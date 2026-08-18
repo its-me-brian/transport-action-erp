@@ -403,7 +403,7 @@ function submitDriverLinkResponse(token, services) {
               // Importado: cannot complete — driver not assigned
             }
 
-              // Route through Inbox for unified traceability (Issue #11)
+            // Route through Inbox for unified traceability (Issue #11)
               var rawData = {
                 serviceId: svc.serviceId,
                 startTime: svc.orarioInizio || '',
@@ -429,7 +429,6 @@ function submitDriverLinkResponse(token, services) {
                 rawData
               );
               results.push({ serviceId: svc.serviceId, inboxId: inboxResult.inboxId || null });
-            }
           } catch (e) {
             Logger.log('Error processing service ' + svc.serviceId + ': ' + e.message);
           }
