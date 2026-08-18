@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: 'Google Sans', Arial, sans-serif; padding: 20px; }
+    .upload-zone {
+      border: 2px dashed #1565C0;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      background: #E3F2FD;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .upload-zone:hover { background: #BBDEFB; border-color: #0D47A1; }
+    .upload-zone.dragover { background: #90CAF9; border-color: #0D47A1; }
+    .btn {
+      background: #1565C0;
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+    .btn:hover { background: #0D47A1; }
+    .btn:disabled { background: #9E9E9E; cursor: not-allowed; }
+    .status { margin-top: 16px; padding: 12px; border-radius: 8px; display: none; }
+    .status.success { display: block; background: #E8F5E9; color: #2E7D32; }
+    .status.error { display: block; background: #FFEBEE; color: #C62828; }
+    .status.loading { display: block; background: #FFF3E0; color: #E65100; }
+    h2 { margin: 0 0 16px; color: #1E3A5F; }
+    .icon { font-size: 48px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <h2>📥 Importar Transport List</h2>
+  
+  <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+    <div class="icon">📄</div>
+    <p><strong>Arrastrá el archivo .xlsx aquí</strong></p>
+    <p style="color:#666;font-size:13px;">o hacé click para seleccionar</p>
+    <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" onchange="handleFile(this)">
+  </div>
+  
+  <div id="statusBox" class="status"></div>
+  
+  <div style="text-align:right;margin-top:16px;">
+    <button class="btn" onclick="google.script.host.close()">Cerrar</button>
+  </div>
+
+  <script>
+    var dropZone = document.getElementById('dropZone');
+    
+    dropZone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    
+    dropZone.addEventListener('dragleave', function() {
+      dropZone.classList.remove('dragover');
+    });
+    
+    dropZone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      var files = e.dataTransfer.files;
+      if (files.length > 0) processFile(files[0]);
+    });
+    
+    function handleFile(input) {
+      if (input.files.length > 0) processFile(input.files[0]);
+    }
+    
+    function processFile(file) {
+      var statusBox = document.getElementById('statusBox');
+      
+      if (!file.name.match(/\.xlsx?$/i)) {
+        statusBox.className = 'status error';
+        statusBox.textContent = '❌ Solo se aceptan archivos .xlsx o .xls';
+        return;
+      }
+      
+      statusBox.className = 'status loading';
+      statusBox.textContent = '⏳ Leyendo archivo: ' + file.name + '...';
+      
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var base64 = e.target.result.split(',')[1];
+        
+        statusBox.textContent = '⏳ Parseando transport list...';
+        
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result.error) {
+              statusBox.className = 'status error';
+              statusBox.textContent = '❌ Error: ' + result.error;
+              return;
+            }
+            
+            statusBox.className = 'status success';
+            statusBox.innerHTML = 
+              '<strong>✅ Importación exitosa</strong><br><br>' +
+              '📋 <strong>Import ID:</strong> ' + result.importId + '<br>' +
+              '🎬 <strong>Producción:</strong> ' + (result.production || 'N/A') + '<br>' +
+              '📅 <strong>Fecha:</strong> ' + (result.dateStr || 'N/A') + '<br>' +
+              '🚗 <strong>Servicios:</strong> ' + result.totalServices + '<br><br>' +
+              '<em>Usá "Normalizar → Data" para moverlos a la base de billing</em>';
+          })
+          .withFailureHandler(function(err) {
+            statusBox.className = 'status error';
+            statusBox.textContent = '❌ Error del servidor: ' + err.message;
+          })
+          .uploadTransportListFile(base64, file.name);
+      };
+      
+      reader.readAsDataURL(file);
+    }
+  </script>
+</body>
+</html>

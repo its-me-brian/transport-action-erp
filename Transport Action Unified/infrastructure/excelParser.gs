@@ -1,0 +1,653 @@
+// ============================================================================
+// EXCELPARSER.GS — Parseo de archivos Excel de Transport List
+// ============================================================================
+
+/**
+ * Parsea un archivo Excel de Transport List subido al Drive.
+ * Formato esperado (Dolce_Italy):
+ *   Row 1: Company/Production name
+ *   Row 2: "Prep. Transport List [Day] [Date]"
+ *   Row 3: empty
+ *   Row 4: Headers (VEHICLE | DRIVER | TIME | , | PASSENGERS | FROM | TO)
+ *   Row 5: empty
+ *   Row 6+: Data (puede span multiple rows por servicio)
+ * 
+ * @param {string} fileId - ID del archivo en Google Drive
+ * @param {number} importSeq - Secuencia de importación
+ * @returns {Object} Resultado con servicios parseados
+ */
+function parseTransportListExcel(fileId, importSeq) {
+  try {
+    const file = DriveApp.getFileById(fileId);
+    const fileName = file.getName();
+    
+    // Convertir Excel a Google Sheets temporal
+    const blob = file.getBlob();
+    const tempFile = DriveApp.createFile(blob);
+    
+    // Para archivos .xlsx, necesitamos importarlos
+    let ss;
+    try {
+      ss = SpreadsheetApp.open(tempFile);
+    } catch (e) {
+      // Si no se puede abrir directamente, intentar con Drive API
+      tempFile.setTrashed(true);
+      return { error: 'No se pudo leer el archivo. Asegurate de que sea .xlsx o .xls' };
+    }
+    
+    const ws = ss.getSheets()[0];
+    const allData = ws.getDataRange().getValues();
+    
+    // Limpiar archivo temporal
+    tempFile.setTrashed(true);
+    
+    // Parsear datos
+    const servicios = _parseTransportListRows(allData, fileName, importSeq || 1);
+    
+    return servicios;
+    
+  } catch (e) {
+    Logger.log('Error parseTransportListExcel: ' + e.message);
+    return { error: e.message };
+  }
+}
+
+/**
+ * Parsea las filas del Excel de Transport List.
+ * Cada servicio puede ocupar 1-4 filas:
+ *   Fila principal: vehicle, driver, time, passenger1, from, to
+ *   Sub-filas: phone, additional passengers, "Then" for second pickup
+ */
+function _parseTransportListRows(allData, fileName, importSeq) {
+  const servicios = [];
+  let production = '';
+  let projectName = '';
+  let transportCompany = '';
+  let dateStr = '';
+  const allValues = []; // {value, row, col} — header scan results for debug
+  
+  // Detectar production, project name, transport company y fecha de las primeras filas
+  if (allData.length > 0 && allData[0][0]) {
+    production = String(allData[0][0]).trim(); // e.g. "WANDERING IN ROME PRODUCTIONS LLC"
+  }
+  
+  // Row 0-1: scan for project name and transport company
+  // Merged cells may put value in any column of the merge range
+  // Strategy: collect ALL non-empty values from rows 0-1, classify them
+  if (allData.length > 0) {
+    
+    // Scan rows 0 and 1 (header area)
+    for (let r = 0; r < Math.min(2, allData.length); r++) {
+      const row = allData[r];
+      for (let c = 0; c < row.length; c++) {
+        const val = String(row[c] || '').trim();
+        if (!val) continue;
+        // Skip production (already read from A1)
+        if (r === 0 && c === 0) continue;
+        // Skip headers/dates
+        if (val.indexOf('Transport List') > -1 || val.indexOf('Prep.') > -1) continue;
+        if (val === production) continue;
+        allValues.push({ value: val, row: r, col: c });
+      }
+    }
+    
+    // Classify: transport company has SRL/LTD/SPA/INC/LLC
+    // Project name is the other short value
+    for (const item of allValues) {
+      const isTransportCo = item.value.match(/\b(SRL|LTD|SPA|INC|LLC)\b/i);
+      if (isTransportCo && !transportCompany) {
+        transportCompany = item.value;
+      } else if (!isTransportCo && !projectName && item.value.length <= 40 && !item.value.match(/\+\d/)) {
+        projectName = item.value;
+      }
+    }
+  }
+  if (allData.length > 1 && allData[1][0]) {
+    dateStr = String(allData[1][0]).replace('Prep. Transport List ', '').replace('Transport List ', '').trim();
+    // Strip leading transport list number (e.g. "5 TuesdayJuly 21th" → "TuesdayJuly 21th")
+    dateStr = dateStr.replace(/^\d+\s*/, '').trim();
+  }
+  
+  // If no projectName from header (e.g. it's an image), extract from filename
+  // Filename format: "DOLCE_Italy_Transport List_07_07.xlsx"
+  if (!projectName && fileName) {
+    const nameMatch = fileName.match(/^([A-Za-z]+)/);
+    if (nameMatch && nameMatch[1].length >= 2) {
+      projectName = nameMatch[1].charAt(0).toUpperCase() + nameMatch[1].slice(1).toLowerCase();
+    }
+  }
+  
+  // If no date from header, try to extract from filename
+  // Filename format: "DOLCE_Italy_Transport List_07_07.xlsx" or "Transport List 5 TuesdayJuly 21th"
+  if (!dateStr && fileName) {
+    // Try MM_DD pattern from filename
+    const mmddMatch = fileName.match(/(\d{2})_(\d{2})/);
+    if (mmddMatch) {
+      const month = parseInt(mmddMatch[1]);
+      const day = parseInt(mmddMatch[2]);
+      const year = new Date().getFullYear();
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+        const d = new Date(year, month - 1, day);
+        const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        dateStr = dayNames[d.getDay()] + ' ' + monthNames[d.getMonth()] + ' ' + d.getDate() + 'th';
+      }
+    }
+  }
+  
+  let i = 0;
+  let servicioIdx = 0;
+  let currentSection = ''; // Track current city section (ROMA, PUGLIA, etc.)
+  let footerContacts = []; // Track footer contact rows
+  
+  // Buscar la fila de headers — detecta múltiples formatos
+  let headerRow = -1;
+  let colMap = {}; // Dynamic column mapping
+  
+  for (let r = 0; r < Math.min(10, allData.length); r++) {
+    for (let c = 0; c < allData[r].length; c++) {
+      const val = String(allData[r][c] || '').toUpperCase().trim();
+      // Detect header row by known header names
+      if (val === 'VEHICLE' || val === 'VEICOLO' || val === 'TIPO' || val === 'TYPE' || 
+          val === 'AUTO' || val === 'VEHICLE TYPE' || val === 'VEHICLE_TYPE') {
+        headerRow = r;
+        break;
+      }
+    }
+    if (headerRow >= 0) break;
+  }
+  
+  if (headerRow < 0) {
+    return { error: 'No se encontraron headers (VEHICLE, TIPO, etc.)', servicios: [], production: production, dateStr: dateStr };
+  }
+  
+  // Build dynamic column map from header row
+  const headerCells = allData[headerRow];
+  for (let c = 0; c < headerCells.length; c++) {
+    const h = String(headerCells[c] || '').toUpperCase().trim();
+    if (h === 'VEHICLE' || h === 'VEICOLO' || h === 'TIPO' || h === 'TYPE' || h === 'AUTO' || h === 'VEHICLE TYPE') {
+      colMap.vehicle = c;
+    } else if (h === 'DRIVER' || h === 'CONDUCTOR' || h === 'DRIVER NAME') {
+      colMap.driver = c;
+    } else if (h === 'TIME' || h === 'HORA' || h === 'ORARIO') {
+      colMap.time = c;
+    } else if (h === 'PASSENGERS' || h === 'PASAJEROS' || h === 'PAX' || h === 'PASSENGER') {
+      colMap.passengers = c;
+    } else if (h === 'FROM' || h === 'ORIGEN' || h === 'PICKUP' || h === 'PICKUP LOCATION') {
+      colMap.from = c;
+    } else if (h === 'TO' || h === 'DESTINO' || h === 'DROPOFF' || h === 'DROPOFF LOCATION') {
+      colMap.to = c;
+    } else if (h === 'SERVICIO' || h === 'SERVICE' || h === 'SERVICE TYPE') {
+      colMap.servicio = c;
+    } else if (h === 'FLIGHT' || h === 'VUELO' || h === 'FLIGHT INFO') {
+      colMap.flightInfo = c;
+    } else if (h === 'SECTION' || h === 'SECCION' || h === 'SEZIONE') {
+      colMap.section = c;
+    }
+  }
+  
+  // Fallback: if no vehicle column detected, use default mapping
+  if (colMap.vehicle === undefined) {
+    colMap = { vehicle: 0, driver: 1, time: 2, passengers: 4, from: 5, to: 6 };
+  }
+  
+  // Parsear desde headerRow + 1
+  i = headerRow + 1;
+  
+  while (i < allData.length) {
+    const row = allData[i];
+    const vehicleCell = String(row[colMap.vehicle] || '').trim();
+    const driverCell = colMap.driver !== undefined ? String(row[colMap.driver] || '').trim() : '';
+    const timeCell = colMap.time !== undefined ? String(row[colMap.time] || '').trim() : '';
+    const passengerCell = colMap.passengers !== undefined ? String(row[colMap.passengers] || '').trim() : '';
+    const fromCell = colMap.from !== undefined ? String(row[colMap.from] || '').trim() : '';
+    const toCell = colMap.to !== undefined ? String(row[colMap.to] || '').trim() : '';
+    const servicioCell = colMap.servicio !== undefined ? String(row[colMap.servicio] || '').trim() : '';
+    const flightCell = colMap.flightInfo !== undefined ? String(row[colMap.flightInfo] || '').trim() : '';
+    const sectionCell = colMap.section !== undefined ? String(row[colMap.section] || '').trim() : '';
+    
+    // Si la fila está vacía, saltar
+    const allEmpty = !vehicleCell && !driverCell && !timeCell && !passengerCell && !fromCell && !toCell && !servicioCell;
+    if (allEmpty) {
+      i++;
+      continue;
+    }
+    
+    // Si es header repetido, saltar
+    const headerNames = ['VEHICLE', 'VEICOLO', 'TIPO', 'TYPE', 'DRIVER', 'TIME', 'PASSENGERS', 'FROM', 'TO', 'SERVICIO', 'SERVICE'];
+    if (headerNames.some(h => vehicleCell.toUpperCase() === h)) {
+      i++;
+      continue;
+    }
+    
+    // Detectar si es una fila de sección
+    const sectionNames = ['ROMA', 'PUGLIA', 'ARRIVALS&DEPARTURES', 'ARRIVALS & DEPARTURES', 'MILAN', 'NAPLES', 'LONDON', 'NAPOLI', 'TORINO', 'FIRENZE', 'BARCELONA', 'MADRID'];
+    const isSection = sectionNames.some(s => vehicleCell.toUpperCase().indexOf(s) > -1) && !driverCell && !timeCell;
+    
+    if (isSection) {
+      currentSection = vehicleCell.trim();
+      i++;
+      continue;
+    }
+    
+    // Use section from column if available
+    if (sectionCell) {
+      currentSection = sectionCell;
+    }
+    
+    // Detectar filas de contactos/emails al final del Excel
+    const allCells = [vehicleCell, driverCell, timeCell, passengerCell, fromCell, toCell];
+    const hasEmail = allCells.some(c => c.indexOf('@') > -1);
+    const hasPhone = allCells.some(c => c.match(/\+\d{8,}/));
+    const isContactRow = hasEmail || (hasPhone && !timeCell && !passengerCell);
+    
+    if (isContactRow) {
+      // Save contact for footer display ONLY — do NOT save to Drivers sheet
+      const contactInfo = _extractContactInfo(allCells);
+      footerContacts.push({
+        name: contactInfo.name || driverCell,
+        role: contactInfo.role || '',
+        phone: contactInfo.phone || '',
+        email: contactInfo.email || ''
+      });
+      i++;
+      continue;
+    }
+    
+    
+    // Esta fila parece ser el inicio de un servicio
+    // Classify service type based on "Servicio" column
+    let serviceType = 'disposal'; // default
+    if (servicioCell) {
+      const lowerServicio = servicioCell.toLowerCase();
+      if (lowerServicio.indexOf('transfer') > -1) {
+        serviceType = 'transfer';
+      } else if (lowerServicio.indexOf('disposal') > -1 || lowerServicio.indexOf('dispo') > -1) {
+        serviceType = 'disposal';
+      } else if (lowerServicio.indexOf('full day') > -1 || lowerServicio.indexOf('fullday') > -1) {
+        serviceType = 'fullDay';
+      } else if (lowerServicio.indexOf('half day') > -1 || lowerServicio.indexOf('halfday') > -1) {
+        serviceType = 'halfDay';
+      } else if (lowerServicio.indexOf('night') > -1) {
+        serviceType = 'night';
+      }
+    }
+    // Also check vehicle type for classification
+    if (vehicleCell) {
+      const lowerVehicle = vehicleCell.toLowerCase();
+      if (lowerVehicle.indexOf('transfer') > -1) {
+        serviceType = 'transfer';
+      }
+    }
+    
+    let servicio = {
+      vehicle: vehicleCell,
+      driver: driverCell,
+      driverPhone: '',
+      time: timeCell,
+      passengers: [],
+      passengerRoles: [],
+      pickupLines: fromCell ? [fromCell] : [],
+      dropoffLines: toCell ? [toCell] : [],
+      flightInfo: flightCell || '',
+      notes: '',
+      section: currentSection,
+      servicio: servicioCell,
+      serviceType: serviceType,
+      hasThenPickup: false
+    };
+    
+    // Procesar pasajero principal
+    if (passengerCell) {
+      const parsed = _parsePassengerLine(passengerCell);
+      servicio.passengers.push(parsed.name);
+      servicio.passengerRoles.push(parsed.role);
+    }
+    
+    // Mirar las sub-filas siguientes
+    let j = i + 1;
+    while (j < allData.length) {
+      const subRow = allData[j];
+      const sub0 = colMap.vehicle !== undefined ? String(subRow[colMap.vehicle] || '').trim() : '';
+      const sub1 = colMap.driver !== undefined ? String(subRow[colMap.driver] || '').trim() : '';
+      const sub2 = colMap.time !== undefined ? String(subRow[colMap.time] || '').trim() : '';
+      const sub4 = colMap.passengers !== undefined ? String(subRow[colMap.passengers] || '').trim() : '';
+      const sub5 = colMap.from !== undefined ? String(subRow[colMap.from] || '').trim() : '';
+      const sub6 = colMap.to !== undefined ? String(subRow[colMap.to] || '').trim() : '';
+      
+      // Detectar si es inicio de nuevo servicio
+      const isNewService = (sub0 && sub1 && sub2 && !sub0.startsWith('+') && 
+                           sub0.toUpperCase() !== 'THEN' && sectionNames.every(s => sub0.toUpperCase().indexOf(s) === -1));
+      
+      // Detectar "Then" (segundo pickup del mismo vehículo)
+      if (sub0.toUpperCase() === 'THEN' || sub2.toUpperCase() === 'THEN') {
+        servicio.hasThenPickup = true;
+        
+        servicios.push(_buildServiceRecord(servicio, production, dateStr, fileName, servicioIdx, importSeq));
+        servicioIdx++;
+        
+        servicio = {
+          vehicle: vehicleCell,
+          driver: driverCell,
+          driverPhone: servicio.driverPhone,
+          time: sub2 || sub0 === 'THEN' ? (colMap.time !== undefined ? String(subRow[colMap.time] || '').trim() : '') : servicio.time,
+          passengers: [],
+          passengerRoles: [],
+          pickupLines: [],
+          dropoffLines: [],
+          flightInfo: servicio.flightInfo,
+          notes: 'Then (same day)',
+          section: currentSection,
+          servicio: servicio.servicio,
+          serviceType: servicio.serviceType,
+          hasThenPickup: false
+        };
+        j++;
+        continue;
+      }
+      
+      // Detectar teléfono
+      if (sub1.startsWith('+') || sub0.startsWith('+')) {
+        servicio.driverPhone = sub1.startsWith('+') ? sub1 : sub0;
+        // Si en la misma fila hay datos de pasajero
+        if (sub4) {
+          const parsed = _parsePassengerLine(sub4);
+          servicio.passengers.push(parsed.name);
+          servicio.passengerRoles.push(parsed.role);
+          if (sub5) servicio.pickupLines.push(sub5);
+          if (sub6) servicio.dropoffLines.push(sub6);
+        }
+        j++;
+        continue;
+      }
+      
+      // Sub-fila con pasajero adicional
+      if (sub4 && !sub0) {
+        const parsed = _parsePassengerLine(sub4);
+        servicio.passengers.push(parsed.name);
+        servicio.passengerRoles.push(parsed.role);
+        if (sub5) servicio.pickupLines.push(sub5);
+        if (sub6) servicio.dropoffLines.push(sub6);
+        j++;
+        continue;
+      }
+      
+      // Sub-fila con FROM/TO adicional
+      if (sub5 || sub6) {
+        if (sub5) servicio.pickupLines.push(sub5);
+        if (sub6) servicio.dropoffLines.push(sub6);
+        j++;
+        continue;
+      }
+      
+      // Sub-fila con Roma (ciudad)
+      if (sub0 === 'Roma' || sub0 === 'Rome') {
+        j++;
+        continue;
+      }
+      
+      // Sub-fila con información de vuelo
+      if (sub4 && String(sub4).toLowerCase().indexOf('flight') > -1) {
+        servicio.flightInfo = sub4;
+        j++;
+        continue;
+      }
+      
+      // Sub-fila vacía o no reconocida → fin del servicio
+      if (!sub0 && !sub1 && !sub2 && !sub4 && !sub5 && !sub6) {
+        break;
+      }
+      
+      // Si tiene vehículo y conductor, es un nuevo servicio
+      if (sub0 && sub1 && sub2) {
+        break;
+      }
+      
+      j++;
+    }
+    
+    // Guardar servicio
+    servicios.push(_buildServiceRecord(servicio, production, dateStr, fileName, servicioIdx, importSeq));
+    servicioIdx++;
+    
+    i = j;
+  }
+  
+  // Extract and save unique drivers from services to Drivers sheet
+  // SKIP drivers from Production vehicles (they belong to the production company, not the agency)
+  const savedDrivers = new Set();
+  for (let d = 0; d < servicios.length; d++) {
+    const svc = servicios[d];
+    // Skip Production vehicles — don't register their drivers
+    const vehicleUpper = String(svc.vehicle || '').toUpperCase();
+    if (vehicleUpper.indexOf('PRODUCTION') > -1) continue;
+    
+    if (svc.driver && !savedDrivers.has(svc.driver)) {
+      savedDrivers.add(svc.driver);
+      _saveDriverToSheet(svc.driver, svc.driverPhone || '', 'transport_list_' + production);
+    }
+  }
+  
+  return {
+    servicios: servicios,
+    production: production,
+    projectName: projectName,
+    transportCompany: transportCompany,
+    dateStr: dateStr,
+    footerContacts: footerContacts,
+    totalServices: servicios.length,
+    _debug: {
+      headerScan: allValues || [],
+      production: production,
+      projectName: projectName,
+      transportCompany: transportCompany,
+      dateStr: dateStr,
+      row0: allData.length > 0 ? allData[0].map((c,i) => ({ col: i, value: String(c||'').trim() })) : [],
+      row1: allData.length > 1 ? allData[1].map((c,i) => ({ col: i, value: String(c||'').trim() })) : [],
+      totalRows: allData.length
+    }
+  };
+}
+
+/**
+ * Parsea una línea de pasajero: "Oliver Hermanus (Executive Producer / Director)"
+ */
+function _parsePassengerLine(line) {
+  if (!line) return { name: '', role: '' };
+  
+  const match = line.match(/^(.+?)\s*\((.+?)\)\s*$/);
+  if (match) {
+    return { name: match[1].trim(), role: match[2].trim() };
+  }
+  
+  return { name: line.trim(), role: '' };
+}
+
+/**
+ * Extract contact info from a row of cells (for driver database).
+ * Looks for patterns like: "Massimiliano Rocchetti [Transportation Manager] +39 339 1050830 massimiliano.rocchetti@gmail.com"
+ * Or: "Claudio D'Elia +39 347 7244593"
+ */
+function _extractContactInfo(cells) {
+  const fullText = cells.join(' ');
+  
+  // Try to extract name before "[" or before phone
+  let name = '';
+  let phone = '';
+  let role = '';
+  
+  // Pattern: "Name [Role] +phone email"
+  const bracketMatch = fullText.match(/^(.+?)\s*\[(.+?)\]\s*(\+[\d\s]+)/);
+  if (bracketMatch) {
+    name = bracketMatch[1].trim();
+    role = bracketMatch[2].trim();
+    phone = bracketMatch[3].replace(/\s/g, '').trim();
+    return { name, phone, role };
+  }
+  
+  // Pattern: "Name +phone" (no brackets)
+  const phoneMatch = fullText.match(/^(.+?)\s+(\+[\d\s]{8,})/);
+  if (phoneMatch) {
+    name = phoneMatch[1].trim();
+    phone = phoneMatch[2].replace(/\s/g, '').trim();
+    // Clean name - remove anything after email
+    if (name.indexOf('@') > -1) name = name.substring(0, name.indexOf('@')).trim();
+    return { name, phone, role };
+  }
+  
+  // Pattern: just name (no phone)
+  if (fullText && fullText.indexOf('@') === -1 && fullText.length > 3) {
+    name = fullText.replace(/\s+/g, ' ').trim();
+    // Truncate at common delimiters
+    const delimiters = ['[', '+', '@'];
+    for (const d of delimiters) {
+      const idx = name.indexOf(d);
+      if (idx > 0) name = name.substring(0, idx).trim();
+    }
+    if (name.length > 2) return { name, phone: '', role: '' };
+  }
+  
+  return { name: '', phone: '', role: '' };
+}
+
+/**
+ * Saves a driver to the Drivers sheet if not already present.
+ * Updates phone if the driver exists but has no phone.
+ * ERD-aligned: writes to 18-column Drivers sheet.
+ */
+function _saveDriverToSheet(name, phone, source) {
+  try {
+    if (!name || name.length < 2) return; // Skip empty/short names
+    
+    // Reject obviously non-driver names (roles, titles, departments)
+    const rejectPatterns = /^(ad's|assistant|as per|transport|coordinator|manager|captain|dept|department|office|ops|operations)/i;
+    if (rejectPatterns.test(name.trim())) return;
+    
+    const ss = SpreadsheetApp.openById(CONFIG.DB_SHEET_ID);
+    const sh = ss.getSheetByName(SHEETS.Drivers);
+    if (!sh) return;
+    
+    const cleanName = name.trim();
+    const cleanPhone = phone ? phone.replace(/^'/, '').trim() : ''; // Strip leading apostrophe
+    
+    // Normalize name for comparison: lowercase, collapse spaces, remove extra chars
+    const normalize = (s) => s.toLowerCase().replace(/\s+/g, ' ').replace(/['']/g, "'").trim();
+    const normalizedName = normalize(cleanName);
+    
+      // Check if driver already exists by normalized name
+      const lastRow = sh.getLastRow();
+      if (lastRow >= 2) {
+        const names = sh.getRange(2, 2, lastRow - 1, 1).getValues();
+        for (let r = 0; r < names.length; r++) {
+          if (normalize(String(names[r][0])) === normalizedName) {
+            // Update phone if empty and new phone available
+            const existingPhone = String(sh.getRange(r + 2, 5).getValue()).replace(/^'/, '').trim(); // Col E = Phone (D = CollaboratorID)
+            if (!existingPhone && cleanPhone) {
+              const phoneFormatted = cleanPhone.startsWith('+') ? "'" + cleanPhone : cleanPhone;
+              sh.getRange(r + 2, 5).setValue(phoneFormatted); // Phone
+              sh.getRange(r + 2, 6).setValue(phoneFormatted); // WhatsApp
+            }
+            return; // Already exists
+          }
+        }
+      }
+    
+    // New driver — append with ERD-aligned columns
+    const now = new Date();
+    const id = 'DRV-' + Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyyMMddHHmmss');
+    const dateFormatted = Utilities.formatDate(now, Session.getScriptTimeZone(), 'dd/MM/yyyy');
+    const isoNow = now.toISOString();
+    let phoneFormatted = cleanPhone || '';
+    if (phoneFormatted.startsWith('+')) {
+      phoneFormatted = "'" + phoneFormatted;
+    }
+    // ERD columns: ID, Name, Type, CollaboratorID, Phone, WhatsApp, Email, IBAN, VehiclePreferred, LicenseType, LicenseExpiry, Status, OperatingCompany, Notes, Source, LastUsed, TotalRides, CreatedAt, UpdatedAt
+    sh.appendRow([id, cleanName, 'Propio', '', phoneFormatted, phoneFormatted, '', '', '', '', '', 'Disponible', '', '', source || 'import', '', 0, isoNow, isoNow]);
+  } catch (e) {
+    Logger.log('Error saving driver: ' + e.message);
+  }
+}
+
+/**
+ * Construye el registro de servicio normalizado
+ */
+function _buildServiceRecord(serv, production, dateStr, fileName, idx, importSeq) {
+  // Parse actual date from dateStr to use as the service date
+  let actualDate = new Date();
+  if (dateStr) {
+    // dateStr format: "Tuesday July 07th" or "July 07th" etc.
+    // Strip day name and ordinal suffixes (st, nd, rd, th) before parsing
+    let cleaned = dateStr.replace(/(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s*/i, '').trim();
+    cleaned = cleaned.replace(/(\d+)(st|nd|rd|th)/i, '$1').trim();
+    const year = new Date().getFullYear();
+    const parsed = new Date(cleaned + ' ' + year);
+    if (!isNaN(parsed.getTime())) {
+      actualDate = parsed;
+    } else {
+      // Fallback: try DD/MM/YYYY pattern
+      const m = cleaned.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/);
+      if (m) {
+        const monthNames = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+        const monthIdx = monthNames.indexOf(m[2].toLowerCase());
+        if (monthIdx >= 0) {
+          actualDate = new Date(parseInt(m[3]), monthIdx, parseInt(m[1]));
+        }
+      }
+    }
+  }
+  
+  // Use actual service date in the ID, not today's date
+  const datePart = Utilities.formatDate(actualDate, Session.getScriptTimeZone(), 'yyyyMMdd');
+  const id = 'TL-' + datePart + '-' + String(importSeq).padStart(2, '0') + String(idx + 1).padStart(3, '0');
+  
+  // Extract Google Maps URL from 'to' field
+  const toRaw = String(serv.to || '');
+  const mapsUrlMatch = toRaw.match(/https?:\/\/(maps\.app\.goo\.gl|goo\.gl|google\.com\/maps)[^\s]*/i);
+  const mapsUrl = mapsUrlMatch ? mapsUrlMatch[0] : '';
+  // Clean destination: remove URL part
+  const toClean = toRaw.replace(/https?:\/\/[^\s]*/g, '').trim();
+  
+  // Build notes with maps URL if present
+  let notes = serv.notes || '';
+  if (mapsUrl) {
+    notes = notes ? notes + ' | maps:' + mapsUrl : 'maps:' + mapsUrl;
+  }
+  
+  // Fix phone: prepend ' to prevent Google Sheets #ERROR on + prefix
+  let phone = serv.driverPhone || '';
+  if (phone.startsWith('+')) {
+    phone = "'" + phone;
+  }
+  
+  // Build rich passengers array (don't concatenate into string)
+  const passengers = [];
+  for (let p = 0; p < serv.passengers.length; p++) {
+    passengers.push({
+      name: serv.passengers[p] || '',
+      role: serv.passengerRoles[p] || ''
+    });
+  }
+  
+  return {
+    id: id,
+    vehicle: serv.vehicle,
+    driver: serv.driver,
+    driverPhone: phone,
+    time: serv.time,
+    passengers: passengers,
+    pickupLines: serv.pickupLines || [],
+    dropoffLines: serv.dropoffLines || [],
+    from: (serv.pickupLines && serv.pickupLines[0]) || '',
+    to: (serv.dropoffLines && serv.dropoffLines[0]) || '',
+    flightInfo: serv.flightInfo,
+    notes: notes,
+    production: production,
+    date: actualDate,
+    dateStr: dateStr,
+    fileName: fileName,
+    section: serv.section || '',
+    servicio: serv.servicio || '',
+    serviceType: serv.serviceType || 'disposal',
+    hasThenPickup: serv.hasThenPickup || false
+  };
+}
