@@ -32,6 +32,14 @@ const InvoiceCommands = {
         return { success: true, message: 'No changes to apply' };
       }
 
+      // Validación de integridad referencial al cambiar ClientID o ProjectID
+      if (filteredChanges.ClientID && !validateForeignId(SHEETS.Clients, filteredChanges.ClientID)) {
+        throw new ValidationError('REFERENTIAL_INTEGRITY: El cliente no existe: ' + filteredChanges.ClientID);
+      }
+      if (filteredChanges.ProjectID && !validateForeignId(SHEETS.Projects, filteredChanges.ProjectID)) {
+        throw new ValidationError('REFERENTIAL_INTEGRITY: El proyecto no existe: ' + filteredChanges.ProjectID);
+      }
+
       InvoiceRepository.update(invoiceId, filteredChanges);
 
       _dispatchEvent({

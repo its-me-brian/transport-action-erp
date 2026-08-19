@@ -1,0 +1,97 @@
+# ============================================================================
+# deploy-gas.yml — Pipeline de deploy a Google Apps Script
+# ============================================================================
+#
+# Se activa con push a main en la carpeta Transport Action Unified/.
+# Usa clasp para hacer push del código GAS al proyecto vinculado.
+#
+# ─── REQUISITOS (configurar UNA vez) ────────────────────────────────────────
+#
+# 1. Obtener un Refresh Token de Google:
+#    a. Ir a https://console.cloud.google.com/apis/credentials
+#    b. Crear OAuth 2.0 Client ID (tipo: Desktop App)
+#    c. Anotar Client ID y Client Secret
+#    d. Ir a https://developers.google.com/apps-script/guides/clasp#using_an_oauth_client_id
+#    e. Seguir instrucciones para obtener refresh_token
+#
+# 2. Configurar estos GitHub Secrets (Settings → Secrets → Actions):
+#    - GAS_REFRESH_TOKEN  → El refresh_token de Google OAuth
+#    - GAS_CLIENT_ID      → El client_id del paso 1c
+#    - GAS_CLIENT_SECRET  → El client_secret del paso 1c
+#
+# 3. El scriptId ya está en Transport Action Unified/.clasp.json
+#
+# ─── NOTAS ───────────────────────────────────────────────────────────────────
+#
+# - clasp push SOLO sincroniza archivos .gs/.js/.html/.json
+# - NO ejecuta tests de GAS (no hay framework de testing en GAS)
+# - Los tests del frontend (vitest) se ejecutan en un workflow separado
+# - Si clasp falla, el push NO se hace (fail-safe)
+#
+# ============================================================================
+
+name: Deploy to Google Apps Script
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Transport Action Unified/**'
+
+  # Permitir deploy manual desde la UI de GitHub
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Push to GAS
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install clasp
+        run: npm install -g @google/clasp
+
+      - name: Setup clasp credentials
+        run: |
+          cat > ~/.clasprc.json << 'EOF'
+          {
+            "token": {
+              "access_token": "",
+              "scope": "https://www.googleapis.com/auth/script.projects https://www.googleapis.com/auth/script.deployments https://www.googleapis.com/auth/drive.file",
+              "token_type": "Bearer",
+              "expiry_date": 9999999999999,
+              "refresh_token": "${{ secrets.GAS_REFRESH_TOKEN }}"
+            },
+            "client_id": "${{ secrets.GAS_CLIENT_ID }}",
+            "client_secret": "${{ secrets.GAS_CLIENT_SECRET }}"
+          }
+          EOF
+        shell: bash
+
+      - name: Deploy to Google Apps Script
+        working-directory: Transport Action Unified
+        run: |
+          echo "Pushing code to GAS..."
+          clasp push --force
+          echo "Deploy complete!"
+
+      - name: Success notification
+        if: success()
+        run: echo "✅ Code pushed to Google Apps Script successfully"
+
+      - name: Failure notification
+        if: failure()
+        run: |
+          echo "❌ Deploy failed. Check logs above."
+          echo "Common issues:"
+          echo "  - GAS_REFRESH_TOKEN expired → regenerate in Google Cloud Console"
+          echo "  - Invalid credentials → check GitHub Secrets"
+          echo "  - GAS project not found → verify scriptId in .clasp.json"

@@ -167,6 +167,15 @@ function apiGetInvoice(id) {
 function apiCreateInvoice(data) {
   if (!data.ProjectID) throw new ValidationError('ProjectID is required');
   if (!data.ClientID) throw new ValidationError('ClientID is required');
+
+  // Validación de integridad referencial
+  if (!validateForeignId(SHEETS.Clients, data.ClientID)) {
+    throw new ValidationError('REFERENTIAL_INTEGRITY: El cliente no existe: ' + data.ClientID);
+  }
+  if (!validateForeignId(SHEETS.Projects, data.ProjectID)) {
+    throw new ValidationError('REFERENTIAL_INTEGRITY: El proyecto no existe: ' + data.ProjectID);
+  }
+
   const entity = InvoiceRepository.create(data);
   _dispatchEvent({ type: 'invoice.created', entity: 'Invoice', entityId: entity.ID });
   return InvoiceRepository.toDTO(entity);

@@ -234,6 +234,43 @@ async function gasGet(action: string, params?: Record<string, string | number | 
 }
 
 /**
+ * gasGet with exponential backoff retry.
+ * Retries up to MAX_RETRIES times on network errors or 5xx responses.
+ * Delays: 1s, 2s, 4s (exponential backoff).
+ *
+ * Why: GET calls can fail due to GAS cold starts, network blips, or
+ * temporary 5xx from the Web App. Retrying avoids user-visible errors.
+ */
+export async function gasGetWithRetry(action: string, params?: Record<string, string | number | boolean | undefined>): Promise<any> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await gasGet(action, params);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+
+      // Don't retry on client errors (4xx) — only retry on network/5xx
+      const isRetryable =
+        lastError.message.includes('Failed to fetch') ||
+        lastError.message.includes('NetworkError') ||
+        lastError.message.includes('HTTP 5') ||
+        lastError.message.includes('timeout');
+
+      if (!isRetryable || attempt === MAX_RETRIES) {
+        throw lastError;
+      }
+
+      const delay = BASE_DELAY_MS * Math.pow(2, attempt);
+      console.warn(`[gasGetWithRetry] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`, lastError.message);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError || new Error('gasGetWithRetry: max retries exceeded');
+}
+
+/**
  * Normalize backend response: unwrap data, flatten error objects to string
  */
 function _unwrapResponse(json: any): any {
@@ -356,14 +393,14 @@ export async function uploadAndParseExcel(file: File): Promise<ImportResult> {
 export async function getTransportLists(projectId?: string): Promise<any[]> {
   const params: Record<string, string> = {};
   if (projectId) params.projectId = projectId;
-  return gasGet('getTransportLists', params);
+  return gasGetWithRetry('getTransportLists', params);
 }
 
 /**
  * Get services by Transport List ID.
  */
 export async function getServicesByTransportListId(transportListId: string): Promise<any[]> {
-  return gasGet('getServices', { transportListId });
+  return gasGetWithRetry('getServices', { transportListId });
 }
 
 /**
@@ -384,7 +421,7 @@ export async function getServices(filters?: {
   if (filters?.dateFrom) params.dateFrom = filters.dateFrom;
   if (filters?.dateTo) params.dateTo = filters.dateTo;
 
-  return gasGet('apiGetServices', params);
+  return gasGetWithRetry('apiGetServices', params);
 }
 
 /**
@@ -593,7 +630,7 @@ export async function autoDetectImportTargets(production: string, projectName?: 
   clients: any[];
   projects: any[];
 }> {
-  return gasGet('autoDetectImportTargets', { production, projectName: projectName || '' });
+  return gasGetWithRetry('autoDetectImportTargets', { production, projectName: projectName || '' });
 }
 
 /**
@@ -603,7 +640,7 @@ export async function getAuditLog(limit?: number): Promise<AuditEntry[]> {
   const params: Record<string, string> = {};
   if (limit) params.limit = String(limit);
 
-  const raw: any[] = await gasGet('apiGetAuditLog', params);
+  const raw: any[] = await gasGetWithRetry('apiGetAuditLog', params);
   if (!Array.isArray(raw)) return [];
 
   // Map PascalCase backend fields → camelCase frontend fields
@@ -641,7 +678,7 @@ export interface DriverRecord {
 }
 
 export async function getDrivers(): Promise<DriverRecord[]> {
-  const result = await gasGet('apiGetDrivers');
+  const result = await gasGetWithRetry('apiGetDrivers');
   // Backend may return { error: ... } if the sheet is missing
   if (result && result.error) {
     console.warn('getDrivers error:', result.error);
@@ -679,7 +716,7 @@ export async function deleteDriver(id: string): Promise<{ success: boolean; erro
 }
 
 export async function cleanupDrivers(): Promise<{ removed: number; error?: string }> {
-  return gasGet('apiCleanupDrivers');
+  return gasGetWithRetry('apiCleanupDrivers');
 }
 
 // ============================================================================
@@ -699,7 +736,7 @@ export interface OperatingCompany {
 }
 
 export async function getOperatingCompanies(): Promise<OperatingCompany[]> {
-  return gasGet('getOperatingCompanies');
+  return gasGetWithRetry('getOperatingCompanies');
 }
 
 export interface ClientDTO {
@@ -718,7 +755,7 @@ export interface ClientDTO {
 }
 
 export async function getClients(): Promise<ClientDTO[]> {
-  return gasGet('getClients');
+  return gasGetWithRetry('getClients');
 }
 
 export async function createClient(data: { name: string; type?: string; vat?: string; address?: string; phone?: string; email?: string; paymentTerms?: number; notes?: string }): Promise<{ success?: boolean; id?: string; error?: string }> {
@@ -734,7 +771,7 @@ export async function deleteClient(id: string): Promise<{ success?: boolean; err
 }
 
 export async function getClient(id: string): Promise<ClientDTO> {
-  return gasGet('getClient', { id });
+  return gasGetWithRetry('getClient', { id });
 }
 
 export async function updateOperatingCompany(id: string, data: Partial<OperatingCompany>): Promise<{ success: boolean; error?: string }> {
@@ -878,7 +915,7 @@ export interface Agency {
  */
 export async function getAgencies(): Promise<{ agencies: Agency[]; error?: string }> {
   try {
-    const result = await gasGet('getClients');
+    const result = await gasGetWithRetry('getClients');
     if (Array.isArray(result)) {
       const agencies = result
         .filter((c: any) => c.type === 'agency')
@@ -921,7 +958,7 @@ export interface Project {
  * Obtiene todos los proyectos
  */
 export async function getProjects(token?: string): Promise<Project[]> {
-  return gasGet('apiGetProjects', { token });
+  return gasGetWithRetry('apiGetProjects', { token });
 }
 
 /**
@@ -995,11 +1032,11 @@ export interface CollaboratorDTO {
 }
 
 export async function getCollaborators(filters?: { active?: boolean; operatingCompany?: string }): Promise<CollaboratorDTO[]> {
-  return gasGet('getCollaborators', filters);
+  return gasGetWithRetry('getCollaborators', filters);
 }
 
 export async function getCollaborator(id: string): Promise<CollaboratorDTO> {
-  return gasGet('getCollaborator', { id });
+  return gasGetWithRetry('getCollaborator', { id });
 }
 
 export async function createCollaborator(data: {
@@ -1054,11 +1091,11 @@ export interface SupplierRateDTO {
 }
 
 export async function getSupplierRates(filters?: { supplierType?: string; supplierId?: string; projectId?: string }): Promise<SupplierRateDTO[]> {
-  return gasGet('getSupplierRates', filters);
+  return gasGetWithRetry('getSupplierRates', filters);
 }
 
 export async function getSupplierRate(id: string): Promise<SupplierRateDTO> {
-  return gasGet('getSupplierRate', { id });
+  return gasGetWithRetry('getSupplierRate', { id });
 }
 
 export async function createSupplierRate(data: {
@@ -1133,7 +1170,7 @@ export async function createChange(data: {
  * Obtiene cambios (filtro opcional por status, entityType o entityId)
  */
 export async function getChanges(filters?: { status?: string; entityType?: string; entityId?: string }): Promise<{ success?: boolean; changes?: Change[]; error?: string }> {
-  return gasGet('getChanges', filters || {});
+  return gasGetWithRetry('getChanges', filters || {});
 }
 
 /**
@@ -1229,7 +1266,7 @@ export async function voidPayment(paymentId: string, reason: string): Promise<{ 
  * Obtiene pagos (filtro opcional por invoiceId, clientId o status)
  */
 export async function getPayments(filters?: { invoiceId?: string; clientId?: string; status?: string; dateFrom?: string; dateTo?: string }): Promise<Payment[]> {
-  const raw = await gasGet('apiGetPayments', filters);
+  const raw = await gasGetWithRetry('apiGetPayments', filters);
   if (!Array.isArray(raw)) return [];
   return raw.map(row => ({
     id: row.ID || row.id || '',
@@ -1269,7 +1306,7 @@ export async function getDriverAdvances(filters?: { driverId?: string; status?: 
   const params: Record<string, string> = {};
   if (filters?.driverId) params.driverId = filters.driverId;
   if (filters?.status) params.status = filters.status;
-  const raw: any[] = await gasGet('getDriverAdvances', params);
+  const raw: any[] = await gasGetWithRetry('getDriverAdvances', params);
   if (!Array.isArray(raw)) return [];
   return raw.map(row => ({
     id: row.ID || row.id || '',
@@ -1286,7 +1323,7 @@ export async function getDriverAdvances(filters?: { driverId?: string; status?: 
 }
 
 export async function getDriverAdvance(id: string): Promise<DriverAdvanceDTO | null> {
-  const raw: any = await gasGet('getDriverAdvance', { id });
+  const raw: any = await gasGetWithRetry('getDriverAdvance', { id });
   if (!raw || raw.error) return null;
   return {
     id: raw.ID || raw.id || '',
@@ -1338,7 +1375,7 @@ export async function getExpenses(filters?: { projectId?: string; status?: strin
   if (filters?.company) params.company = filters.company;
   if (filters?.dateFrom) params.dateFrom = filters.dateFrom;
   if (filters?.dateTo) params.dateTo = filters.dateTo;
-  const raw: any[] = await gasGet('getExpenses', params);
+  const raw: any[] = await gasGetWithRetry('getExpenses', params);
   if (!Array.isArray(raw)) return [];
   return raw.map(row => ({
     id: row.ID || row.id || '',
@@ -1448,7 +1485,7 @@ export async function validateSession(token: string): Promise<{ valid: boolean; 
  * Get all users (admin only)
  */
 export async function getUsers(token: string): Promise<{ success?: boolean; users?: UserRecord[]; error?: string }> {
-  return gasGet('apiGetUsers', { token });
+  return gasGetWithRetry('apiGetUsers', { token });
 }
 
 /**
@@ -1508,7 +1545,7 @@ export async function updateUser(token: string, userId: string, updates: {
 // ============================================================================
 
 export async function getSettings(): Promise<Record<string, string>> {
-  const result = await gasGet('getSettings');
+  const result = await gasGetWithRetry('getSettings');
   if (result && result.error) {
     console.warn('getSettings error:', result.error);
     return {};
@@ -1579,7 +1616,7 @@ export async function getRapportinoClients(filters?: {
   dateFrom?: string;
   dateTo?: string;
 }): Promise<RapportinoClientDTO[]> {
-  return gasGet('apiGetRapportinoClients', filters as any);
+  return gasGetWithRetry('apiGetRapportinoClients', filters as any);
 }
 
 export async function createRapportinoClient(
@@ -1635,7 +1672,7 @@ export async function getRapportinoDrivers(filters?: {
   dateFrom?: string;
   dateTo?: string;
 }): Promise<RapportinoDriverDTO[]> {
-  return gasGet('apiGetRapportinoDrivers', filters as any);
+  return gasGetWithRetry('apiGetRapportinoDrivers', filters as any);
 }
 
 export async function createRapportinoDriver(
@@ -1697,7 +1734,7 @@ export async function getRapportinoCollaborators(filters?: {
   dateFrom?: string;
   dateTo?: string;
 }): Promise<RapportinoCollaboratorDTO[]> {
-  return gasGet('apiGetRapportinoCollaborators', filters as any);
+  return gasGetWithRetry('apiGetRapportinoCollaborators', filters as any);
 }
 
 export async function createRapportinoCollaborator(
@@ -1773,11 +1810,11 @@ export async function getInvoices(filters?: {
   dateFrom?: string;
   dateTo?: string;
 }): Promise<InvoiceDTO[]> {
-  return gasGet('getInvoices', filters as any);
+  return gasGetWithRetry('getInvoices', filters as any);
 }
 
 export async function getInvoiceItems(invoiceId?: string): Promise<InvoiceItemDTO[]> {
-  return gasGet('getInvoiceItems', { invoiceId });
+  return gasGetWithRetry('getInvoiceItems', { invoiceId });
 }
 
 export async function createInvoice(data: {
@@ -1831,7 +1868,7 @@ export interface ContactDTO {
 export async function getContacts(clientId?: string): Promise<ContactDTO[]> {
   const params: Record<string, string> = {};
   if (clientId) params.clientId = clientId;
-  const raw: any[] = await gasGet('apiGetContacts', params);
+  const raw: any[] = await gasGetWithRetry('apiGetContacts', params);
   if (!Array.isArray(raw)) return [];
   return raw.map(row => ({
     id: row.ID || row.id || '',
@@ -1883,7 +1920,7 @@ export interface VehicleDTO {
 }
 
 export async function getVehicles(): Promise<VehicleDTO[]> {
-  const raw: any[] = await gasGet('apiGetVehicles');
+  const raw: any[] = await gasGetWithRetry('apiGetVehicles');
   if (!Array.isArray(raw)) return [];
   return raw.map(row => ({
     id: row.ID || row.id || '',
@@ -1917,7 +1954,7 @@ export async function deleteVehicle(id: string): Promise<{ success?: boolean; er
 }
 
 export async function getVehicle(id: string): Promise<VehicleDTO> {
-  return gasGet('getVehicle', { id });
+  return gasGetWithRetry('getVehicle', { id });
 }
 
 // ============================================================================
@@ -1942,7 +1979,7 @@ export interface DriverRateDTO {
 export async function getDriverRates(driverId?: string): Promise<DriverRateDTO[]> {
   const params: Record<string, string> = {};
   if (driverId) params.driverId = driverId;
-  const raw: any[] = await gasGet('apiGetDriverRates', params);
+  const raw: any[] = await gasGetWithRetry('apiGetDriverRates', params);
   if (!Array.isArray(raw)) return [];
   return raw.map(row => ({
     id: row.ID || row.id || '',
@@ -2000,7 +2037,7 @@ export interface RateCardDTO {
 export async function getRateCards(clientId?: string): Promise<RateCardDTO[]> {
   const params: Record<string, string> = {};
   if (clientId) params.clientId = clientId;
-  const raw: any[] = await gasGet('apiGetRateCards', params);
+  const raw: any[] = await gasGetWithRetry('apiGetRateCards', params);
   if (!Array.isArray(raw)) return [];
   return raw.map(row => ({
     id: row.ID || row.id || '',
@@ -2066,7 +2103,7 @@ export interface DriverReportDTO {
 export async function getDriverReports(serviceId?: string): Promise<DriverReportDTO[]> {
   const params: Record<string, string> = {};
   if (serviceId) params.serviceId = serviceId;
-  const raw: any[] = await gasGet('apiGetDriverReports', params);
+  const raw: any[] = await gasGetWithRetry('apiGetDriverReports', params);
   if (!Array.isArray(raw)) return [];
   return raw.map(row => ({
     id: row.ID || row.id || '',
@@ -2093,7 +2130,7 @@ export async function getDriverReports(serviceId?: string): Promise<DriverReport
 }
 
 export async function getDriverReport(id: string): Promise<DriverReportDTO | null> {
-  const raw: any = await gasGet('apiGetDriverReport', { id });
+  const raw: any = await gasGetWithRetry('apiGetDriverReport', { id });
   if (!raw || raw.error) return null;
   return {
     id: raw.ID || raw.id || '',
@@ -2149,7 +2186,7 @@ export interface ActivityFeedEntry {
 export async function getActivityFeed(limit?: number): Promise<ActivityFeedEntry[]> {
   const params: Record<string, string> = {};
   if (limit) params.limit = String(limit);
-  const raw: any[] = await gasGet('apiGetActivityFeed', params);
+  const raw: any[] = await gasGetWithRetry('apiGetActivityFeed', params);
   if (!Array.isArray(raw)) return [];
   return raw.map(row => ({
     id: row.ID || row.id || '',
@@ -2209,7 +2246,7 @@ export async function getDriverLinks(filters?: {
   startDate?: string;
   endDate?: string;
 }): Promise<DriverLinkDTO[]> {
-  return gasGet('getDriverLinks', filters as any);
+  return gasGetWithRetry('getDriverLinks', filters as any);
 }
 
 /**
@@ -2329,11 +2366,11 @@ export interface ReconciliationDTO {
 }
 
 export async function getReconciliations(filters?: { status?: string; projectId?: string; serviceId?: string; company?: string }): Promise<ReconciliationDTO[]> {
-  return gasGet('getReconciliations', filters || {});
+  return gasGetWithRetry('getReconciliations', filters || {});
 }
 
 export async function getReconciliation(id: string): Promise<ReconciliationDTO> {
-  return gasGet('getReconciliation', { id });
+  return gasGetWithRetry('getReconciliation', { id });
 }
 
 export async function resolveReconciliation(id: string, resolution: {
@@ -2367,7 +2404,7 @@ export async function getDocuments(entityType?: string, entityId?: string): Prom
   const params: Record<string, string> = {};
   if (entityType) params.entityType = entityType;
   if (entityId) params.entityId = entityId;
-  return gasGet('getDocuments', params);
+  return gasGetWithRetry('getDocuments', params);
 }
 
 
@@ -2424,7 +2461,7 @@ export interface ServiceSummary {
 }
 
 export async function getMainDashboard(operatingCompany?: string, startDate?: string, endDate?: string): Promise<DashboardSummary> {
-  return gasGet('getMainDashboard', { operatingCompany: operatingCompany || '', startDate: startDate || '', endDate: endDate || '' });
+  return gasGetWithRetry('getMainDashboard', { operatingCompany: operatingCompany || '', startDate: startDate || '', endDate: endDate || '' });
 }
 
 
@@ -2433,9 +2470,9 @@ export async function getMainDashboard(operatingCompany?: string, startDate?: st
 // ============================================================================
 
 export async function getPendingValidation(): Promise<ServiceSummary[]> {
-  return gasGet('getPendingValidation');
+  return gasGetWithRetry('getPendingValidation');
 }
 
 export async function getPendingInvoicing(): Promise<ServiceSummary[]> {
-  return gasGet('getPendingInvoicing');
+  return gasGetWithRetry('getPendingInvoicing');
 }

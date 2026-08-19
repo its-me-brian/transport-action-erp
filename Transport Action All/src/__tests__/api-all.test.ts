@@ -63,11 +63,14 @@ function mockGasResponse(data: any) {
 }
 
 function mockGasError(status: number, message: string) {
-  mockFetch.mockResolvedValueOnce({
-    ok: false,
-    status,
-    statusText: message
-  });
+  // gasGetWithRetry retries 3 times, so we need 4 mock responses (1 + 3 retries)
+  for (let i = 0; i < 4; i++) {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status,
+      statusText: message
+    });
+  }
 }
 
 beforeEach(() => {
@@ -764,13 +767,16 @@ describe('Y. Utility Functions', () => {
 // Z. ERROR HANDLING
 // ============================================================================
 describe('Z. Error Handling', () => {
-  it('throws on HTTP error', async () => {
+  it('throws on HTTP error', { timeout: 30000 }, async () => {
     mockGasError(500, 'Internal Server Error');
     await expect(api.getServices()).rejects.toThrow('HTTP 500');
   });
 
-  it('throws on network error', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network failure'));
+  it('throws on network error', { timeout: 30000 }, async () => {
+    // gasGetWithRetry retries 3 times, so we need 4 mock rejections
+    for (let i = 0; i < 4; i++) {
+      mockFetch.mockRejectedValueOnce(new Error('Network failure'));
+    }
     await expect(api.getServices()).rejects.toThrow('Network failure');
   });
 });
