@@ -1,147 +1,90 @@
 // ============================================================================
-// LOCK.GS — Wrapper de bloqueo con logging y timeout configurable
+// LOCK.GS — Sistema de locking unificado para GAS
 // ============================================================================
 //
-// Resolución de brecha: Concurrencia en GAS
-// Google Apps Script ejecuta múltiples instancias en paralelo cuando
-// varios usuarios acceden simultáneamente. Sin lock, dos escrituras
-// concurrentes pueden corromper datos (race condition en Sheets).
+// ARQUITECTURA:
+//   executeWithLock(fn, operationName, timeoutMs)  ← implementación base
+//   _withLock(fn, operationName?)                  ← wrapper retrocompatible
 //
-// Diferencia con _withLock() en infrastructure/lockService.gs:
-//   - executeWithLock: añade logging detallado + timeout configurable
-//   - _withLock: wrapper básico sin logging
+// Los 62 lugares existentes llaman _withLock(() => { ... }).
+// _withLock internamente delega a executeWithLock, obteniendo
+// automáticamente: logging, timeout configurable, manejo robusto de errores.
 //
-// Ambos usan LockService.getScriptLock(). Para write operations, USAR SIEMPRE
-// executeWithLock o _withLock. NO escribir a Sheets sin lock.
+// Para código NUEVO, usar executeWithLock directamente con un operationName
+// descriptivo (ej. "Crear servicio S-123").
+//
+// REGLA: Toda escritura a Sheets DEBE pasar por executeWithLock o _withLock.
 // ============================================================================
 
 /**
- * Ejecuta una función callback dentro de un ScriptLock con logging y timeout.
+ * Implementación base de locking con logging y timeout configurable.
+ * Esta es la función interna para TODO el locking del sistema.
  *
- * @param {Function} fn           - Callback a ejecutar dentro del lock
- * @param {string}   logMessage   - Mensaje descriptivo para el log (ej. "Crear servicio S-123")
- * @param {number}   [timeoutMs]  - Tiempo máximo de espera para adquirir el lock (default: 10000ms)
- * @returns {*}                   - El valor retornado por fn()
- * @throws {ConcurrencyError}     - Si no puede adquirir el lock en timeoutMs
- *
- * @example
- *   executeWithLock(() => {
- *     const sheet = SpreadsheetApp.openById(SS_ID).getSheetByName('Services');
- *     sheet.appendRow([id, date, driver]);
- *   }, 'Crear servicio nuevo');
+ * @param {Function} callback      - Función a ejecutar dentro del lock
+ * @param {string}   operationName - Nombre descriptivo para logs (ej. "Crear servicio")
+ * @param {number}   [timeoutMs]   - Timeout en ms (default: 10000)
+ * @returns {*}                    - Valor retornado por callback
+ * @throws {ConcurrencyError}      - Si no puede adquirir el lock (HTTP 409)
  */
-function executeWithLock(fn, logMessage, timeoutMs) {
-  if (typeof fn !== 'function') {
-    throw new Error('executeWithLock: fn debe ser una función');
+function executeWithLock(callback, operationName, timeoutMs) {
+  if (typeof callback !== 'function') {
+    throw new Error('executeWithLock: callback debe ser una función');
   }
 
-  const timeout = typeof timeoutMs === 'number' ? timeoutMs : 10000;
-  const lock = LockService.getScriptLock();
-  const startTime = Date.now();
+  var opName = operationName || 'operación_desconocida';
+  var timeout = typeof timeoutMs === 'number' ? timeoutMs : 10000;
+  var lock = LockService.getScriptLock();
+  var startTime = Date.now();
 
-  Logger.log(`[LOCK] Adquiriendo lock: "${logMessage}" (timeout: ${timeout}ms)`);
+  Logger.log('[LOCK] Adquiriendo: "' + opName + '" (timeout: ' + timeout + 'ms)');
 
   try {
     lock.waitLock(timeout);
-    const waitTime = Date.now() - startTime;
-    Logger.log(`[LOCK] Lock adquirido en ${waitTime}ms: "${logMessage}"`);
+    var waitTime = Date.now() - startTime;
+    Logger.log('[LOCK] Adquirido en ' + waitTime + 'ms: "' + opName + '"');
 
-    const result = fn();
+    var result = callback();
 
-    const elapsed = Date.now() - startTime;
-    Logger.log(`[LOCK] Operación completada en ${elapsed}ms: "${logMessage}"`);
+    var elapsed = Date.now() - startTime;
+    Logger.log('[LOCK] Completado en ' + elapsed + 'ms: "' + opName + '"');
 
     return result;
   } catch (e) {
-    const elapsed = Date.now() - startTime;
+    var elapsed = Date.now() - startTime;
 
+    // Timeout de LockService → ConcurrencyError (HTTP 409 via _serializeError)
     if (e.message && e.message.includes('Cannot acquire lock')) {
-      Logger.log(`[LOCK] TIMEOUT tras ${elapsed}ms: "${logMessage}" — No se pudo adquirir lock`);
+      Logger.log('[LOCK] TIMEOUT ' + elapsed + 'ms: "' + opName + '"');
       throw new ConcurrencyError(
         'No se pudo adquirir lock en ' + timeout + 'ms. ' +
         'El recurso está siendo modificado por otro usuario. ' +
-        'Operación: ' + logMessage
+        'Operación: ' + opName
       );
     }
 
-    Logger.log(`[LOCK] ERROR tras ${elapsed}ms: "${logMessage}" — ${e.message}`);
+    Logger.log('[LOCK] ERROR ' + elapsed + 'ms: "' + opName + '" — ' + e.message);
     throw e;
   } finally {
-    lock.releaseLock();
-    Logger.log(`[LOCK] Lock liberado: "${logMessage}"`);
+    try {
+      lock.releaseLock();
+      Logger.log('[LOCK] Liberado: "' + opName + '"');
+    } catch (releaseError) {
+      Logger.log('[LOCK] WARNING: No se pudo liberar lock para "' + opName + '": ' + releaseError.message);
+    }
   }
 }
 
-
-// ============================================================================
-// EJEMPLOS DE REFACTORIZACIÓN
-// ============================================================================
-
 /**
- * EJEMPLO 1: apiCreateService en domain/service.gs
+ * Wrapper retrocompatible con los 62 lugares existentes.
+ * Internamente delega a executeWithLock.
  *
- * ANTES (sin lock — riesgo de race condition):
+ * Los 62 llamadas existentes son: _withLock(() => { ... })
+ * El segundo parámetro operationName es opcional (default: 'operación_anónima').
  *
- *   function apiCreateService(data) {
- *     if (!data.ProjectID) throw new ValidationError('ProjectID is required');
- *     if (!data.Date) throw new ValidationError('Date is required');
- *     const project = ProjectRepository.getById(data.ProjectID);
- *     if (!project) throw new NotFoundError('Project', data.ProjectID);
- *     if (!data.OperatingCompany) {
- *       data.OperatingCompany = project.OperatingCompany;
- *     }
- *     const entity = ServiceRepository.create(data);
- *     _dispatchEvent({ type: 'service.imported', entity: 'Service', entityId: entity.ID });
- *     return ServiceRepository.toDTO(entity);
- *   }
- *
- * DESPUÉS (con executeWithLock):
- *
- *   function apiCreateService(data) {
- *     if (!data.ProjectID) throw new ValidationError('ProjectID is required');
- *     if (!data.Date) throw new ValidationError('Date is required');
- *
- *     const project = ProjectRepository.getById(data.ProjectID);
- *     if (!project) throw new NotFoundError('Project', data.ProjectID);
- *
- *     if (!data.OperatingCompany) {
- *       data.OperatingCompany = project.OperatingCompany;
- *     }
- *
- *     return executeWithLock(() => {
- *       const entity = ServiceRepository.create(data);
- *       _dispatchEvent({ type: 'service.imported', entity: 'Service', entityId: entity.ID });
- *       return ServiceRepository.toDTO(entity);
- *     }, `Crear servicio para proyecto ${data.ProjectID}`);
- *   }
- *
- *
- * EJEMPLO 2: apiCreateDriverReport en domain/driverReportCommands.gs
- *
- * ANTES (sin lock):
- *
- *   function apiCreateDriverReport(serviceId, driverId, reportData) {
- *     // ... validaciones ...
- *     const entity = DriverReportRepository.create(serviceId, driverId, reportData);
- *     return entity;
- *   }
- *
- * DESPUÉS (con executeWithLock):
- *
- *   function apiCreateDriverReport(serviceId, driverId, reportData) {
- *     if (!serviceId) throw new ValidationError('serviceId is required');
- *     if (!driverId) throw new ValidationError('driverId is required');
- *
- *     const service = ServiceRepository.getById(serviceId);
- *     if (!service) throw new NotFoundError('Service', serviceId);
- *
- *     return executeWithLock(() => {
- *       const entity = DriverReportRepository.create(serviceId, driverId, reportData);
- *       _dispatchEvent({ type: 'driverReport.created', entity: 'DriverReport', entityId: entity.ID });
- *       return entity;
- *     }, `Crear reporte de conductor para servicio ${serviceId}`);
- *   }
- *
- * REGLA: Solo envolver en lock la SECCIÓN que escribe a Sheets.
- *         Las validaciones y lecturas previas NO necesitan lock.
+ * @param {Function} callback        - Función a ejecutar
+ * @param {string}   [operationName] - Nombre para logs (opcional)
+ * @returns {*}                      - Valor retornado por callback
  */
+function _withLock(callback, operationName) {
+  return executeWithLock(callback, operationName || 'operación_anónima');
+}
