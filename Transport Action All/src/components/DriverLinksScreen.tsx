@@ -84,7 +84,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
   const loadLinks = async () => {
     setIsLoading(true);
     try {
-      const filters: any = {};
+      const filters: Record<string, string> = {};
       if (filterDriver) filters.driverId = filterDriver;
       if (filterProject) filters.projectId = filterProject;
       if (filterStatus) filters.status = filterStatus;
@@ -890,7 +890,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
                       setEditingLink(null);
                       loadLinks(); // Reload to show updated data
                     }
-                  } catch (err: any) {
+                  } catch (err) {
                     showToast('Error: ' + (err.message || 'Unknown error'), 'error');
                   } finally {
                     setIsSaving(false);

@@ -134,7 +134,7 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
       }
       setEditProject(null);
       await loadProjects();
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + err.message, 'error');
     } finally {
       setIsSaving(false);
@@ -147,7 +147,7 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
       if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setDeleteConfirm(null);
       await loadProjects();
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + err.message, 'error');
     }
   };
@@ -178,7 +178,7 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
       } else {
         await loadProjects();
       }
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + err.message, 'error');
     }
   };

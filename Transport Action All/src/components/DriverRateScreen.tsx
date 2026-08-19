@@ -3,6 +3,7 @@ import { DollarSign, Plus, Search, Loader2, X, Save, Edit3 } from 'lucide-react'
 import { ScreenId } from '../types';
 import { getDriverRates, createDriverRate, updateDriverRate, getDrivers, DriverRateDTO } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
+import { getErrorMessage } from '../utils/errorUtils';
 
 interface Props { onNavigate: (screen: ScreenId) => void; }
 
@@ -50,7 +51,7 @@ export default function DriverRateScreen({ onNavigate }: Props) {
       });
       if (r.error) { showToast(r.error, 'error'); return; }
       await loadRates();
-    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsSaving(false); setShowCreateModal(false); }
+    } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsSaving(false); setShowCreateModal(false); }
   };
 
   const handleEdit = async () => {
@@ -65,7 +66,7 @@ export default function DriverRateScreen({ onNavigate }: Props) {
       });
       if (r.error) { showToast(r.error, 'error'); return; }
       await loadRates();
-    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsSaving(false); setEditTarget(null); }
+    } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsSaving(false); setEditTarget(null); }
   };
 
   const openEdit = (r: DriverRateDTO) => {

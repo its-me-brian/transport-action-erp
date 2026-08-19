@@ -72,7 +72,7 @@ export default function PaymentsScreen({ onNavigate }: PaymentsScreenProps) {
   const loadPayments = async () => {
     setIsLoading(true);
     try {
-      const filters: any = {};
+      const filters: Record<string, string> = {};
       if (statusFilter !== 'All') filters.status = statusFilter;
       if (dateFrom) filters.dateFrom = dateFrom;
       if (dateTo) filters.dateTo = dateTo;
@@ -224,7 +224,7 @@ export default function PaymentsScreen({ onNavigate }: PaymentsScreenProps) {
       if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setNewPayment({ invoiceId: '', clientId: '', amount: '', paymentMethod: 'transfer', paymentDate: '', reference: '', notes: '', cashReceivedBy: '', cashDate: '', cashReference: '' });
       await loadPayments();
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + err.message, 'error');
     } finally {
       setIsSaving(false);
@@ -238,7 +238,7 @@ export default function PaymentsScreen({ onNavigate }: PaymentsScreenProps) {
       if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setConfirmAction(null);
       await loadPayments();
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + err.message, 'error');
     }
   };
@@ -249,7 +249,7 @@ export default function PaymentsScreen({ onNavigate }: PaymentsScreenProps) {
       if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setConfirmAction(null);
       await loadPayments();
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + err.message, 'error');
     }
   };
@@ -283,7 +283,7 @@ export default function PaymentsScreen({ onNavigate }: PaymentsScreenProps) {
       if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setEditTarget(null);
       await loadPayments();
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + err.message, 'error');
     } finally {
       setIsEditing(false);

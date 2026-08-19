@@ -3,6 +3,7 @@ import { ClipboardCheck, Search, Loader2, CheckCircle, XCircle, Clock, Eye, X } 
 import { ScreenId } from '../types';
 import { getDriverReports, getDriverReport, approveDriverReport, rejectDriverReport, DriverReportDTO } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
+import { getErrorMessage } from '../utils/errorUtils';
 
 interface Props { onNavigate: (screen: ScreenId) => void; }
 
@@ -43,7 +44,7 @@ export default function DriverReportScreen({ onNavigate }: Props) {
       const r = await approveDriverReport(report.id);
       if (r.error) { showToast(r.error, 'error'); return; }
       await loadData();
-    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsProcessing(false); }
+    } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsProcessing(false); }
   };
 
   const handleReject = async () => {
@@ -53,7 +54,7 @@ export default function DriverReportScreen({ onNavigate }: Props) {
       const r = await rejectDriverReport(rejectTarget.id, rejectReason);
       if (r.error) { showToast(r.error, 'error'); return; }
       await loadData();
-    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsProcessing(false); }
+    } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsProcessing(false); }
   };
 
   return (

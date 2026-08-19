@@ -577,7 +577,7 @@ export default function DashboardScreen({
       }
       // Remove from local state
       onServiceUpdate?.(cancellingService.id, { status: 'Deleted' });
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error deleting service: ' + (err.message || 'Unknown error'), 'error');
     } finally {
       setCancellingService(null);
@@ -608,7 +608,7 @@ export default function DashboardScreen({
       }
       // Mark as cancelled in local state
       onServiceUpdate?.(cancellingService.id, { operationalStatus: 'Cancelado' });
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error cancelling service: ' + (err.message || 'Unknown error'), 'error');
     } finally {
       setCancellingService(null);
@@ -650,7 +650,7 @@ export default function DashboardScreen({
         return;
       }
       showToast(`${adjustmentType === 'revenue' ? 'Revenue' : 'Cost'} adjustment of ${amount} saved.`, 'success');
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + (err.message || 'Unknown error'), 'error');
     } finally {
       setAdjustingService(null);
@@ -856,7 +856,7 @@ export default function DashboardScreen({
                     if (result.error) {
                       showToast('Error: ' + result.error, 'error');
                     }
-                  } catch (err: any) {
+                  } catch (err) {
                     showToast('Error: ' + err.message, 'error');
                   }
                 }}
@@ -876,7 +876,7 @@ export default function DashboardScreen({
                     if (result.error) {
                       showToast('Error: ' + result.error, 'error');
                     }
-                  } catch (err: any) {
+                  } catch (err) {
                     showToast('Error: ' + err.message, 'error');
                   }
                 }}
@@ -896,7 +896,7 @@ export default function DashboardScreen({
                     if (result.error) {
                       showToast('Error: ' + result.error, 'error');
                     }
-                  } catch (err: any) {
+                  } catch (err) {
                     showToast('Error: ' + err.message, 'error');
                   }
                 }}
@@ -916,7 +916,7 @@ export default function DashboardScreen({
                     if (result.error) {
                       showToast('Error: ' + result.error, 'error');
                     }
-                  } catch (err: any) {
+                  } catch (err) {
                     showToast('Error: ' + err.message, 'error');
                   }
                 }}
@@ -936,7 +936,7 @@ export default function DashboardScreen({
                     if (result.error) {
                       showToast('Error: ' + result.error, 'error');
                     }
-                  } catch (err: any) {
+                  } catch (err) {
                     showToast('Error: ' + err.message, 'error');
                   }
                 }}
@@ -956,7 +956,7 @@ export default function DashboardScreen({
                     if (result.error) {
                       showToast('Error: ' + result.error, 'error');
                     }
-                  } catch (err: any) {
+                  } catch (err) {
                     showToast('Error: ' + err.message, 'error');
                   }
                 }}

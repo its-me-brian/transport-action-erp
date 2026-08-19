@@ -679,7 +679,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
         }
       }, 500);
       
-    } catch (err: any) {
+    } catch (err) {
       clearInterval(progressInterval);
       setError(err.message || 'Error al procesar el archivo');
       setStep('upload');
@@ -808,7 +808,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
           setServices(normalizeTransportServices(refreshedServices));
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || 'Lifecycle transition failed');
     } finally {
       setLifecycleLoading(prev => ({ ...prev, [serviceId]: null }));
@@ -863,7 +863,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
           fileName: `Transport_List_${dateStr || 'today'}.xlsx`,
         });
       }
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || 'Error al exportar Excel');
     } finally {
       setIsExporting(false);
@@ -964,7 +964,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
         setEmailRecipients('');
         setEmailSubject('');
       }
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || 'Error al enviar email');
     } finally {
       setIsSending(false);
@@ -1026,7 +1026,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
         setSelectedAgency(null);
         setAgencyNotes('');
       }
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || 'Error al enviar a la agencia');
     } finally {
       setIsSending(false);
@@ -1044,7 +1044,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
       }));
       const mapped = normalizeTransportServices(rawServices);
       setViewingHistory({ entry, services: mapped });
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || 'Error loading transport');
     }
   };
@@ -1091,7 +1091,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
       getTransportLists().then(lists => {
         setHistory(Array.isArray(lists) ? lists : []);
       }).catch(e => console.error('Failed to refresh history:', e));
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || 'Error al importar');
       setStep('preview');
     }
@@ -1168,7 +1168,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
       getTransportLists().then(lists => {
         setHistory(Array.isArray(lists) ? lists : []);
       }).catch(e => console.error('Failed to refresh history:', e));
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || 'Error al sincronizar');
       setStep('preview');
     }
@@ -1258,7 +1258,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
         const services = await getServices({});
         if (services) setServices(normalizeTransportServices(services));
       }
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || 'Failed to assign driver');
       const services = await getServices({});
       if (services) setServices(normalizeTransportServices(services));

@@ -14,6 +14,7 @@ import {
 import { ScreenId } from '../types';
 import StatusBadge from './StatusBadge';
 import { useToast } from '../contexts/ToastContext';
+import { getErrorMessage } from '../utils/errorUtils';
 import {
   getDriverAdvances,
   createDriverAdvance,
@@ -105,7 +106,7 @@ export default function DriverAdvanceScreen({ onNavigate }: Props) {
       });
       if (r.error) { showToast(r.error, 'error'); return; }
       await loadAdvances();
-    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsCreating(false); setShowCreateModal(false); }
+    } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsCreating(false); setShowCreateModal(false); }
   };
 
   return (

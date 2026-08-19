@@ -125,7 +125,7 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const filters: any = {};
+      const filters: Record<string, string> = {};
       if (statusFilter !== 'All') filters.status = statusFilter;
       if (dateFrom) filters.dateFrom = dateFrom;
       if (dateTo) filters.dateTo = dateTo;
@@ -175,7 +175,7 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
       if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setNewInvoice({ projectId: '', clientId: '', dueDate: '', notes: '' });
       await loadData();
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + err.message, 'error');
     } finally {
       setIsCreating(false);
@@ -197,7 +197,7 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
         return;
       }
       await loadData();
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + err.message, 'error');
     } finally {
       setUpdatingStatus(null);
@@ -213,7 +213,7 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
       setVoidTarget(null);
       setVoidReason('');
       await loadData();
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + err.message, 'error');
     } finally {
       setIsVoiding(false);
@@ -246,7 +246,7 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
       if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setEditTarget(null);
       await loadData();
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + err.message, 'error');
     } finally {
       setIsEditing(false);

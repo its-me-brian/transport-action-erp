@@ -27,6 +27,7 @@ import {
   ExpenseDTO
 } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
+import { getErrorMessage } from '../utils/errorUtils';
 
 interface Props {
   onNavigate: (screen: ScreenId) => void;
@@ -218,7 +219,7 @@ export default function ExpenseScreen({ onNavigate }: Props) {
       if (r.error) { showToast(r.error, 'error'); return; }
       setNewExp({ ownerType: 'empresa', ownerId: '', category: 'other', description: '', amount: '', expenseDate: '', accountingDate: '', projectId: '' });
       await loadData();
-    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsCreating(false); setShowCreateModal(false); }
+    } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsCreating(false); setShowCreateModal(false); }
   };
 
   // ─── Edit ──────────────────────────────────────────────────────────────────
@@ -230,7 +231,7 @@ export default function ExpenseScreen({ onNavigate }: Props) {
       if (r.error) { showToast(r.error, 'error'); return; }
       setEditChanges({});
       await loadData();
-    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsEditing(false); setEditTarget(null); }
+    } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsEditing(false); setEditTarget(null); }
   };
 
   // ─── Confirm ───────────────────────────────────────────────────────────────
@@ -249,7 +250,7 @@ export default function ExpenseScreen({ onNavigate }: Props) {
       if (r.error) { showToast(r.error, 'error'); return; }
       setConfirmTarget(null);
       await loadData();
-    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsProcessing(false); }
+    } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsProcessing(false); }
   };
 
   // ─── Available transitions per state machine ────────────────────────────────

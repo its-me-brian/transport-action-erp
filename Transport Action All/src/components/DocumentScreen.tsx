@@ -70,7 +70,7 @@ export default function DocumentScreen({ onNavigate }: DocumentScreenProps) {
       }
       setDeleteConfirm(null);
       await loadDocuments();
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + err.message, 'error');
     }
   };
@@ -103,7 +103,7 @@ export default function DocumentScreen({ onNavigate }: DocumentScreenProps) {
       }
 
       await loadDocuments();
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error uploading: ' + err.message, 'error');
     } finally {
       setIsUploading(false);

@@ -352,7 +352,7 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
       } else {
         showToast('Settings saved successfully!', 'success');
       }
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + (err.message || 'Unknown'), 'error');
     } finally {
       setIsSaving(false);

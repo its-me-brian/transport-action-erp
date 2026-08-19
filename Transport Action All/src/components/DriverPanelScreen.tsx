@@ -77,7 +77,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
       } else {
         showToast('No entries to clean', 'warning');
       }
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + err.message, 'error');
     }
   };

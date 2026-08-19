@@ -122,7 +122,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
       }
       setEditCollaborator(null);
       await loadCollaborators();
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + (err.message || err), 'error');
     } finally {
       setIsSaving(false);
@@ -135,7 +135,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
       if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setDeleteConfirm(null);
       await loadCollaborators();
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + (err.message || err), 'error');
     }
   };
@@ -177,7 +177,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
       }
       setEditRate(null);
       await loadRates(selectedCollaborator!.id);
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + (err.message || err), 'error');
     } finally {
       setIsSaving(false);
@@ -189,7 +189,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
       const result = await deleteSupplierRate(rateId);
       if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       await loadRates(selectedCollaborator!.id);
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + (err.message || err), 'error');
     }
   };

@@ -111,7 +111,7 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
       if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setNewChange({ entityType: 'Service', entityId: '', type: 'other', description: '', priority: 'Medium', dueDate: '', notes: '' });
       await loadChanges();
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + err.message, 'error');
     } finally {
       setIsSaving(false);
@@ -132,7 +132,7 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
       setResolveTarget(null);
       setResolveNotes('');
       await loadChanges();
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + err.message, 'error');
     }
   };
@@ -143,7 +143,7 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
       if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setDeleteConfirm(null);
       await loadChanges();
-    } catch (err: any) {
+    } catch (err) {
       showToast('Error: ' + err.message, 'error');
     }
   };

@@ -22,6 +22,7 @@ import {
 } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { getErrorMessage } from '../utils/errorUtils';
 
 interface ClientScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -102,8 +103,8 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
       }
       setEditClient(null);
       await loadClients();
-    } catch (err: any) {
-      showToast(err.message || 'Error saving client', 'error');
+    } catch (err) {
+      showToast(getErrorMessage(err) || 'Error saving client', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -115,8 +116,8 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
       if (result.error) { showToast(result.error, 'error'); return; }
       setDeleteConfirm(null);
       await loadClients();
-    } catch (err: any) {
-      showToast(err.message || 'Error deleting client', 'error');
+    } catch (err) {
+      showToast(getErrorMessage(err) || 'Error deleting client', 'error');
     }
   };
 
@@ -124,8 +125,8 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
     try {
       await updateClient(client.id, { Active: !client.active });
       await loadClients();
-    } catch (err: any) {
-      showToast(err.message || 'Error toggling client status', 'error');
+    } catch (err) {
+      showToast(getErrorMessage(err) || 'Error toggling client status', 'error');
     }
   };
 

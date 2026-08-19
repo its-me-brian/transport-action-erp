@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useToast } from '../contexts/ToastContext';
+import { getErrorMessage } from '../utils/errorUtils';
 import { 
   FileText, 
   Plus, 
@@ -469,7 +470,7 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const filters: any = {};
+      const filters: Record<string, string> = {};
       if (dateFrom) filters.dateFrom = dateFrom;
       if (dateTo) filters.dateTo = dateTo;
       if (filterClient) filters.clientId = filterClient;
@@ -550,8 +551,8 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
       }
       showToast('Rapportino actualizado correctamente', 'success');
       await loadData();
-    } catch (err: any) {
-      showToast(err.message, 'error');
+    } catch (err) {
+      showToast(getErrorMessage(err), 'error');
     } finally {
       setUpdatingStatus(null);
     }
@@ -573,8 +574,8 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
       }
       showToast('Rapportino actualizado correctamente', 'success');
       await loadData();
-    } catch (err: any) {
-      showToast(err.message, 'error');
+    } catch (err) {
+      showToast(getErrorMessage(err), 'error');
     } finally {
       setUpdatingStatus(null);
     }
@@ -613,8 +614,8 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
       }
       showToast('Rapportino actualizado correctamente', 'success');
       await loadData();
-    } catch (err: any) {
-      showToast(err.message, 'error');
+    } catch (err) {
+      showToast(getErrorMessage(err), 'error');
     } finally {
       setUpdatingStatus(null);
     }
@@ -640,7 +641,7 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
         rapportino.weekEnd || rapportino.weekStart || ''
       );
       setDriverLinkModal(prev => ({ ...prev, loading: false, link }));
-    } catch (err: any) {
+    } catch (err) {
       setDriverLinkModal(prev => ({ ...prev, loading: false, error: err.message || 'Failed to generate link' }));
     }
   }, []);
