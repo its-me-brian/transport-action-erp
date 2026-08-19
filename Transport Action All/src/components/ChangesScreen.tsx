@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, 
   Search, 
@@ -259,16 +260,23 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
             )}
           </div>
         ) : (
-          filtered.map(c => {
-            const tc = typeConfig[c.type] || typeConfig.other;
-            const sc = statusConfig[c.status] || statusConfig.Open;
-            const pc = priorityConfig[c.priority] || priorityConfig.Medium;
-            const StatusIcon = sc.icon;
-            return (
-              <div
-                key={c.id}
-                className={`bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors ${c.status === 'Open' ? 'border-l-4 border-l-orange-500' : ''}`}
-              >
+          <AnimatePresence mode="popLayout">
+            {filtered.map(c => {
+              const tc = typeConfig[c.type] || typeConfig.other;
+              const sc = statusConfig[c.status] || statusConfig.Open;
+              const pc = priorityConfig[c.priority] || priorityConfig.Medium;
+              const StatusIcon = sc.icon;
+              return (
+                <motion.div
+                  key={c.id}
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  whileHover={{ scale: 1.01 }}
+                  className={`bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors ${c.status === 'Open' ? 'border-l-4 border-l-orange-500' : ''}`}
+                >
                 {/* Status icon */}
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sc.bg}`}>
                   <StatusIcon className={`w-4 h-4 ${sc.color}`} />
@@ -331,9 +339,10 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
                     </button>
                   )}
                 </div>
-              </div>
+              </motion.div>
             );
-          })
+          })}
+          </AnimatePresence>
         )}
       </div>
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useToast } from '../contexts/ToastContext';
 import { getErrorMessage } from '../utils/errorUtils';
 import { 
@@ -232,7 +233,16 @@ const ClientRapportinoCard = React.memo(function ClientRapportinoCard({
   const sc = CLIENT_STATUS_CONFIG[r.status] || CLIENT_STATUS_CONFIG.Borrador;
   const StatusIcon = sc.icon;
   return (
-    <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors hover:bg-surface-dim/30">
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.2 }}
+      whileHover={{ scale: 1.01 }}
+      whileTap={{ scale: 0.99 }}
+      className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors hover:bg-surface-dim/30"
+    >
       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sc.bg}`}>
         <StatusIcon className={`w-4 h-4 ${sc.color}`} />
       </div>
@@ -256,23 +266,27 @@ const ClientRapportinoCard = React.memo(function ClientRapportinoCard({
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
         {nextAction && nextLabel && (
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => onStatusUpdate(r.id!, nextAction)}
             disabled={isUpdating}
-            className="px-3 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary text-[11px] font-medium rounded transition-all duration-150 flex items-center gap-1 cursor-pointer disabled:opacity-50 active:scale-95"
+            className="px-3 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary text-[11px] font-medium rounded transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
           >
             {isUpdating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
             {nextLabel}
-          </button>
+          </motion.button>
         )}
-        <button
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           onClick={() => onView(r)}
-          className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-all duration-150 cursor-pointer active:scale-95"
+          className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-colors cursor-pointer"
         >
           <Eye className="w-3.5 h-3.5" />
-        </button>
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 });
 
@@ -294,7 +308,16 @@ const DriverRapportinoCard = React.memo(function DriverRapportinoCard({
   const sc = DRIVER_STATUS_CONFIG[r.status] || DRIVER_STATUS_CONFIG.Borrador;
   const StatusIcon = sc.icon;
   return (
-    <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors hover:bg-surface-dim/30">
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.2 }}
+      whileHover={{ scale: 1.01 }}
+      whileTap={{ scale: 0.99 }}
+      className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors hover:bg-surface-dim/30"
+    >
       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sc.bg}`}>
         <StatusIcon className={`w-4 h-4 ${sc.color}`} />
       </div>
@@ -317,32 +340,38 @@ const DriverRapportinoCard = React.memo(function DriverRapportinoCard({
         </div>
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
-        <button
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           onClick={() => onGenerateLink(r)}
           disabled={linkLoading}
           title="Generar link para conductor"
-          className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-all duration-150 cursor-pointer disabled:opacity-50 active:scale-95"
+          className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-colors cursor-pointer disabled:opacity-50"
         >
           <Link className="w-3.5 h-3.5" />
-        </button>
+        </motion.button>
         {nextAction && nextLabel && (
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => onStatusUpdate(r.id!, nextAction)}
             disabled={isUpdating}
-            className="px-3 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary text-[11px] font-medium rounded transition-all duration-150 flex items-center gap-1 cursor-pointer disabled:opacity-50 active:scale-95"
+            className="px-3 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary text-[11px] font-medium rounded transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
           >
             {isUpdating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
             {nextLabel}
-          </button>
+          </motion.button>
         )}
-        <button
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           onClick={() => onView(r)}
-          className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-all duration-150 cursor-pointer active:scale-95"
+          className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-colors cursor-pointer"
         >
           <Eye className="w-3.5 h-3.5" />
-        </button>
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 });
 
@@ -362,7 +391,16 @@ const CollaboratorRapportinoCard = React.memo(function CollaboratorRapportinoCar
   const sc = COLLABORATOR_STATUS_CONFIG[r.status] || COLLABORATOR_STATUS_CONFIG.Borrador;
   const StatusIcon = sc.icon;
   return (
-    <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors hover:bg-surface-dim/30">
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.2 }}
+      whileHover={{ scale: 1.01 }}
+      whileTap={{ scale: 0.99 }}
+      className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors hover:bg-surface-dim/30"
+    >
       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sc.bg}`}>
         <StatusIcon className={`w-4 h-4 ${sc.color}`} />
       </div>
@@ -386,23 +424,27 @@ const CollaboratorRapportinoCard = React.memo(function CollaboratorRapportinoCar
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
         {nextAction && nextLabel && (
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => onStatusUpdate(r.id!, nextAction)}
             disabled={isUpdating}
-            className="px-3 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary text-[11px] font-medium rounded transition-all duration-150 flex items-center gap-1 cursor-pointer disabled:opacity-50 active:scale-95"
+            className="px-3 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary text-[11px] font-medium rounded transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
           >
             {isUpdating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
             {nextLabel}
-          </button>
+          </motion.button>
         )}
-        <button
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           onClick={() => onView(r)}
-          className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-all duration-150 cursor-pointer active:scale-95"
+          className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-colors cursor-pointer"
         >
           <Eye className="w-3.5 h-3.5" />
-        </button>
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 });
 
@@ -933,7 +975,8 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
             </p>
           </div>
         ) : activeTab === 'client' ? (
-          filteredClients.map(r => (
+          <AnimatePresence mode="popLayout">
+            {filteredClients.map(r => (
             <ClientRapportinoCard
               key={r.id}
               rapportino={r}
@@ -944,35 +987,40 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
               onView={(rec) => setViewTarget(rec)}
               formatDate={formatDate}
             />
-          ))
+          ))}
+          </AnimatePresence>
         ) : activeTab === 'driver' ? (
-          filteredDrivers.map(r => (
-            <DriverRapportinoCard
-              key={r.id}
-              rapportino={r}
-              isUpdating={updatingStatus === r.id}
-              nextAction={getDriverNextAction(r.status as DriverStatus)}
-              nextLabel={r.status ? DRIVER_NEXT_STATUS_LABELS[r.status] : null}
-              linkLoading={driverLinkModal.loading && driverLinkModal.rapportino?.id === r.id}
-              onStatusUpdate={handleDriverStatusUpdate}
-              onGenerateLink={handleGenerateDriverLink}
-              onView={(rec) => setViewTarget(rec)}
-              formatDate={formatDate}
-            />
-          ))
+          <AnimatePresence mode="popLayout">
+            {filteredDrivers.map(r => (
+              <DriverRapportinoCard
+                key={r.id}
+                rapportino={r}
+                isUpdating={updatingStatus === r.id}
+                nextAction={getDriverNextAction(r.status as DriverStatus)}
+                nextLabel={r.status ? DRIVER_NEXT_STATUS_LABELS[r.status] : null}
+                linkLoading={driverLinkModal.loading && driverLinkModal.rapportino?.id === r.id}
+                onStatusUpdate={handleDriverStatusUpdate}
+                onGenerateLink={handleGenerateDriverLink}
+                onView={(rec) => setViewTarget(rec)}
+                formatDate={formatDate}
+              />
+            ))}
+          </AnimatePresence>
         ) : (
-          filteredCollaborators.map(r => (
-            <CollaboratorRapportinoCard
-              key={r.id}
-              rapportino={r}
-              isUpdating={updatingStatus === r.id}
-              nextAction={getCollaboratorNextAction(r.status as CollaboratorStatus)}
-              nextLabel={r.status ? COLLABORATOR_NEXT_STATUS_LABELS[r.status] : null}
-              onStatusUpdate={handleCollaboratorStatusUpdate}
-              onView={(rec) => setViewTarget(rec)}
-              formatDate={formatDate}
-            />
-          ))
+          <AnimatePresence mode="popLayout">
+            {filteredCollaborators.map(r => (
+              <CollaboratorRapportinoCard
+                key={r.id}
+                rapportino={r}
+                isUpdating={updatingStatus === r.id}
+                nextAction={getCollaboratorNextAction(r.status as CollaboratorStatus)}
+                nextLabel={r.status ? COLLABORATOR_NEXT_STATUS_LABELS[r.status] : null}
+                onStatusUpdate={handleCollaboratorStatusUpdate}
+                onView={(rec) => setViewTarget(rec)}
+                formatDate={formatDate}
+              />
+            ))}
+          </AnimatePresence>
         )}
       </div>
 
