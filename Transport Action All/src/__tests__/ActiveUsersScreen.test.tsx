@@ -29,6 +29,10 @@ vi.mock('../contexts/AuthContext', () => ({
   }),
 }));
 
+vi.mock('../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
 const mockUsers = [
   {
     UserID: 'u1',
@@ -67,7 +71,9 @@ describe('ActiveUsersScreen', () => {
   it('shows loading state initially', () => {
     mockGasPost.mockReturnValue(new Promise(() => {})); // never resolves
     render(<ActiveUsersScreen onNavigate={vi.fn()} />);
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    // Skeleton table rows shown during loading
+    const pulsingElements = document.querySelectorAll('.animate-pulse');
+    expect(pulsingElements.length).toBeGreaterThan(0);
   });
 
   it('loads and displays users', async () => {

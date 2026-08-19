@@ -26,6 +26,7 @@ import {
   correctExpense,
   ExpenseDTO
 } from '../services/api';
+import { useToast } from '../contexts/ToastContext';
 
 interface Props {
   onNavigate: (screen: ScreenId) => void;
@@ -52,6 +53,7 @@ const fmtDate = (d: string) => {
 };
 
 export default function ExpenseScreen({ onNavigate }: Props) {
+  const { showToast } = useToast();
   const [expenses, setExpenses] = useState<ExpenseDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -198,7 +200,7 @@ export default function ExpenseScreen({ onNavigate }: Props) {
   // ─── Create ────────────────────────────────────────────────────────────────
   const handleCreate = async () => {
     if (!newExp.description.trim() || !newExp.amount || parseFloat(newExp.amount) <= 0) {
-      alert('Description and amount (> 0) are required');
+      showToast('Description and amount (> 0) are required', 'warning');
       return;
     }
     setIsCreating(true);
@@ -213,10 +215,10 @@ export default function ExpenseScreen({ onNavigate }: Props) {
         accountingDate: newExp.accountingDate || undefined,
         projectId: newExp.projectId || undefined,
       });
-      if (r.error) { alert(r.error); return; }
+      if (r.error) { showToast(r.error, 'error'); return; }
       setNewExp({ ownerType: 'empresa', ownerId: '', category: 'other', description: '', amount: '', expenseDate: '', accountingDate: '', projectId: '' });
       await loadData();
-    } catch (err: any) { alert(err.message); } finally { setIsCreating(false); setShowCreateModal(false); }
+    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsCreating(false); setShowCreateModal(false); }
   };
 
   // ─── Edit ──────────────────────────────────────────────────────────────────
@@ -225,10 +227,10 @@ export default function ExpenseScreen({ onNavigate }: Props) {
     setIsEditing(true);
     try {
       const r = await editExpense('session', editTarget.id, editChanges);
-      if (r.error) { alert(r.error); return; }
+      if (r.error) { showToast(r.error, 'error'); return; }
       setEditChanges({});
       await loadData();
-    } catch (err: any) { alert(err.message); } finally { setIsEditing(false); setEditTarget(null); }
+    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsEditing(false); setEditTarget(null); }
   };
 
   // ─── Confirm ───────────────────────────────────────────────────────────────
@@ -244,10 +246,10 @@ export default function ExpenseScreen({ onNavigate }: Props) {
       } else if (confirmTarget.action === 'correct') {
         r = await correctExpense(confirmTarget.expense.id);
       }
-      if (r.error) { alert(r.error); return; }
+      if (r.error) { showToast(r.error, 'error'); return; }
       setConfirmTarget(null);
       await loadData();
-    } catch (err: any) { alert(err.message); } finally { setIsProcessing(false); }
+    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsProcessing(false); }
   };
 
   // ─── Available transitions per state machine ────────────────────────────────
@@ -332,9 +334,23 @@ export default function ExpenseScreen({ onNavigate }: Props) {
       {/* Expense list */}
       <div className="space-y-2">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <span className="text-[13px] text-on-surface-variant">Loading...</span>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex items-center gap-3">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 bg-surface-container-highest rounded w-14 animate-pulse" />
+                    <div className="h-3.5 bg-surface-container-highest rounded w-32 animate-pulse" />
+                    <div className="h-3 bg-surface-container-highest rounded w-16 animate-pulse" />
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="h-2.5 bg-surface-container-highest rounded w-24 animate-pulse" />
+                    <div className="h-2.5 bg-surface-container-highest rounded w-20 animate-pulse" />
+                  </div>
+                </div>
+                <div className="h-4 bg-surface-container-highest rounded w-20 animate-pulse" />
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-outline-variant rounded-xl">

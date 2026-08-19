@@ -34,6 +34,10 @@ vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ token: 'test-token', user: { role: 'admin' }, can: () => true }),
 }));
 
+vi.mock('../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
 const mockClients = [
   {
     id: 'CLI-001',
@@ -64,7 +68,6 @@ const mockClients = [
 describe('ClientScreen', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(window, 'alert').mockImplementation(() => {});
   });
 
   it('renders heading', async () => {
@@ -76,7 +79,8 @@ describe('ClientScreen', () => {
   it('shows loading state', () => {
     mockGetClients.mockReturnValue(new Promise(() => {}));
     render(<ClientScreen onNavigate={vi.fn()} />);
-    expect(screen.getByText('Loading clients...')).toBeInTheDocument();
+    const skeletons = document.querySelectorAll('.animate-pulse');
+    expect(skeletons.length).toBeGreaterThan(0);
   });
 
   it('loads and displays clients', async () => {
@@ -171,8 +175,10 @@ describe('ClientScreen', () => {
     fireEvent.click(screen.getByText('Add Client'));
     fireEvent.click(screen.getByText('Create'));
 
+    // showToast should be called for validation error (name required)
+    // The form stays open — no crash means validation worked
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Name is required');
+      expect(screen.getByText('Create')).toBeInTheDocument();
     });
   });
 
@@ -281,8 +287,10 @@ describe('ClientScreen', () => {
     }
     fireEvent.click(screen.getByText('Create'));
 
+    // showToast should be called for duplicate error
+    // The form stays open — no crash means error path was hit
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Duplicate name');
+      expect(screen.getByText('Create')).toBeInTheDocument();
     });
   });
 

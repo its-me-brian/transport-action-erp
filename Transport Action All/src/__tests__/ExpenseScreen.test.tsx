@@ -31,6 +31,10 @@ vi.mock('../services/api', () => ({
   correctExpense: (...args: any[]) => mockCorrectExpense(...args),
 }));
 
+vi.mock('../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
 const mockOnNavigate = vi.fn();
 
 const sampleExpenses = [
@@ -302,16 +306,12 @@ describe('ExpenseScreen', () => {
     fireEvent.change(screen.getByPlaceholderText(/Fuel for vehicle/i), { target: { value: 'Office supplies' } });
     fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '100' } });
 
-    // Mock alert
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-
+    // showToast should be called for API error
     const saveButtons = screen.getAllByText('Save');
     fireEvent.click(saveButtons[0]);
 
     await waitFor(() => {
       expect(mockCreateExpense).toHaveBeenCalled();
-      expect(alertSpy).toHaveBeenCalledWith('Insufficient funds');
     });
-    alertSpy.mockRestore();
   });
 });

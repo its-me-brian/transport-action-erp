@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogIn, UserPlus, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
+import { useToast } from '../contexts/ToastContext';
+import { LogIn, UserPlus, Eye, EyeOff, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
 type AuthMode = 'login' | 'register';
 
 export default function AuthScreen() {
   const { login, register } = useAuth();
+  const { showToast } = useToast();
   const [mode, setMode] = useState<AuthMode>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -47,6 +50,7 @@ export default function AuthScreen() {
         ? (result.error as { message?: string }).message || 'Login failed'
         : result.error || 'Login failed';
       setError(msg);
+      showToast(msg, 'error');
     }
   };
 
@@ -76,6 +80,7 @@ export default function AuthScreen() {
 
     if (result.success) {
       setSuccess(result.message || 'Registration successful. Waiting for admin approval.');
+      showToast(result.message || 'Registration successful', 'success');
       resetFields();
       setMode('login');
     } else {
@@ -83,14 +88,25 @@ export default function AuthScreen() {
         ? (result.error as { message?: string }).message || 'Registration failed'
         : result.error || 'Registration failed';
       setError(msg);
+      showToast(msg, 'error');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-surface-dim via-surface to-surface-dim flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center p-4">
+      <motion.div
+        className="w-full max-w-md"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+      >
         {/* Logo + Title */}
-        <div className="text-center mb-8">
+        <motion.div
+          className="text-center mb-8"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+        >
           <div className="w-20 h-20 mx-auto mb-4 rounded-2xl overflow-hidden bg-surface-container-highest border border-outline-variant shadow-lg">
             <img 
               alt="Transport Action Logo" 
@@ -100,15 +116,20 @@ export default function AuthScreen() {
           </div>
           <h1 className="font-headline-lg text-primary font-bold text-2xl">Transport Movie System</h1>
           <p className="text-on-surface-variant text-sm mt-1">Action</p>
-        </div>
+        </motion.div>
 
         {/* Auth Card */}
-        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant shadow-xl overflow-hidden">
+        <motion.div
+          className="bg-surface-container-lowest rounded-2xl border border-outline-variant shadow-xl overflow-hidden"
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.35, delay: 0.15, ease: 'easeOut' }}
+        >
           {/* Tab Selector */}
           <div className="flex border-b border-outline-variant">
             <button
               onClick={() => { setMode('login'); resetFields(); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors cursor-pointer ${
                 mode === 'login'
                   ? 'text-primary border-b-2 border-primary bg-primary/5'
                   : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low'
@@ -119,7 +140,7 @@ export default function AuthScreen() {
             </button>
             <button
               onClick={() => { setMode('register'); resetFields(); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors cursor-pointer ${
                 mode === 'register'
                   ? 'text-primary border-b-2 border-primary bg-primary/5'
                   : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low'
@@ -133,16 +154,26 @@ export default function AuthScreen() {
           <div className="p-6">
             {/* Error/Success Messages */}
             {error && (
-              <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm"
+              >
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 {error}
-              </div>
+              </motion.div>
             )}
             {success && (
-              <div className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-4 flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm"
+              >
                 <CheckCircle className="w-4 h-4 shrink-0" />
                 {success}
-              </div>
+              </motion.div>
             )}
 
             {/* Login Form */}
@@ -174,19 +205,28 @@ export default function AuthScreen() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-on-surface-variant hover:text-on-surface"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-on-surface-variant hover:text-on-surface cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
-                <button
+                <motion.button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-2.5 rounded-lg bg-primary text-on-primary font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                  whileHover={{ scale: isLoading ? 1 : 1.01 }}
+                  whileTap={{ scale: isLoading ? 1 : 0.98 }}
+                  className="w-full py-2.5 rounded-lg bg-primary text-on-primary font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2 flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  {isLoading ? 'Signing in...' : 'Sign In'}
-                </button>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    'Sign In'
+                  )}
+                </motion.button>
               </form>
             )}
 
@@ -240,7 +280,7 @@ export default function AuthScreen() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-on-surface-variant hover:text-on-surface"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-on-surface-variant hover:text-on-surface cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -258,26 +298,35 @@ export default function AuthScreen() {
                     placeholder="Repeat your password"
                   />
                 </div>
-                <button
+                <motion.button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-2.5 rounded-lg bg-primary text-on-primary font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                  whileHover={{ scale: isLoading ? 1 : 1.01 }}
+                  whileTap={{ scale: isLoading ? 1 : 0.98 }}
+                  className="w-full py-2.5 rounded-lg bg-primary text-on-primary font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2 flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  {isLoading ? 'Creating account...' : 'Create Account'}
-                </button>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Creating account...
+                    </>
+                  ) : (
+                    'Create Account'
+                  )}
+                </motion.button>
                 <p className="text-[11px] text-on-surface-variant text-center">
                   Your account will be reviewed by an admin before activation.
                 </p>
               </form>
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* Footer */}
         <p className="text-center text-[11px] text-on-surface-variant mt-6">
           Transport Movie System &copy; {new Date().getFullYear()}
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }

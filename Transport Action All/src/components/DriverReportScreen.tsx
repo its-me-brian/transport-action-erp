@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ClipboardCheck, Search, Loader2, CheckCircle, XCircle, Clock, AlertTriangle, Eye, X } from 'lucide-react';
+import { ClipboardCheck, Search, Loader2, CheckCircle, XCircle, Clock, Eye, X } from 'lucide-react';
 import { ScreenId } from '../types';
 import { getDriverReports, getDriverReport, approveDriverReport, rejectDriverReport, DriverReportDTO } from '../services/api';
+import { useToast } from '../contexts/ToastContext';
 
 interface Props { onNavigate: (screen: ScreenId) => void; }
 
@@ -13,6 +14,7 @@ const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; bg
 const fmt = (n: number) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
 
 export default function DriverReportScreen({ onNavigate }: Props) {
+  const { showToast } = useToast();
   const [reports, setReports] = useState<DriverReportDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,21 +41,19 @@ export default function DriverReportScreen({ onNavigate }: Props) {
     setIsProcessing(true);
     try {
       const r = await approveDriverReport(report.id);
-      if (r.error) { alert(r.error); return; }
+      if (r.error) { showToast(r.error, 'error'); return; }
       await loadData();
-    } catch (err: any) { alert(err.message); } finally { setIsProcessing(false); }
+    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsProcessing(false); }
   };
 
   const handleReject = async () => {
-    if (!rejectTarget || !rejectReason.trim()) { alert('Reason is required'); return; }
+    if (!rejectTarget || !rejectReason.trim()) { showToast('Reason is required', 'warning'); return; }
     setIsProcessing(true);
     try {
       const r = await rejectDriverReport(rejectTarget.id, rejectReason);
-      if (r.error) { alert(r.error); return; }
-      setRejectTarget(null);
-      setRejectReason('');
+      if (r.error) { showToast(r.error, 'error'); return; }
       await loadData();
-    } catch (err: any) { alert(err.message); } finally { setIsProcessing(false); }
+    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsProcessing(false); }
   };
 
   return (
@@ -80,7 +80,17 @@ export default function DriverReportScreen({ onNavigate }: Props) {
 
       <div className="space-y-2">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3"><Loader2 className="w-8 h-8 text-primary animate-spin" /></div>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 animate-pulse">
+                <div className="flex-1 space-y-2">
+                  <div className="flex gap-2"><div className="h-5 w-16 bg-surface-dim rounded" /><div className="h-4 w-8 bg-surface-dim rounded" /></div>
+                  <div className="flex gap-4"><div className="h-3 w-20 bg-surface-dim rounded" /><div className="h-3 w-16 bg-surface-dim rounded" /><div className="h-3 w-24 bg-surface-dim rounded" /></div>
+                </div>
+                <div className="flex gap-2"><div className="h-7 w-7 bg-surface-dim rounded" /><div className="h-7 w-7 bg-surface-dim rounded" /></div>
+              </div>
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-outline-variant rounded-xl">
             <ClipboardCheck className="w-10 h-10 text-outline" /><span className="text-[13px] text-on-surface-variant">No reports found</span>

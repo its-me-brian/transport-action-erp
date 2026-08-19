@@ -278,6 +278,43 @@ export async function gasPost(action: string, data: Record<string, any>): Promis
   return _unwrapResponse(json);
 }
 
+/**
+ * gasPost with exponential backoff retry.
+ * Retries up to MAX_RETRIES times on network errors or 5xx responses.
+ * Delays: 1s, 2s, 4s (exponential backoff).
+ */
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000;
+
+export async function gasPostWithRetry(action: string, data: Record<string, any> = {}): Promise<any> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await gasPost(action, data);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+
+      // Don't retry on client errors (4xx) — only retry on network/5xx
+      const isRetryable =
+        !lastError.message.includes('HTTP 4') ||
+        lastError.message.includes('Failed to fetch') ||
+        lastError.message.includes('NetworkError');
+
+      if (!isRetryable || attempt === MAX_RETRIES) {
+        throw lastError;
+      }
+
+      // Exponential backoff: 1s, 2s, 4s
+      const delay = BASE_DELAY_MS * Math.pow(2, attempt);
+      console.warn(`[gasPostWithRetry] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`, lastError.message);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError || new Error('gasPostWithRetry: max retries exceeded');
+}
+
 // ============================================================================
 // API CALLS
 // ============================================================================
@@ -367,80 +404,80 @@ export async function createService(data: {
   ServiceType?: string;
   SourceType?: string;
 }): Promise<{ success: boolean; id?: string; error?: string }> {
-  return gasPost('createService', data);
+  return gasPostWithRetry('createService', data);
 }
 
 export async function updateServiceField(serviceId: string, field: string, value: any): Promise<{ success: boolean; error?: string }> {
-  return gasPost('updateServiceField', { serviceId, field, value });
+  return gasPostWithRetry('updateServiceField', { serviceId, field, value });
 }
 
 export async function facturarService(serviceId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('facturarService', { serviceId });
+  return gasPostWithRetry('facturarService', { serviceId });
 }
 
 export async function cobrarService(serviceId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('cobrarService', { serviceId });
+  return gasPostWithRetry('cobrarService', { serviceId });
 }
 
 export async function closeService(serviceId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('closeService', { serviceId });
+  return gasPostWithRetry('closeService', { serviceId });
 }
 
 export async function cerrarComercialmente(serviceId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('cerrarComercialmente', { serviceId });
+  return gasPostWithRetry('cerrarComercialmente', { serviceId });
 }
 
 export async function confirmActuals(serviceId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('confirmActuals', { serviceId });
+  return gasPostWithRetry('confirmActuals', { serviceId });
 }
 
 export async function approveFinancial(serviceId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('approveFinancial', { serviceId });
+  return gasPostWithRetry('approveFinancial', { serviceId });
 }
 
 export async function markFacturable(serviceId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('markFacturable', { serviceId });
+  return gasPostWithRetry('markFacturable', { serviceId });
 }
 
 export async function calculateService(serviceId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('calculateService', { serviceId });
+  return gasPostWithRetry('calculateService', { serviceId });
 }
 
 export async function moveToConfrontacion(serviceId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('moveToConfrontacion', { serviceId });
+  return gasPostWithRetry('moveToConfrontacion', { serviceId });
 }
 
 export async function moveToRevision(serviceId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('moveToRevision', { serviceId });
+  return gasPostWithRetry('moveToRevision', { serviceId });
 }
 
 // Service lifecycle functions
 export async function assignDriver(serviceId: string, driverId: string, vehicleId?: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('assignDriver', { serviceId, driverId, vehicleId });
+  return gasPostWithRetry('assignDriver', { serviceId, driverId, vehicleId });
 }
 
 export async function confirmService(serviceId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('confirmService', { serviceId });
+  return gasPostWithRetry('confirmService', { serviceId });
 }
 
 export async function startService(serviceId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('startService', { serviceId });
+  return gasPostWithRetry('startService', { serviceId });
 }
 
 export async function completeService(serviceId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('completeService', { serviceId });
+  return gasPostWithRetry('completeService', { serviceId });
 }
 
 export async function validateService(serviceId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('validateService', { serviceId });
+  return gasPostWithRetry('validateService', { serviceId });
 }
 
 export async function deleteService(serviceId: string, reason?: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('deleteService', { serviceId, reason: reason || '' });
+  return gasPostWithRetry('deleteService', { serviceId, reason: reason || '' });
 }
 
 export async function cancelService(serviceId: string, reason: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('cancelService', { serviceId, reason });
+  return gasPostWithRetry('cancelService', { serviceId, reason });
 }
 
 export async function adjustRevenue(serviceId: string, adjustment: {
@@ -450,7 +487,7 @@ export async function adjustRevenue(serviceId: string, adjustment: {
   unitPrice?: number;
   referenceLineId?: string;
 }): Promise<{ success?: boolean; error?: string; id?: string }> {
-  return gasPost('adjustRevenue', { serviceId, adjustment });
+  return gasPostWithRetry('adjustRevenue', { serviceId, adjustment });
 }
 
 export async function adjustCost(serviceId: string, adjustment: {
@@ -459,7 +496,7 @@ export async function adjustCost(serviceId: string, adjustment: {
   driverId?: string;
   referenceLineId?: string;
 }): Promise<{ success?: boolean; error?: string; id?: string }> {
-  return gasPost('adjustCost', { serviceId, adjustment });
+  return gasPostWithRetry('adjustCost', { serviceId, adjustment });
 }
 
 export async function getEstimatedVsActual(projectId: string): Promise<{
@@ -543,7 +580,7 @@ export async function importTransportListWithProject(data: {
   projectId?: string;
   operatingCompany: string;
 }): Promise<{ success: boolean; servicesCreated?: number; clientId?: string; projectId?: string; error?: string }> {
-  return gasPost('importTransportListWithProject', data);
+  return gasPostWithRetry('importTransportListWithProject', data);
 }
 
 /**
@@ -630,15 +667,15 @@ export async function getDrivers(): Promise<DriverRecord[]> {
 }
 
 export async function createDriver(name: string, phone: string, notes?: string): Promise<{ success: boolean; id?: string; error?: string }> {
-  return gasPost('createDriver', { name, phone, notes });
+  return gasPostWithRetry('createDriver', { name, phone, notes });
 }
 
 export async function updateDriver(id: string, fields: { name?: string; phone?: string; whatsapp?: string; vehiclePreferred?: string; notes?: string; status?: string }): Promise<{ success: boolean; error?: string }> {
-  return gasPost('updateDriver', { id, fields });
+  return gasPostWithRetry('updateDriver', { id, fields });
 }
 
 export async function deleteDriver(id: string): Promise<{ success: boolean; error?: string }> {
-  return gasPost('deleteDriver', { id });
+  return gasPostWithRetry('deleteDriver', { id });
 }
 
 export async function cleanupDrivers(): Promise<{ removed: number; error?: string }> {
@@ -685,15 +722,15 @@ export async function getClients(): Promise<ClientDTO[]> {
 }
 
 export async function createClient(data: { name: string; type?: string; vat?: string; address?: string; phone?: string; email?: string; paymentTerms?: number; notes?: string }): Promise<{ success?: boolean; id?: string; error?: string }> {
-  return gasPost('createClient', data);
+  return gasPostWithRetry('createClient', data);
 }
 
 export async function updateClient(id: string, changes: Record<string, any>): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('updateClient', { id, changes });
+  return gasPostWithRetry('updateClient', { id, changes });
 }
 
 export async function deleteClient(id: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('deleteClient', { id });
+  return gasPostWithRetry('deleteClient', { id });
 }
 
 export async function getClient(id: string): Promise<ClientDTO> {
@@ -701,7 +738,7 @@ export async function getClient(id: string): Promise<ClientDTO> {
 }
 
 export async function updateOperatingCompany(id: string, data: Partial<OperatingCompany>): Promise<{ success: boolean; error?: string }> {
-  return gasPost('updateOperatingCompany', { id, ...data });
+  return gasPostWithRetry('updateOperatingCompany', { id, ...data });
 }
 
 // ============================================================================
@@ -723,7 +760,7 @@ export async function exportTransportListExcel(
   services: TransportService[],
   fileName?: string
 ): Promise<ExportResult> {
-  return gasPost('exportTransportListExcel', { services, fileName });
+  return gasPostWithRetry('exportTransportListExcel', { services, fileName });
 }
 
 // ============================================================================
@@ -812,7 +849,7 @@ export async function sendTransportListEmail(
   dateStr: string,
   production?: string
 ): Promise<EmailResult> {
-  return gasPost('sendTransportListEmail', { recipients, subject, services, dateStr, production });
+  return gasPostWithRetry('sendTransportListEmail', { recipients, subject, services, dateStr, production });
 }
 
 export async function sendServicesToAgency(
@@ -822,7 +859,7 @@ export async function sendServicesToAgency(
   dateStr: string,
   notes?: string
 ): Promise<EmailResult> {
-  return gasPost('sendServicesToAgency', { recipients, agencyName, services, dateStr, notes });
+  return gasPostWithRetry('sendServicesToAgency', { recipients, agencyName, services, dateStr, notes });
 }
 
 /** Auxiliary type for agency contacts (agencies are Clients with Type='agency' per ERD) */
@@ -891,21 +928,21 @@ export async function getProjects(token?: string): Promise<Project[]> {
  * Crea un nuevo proyecto
  */
 export async function createProject(token: string, data: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ success?: boolean; id?: string; error?: string }> {
-  return gasPost('apiCreateProject', { token, ...data });
+  return gasPostWithRetry('apiCreateProject', { token, ...data });
 }
 
 /**
  * Actualiza un proyecto existente
  */
 export async function updateProject(token: string, data: Partial<Project> & { id: string }): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('apiUpdateProject', { token, ...data });
+  return gasPostWithRetry('apiUpdateProject', { token, ...data });
 }
 
 /**
  * Elimina un proyecto
  */
 export async function deleteProject(token: string, id: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('apiDeleteProject', { token, id });
+  return gasPostWithRetry('apiDeleteProject', { token, id });
 }
 
 // ============================================================================
@@ -914,27 +951,27 @@ export async function deleteProject(token: string, id: string): Promise<{ succes
 // ============================================================================
 
 export async function prepararProject(token: string, id: string): Promise<{ success?: boolean; project?: Project; error?: string }> {
-  return gasPost('prepararProject', { token, id });
+  return gasPostWithRetry('prepararProject', { token, id });
 }
 
 export async function activarProject(token: string, id: string): Promise<{ success?: boolean; project?: Project; error?: string }> {
-  return gasPost('activarProject', { token, id });
+  return gasPostWithRetry('activarProject', { token, id });
 }
 
 export async function pasarAFacturacionProject(token: string, id: string): Promise<{ success?: boolean; project?: Project; error?: string }> {
-  return gasPost('pasarAFacturacionProject', { token, id });
+  return gasPostWithRetry('pasarAFacturacionProject', { token, id });
 }
 
 export async function pasarACobroProject(token: string, id: string): Promise<{ success?: boolean; project?: Project; error?: string }> {
-  return gasPost('pasarACobroProject', { token, id });
+  return gasPostWithRetry('pasarACobroProject', { token, id });
 }
 
 export async function cerrarProject(token: string, id: string): Promise<{ success?: boolean; project?: Project; error?: string }> {
-  return gasPost('cerrarProject', { token, id });
+  return gasPostWithRetry('cerrarProject', { token, id });
 }
 
 export async function archiveProject(token: string, id: string): Promise<{ success?: boolean; project?: Project; error?: string }> {
-  return gasPost('archiveProject', { token, id });
+  return gasPostWithRetry('archiveProject', { token, id });
 }
 
 
@@ -975,15 +1012,15 @@ export async function createCollaborator(data: {
   notes?: string;
   operatingCompany?: string;
 }): Promise<{ success?: boolean; id?: string; error?: string }> {
-  return gasPost('createCollaborator', data);
+  return gasPostWithRetry('createCollaborator', data);
 }
 
 export async function updateCollaborator(id: string, changes: Partial<CollaboratorDTO>): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('updateCollaborator', { id, changes });
+  return gasPostWithRetry('updateCollaborator', { id, changes });
 }
 
 export async function deleteCollaborator(id: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('deleteCollaborator', { id });
+  return gasPostWithRetry('deleteCollaborator', { id });
 }
 
 
@@ -1044,15 +1081,15 @@ export async function createSupplierRate(data: {
   validTo?: string;
   operatingCompany?: string;
 }): Promise<{ success?: boolean; id?: string; error?: string }> {
-  return gasPost('createSupplierRate', data);
+  return gasPostWithRetry('createSupplierRate', data);
 }
 
 export async function updateSupplierRate(id: string, changes: Partial<SupplierRateDTO>): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('updateSupplierRate', { id, changes });
+  return gasPostWithRetry('updateSupplierRate', { id, changes });
 }
 
 export async function deleteSupplierRate(id: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('deleteSupplierRate', { id });
+  return gasPostWithRetry('deleteSupplierRate', { id });
 }
 
 
@@ -1089,7 +1126,7 @@ export async function createChange(data: {
   dueDate?: string;
   notes?: string;
 }): Promise<{ success?: boolean; id?: string; error?: string }> {
-  return gasPost('createChange', data);
+  return gasPostWithRetry('createChange', data);
 }
 
 /**
@@ -1103,14 +1140,14 @@ export async function getChanges(filters?: { status?: string; entityType?: strin
  * Actualiza un cambio (resolver, cancelar, agregar notas)
  */
 export async function updateChange(data: Partial<Change> & { id: string }): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('updateChange', data);
+  return gasPostWithRetry('updateChange', data);
 }
 
 /**
  * Elimina un cambio
  */
 export async function deleteChange(id: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('deleteChange', { id });
+  return gasPostWithRetry('deleteChange', { id });
 }
 
 /**
@@ -1118,7 +1155,7 @@ export async function deleteChange(id: string): Promise<{ success?: boolean; err
  * Precondición: Status=Open
  */
 export async function resolveChange(id: string): Promise<{ success?: boolean; change?: Change; error?: string }> {
-  return gasPost('resolveChange', { id });
+  return gasPostWithRetry('resolveChange', { id });
 }
 
 // ============================================================================
@@ -1154,7 +1191,7 @@ export async function registerPayment(invoiceId: string, paymentData: {
   cashDate?: string;
   cashReference?: string;
 }): Promise<{ success?: boolean; id?: string; error?: string }> {
-  return gasPost('registerPayment', { invoiceId, paymentData });
+  return gasPostWithRetry('registerPayment', { invoiceId, paymentData });
 }
 
 export async function editPayment(paymentId: string, changes: {
@@ -1164,28 +1201,28 @@ export async function editPayment(paymentId: string, changes: {
   Reference?: string;
   Notes?: string;
 }): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('editPayment', { paymentId, changes });
+  return gasPostWithRetry('editPayment', { paymentId, changes });
 }
 
 /**
  * Confirmar un pago (Registrado → Confirmado, recalcula saldo de Invoice)
  */
 export async function confirmPayment(paymentId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('confirmPayment', { paymentId });
+  return gasPostWithRetry('confirmPayment', { paymentId });
 }
 
 /**
  * Conciliar pago (Confirmado → Conciliado)
  */
 export async function reconcilePayment(paymentId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('reconcilePayment', { paymentId });
+  return gasPostWithRetry('reconcilePayment', { paymentId });
 }
 
 /**
  * Anular pago (Registrado → Anulado)
  */
 export async function voidPayment(paymentId: string, reason: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('voidPayment', { paymentId, reason });
+  return gasPostWithRetry('voidPayment', { paymentId, reason });
 }
 
 /**
@@ -1266,11 +1303,11 @@ export async function getDriverAdvance(id: string): Promise<DriverAdvanceDTO | n
 }
 
 export async function createDriverAdvance(data: { driverId: string; projectId?: string; amount: number; notes?: string }): Promise<{ success?: boolean; id?: string; error?: string }> {
-  return gasPost('createDriverAdvance', { DriverID: data.driverId, ProjectID: data.projectId, Amount: data.amount, Notes: data.notes });
+  return gasPostWithRetry('createDriverAdvance', { DriverID: data.driverId, ProjectID: data.projectId, Amount: data.amount, Notes: data.notes });
 }
 
 export async function updateDriverAdvance(id: string, changes: Record<string, any>): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('updateDriverAdvance', { id, changes });
+  return gasPostWithRetry('updateDriverAdvance', { id, changes });
 }
 
 // ============================================================================
@@ -1322,26 +1359,26 @@ export async function getExpenses(filters?: { projectId?: string; status?: strin
 }
 
 export async function createExpense(token: string, data: { ownerType: string; ownerId: string; category: string; description: string; amount: number; expenseDate: string; accountingDate?: string; projectId?: string; operatingCompany?: string }): Promise<{ success?: boolean; id?: string; error?: string }> {
-  return gasPost('apiCreateExpense', { token, ...data });
+  return gasPostWithRetry('apiCreateExpense', { token, ...data });
 }
 
 export async function editExpense(token: string, id: string, changes: Record<string, any>): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('apiEditExpense', { token, id, changes });
+  return gasPostWithRetry('apiEditExpense', { token, id, changes });
 }
 
 export async function confirmExpense(token: string, id: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('apiConfirmExpense', { token, id });
+  return gasPostWithRetry('apiConfirmExpense', { token, id });
 }
 
 export async function cancelExpense(token: string, id: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('apiCancelExpense', { token, id });
+  return gasPostWithRetry('apiCancelExpense', { token, id });
 }
 
 /**
  * Corregir gasto confirmado (Confirmed → cancelar + crear nuevo Draft)
  */
 export async function correctExpense(id: string): Promise<{ success?: boolean; id?: string; error?: string }> {
-  return gasPost('apiCorrectExpense', { id });
+  return gasPostWithRetry('apiCorrectExpense', { id });
 }
 
 // ============================================================================
@@ -1383,21 +1420,21 @@ export async function registerUser(data: {
   phone: string;
   password: string;
 }): Promise<AuthResponse> {
-  return gasPost('registerUser', data);
+  return gasPostWithRetry('registerUser', data);
 }
 
 /**
  * Login with username and password
  */
 export async function loginUser(username: string, password: string): Promise<AuthResponse> {
-  return gasPost('loginUser', { username, password });
+  return gasPostWithRetry('loginUser', { username, password });
 }
 
 /**
  * Logout and invalidate session
  */
 export async function logoutUser(token: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('logoutUser', { token });
+  return gasPostWithRetry('logoutUser', { token });
 }
 
 /**
@@ -1418,28 +1455,28 @@ export async function getUsers(token: string): Promise<{ success?: boolean; user
  * Approve a user (admin only)
  */
 export async function approveUser(token: string, userId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('approveUser', { token, userId });
+  return gasPostWithRetry('approveUser', { token, userId });
 }
 
 /**
  * Reject a user (admin only)
  */
 export async function rejectUser(token: string, userId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('rejectUser', { token, userId });
+  return gasPostWithRetry('rejectUser', { token, userId });
 }
 
 /**
  * Update user role (admin only)
  */
 export async function updateUserRole(token: string, userId: string, newRole: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('updateUserRole', { token, userId, newRole });
+  return gasPostWithRetry('updateUserRole', { token, userId, newRole });
 }
 
 /**
  * Delete a user (admin only)
  */
 export async function deleteUser(token: string, userId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('deleteUser', { token, userId });
+  return gasPostWithRetry('deleteUser', { token, userId });
 }
 
 /**
@@ -1452,7 +1489,7 @@ export async function createUser(token: string, data: {
   name?: string;
   role?: string;
 }): Promise<{ success?: boolean; userId?: string; error?: string }> {
-  return gasPost('createUser', { token, ...data });
+  return gasPostWithRetry('createUser', { token, ...data });
 }
 
 /**
@@ -1463,7 +1500,7 @@ export async function updateUser(token: string, userId: string, updates: {
   email?: string;
   role?: string;
 }): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('updateUser', { token, userId, updates });
+  return gasPostWithRetry('updateUser', { token, userId, updates });
 }
 
 // ============================================================================
@@ -1480,7 +1517,7 @@ export async function getSettings(): Promise<Record<string, string>> {
 }
 
 export async function saveSettings(settings: Record<string, string>): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('saveSettings', { settings });
+  return gasPostWithRetry('saveSettings', { settings });
 }
 
 // ============================================================================
@@ -1552,41 +1589,41 @@ export async function createRapportinoClient(
   weekEnd: string,
   periodType: string = 'weekly'
 ): Promise<RapportinoClientDTO> {
-  return gasPost('apiCreateRapportinoClient', { projectId, clientId, weekStart, weekEnd, periodType });
+  return gasPostWithRetry('apiCreateRapportinoClient', { projectId, clientId, weekStart, weekEnd, periodType });
 }
 
 export async function addServiceToRapportino(
   rapportinoId: string,
   serviceId: string
 ): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('apiAddServiceToRapportino', { rapportinoId, serviceId });
+  return gasPostWithRetry('apiAddServiceToRapportino', { rapportinoId, serviceId });
 }
 
 export async function removeServiceFromRapportino(
   rapportinoId: string,
   serviceId: string
 ): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('apiRemoveServiceFromRapportino', { rapportinoId, serviceId });
+  return gasPostWithRetry('apiRemoveServiceFromRapportino', { rapportinoId, serviceId });
 }
 
 export async function reviewRapportinoClient(rapportinoId: string): Promise<RapportinoClientDTO> {
-  return gasPost('apiReviewRapportinoClient', { rapportinoId });
+  return gasPostWithRetry('apiReviewRapportinoClient', { rapportinoId });
 }
 
 export async function sendRapportinoClient(rapportinoId: string): Promise<RapportinoClientDTO> {
-  return gasPost('apiSendRapportinoClient', { rapportinoId });
+  return gasPostWithRetry('apiSendRapportinoClient', { rapportinoId });
 }
 
 export async function acceptRapportinoClient(rapportinoId: string): Promise<RapportinoClientDTO> {
-  return gasPost('apiAcceptRapportinoClient', { rapportinoId });
+  return gasPostWithRetry('apiAcceptRapportinoClient', { rapportinoId });
 }
 
 export async function rejectRapportinoClient(rapportinoId: string, reason: string): Promise<RapportinoClientDTO> {
-  return gasPost('apiRejectRapportinoClient', { rapportinoId, reason });
+  return gasPostWithRetry('apiRejectRapportinoClient', { rapportinoId, reason });
 }
 
 export async function facturarRapportino(rapportinoId: string): Promise<RapportinoClientDTO> {
-  return gasPost('apiFacturarRapportino', { rapportinoId });
+  return gasPostWithRetry('apiFacturarRapportino', { rapportinoId });
 }
 
 // --- Rapportino Driver ---
@@ -1608,30 +1645,30 @@ export async function createRapportinoDriver(
   weekEnd: string,
   periodType: string = 'weekly'
 ): Promise<RapportinoDriverDTO> {
-  return gasPost('apiCreateRapportinoDriver', { projectId, driverId, weekStart, weekEnd, periodType });
+  return gasPostWithRetry('apiCreateRapportinoDriver', { projectId, driverId, weekStart, weekEnd, periodType });
 }
 
 export async function reviewRapportinoDriver(rapportinoId: string): Promise<RapportinoDriverDTO> {
-  return gasPost('apiReviewRapportinoDriver', { rapportinoId });
+  return gasPostWithRetry('apiReviewRapportinoDriver', { rapportinoId });
 }
 
 export async function sendRapportinoDriver(rapportinoId: string): Promise<RapportinoDriverDTO> {
-  return gasPost('apiSendRapportinoDriver', { rapportinoId });
+  return gasPostWithRetry('apiSendRapportinoDriver', { rapportinoId });
 }
 
 export async function acceptRapportinoDriver(rapportinoId: string): Promise<RapportinoDriverDTO> {
-  return gasPost('apiAcceptRapportinoDriver', { rapportinoId });
+  return gasPostWithRetry('apiAcceptRapportinoDriver', { rapportinoId });
 }
 
 export async function rejectRapportinoDriver(rapportinoId: string, reason: string): Promise<RapportinoDriverDTO> {
-  return gasPost('apiRejectRapportinoDriver', { rapportinoId, reason });
+  return gasPostWithRetry('apiRejectRapportinoDriver', { rapportinoId, reason });
 }
 
 export async function payRapportinoDriver(
   rapportinoId: string,
   amount?: number
 ): Promise<RapportinoDriverDTO> {
-  return gasPost('apiPayRapportinoDriver', { rapportinoId, amount });
+  return gasPostWithRetry('apiPayRapportinoDriver', { rapportinoId, amount });
 }
 
 // --- Rapportino Collaborator ---
@@ -1670,29 +1707,29 @@ export async function createRapportinoCollaborator(
   periodEnd: string,
   periodType: string = 'weekly'
 ): Promise<RapportinoCollaboratorDTO> {
-  return gasPost('apiCreateRapportinoCollaborator', { projectId, collaboratorId, periodStart, periodEnd, periodType });
+  return gasPostWithRetry('apiCreateRapportinoCollaborator', { projectId, collaboratorId, periodStart, periodEnd, periodType });
 }
 
 export async function addServiceToRapportinoCollaborator(
   rapportinoId: string,
   serviceId: string
 ): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('apiAddServiceToRapportinoCollaborator', { rapportinoId, serviceId });
+  return gasPostWithRetry('apiAddServiceToRapportinoCollaborator', { rapportinoId, serviceId });
 }
 
 export async function sendRapportinoCollaborator(rapportinoId: string): Promise<RapportinoCollaboratorDTO> {
-  return gasPost('apiSendRapportinoCollaborator', { rapportinoId });
+  return gasPostWithRetry('apiSendRapportinoCollaborator', { rapportinoId });
 }
 
 export async function acceptRapportinoCollaborator(rapportinoId: string): Promise<RapportinoCollaboratorDTO> {
-  return gasPost('apiAcceptRapportinoCollaborator', { rapportinoId });
+  return gasPostWithRetry('apiAcceptRapportinoCollaborator', { rapportinoId });
 }
 
 export async function payRapportinoCollaborator(
   rapportinoId: string,
   amount?: number
 ): Promise<RapportinoCollaboratorDTO> {
-  return gasPost('apiPayRapportinoCollaborator', { rapportinoId, amount });
+  return gasPostWithRetry('apiPayRapportinoCollaborator', { rapportinoId, amount });
 }
 
 // ============================================================================
@@ -1749,11 +1786,11 @@ export async function createInvoice(data: {
   dueDate?: string;
   notes?: string;
 }): Promise<InvoiceDTO & { error?: string }> {
-  return gasPost('createInvoice', data);
+  return gasPostWithRetry('createInvoice', data);
 }
 
 export async function emitInvoice(invoiceId: string): Promise<InvoiceDTO & { error?: string }> {
-  return gasPost('emitInvoice', { invoiceId });
+  return gasPostWithRetry('emitInvoice', { invoiceId });
 }
 
 export async function editInvoice(invoiceId: string, changes: {
@@ -1762,15 +1799,15 @@ export async function editInvoice(invoiceId: string, changes: {
   DueDate?: string;
   Notes?: string;
 }): Promise<InvoiceDTO & { error?: string }> {
-  return gasPost('editInvoice', { invoiceId, changes });
+  return gasPostWithRetry('editInvoice', { invoiceId, changes });
 }
 
 export async function sendInvoice(invoiceId: string): Promise<InvoiceDTO & { error?: string }> {
-  return gasPost('sendInvoice', { invoiceId });
+  return gasPostWithRetry('sendInvoice', { invoiceId });
 }
 
 export async function voidInvoice(invoiceId: string, reason: string): Promise<InvoiceDTO & { error?: string }> {
-  return gasPost('voidInvoice', { invoiceId, reason });
+  return gasPostWithRetry('voidInvoice', { invoiceId, reason });
 }
 
 // ============================================================================
@@ -1812,15 +1849,15 @@ export async function getContacts(clientId?: string): Promise<ContactDTO[]> {
 }
 
 export async function createContact(data: { clientId: string; name: string; role?: string; phone?: string; email?: string; whatsapp?: string; notes?: string }): Promise<{ success?: boolean; id?: string; error?: string }> {
-  return gasPost('apiCreateContact', data);
+  return gasPostWithRetry('apiCreateContact', data);
 }
 
 export async function updateContact(id: string, changes: Record<string, any>): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('apiUpdateContact', { id, changes });
+  return gasPostWithRetry('apiUpdateContact', { id, changes });
 }
 
 export async function deleteContact(id: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('deleteContact', { id });
+  return gasPostWithRetry('deleteContact', { id });
 }
 
 // ============================================================================
@@ -1868,15 +1905,15 @@ export async function getVehicles(): Promise<VehicleDTO[]> {
 }
 
 export async function createVehicle(data: { plate: string; brand?: string; model?: string; type?: string; ownership?: string; capacity?: number; operatingCompany?: string; notes?: string }): Promise<{ success?: boolean; id?: string; error?: string }> {
-  return gasPost('apiCreateVehicle', data);
+  return gasPostWithRetry('apiCreateVehicle', data);
 }
 
 export async function updateVehicle(id: string, changes: Record<string, any>): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('apiUpdateVehicle', { id, changes });
+  return gasPostWithRetry('apiUpdateVehicle', { id, changes });
 }
 
 export async function deleteVehicle(id: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('deleteVehicle', { id });
+  return gasPostWithRetry('deleteVehicle', { id });
 }
 
 export async function getVehicle(id: string): Promise<VehicleDTO> {
@@ -1924,11 +1961,11 @@ export async function getDriverRates(driverId?: string): Promise<DriverRateDTO[]
 }
 
 export async function createDriverRate(data: { driverId: string; vehicleType?: string; transferRate?: number; halfDayRate?: number; fullDayRate?: number; nightExtra?: number; holidayExtra?: number; waitHourRate?: number }): Promise<{ success?: boolean; id?: string; error?: string }> {
-  return gasPost('apiCreateDriverRate', data);
+  return gasPostWithRetry('apiCreateDriverRate', data);
 }
 
 export async function updateDriverRate(id: string, changes: Record<string, any>): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('apiUpdateDriverRate', { id, changes });
+  return gasPostWithRetry('apiUpdateDriverRate', { id, changes });
 }
 
 // ============================================================================
@@ -1992,11 +2029,11 @@ export async function getRateCards(clientId?: string): Promise<RateCardDTO[]> {
 }
 
 export async function createRateCard(data: { name: string; category?: string; vehicleType?: string; basePrice?: number; clientId?: string; projectId?: string }): Promise<{ success?: boolean; id?: string; error?: string }> {
-  return gasPost('apiCreateRateCard', data);
+  return gasPostWithRetry('apiCreateRateCard', data);
 }
 
 export async function updateRateCard(id: string, changes: Record<string, any>): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('apiUpdateRateCard', { id, changes });
+  return gasPostWithRetry('apiUpdateRateCard', { id, changes });
 }
 
 // ============================================================================
@@ -2083,15 +2120,15 @@ export async function getDriverReport(id: string): Promise<DriverReportDTO | nul
 }
 
 export async function submitDriverReport(serviceId: string, driverId: string, reportData: Record<string, any>): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('submitDriverReport', { serviceId, driverId, reportData });
+  return gasPostWithRetry('submitDriverReport', { serviceId, driverId, reportData });
 }
 
 export async function approveDriverReport(reportId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('apiApproveDriverReport', { reportId });
+  return gasPostWithRetry('apiApproveDriverReport', { reportId });
 }
 
 export async function rejectDriverReport(reportId: string, reason: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('apiRejectDriverReport', { reportId, reason });
+  return gasPostWithRetry('apiRejectDriverReport', { reportId, reason });
 }
 
 // ============================================================================
@@ -2159,7 +2196,7 @@ export async function generateDriverLink(
   dateTo: string,
   options?: { baseUrl?: string; fieldsSchema?: string; linkDurationDays?: number }
 ): Promise<DriverLinkDTO> {
-  return gasPost('generateDriverLink', { driverId, projectId, dateFrom, dateTo, ...options });
+  return gasPostWithRetry('generateDriverLink', { driverId, projectId, dateFrom, dateTo, ...options });
 }
 
 /**
@@ -2181,7 +2218,7 @@ export async function getDriverLinks(filters?: {
 export async function deactivateDriverLink(
   token: string
 ): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('deactivateDriverLink', { linkToken: token });
+  return gasPostWithRetry('deactivateDriverLink', { linkToken: token });
 }
 
 export async function updateDriverLink(
@@ -2194,7 +2231,7 @@ export async function updateDriverLink(
     FieldsSchema?: string;
   }
 ): Promise<{ success?: boolean; error?: string; changes?: Record<string, any> }> {
-  return gasPost('updateDriverLink', { linkToken: token, updates });
+  return gasPostWithRetry('updateDriverLink', { linkToken: token, updates });
 }
 
 // ============================================================================
@@ -2232,20 +2269,20 @@ export async function normalizeReport(
   inboxId: string,
   normalizedData: Record<string, any>
 ): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('normalizeReport', { inboxId, normalizedData });
+  return gasPostWithRetry('normalizeReport', { inboxId, normalizedData });
 }
 
 export async function submitToReview(
   inboxId: string
 ): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('submitToReview', { inboxId });
+  return gasPostWithRetry('submitToReview', { inboxId });
 }
 
 export async function acceptReport(
   inboxId: string,
   reviewedBy?: string
 ): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('acceptReport', { inboxId, reviewedBy });
+  return gasPostWithRetry('acceptReport', { inboxId, reviewedBy });
 }
 
 export async function rejectReport(
@@ -2253,13 +2290,13 @@ export async function rejectReport(
   reason?: string,
   reviewedBy?: string
 ): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('rejectReport', { inboxId, reason, reviewedBy });
+  return gasPostWithRetry('rejectReport', { inboxId, reason, reviewedBy });
 }
 
 export async function lockReport(
   inboxId: string
 ): Promise<{ success?: boolean; error?: string }> {
-  return gasPost('lockReport', { inboxId });
+  return gasPostWithRetry('lockReport', { inboxId });
 }
 
 

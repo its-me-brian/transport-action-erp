@@ -40,6 +40,12 @@ vi.mock('../services/api', () => ({
   generateDriverLink: (...args: any[]) => mockGenerateDriverLink(...args),
 }));
 
+vi.mock('../contexts/ToastContext', () => ({
+  useToast: () => ({
+    showToast: vi.fn(),
+  }),
+}));
+
 const mockOnNavigate = vi.fn();
 
 const sampleClientRapportinos = [

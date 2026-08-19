@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Inbox, Check, X, Lock, Eye, Filter, ChevronDown, Send, Edit3 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { getInboxItems, normalizeReport, submitToReview, acceptReport, rejectReport, lockReport } from '../services/api';
 
 interface InboxItem {
@@ -46,6 +47,7 @@ interface ReportInboxScreenProps {
 
 export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps) {
   const { token, can } = useAuth();
+  const { showToast } = useToast();
   const [items, setItems] = useState<InboxItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<InboxItem | null>(null);
@@ -73,6 +75,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
       }
     } catch (err) {
       console.error('Failed to load inbox items:', err);
+      showToast('Error al cargar los reportes', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -117,6 +120,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
       loadItems();
     } catch (err) {
       console.error('Failed to normalize report:', err);
+      showToast('Error al normalizar el reporte', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -131,6 +135,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
       loadItems();
     } catch (err) {
       console.error('Failed to submit to review:', err);
+      showToast('Error al enviar a revisión', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -145,6 +150,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
       loadItems();
     } catch (err) {
       console.error('Failed to accept report:', err);
+      showToast('Error al aceptar el reporte', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -161,6 +167,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
       loadItems();
     } catch (err) {
       console.error('Failed to reject report:', err);
+      showToast('Error al rechazar el reporte', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -175,6 +182,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
       loadItems();
     } catch (err) {
       console.error('Failed to lock report:', err);
+      showToast('Error al bloquear el reporte', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -291,7 +299,34 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
 
       {/* Items Table */}
       {isLoading ? (
-        <div className="text-center py-8 text-on-surface-variant">Loading...</div>
+        <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-surface-container">
+              <tr>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Source</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Driver</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Project</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Date</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Status</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Correlation</th>
+                <th className="text-right px-4 py-3 text-sm font-semibold text-on-surface">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-outline-variant">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <tr key={i} className="animate-pulse">
+                  <td className="px-4 py-3"><div className="h-5 w-16 bg-surface-dim rounded-full" /></td>
+                  <td className="px-4 py-3"><div className="h-4 w-20 bg-surface-dim rounded" /></td>
+                  <td className="px-4 py-3"><div className="h-4 w-16 bg-surface-dim rounded" /></td>
+                  <td className="px-4 py-3"><div className="h-4 w-24 bg-surface-dim rounded" /></td>
+                  <td className="px-4 py-3"><div className="h-5 w-20 bg-surface-dim rounded-full" /></td>
+                  <td className="px-4 py-3"><div className="h-3 w-24 bg-surface-dim rounded" /></td>
+                  <td className="px-4 py-3 text-right"><div className="h-7 w-7 bg-surface-dim rounded ml-auto" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : filteredItems.length === 0 ? (
         <div className="text-center py-12 text-on-surface-variant">
           <Inbox className="w-12 h-12 mx-auto mb-3 opacity-30" />

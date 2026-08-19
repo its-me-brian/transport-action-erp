@@ -22,6 +22,10 @@ vi.mock('../services/api', () => ({
   updateVehicle: (...args: any[]) => mockUpdateVehicle(...args),
 }));
 
+vi.mock('../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
 const mockOnNavigate = vi.fn();
 
 const sampleVehicles = [

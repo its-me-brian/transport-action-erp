@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Driver, ScreenId, getDriverAvatar } from '../types';
 import { getDrivers, createDriver, updateDriver, deleteDriver, cleanupDrivers, DriverRecord } from '../services/api';
+import { useToast } from '../contexts/ToastContext';
 
 interface DriverPanelScreenProps {
   drivers: Driver[];
@@ -43,6 +44,7 @@ interface EditModalDriver {
 }
 
 export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: DriverPanelScreenProps) {
+  const { showToast } = useToast();
   const [statusFilter, setStatusFilter] = useState<'All' | 'Disponible' | 'Asignado' | 'Inactivo'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [dbDrivers, setDbDrivers] = useState<DriverRecord[]>([]);
@@ -70,13 +72,13 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
     try {
       const result = await cleanupDrivers();
       if (result.removed > 0) {
-        alert(`Removed ${result.removed} entries`);
+        showToast(`Removed ${result.removed} entries`, 'success');
         loadDrivers();
       } else {
-        alert('No entries to clean');
+        showToast('No entries to clean', 'warning');
       }
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast('Error: ' + err.message, 'error');
     }
   };
 
@@ -185,12 +187,12 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
         status: editDriver.status,
       });
       if (result.error) {
-        alert('Error: ' + result.error);
+        showToast('Error: ' + result.error, 'error');
       } else {
         loadDrivers();
       }
     } catch (e: any) {
-      alert('Error: ' + (e.message || 'Unknown'));
+      showToast('Error: ' + (e.message || 'Unknown'), 'error');
     } finally {
       setEditSaving(false);
       setEditDriver(null);
@@ -200,20 +202,20 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
   // Add new driver
   const saveNewDriver = async () => {
     if (!newDriver.name.trim()) {
-      alert('Name is required');
+      showToast('Name is required', 'warning');
       return;
     }
     setAddSaving(true);
     try {
       const result = await createDriver(newDriver.name, newDriver.phone, newDriver.notes);
       if (result.error) {
-        alert('Error: ' + result.error);
+        showToast('Error: ' + result.error, 'error');
       } else {
         setNewDriver({ name: '', phone: '', notes: '' });
         loadDrivers();
       }
     } catch (e: any) {
-      alert('Error: ' + (e.message || 'Unknown'));
+      showToast('Error: ' + (e.message || 'Unknown'), 'error');
     } finally {
       setAddSaving(false);
       setShowAddModal(false);
@@ -225,13 +227,13 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
     try {
       const result = await deleteDriver(id);
       if (result.error) {
-        alert('Error: ' + result.error);
+        showToast('Error: ' + result.error, 'error');
       } else {
         setDeleteConfirm(null);
         loadDrivers();
       }
     } catch (e: any) {
-      alert('Error: ' + (e.message || 'Unknown'));
+      showToast('Error: ' + (e.message || 'Unknown'), 'error');
     }
   };
 
@@ -340,10 +342,26 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
       {/* Driver Grid Deck */}
       <div id="drivers-deck" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
         {isLoading ? (
-          <div className="col-span-full flex flex-col items-center justify-center py-16 gap-3">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <span className="text-[13px] text-on-surface-variant">Loading drivers...</span>
-          </div>
+          <>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex gap-2.5 items-center">
+                    <div className="w-10 h-10 rounded-full bg-surface-container-highest animate-pulse" />
+                    <div className="space-y-1.5">
+                      <div className="h-4 bg-surface-container-highest rounded w-28 animate-pulse" />
+                      <div className="h-2.5 bg-surface-container-highest rounded w-20 animate-pulse" />
+                    </div>
+                  </div>
+                  <div className="h-5 bg-surface-container-highest rounded w-16 animate-pulse" />
+                </div>
+                <div className="flex gap-3">
+                  <div className="h-2.5 bg-surface-container-highest rounded w-24 animate-pulse" />
+                  <div className="h-2.5 bg-surface-container-highest rounded w-16 animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </>
         ) : filteredDrivers.length === 0 ? (
           <div className="col-span-full flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-outline-variant rounded-xl">
             <Users className="w-10 h-10 text-outline" />

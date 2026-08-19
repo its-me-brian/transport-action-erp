@@ -12,6 +12,7 @@ import {
   PauseCircle
 } from 'lucide-react';
 import { ScreenId } from '../types';
+import StatusBadge from './StatusBadge';
 import {
   ClientDTO,
   getClients,
@@ -20,6 +21,7 @@ import {
   deleteClient
 } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 interface ClientScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -27,6 +29,7 @@ interface ClientScreenProps {
 
 export default function ClientScreen({ onNavigate }: ClientScreenProps) {
   const { token } = useAuth();
+  const { showToast } = useToast();
   const [clients, setClients] = useState<ClientDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,6 +55,7 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
       }
     } catch (err) {
       console.error('Error loading clients:', err);
+      showToast('Error al cargar clientes', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -67,7 +71,7 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
   });
 
   const handleSave = async () => {
-    if (!editClient?.name?.trim()) { alert('Name is required'); return; }
+    if (!editClient?.name?.trim()) { showToast('Name is required', 'warning'); return; }
     setIsSaving(true);
     try {
       if (isNew) {
@@ -81,7 +85,7 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
           paymentTerms: editClient.paymentTerms,
           notes: editClient.notes
         });
-        if (result.error) { alert(result.error); return; }
+        if (result.error) { showToast(result.error, 'error'); return; }
       } else if (editClient.id) {
         const result = await updateClient(editClient.id, {
           Name: editClient.name,
@@ -94,12 +98,12 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
           Notes: editClient.notes,
           Active: editClient.active
         });
-        if (result.error) { alert(result.error); return; }
+        if (result.error) { showToast(result.error, 'error'); return; }
       }
       setEditClient(null);
       await loadClients();
     } catch (err: any) {
-      alert(err.message || 'Error saving client');
+      showToast(err.message || 'Error saving client', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -108,11 +112,11 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
   const handleDelete = async (id: string) => {
     try {
       const result = await deleteClient(id);
-      if (result.error) { alert(result.error); return; }
+      if (result.error) { showToast(result.error, 'error'); return; }
       setDeleteConfirm(null);
       await loadClients();
     } catch (err: any) {
-      alert(err.message || 'Error deleting client');
+      showToast(err.message || 'Error deleting client', 'error');
     }
   };
 
@@ -121,7 +125,7 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
       await updateClient(client.id, { Active: !client.active });
       await loadClients();
     } catch (err: any) {
-      alert(err.message || 'Error toggling client status');
+      showToast(err.message || 'Error toggling client status', 'error');
     }
   };
 
@@ -161,9 +165,17 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
       {/* Clients List */}
       <div id="clients-list" className="space-y-2">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <span className="text-[13px] text-on-surface-variant">Loading clients...</span>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-4 flex items-center gap-4 animate-pulse">
+                <div className="w-10 h-10 bg-surface-dim rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-surface-dim rounded w-1/3" />
+                  <div className="h-3 bg-surface-dim rounded w-1/2" />
+                </div>
+                <div className="h-8 w-8 bg-surface-dim rounded-lg" />
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-outline-variant rounded-xl">
@@ -182,9 +194,7 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-[13px] font-semibold text-on-surface">{c.name}</span>
                   {c.vat && <span className="text-[10px] text-on-surface-variant font-mono">VAT: {c.vat}</span>}
-                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${c.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                    {c.active ? 'Active' : 'Inactive'}
-                  </span>
+                  <StatusBadge status={c.active ? 'active' : 'inactive'} size="xs" />
                   {c.type && c.type !== 'direct' && (
                     <span className="text-[10px] text-on-surface-variant bg-surface-container px-1.5 py-0.5 rounded">{c.type}</span>
                   )}

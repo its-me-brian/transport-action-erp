@@ -29,6 +29,7 @@ import {
 import { ScreenId } from '../types';
 import { getSettings, saveSettings, getUsers, approveUser, rejectUser, updateUserRole, deleteUser, createUser, updateUser, getAuditLog, AuditEntry, getOperatingCompanies, updateOperatingCompany, OperatingCompany } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 interface CompanySettingsScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -36,6 +37,7 @@ interface CompanySettingsScreenProps {
 
 export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScreenProps) {
   const { user, token, can } = useAuth();
+  const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [config, setConfig] = useState<Record<string, string>>({});
@@ -346,12 +348,12 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
       
       const result = await saveSettings(toSave);
       if (result.error) {
-        alert('Error: ' + result.error);
+        showToast('Error: ' + result.error, 'error');
       } else {
-        alert('Settings saved successfully!');
+        showToast('Settings saved successfully!', 'success');
       }
     } catch (err: any) {
-      alert('Error: ' + (err.message || 'Unknown'));
+      showToast('Error: ' + (err.message || 'Unknown'), 'error');
     } finally {
       setIsSaving(false);
     }
@@ -424,9 +426,28 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
 
   if (isLoading) {
     return (
-      <div className="flex-1 w-full flex flex-col items-center justify-center gap-3">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-        <span className="text-[13px] text-on-surface-variant">Loading settings...</span>
+      <div className="flex-1 w-full max-w-[1200px] mx-auto space-y-4 p-4 md:p-6">
+        <div className="space-y-2">
+          <div className="h-6 bg-surface-container-highest rounded w-40 animate-pulse" />
+          <div className="h-3 bg-surface-container-highest rounded w-64 animate-pulse" />
+        </div>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="h-4 bg-surface-container-highest rounded w-4 animate-pulse" />
+              <div className="h-4 bg-surface-container-highest rounded w-32 animate-pulse" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {Array.from({ length: 4 }).map((_, j) => (
+                <div key={j} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 space-y-3">
+                  <div className="h-3 bg-surface-container-highest rounded w-24 animate-pulse" />
+                  <div className="h-8 bg-surface-container-highest rounded w-full animate-pulse" />
+                  <div className="h-2.5 bg-surface-container-highest rounded w-32 animate-pulse" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     );
   }

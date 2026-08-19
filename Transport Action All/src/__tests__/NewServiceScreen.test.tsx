@@ -11,6 +11,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import React from 'react';
 import NewServiceScreen from '../components/NewServiceScreen';
 
 const mockGetProjects = vi.fn();
@@ -21,6 +22,14 @@ vi.mock('../services/api', () => ({
   getProjects: (...args: any[]) => mockGetProjects(...args),
   getDrivers: (...args: any[]) => mockGetDrivers(...args),
   createService: (...args: any[]) => mockCreateService(...args),
+}));
+
+const mockShowToast = vi.fn();
+vi.mock('../contexts/ToastContext', () => ({
+  useToast: () => ({
+    showToast: mockShowToast,
+  }),
+  ToastProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 const mockProjects = [
@@ -36,7 +45,6 @@ const mockDrivers = [
 describe('NewServiceScreen', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(window, 'alert').mockImplementation(() => {});
     mockGetProjects.mockResolvedValue(mockProjects);
     mockGetDrivers.mockResolvedValue(mockDrivers);
   });
@@ -80,8 +88,9 @@ describe('NewServiceScreen', () => {
     fireEvent.click(screen.getByText('Save Service'));
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith(
-        'Please fill out Project, Pickup and Dropoff locations.'
+      expect(mockShowToast).toHaveBeenCalledWith(
+        'Please fill out all required fields',
+        'error'
       );
     });
     expect(onAddService).not.toHaveBeenCalled();
@@ -175,7 +184,7 @@ describe('NewServiceScreen', () => {
     fireEvent.click(screen.getByText('Save Service'));
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Error creating service: Backend failure');
+      expect(mockShowToast).toHaveBeenCalledWith('Error creating service: Backend failure', 'error');
     });
   });
 
@@ -194,7 +203,7 @@ describe('NewServiceScreen', () => {
     fireEvent.click(screen.getByText('Save Service'));
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Error creating service: backend did not return an ID');
+      expect(mockShowToast).toHaveBeenCalledWith('Error: backend did not return an ID', 'error');
     });
   });
 

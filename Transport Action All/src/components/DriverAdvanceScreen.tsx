@@ -12,6 +12,8 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { ScreenId } from '../types';
+import StatusBadge from './StatusBadge';
+import { useToast } from '../contexts/ToastContext';
 import {
   getDriverAdvances,
   createDriverAdvance,
@@ -37,6 +39,7 @@ const fmtDate = (d: string) => {
 };
 
 export default function DriverAdvanceScreen({ onNavigate }: Props) {
+  const { showToast } = useToast();
   const [advances, setAdvances] = useState<DriverAdvanceDTO[]>([]);
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,6 +69,7 @@ export default function DriverAdvanceScreen({ onNavigate }: Props) {
       setDrivers(driversData);
     } catch (err) {
       console.error('Error loading advances:', err);
+      showToast('Error al cargar anticipos', 'error');
     } finally { setIsLoading(false); }
   };
 
@@ -88,7 +92,7 @@ export default function DriverAdvanceScreen({ onNavigate }: Props) {
 
   const handleCreate = async () => {
     if (!newAdvance.driverId || !newAdvance.amount || parseFloat(newAdvance.amount) <= 0) {
-      alert('Driver and amount (> 0) are required');
+      showToast('Driver and amount (> 0) are required', 'warning');
       return;
     }
     setIsCreating(true);
@@ -99,10 +103,9 @@ export default function DriverAdvanceScreen({ onNavigate }: Props) {
         amount: parseFloat(newAdvance.amount) || 0,
         notes: newAdvance.notes || undefined,
       });
-      if (r.error) { alert(r.error); return; }
-      setNewAdvance({ driverId: '', projectId: '', amount: '', notes: '' });
-      await loadData();
-    } catch (err: any) { alert(err.message); } finally { setIsCreating(false); setShowCreateModal(false); }
+      if (r.error) { showToast(r.error, 'error'); return; }
+      await loadAdvances();
+    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsCreating(false); setShowCreateModal(false); }
   };
 
   return (
@@ -139,9 +142,23 @@ export default function DriverAdvanceScreen({ onNavigate }: Props) {
       {/* Advances List */}
       <div className="space-y-2">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <span className="text-[13px] text-on-surface-variant">Loading advances...</span>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-surface-container-highest animate-pulse shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3.5 bg-surface-container-highest rounded w-28 animate-pulse" />
+                    <div className="h-3 bg-surface-container-highest rounded w-16 animate-pulse" />
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="h-2.5 bg-surface-container-highest rounded w-20 animate-pulse" />
+                    <div className="h-2.5 bg-surface-container-highest rounded w-24 animate-pulse" />
+                  </div>
+                </div>
+                <div className="h-5 bg-surface-container-highest rounded w-16 animate-pulse" />
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-outline-variant rounded-xl">
@@ -173,10 +190,7 @@ export default function DriverAdvanceScreen({ onNavigate }: Props) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[13px] font-semibold text-on-surface">{driver?.name || a.driverId}</span>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${sc.color} ${sc.bg}`}>
-                      <StatusIcon className="w-3 h-3" />
-                      {sc.label}
-                    </span>
+                    <StatusBadge status={a.status || 'Pendiente'} size="xs" />
                   </div>
                   <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
                     {a.projectId && <span>Project: {a.projectId}</span>}

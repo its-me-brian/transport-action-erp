@@ -32,6 +32,10 @@ vi.mock('../contexts/AuthContext', () => ({
   }),
 }));
 
+vi.mock('../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
 const mockOnNavigate = vi.fn();
 
 const sampleLinks = [

@@ -17,6 +17,7 @@ import {
 import { ScreenId } from '../types';
 import { Project, getProjects, createProject, updateProject, deleteProject, getClients, prepararProject, activarProject, pasarAFacturacionProject, pasarACobroProject, cerrarProject, getMainDashboard, DashboardSummary } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 interface ProjectScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -28,6 +29,7 @@ type ClientOption = { id: string; name: string };
 
 export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
   const { token } = useAuth();
+  const { showToast } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,6 +59,7 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
       setDashboardSummary(summary);
     } catch (err) {
       console.error('Error loading dashboard:', err);
+      showToast('Error al cargar dashboard', 'error');
     }
   };
 
@@ -68,6 +71,7 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
       }
     } catch (err) {
       console.error('Error loading clients:', err);
+      showToast('Error al cargar clientes', 'error');
     }
   };
 
@@ -87,6 +91,7 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
       }
     } catch (err) {
       console.error('Error loading projects:', err);
+      showToast('Error al cargar proyectos', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -105,7 +110,7 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
 
   const handleSave = async () => {
     if (!editProject?.name?.trim()) {
-      alert('Project name is required');
+      showToast('Project name is required', 'warning');
       return;
     }
     setIsSaving(true);
@@ -122,15 +127,15 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
           dateTo: editProject.dateTo || '',
           notes: editProject.notes || ''
         });
-        if (result.error) { alert('Error: ' + result.error); return; }
+        if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       } else {
         const result = await updateProject(token, editProject as Project);
-        if (result.error) { alert('Error: ' + result.error); return; }
+        if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       }
       setEditProject(null);
       await loadProjects();
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast('Error: ' + err.message, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -139,11 +144,11 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
   const handleDelete = async (id: string) => {
     try {
       const result = await deleteProject(token, id);
-      if (result.error) { alert('Error: ' + result.error); return; }
+      if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setDeleteConfirm(null);
       await loadProjects();
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast('Error: ' + err.message, 'error');
     }
   };
 
@@ -169,12 +174,12 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
         case 'cerrar': result = await cerrarProject(token, projectId); break;
       }
       if (result?.error) {
-        alert('Error: ' + result.error);
+        showToast('Error: ' + result.error, 'error');
       } else {
         await loadProjects();
       }
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast('Error: ' + err.message, 'error');
     }
   };
 
@@ -302,10 +307,23 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
       {/* Projects Grid */}
       <div id="projects-grid" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
         {isLoading ? (
-          <div className="col-span-full flex flex-col items-center justify-center py-16 gap-3">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <span className="text-[13px] text-on-surface-variant">Loading projects...</span>
-          </div>
+          <>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1.5 flex-1">
+                    <div className="h-4 bg-surface-container-highest rounded w-32 animate-pulse" />
+                    <div className="h-2.5 bg-surface-container-highest rounded w-20 animate-pulse" />
+                  </div>
+                  <div className="h-5 bg-surface-container-highest rounded w-16 animate-pulse" />
+                </div>
+                <div className="flex gap-3">
+                  <div className="h-2.5 bg-surface-container-highest rounded w-24 animate-pulse" />
+                  <div className="h-2.5 bg-surface-container-highest rounded w-16 animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </>
         ) : filtered.length === 0 ? (
           <div className="col-span-full flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-outline-variant rounded-xl">
             <FolderOpen className="w-10 h-10 text-outline" />

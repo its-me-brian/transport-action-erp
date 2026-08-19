@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { 
   BarChart3, TrendingUp, TrendingDown, FileText, AlertCircle,
   CheckCircle, Clock, DollarSign, Car, Users, Loader2,
@@ -56,86 +57,101 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
       </header>
 
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-3">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          <span className="text-[13px] text-on-surface-variant">Loading dashboard...</span>
+        <div className="space-y-4">
+          {/* KPI skeleton row 1 */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rounded-lg border border-outline-variant/30 px-4 py-3 space-y-2 animate-pulse">
+                <div className="h-3 bg-surface-dim rounded w-1/2" />
+                <div className="h-7 bg-surface-dim rounded w-2/3" />
+                <div className="h-3 bg-surface-dim rounded w-1/3" />
+              </div>
+            ))}
+          </div>
+          {/* KPI skeleton row 2 */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rounded-lg border border-outline-variant/30 px-4 py-3 space-y-2 animate-pulse">
+                <div className="h-3 bg-surface-dim rounded w-1/2" />
+                <div className="h-7 bg-surface-dim rounded w-2/3" />
+                <div className="h-3 bg-surface-dim rounded w-1/3" />
+              </div>
+            ))}
+          </div>
+          {/* Worklist skeleton */}
+          <div className="grid grid-cols-2 gap-3">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="rounded-lg border border-outline-variant/30 px-4 py-3 space-y-2 animate-pulse">
+                <div className="h-3 bg-surface-dim rounded w-1/2" />
+                <div className="h-7 bg-surface-dim rounded w-1/4" />
+                <div className="h-3 bg-surface-dim rounded w-2/3" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : dashboardSummary ? (
         <>
           {/* KPI Cards - Row 1: Core Financials */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3">
-              <div className="flex items-center gap-2 mb-1">
-                <BarChart3 className="w-4 h-4 text-on-surface-variant" />
-                <span className="text-[10px] text-on-surface-variant uppercase tracking-wide">Total Services</span>
-              </div>
-              <div className="text-[24px] font-bold text-on-surface">{dashboardSummary.services.total}</div>
-              <div className="text-[11px] text-on-surface-variant">{dashboardSummary.services.validated} validated</div>
-            </div>
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3">
-              <div className="flex items-center gap-2 mb-1">
-                <TrendingUp className="w-4 h-4 text-emerald-600" />
-                <span className="text-[10px] text-on-surface-variant uppercase tracking-wide">Revenue</span>
-              </div>
-              <div className="text-[24px] font-bold text-emerald-600">{fmt(dashboardSummary.financials.totalRevenue)}</div>
-            </div>
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3">
-              <div className="flex items-center gap-2 mb-1">
-                <TrendingDown className="w-4 h-4 text-red-600" />
-                <span className="text-[10px] text-on-surface-variant uppercase tracking-wide">Cost</span>
-              </div>
-              <div className="text-[24px] font-bold text-red-600">{fmt(dashboardSummary.financials.totalCost)}</div>
-            </div>
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3">
-              <div className="flex items-center gap-2 mb-1">
-                <DollarSign className={`w-4 h-4 ${dashboardSummary.financials.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
-                <span className="text-[10px] text-on-surface-variant uppercase tracking-wide">Profit</span>
-              </div>
-              <div className={`text-[24px] font-bold ${dashboardSummary.financials.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                {fmt(dashboardSummary.financials.profit)}
-              </div>
-              <div className="text-[11px] text-on-surface-variant">{dashboardSummary.financials.margin.toFixed(1)}% margin</div>
-            </div>
-          </div>
+          <motion.div 
+            className="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0"
+            initial="hidden"
+            animate="visible"
+            variants={{ visible: { transition: { staggerChildren: 0.06 } } }}
+          >
+            {[
+              { icon: BarChart3, iconColor: 'text-on-surface-variant', label: 'Total Services', value: dashboardSummary.services.total, sub: `${dashboardSummary.services.validated} validated` },
+              { icon: TrendingUp, iconColor: 'text-emerald-600', label: 'Revenue', value: fmt(dashboardSummary.financials.totalRevenue), valueColor: 'text-emerald-600' },
+              { icon: TrendingDown, iconColor: 'text-red-600', label: 'Cost', value: fmt(dashboardSummary.financials.totalCost), valueColor: 'text-red-600' },
+              { icon: DollarSign, iconColor: dashboardSummary.financials.profit >= 0 ? 'text-emerald-600' : 'text-red-600', label: 'Profit', value: fmt(dashboardSummary.financials.profit), valueColor: dashboardSummary.financials.profit >= 0 ? 'text-emerald-600' : 'text-red-600', sub: `${dashboardSummary.financials.margin.toFixed(1)}% margin` }
+            ].map((card, i) => {
+              const Icon = card.icon;
+              return (
+                <motion.div
+                  key={i}
+                  className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3"
+                  variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0, transition: { duration: 0.25 } } }}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Icon className={`w-4 h-4 ${card.iconColor}`} />
+                    <span className="text-[10px] text-on-surface-variant uppercase tracking-wide">{card.label}</span>
+                  </div>
+                  <div className={`text-[24px] font-bold ${card.valueColor || 'text-on-surface'}`}>{card.value}</div>
+                  {card.sub && <div className="text-[11px] text-on-surface-variant">{card.sub}</div>}
+                </motion.div>
+              );
+            })}
+          </motion.div>
 
           {/* KPI Cards - Row 2: Invoicing, Expenses, Resources */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3">
-              <div className="flex items-center gap-2 mb-1">
-                <FileText className="w-4 h-4 text-on-surface-variant" />
-                <span className="text-[10px] text-on-surface-variant uppercase tracking-wide">Invoiced</span>
-              </div>
-              <div className="text-[24px] font-bold text-on-surface">{fmt(dashboardSummary.invoicing.totalInvoiced)}</div>
-              <div className="text-[11px] text-on-surface-variant">{dashboardSummary.invoicing.pending} pending</div>
-            </div>
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3">
-              <div className="flex items-center gap-2 mb-1">
-                <CheckCircle className="w-4 h-4 text-emerald-600" />
-                <span className="text-[10px] text-on-surface-variant uppercase tracking-wide">Paid</span>
-              </div>
-              <div className="text-[24px] font-bold text-emerald-600">{fmt(dashboardSummary.invoicing.totalPaid)}</div>
-              <div className="text-[11px] text-on-surface-variant">{fmt(dashboardSummary.invoicing.pendingAmount)} pending</div>
-            </div>
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3">
-              <div className="flex items-center gap-2 mb-1">
-                <AlertCircle className="w-4 h-4 text-red-600" />
-                <span className="text-[10px] text-on-surface-variant uppercase tracking-wide">Expenses</span>
-              </div>
-              <div className="text-[24px] font-bold text-red-600">{fmt(dashboardSummary.expenses.total)}</div>
-            </div>
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3">
-              <div className="flex items-center gap-2 mb-1">
-                <Users className="w-4 h-4 text-on-surface-variant" />
-                <span className="text-[10px] text-on-surface-variant uppercase tracking-wide">Resources</span>
-              </div>
-              <div className="text-[16px] font-bold text-on-surface">
-                {dashboardSummary.resources.drivers.available}/{dashboardSummary.resources.drivers.total} drivers
-              </div>
-              <div className="text-[11px] text-on-surface-variant">
-                {dashboardSummary.resources.vehicles.available}/{dashboardSummary.resources.vehicles.total} vehicles
-              </div>
-            </div>
-          </div>
+          <motion.div 
+            className="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0"
+            initial="hidden"
+            animate="visible"
+            variants={{ visible: { transition: { staggerChildren: 0.06, delayChildren: 0.25 } } }}
+          >
+            {[
+              { icon: FileText, iconColor: 'text-on-surface-variant', label: 'Invoiced', value: fmt(dashboardSummary.invoicing.totalInvoiced), sub: `${dashboardSummary.invoicing.pending} pending` },
+              { icon: CheckCircle, iconColor: 'text-emerald-600', label: 'Paid', value: fmt(dashboardSummary.invoicing.totalPaid), valueColor: 'text-emerald-600', sub: `${fmt(dashboardSummary.invoicing.pendingAmount)} pending` },
+              { icon: AlertCircle, iconColor: 'text-red-600', label: 'Expenses', value: fmt(dashboardSummary.expenses.total), valueColor: 'text-red-600' },
+              { icon: Users, iconColor: 'text-on-surface-variant', label: 'Resources', value: `${dashboardSummary.resources.drivers.available}/${dashboardSummary.resources.drivers.total} drivers`, valueSize: 'text-[16px]', sub: `${dashboardSummary.resources.vehicles.available}/${dashboardSummary.resources.vehicles.total} vehicles` }
+            ].map((card, i) => {
+              const Icon = card.icon;
+              return (
+                <motion.div
+                  key={i}
+                  className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3"
+                  variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0, transition: { duration: 0.25 } } }}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Icon className={`w-4 h-4 ${card.iconColor}`} />
+                    <span className="text-[10px] text-on-surface-variant uppercase tracking-wide">{card.label}</span>
+                  </div>
+                  <div className={`${card.valueSize || 'text-[24px]'} font-bold ${card.valueColor || 'text-on-surface'}`}>{card.value}</div>
+                  {card.sub && <div className="text-[11px] text-on-surface-variant">{card.sub}</div>}
+                </motion.div>
+              );
+            })}
+          </motion.div>
 
           {/* Actionable Worklist Counts */}
           <div className="grid grid-cols-2 gap-3 shrink-0">

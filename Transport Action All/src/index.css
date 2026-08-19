@@ -117,6 +117,16 @@
   }
 }
 
+/* StatusFlow animated connector keyframes */
+@keyframes travel {
+  0%, 100% { left: 0%; }
+  50% { left: calc(100% - 6px); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 /* Print styles — only show #print-area */
 @media print {
   body * {

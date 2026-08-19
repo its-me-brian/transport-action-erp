@@ -18,13 +18,16 @@ import {
   FileText
 } from 'lucide-react';
 import { ScreenId } from '../types';
+import StatusBadge from './StatusBadge';
 import { Payment, getPayments, registerPayment, confirmPayment, reconcilePayment, editPayment } from '../services/api';
+import { useToast } from '../contexts/ToastContext';
 
 interface PaymentsScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
 }
 
 export default function PaymentsScreen({ onNavigate }: PaymentsScreenProps) {
+  const { showToast } = useToast();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -87,6 +90,7 @@ export default function PaymentsScreen({ onNavigate }: PaymentsScreenProps) {
       }
     } catch (err) {
       console.error('Error loading payments:', err);
+      showToast('Error al cargar pagos', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -202,7 +206,7 @@ export default function PaymentsScreen({ onNavigate }: PaymentsScreenProps) {
 
   const handleCreate = async () => {
     if (!newPayment.invoiceId.trim() || !newPayment.amount) {
-      alert('Invoice ID and amount are required');
+      showToast('Invoice ID and amount are required', 'warning');
       return;
     }
     setIsSaving(true);
@@ -217,11 +221,11 @@ export default function PaymentsScreen({ onNavigate }: PaymentsScreenProps) {
         cashDate: newPayment.cashDate,
         cashReference: newPayment.cashReference
       });
-      if (result.error) { alert('Error: ' + result.error); return; }
+      if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setNewPayment({ invoiceId: '', clientId: '', amount: '', paymentMethod: 'transfer', paymentDate: '', reference: '', notes: '', cashReceivedBy: '', cashDate: '', cashReference: '' });
       await loadPayments();
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast('Error: ' + err.message, 'error');
     } finally {
       setIsSaving(false);
       setShowAddModal(false);
@@ -231,22 +235,22 @@ export default function PaymentsScreen({ onNavigate }: PaymentsScreenProps) {
   const handleConfirm = async (paymentId: string) => {
     try {
       const result = await confirmPayment(paymentId);
-      if (result.error) { alert('Error: ' + result.error); return; }
+      if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setConfirmAction(null);
       await loadPayments();
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast('Error: ' + err.message, 'error');
     }
   };
 
   const handleReconcile = async (paymentId: string) => {
     try {
       const result = await reconcilePayment(paymentId);
-      if (result.error) { alert('Error: ' + result.error); return; }
+      if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setConfirmAction(null);
       await loadPayments();
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast('Error: ' + err.message, 'error');
     }
   };
 
@@ -276,11 +280,11 @@ export default function PaymentsScreen({ onNavigate }: PaymentsScreenProps) {
       if (Object.keys(changes).length === 0) { setEditTarget(null); return; }
 
       const result = await editPayment(editTarget.id, changes);
-      if (result.error) { alert('Error: ' + result.error); return; }
+      if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setEditTarget(null);
       await loadPayments();
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast('Error: ' + err.message, 'error');
     } finally {
       setIsEditing(false);
     }
@@ -400,9 +404,23 @@ export default function PaymentsScreen({ onNavigate }: PaymentsScreenProps) {
       {/* Payments List */}
       <div id="payments-list" className="space-y-2">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <span className="text-[13px] text-on-surface-variant">Loading payments...</span>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-surface-container-highest animate-pulse shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 bg-surface-container-highest rounded w-16 animate-pulse" />
+                    <div className="h-3.5 bg-surface-container-highest rounded w-24 animate-pulse" />
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="h-2.5 bg-surface-container-highest rounded w-20 animate-pulse" />
+                    <div className="h-2.5 bg-surface-container-highest rounded w-28 animate-pulse" />
+                  </div>
+                </div>
+                <div className="h-4 bg-surface-container-highest rounded w-20 animate-pulse" />
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-outline-variant rounded-xl">
@@ -457,10 +475,7 @@ export default function PaymentsScreen({ onNavigate }: PaymentsScreenProps) {
 
                 {/* Status + Amount + Actions */}
                 <div className="flex items-center gap-3 shrink-0">
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${sc.color}`}>
-                    <StatusIcon className="w-3 h-3" />
-                    {sc.label}
-                  </span>
+                  <StatusBadge status={p.status || 'Registrado'} size="xs" />
                   <span className="text-[14px] font-bold text-on-surface">{formatCurrency(p.amount)}</span>
                   {p.status === 'Registrado' && (
                     <>

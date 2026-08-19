@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeftRight,
   Search,
@@ -18,6 +18,7 @@ import {
   resolveReconciliation
 } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 interface ReconciliationScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -27,6 +28,7 @@ type StatusFilter = 'all' | 'Pendiente' | 'EnProceso' | 'Resuelto';
 
 export default function ReconciliationScreen({ onNavigate }: ReconciliationScreenProps) {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [reconciliations, setReconciliations] = useState<ReconciliationDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,6 +63,7 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
       }
     } catch (err) {
       console.error('Error loading reconciliations:', err);
+      showToast('Error al cargar conciliaciones', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -70,7 +73,7 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
     loadReconciliations();
   }, [statusFilter]);
 
-  const filtered = reconciliations.filter(r => {
+  const filtered = useMemo(() => reconciliations.filter(r => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       return r.serviceId.toLowerCase().includes(q) ||
@@ -78,7 +81,7 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
              r.id.toLowerCase().includes(q);
     }
     return true;
-  });
+  }), [reconciliations, searchQuery]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -122,7 +125,8 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
       await loadReconciliations();
     } catch (err) {
       console.error('Error resolving reconciliation:', err);
-      alert('Error resolving reconciliation');
+      showToast('Error al resolver conciliación', 'error');
+      showToast('Error resolving reconciliation', 'error');
     } finally {
       setIsResolving(false);
     }
@@ -135,6 +139,10 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
            r.production.diaria !== r.driver.diaria ||
            r.production.festivo !== r.driver.festivo ||
            r.production.notturno !== r.driver.notturno;
+  };
+
+  const diffClass = (prod: any, driver: any): string => {
+    return prod !== driver ? 'bg-amber-100 text-amber-800 rounded px-1 font-medium' : '';
   };
 
   // Stats
@@ -212,9 +220,21 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
       {/* Content */}
       <div className="flex-1 overflow-auto px-6 py-4">
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-primary mr-2" />
-            <span className="text-on-surface-variant">Loading reconciliations...</span>
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="border border-outline-variant/30 rounded-lg p-4 animate-pulse">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-surface-dim rounded w-1/4" />
+                    <div className="h-3 bg-surface-dim rounded w-1/3" />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="h-6 w-20 bg-surface-dim rounded-full" />
+                    <div className="h-8 w-8 bg-surface-dim rounded-lg" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-12">
@@ -279,12 +299,12 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                           <h4 className="text-xs font-bold text-blue-700 mb-2">Production</h4>
                           <div className="space-y-1 text-sm">
-                            <div><span className="text-on-surface-variant">Start:</span> {r.production.startTime || '—'}</div>
-                            <div><span className="text-on-surface-variant">End:</span> {r.production.endTime || '—'}</div>
-                            <div><span className="text-on-surface-variant">KM:</span> {r.production.km}</div>
-                            <div><span className="text-on-surface-variant">Diaria:</span> {r.production.diaria}</div>
-                            <div><span className="text-on-surface-variant">Festivo:</span> {r.production.festivo ? 'Yes' : 'No'}</div>
-                            <div><span className="text-on-surface-variant">Notturno:</span> {r.production.notturno ? 'Yes' : 'No'}</div>
+                            <div><span className="text-on-surface-variant">Start:</span> <span className={diffClass(r.production.startTime, r.driver.startTime)}>{r.production.startTime || '—'}</span></div>
+                            <div><span className="text-on-surface-variant">End:</span> <span className={diffClass(r.production.endTime, r.driver.endTime)}>{r.production.endTime || '—'}</span></div>
+                            <div><span className="text-on-surface-variant">KM:</span> <span className={diffClass(r.production.km, r.driver.km)}>{r.production.km}</span></div>
+                            <div><span className="text-on-surface-variant">Diaria:</span> <span className={diffClass(r.production.diaria, r.driver.diaria)}>{r.production.diaria}</span></div>
+                            <div><span className="text-on-surface-variant">Festivo:</span> <span className={diffClass(r.production.festivo, r.driver.festivo)}>{r.production.festivo ? 'Yes' : 'No'}</span></div>
+                            <div><span className="text-on-surface-variant">Notturno:</span> <span className={diffClass(r.production.notturno, r.driver.notturno)}>{r.production.notturno ? 'Yes' : 'No'}</span></div>
                           </div>
                         </div>
 
@@ -292,12 +312,12 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
                         <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                           <h4 className="text-xs font-bold text-green-700 mb-2">Driver</h4>
                           <div className="space-y-1 text-sm">
-                            <div><span className="text-on-surface-variant">Start:</span> {r.driver.startTime || '—'}</div>
-                            <div><span className="text-on-surface-variant">End:</span> {r.driver.endTime || '—'}</div>
-                            <div><span className="text-on-surface-variant">KM:</span> {r.driver.km}</div>
-                            <div><span className="text-on-surface-variant">Diaria:</span> {r.driver.diaria}</div>
-                            <div><span className="text-on-surface-variant">Festivo:</span> {r.driver.festivo ? 'Yes' : 'No'}</div>
-                            <div><span className="text-on-surface-variant">Notturno:</span> {r.driver.notturno ? 'Yes' : 'No'}</div>
+                            <div><span className="text-on-surface-variant">Start:</span> <span className={diffClass(r.driver.startTime, r.production.startTime)}>{r.driver.startTime || '—'}</span></div>
+                            <div><span className="text-on-surface-variant">End:</span> <span className={diffClass(r.driver.endTime, r.production.endTime)}>{r.driver.endTime || '—'}</span></div>
+                            <div><span className="text-on-surface-variant">KM:</span> <span className={diffClass(r.driver.km, r.production.km)}>{r.driver.km}</span></div>
+                            <div><span className="text-on-surface-variant">Diaria:</span> <span className={diffClass(r.driver.diaria, r.production.diaria)}>{r.driver.diaria}</span></div>
+                            <div><span className="text-on-surface-variant">Festivo:</span> <span className={diffClass(r.driver.festivo, r.production.festivo)}>{r.driver.festivo ? 'Yes' : 'No'}</span></div>
+                            <div><span className="text-on-surface-variant">Notturno:</span> <span className={diffClass(r.driver.notturno, r.production.notturno)}>{r.driver.notturno ? 'Yes' : 'No'}</span></div>
                           </div>
                         </div>
 

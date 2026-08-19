@@ -72,6 +72,10 @@ vi.mock('../components/print', () => ({
   PrintPreview: ({ onClose }: any) => <div data-testid="print-preview"><button onClick={onClose}>Close</button></div>,
 }));
 
+vi.mock('../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
 const mockOnNavigate = vi.fn();
 
 const sampleDrivers = [

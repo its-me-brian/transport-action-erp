@@ -11,6 +11,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import React from 'react';
 import AuthScreen from '../components/AuthScreen';
 
 // Mock useAuth
@@ -26,6 +27,14 @@ vi.mock('../contexts/AuthContext', () => ({
     isAuthenticated: false,
     isLoading: false,
   }),
+}));
+
+const mockShowToast = vi.fn();
+vi.mock('../contexts/ToastContext', () => ({
+  useToast: () => ({
+    showToast: mockShowToast,
+  }),
+  ToastProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 describe('AuthScreen', () => {

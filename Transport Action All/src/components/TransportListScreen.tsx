@@ -69,6 +69,7 @@ import {
   Project
 } from '../services/api';
 import { PrintPreview } from './print';
+import { useToast } from '../contexts/ToastContext';
 
 interface TransportListScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -338,6 +339,7 @@ const OperatingCompanyCell = React.memo(function OperatingCompanyCell({ service,
 });
 
 export default function TransportListScreen({ onNavigate, onImportComplete }: TransportListScreenProps) {
+  const { showToast } = useToast();
   // --- Helper: format history dates ---
   const formatImportDate = (importDate: string): string => {
     if (!importDate) return '';
@@ -887,7 +889,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
     } else {
       // No phone: copy to clipboard
       navigator.clipboard.writeText(message);
-      alert('Mensaje copiado al portapapeles (no se encontró número de teléfono)');
+      showToast('Mensaje copiado al portapapeles (no se encontró número de teléfono)', 'success');
     }
   };
 
@@ -903,7 +905,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
     
     // Copy to clipboard for group sharing
     navigator.clipboard.writeText(message).then(() => {
-      alert('Mensaje copiado al portapapeles. Pegalo en el grupo de WhatsApp.');
+      showToast('Mensaje copiado al portapapeles. Pegalo en el grupo de WhatsApp.', 'success');
     }).catch(() => {
       // Fallback: open WhatsApp Web
       window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
@@ -924,7 +926,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
       window.open(`https://wa.me/${cleanPhone}?text=${encodedMsg}`, '_blank');
     } else {
       navigator.clipboard.writeText(message).then(() => {
-        alert('Mensaje copiado al portapapeles.');
+        showToast('Mensaje copiado al portapapeles.', 'success');
       });
     }
     
@@ -958,7 +960,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
       if (result.error) {
         setError(toErrorMessage(result.error));
       } else {
-        alert(`Email enviado a: ${result.sentTo?.join(', ')}`);
+        showToast(`Email enviado a: ${result.sentTo?.join(', ')}`, 'success');
         setEmailRecipients('');
         setEmailSubject('');
       }
@@ -1020,7 +1022,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
       if (result.error) {
         setError(toErrorMessage(result.error));
       } else {
-        alert(`Servicios enviados a ${selectedAgency.name}: ${result.sentTo?.join(', ')}`);
+        showToast(`Servicios enviados a ${selectedAgency.name}: ${result.sentTo?.join(', ')}`, 'success');
         setSelectedAgency(null);
         setAgencyNotes('');
       }
@@ -2721,7 +2723,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                       const url = exportResult.downloadUrl || exportResult.url;
                       if (url) {
                         navigator.clipboard.writeText(url).then(() => {
-                          alert('Link copiado al portapapeles');
+                          showToast('Link copiado al portapapeles', 'success');
                         });
                       }
                     }}

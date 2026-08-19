@@ -33,6 +33,10 @@ vi.mock('../services/api', () => ({
   editPayment: (...args: any[]) => mockEditPayment(...args),
 }));
 
+vi.mock('../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
 const mockOnNavigate = vi.fn();
 
 const samplePayments = [
@@ -100,8 +104,8 @@ describe('PaymentsScreen', () => {
 
   it('shows loading spinner initially', () => {
     mockGetPayments.mockReturnValue(new Promise(() => {}));
-    render(<PaymentsScreen onNavigate={mockOnNavigate} />);
-    expect(screen.getByText('Loading payments...')).toBeInTheDocument();
+    const { container } = render(<PaymentsScreen onNavigate={mockOnNavigate} />);
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
   });
 
   it('shows empty state when no payments exist', async () => {

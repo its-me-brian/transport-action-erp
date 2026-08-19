@@ -92,8 +92,8 @@ describe('UserManagementScreen', () => {
 
   it('shows loading state', () => {
     mockGetUsers.mockReturnValue(new Promise(() => {}));
-    render(<UserManagementScreen onNavigate={mockOnNavigate} />);
-    expect(screen.getByText('Loading users...')).toBeInTheDocument();
+    const { container } = render(<UserManagementScreen onNavigate={mockOnNavigate} />);
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
   });
 
   it('loads and displays users', async () => {

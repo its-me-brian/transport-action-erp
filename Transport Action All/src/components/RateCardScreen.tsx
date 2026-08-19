@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CreditCard, Plus, Search, Loader2, X, Save, Edit3 } from 'lucide-react';
 import { ScreenId } from '../types';
 import { getRateCards, createRateCard, updateRateCard, getClients, RateCardDTO } from '../services/api';
+import { useToast } from '../contexts/ToastContext';
 
 interface Props { onNavigate: (screen: ScreenId) => void; }
 
@@ -9,6 +10,7 @@ const VEHICLE_TYPES = ['Van', 'Minivan', 'Sedan', 'SUV', 'Bus', 'Coach'];
 const fmt = (n: number) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
 
 export default function RateCardScreen({ onNavigate }: Props) {
+  const { showToast } = useToast();
   const [cards, setCards] = useState<RateCardDTO[]>([]);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,17 +38,16 @@ export default function RateCardScreen({ onNavigate }: Props) {
   });
 
   const handleCreate = async () => {
-    if (!form.name.trim()) { alert('Name is required'); return; }
+    if (!form.name.trim()) { showToast('Name is required', 'warning'); return; }
     setIsSaving(true);
     try {
       const r = await createRateCard({
         name: form.name, category: form.category, vehicleType: form.vehicleType,
         basePrice: parseFloat(form.basePrice) || 0, clientId: form.clientId || undefined,
       });
-      if (r.error) { alert(r.error); return; }
-      setForm({ name: '', category: '', vehicleType: 'Van', basePrice: '', extraKmRate: '', extraHourRate: '', waitRate: '', nightFee: '', holidayFee: '', halfDayPrice: '', fullDayPrice: '', airportSurcharge: '', clientId: '', notes: '' });
-      await loadData();
-    } catch (err: any) { alert(err.message); } finally { setIsSaving(false); setShowCreateModal(false); }
+      if (r.error) { showToast(r.error, 'error'); return; }
+      await loadCards();
+    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsSaving(false); setShowCreateModal(false); }
   };
 
   const handleEdit = async () => {
@@ -61,9 +62,9 @@ export default function RateCardScreen({ onNavigate }: Props) {
         HalfDayPrice: parseFloat(form.halfDayPrice) || 0, FullDayPrice: parseFloat(form.fullDayPrice) || 0,
         AirportSurcharge: parseFloat(form.airportSurcharge) || 0, Notes: form.notes,
       });
-      if (r.error) { alert(r.error); return; }
-      await loadData();
-    } catch (err: any) { alert(err.message); } finally { setIsSaving(false); setEditTarget(null); }
+      if (r.error) { showToast(r.error, 'error'); return; }
+      await loadCards();
+    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsSaving(false); setEditTarget(null); }
   };
 
   const openEdit = (c: RateCardDTO) => {
@@ -122,7 +123,17 @@ export default function RateCardScreen({ onNavigate }: Props) {
 
       <div className="space-y-2">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3"><Loader2 className="w-8 h-8 text-primary animate-spin" /></div>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 animate-pulse">
+                <div className="flex-1 space-y-2">
+                  <div className="flex gap-2"><div className="h-4 w-24 bg-surface-dim rounded" /><div className="h-5 w-12 bg-surface-dim rounded" /></div>
+                  <div className="flex gap-4"><div className="h-3 w-16 bg-surface-dim rounded" /><div className="h-3 w-20 bg-surface-dim rounded" /><div className="h-3 w-16 bg-surface-dim rounded" /></div>
+                </div>
+                <div className="h-7 w-7 bg-surface-dim rounded shrink-0" />
+              </div>
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-outline-variant rounded-xl">
             <CreditCard className="w-10 h-10 text-outline" /><span className="text-[13px] text-on-surface-variant">No rate cards found</span>

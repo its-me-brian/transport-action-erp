@@ -74,44 +74,46 @@ function umCreateUser(token, userData) {
       return { error: 'Username, email and password are required' };
     }
 
-    if (_findUserByUsername(username)) {
-      return { error: 'Username already exists' };
-    }
-    if (_findUserByEmail(email)) {
-      return { error: 'Email already registered' };
-    }
+    return _withLock(function() {
+      if (_findUserByUsername(username)) {
+        return { error: 'Username already exists' };
+      }
+      if (_findUserByEmail(email)) {
+        return { error: 'Email already registered' };
+      }
 
-    var sh = _getUsersSheet();
-    var salt = _generateSalt();
-    var hash = _hashPassword(password, salt);
-    var now = new Date().toISOString();
-    var id = 'USR-' + String(sh.getLastRow()).padStart(3, '0');
+      var sh = _getUsersSheet();
+      var salt = _generateSalt();
+      var hash = _hashPassword(password, salt);
+      var now = new Date().toISOString();
+      var id = 'USR-' + String(sh.getLastRow()).padStart(3, '0');
 
-    sh.appendRow([
-      id,           // A
-      username,     // B
-      hash,         // C
-      salt,         // D
-      role,         // E
-      name,         // F
-      email,        // G
-      'approved',   // H — approved directly
-      now,          // I
-      now,          // J
-      '',           // K
-      '',           // L
-      ''            // M
-    ]);
+      sh.appendRow([
+        id,           // A
+        username,     // B
+        hash,         // C
+        salt,         // D
+        role,         // E
+        name,         // F
+        email,        // G
+        'approved',   // H — approved directly
+        now,          // I
+        now,          // J
+        '',           // K
+        '',           // L
+        ''            // M
+      ]);
 
-    _dispatchEvent({
-      type: 'user.created',
-      entity: 'User',
-      entityId: id,
-      user: email,
-      payload: { username: username, role: role }
+      _dispatchEvent({
+        type: 'user.created',
+        entity: 'User',
+        entityId: id,
+        user: email,
+        payload: { username: username, role: role }
+      });
+
+      return { success: true, message: 'User created', userId: id };
     });
-
-    return { success: true, message: 'User created', userId: id };
   } catch (e) {
     return { error: e.message };
   }
@@ -131,26 +133,28 @@ function umApproveUser(token, userId) {
     var permErr = _requirePermission(token, 'admin');
     if (permErr) return permErr;
 
-    var sh = _getUsersSheet();
-    var data = sh.getDataRange().getValues();
+    return _withLock(function() {
+      var sh = _getUsersSheet();
+      var data = sh.getDataRange().getValues();
 
-    for (var i = 1; i < data.length; i++) {
-      if (data[i][0] === userId) {
-        sh.getRange(i + 1, 8).setValue('approved');               // H = Active
-        sh.getRange(i + 1, 10).setValue(new Date().toISOString()); // J = Updated_At
+      for (var i = 1; i < data.length; i++) {
+        if (data[i][0] === userId) {
+          sh.getRange(i + 1, 8).setValue('approved');               // H = Active
+          sh.getRange(i + 1, 10).setValue(new Date().toISOString()); // J = Updated_At
 
-        _dispatchEvent({
-          type: 'user.approved',
-          entity: 'User',
-          entityId: userId,
-          user: data[i][6],
-          payload: { username: data[i][1], role: data[i][4] }
-        });
+          _dispatchEvent({
+            type: 'user.approved',
+            entity: 'User',
+            entityId: userId,
+            user: data[i][6],
+            payload: { username: data[i][1], role: data[i][4] }
+          });
 
-        return { success: true, message: 'User approved' };
+          return { success: true, message: 'User approved' };
+        }
       }
-    }
-    return { error: 'User not found' };
+      return { error: 'User not found' };
+    });
   } catch (e) {
     return { error: e.message };
   }
@@ -170,26 +174,28 @@ function umRejectUser(token, userId) {
     var permErr = _requirePermission(token, 'admin');
     if (permErr) return permErr;
 
-    var sh = _getUsersSheet();
-    var data = sh.getDataRange().getValues();
+    return _withLock(function() {
+      var sh = _getUsersSheet();
+      var data = sh.getDataRange().getValues();
 
-    for (var i = 1; i < data.length; i++) {
-      if (data[i][0] === userId) {
-        sh.getRange(i + 1, 8).setValue('rejected');               // H = Active
-        sh.getRange(i + 1, 10).setValue(new Date().toISOString()); // J = Updated_At
+      for (var i = 1; i < data.length; i++) {
+        if (data[i][0] === userId) {
+          sh.getRange(i + 1, 8).setValue('rejected');               // H = Active
+          sh.getRange(i + 1, 10).setValue(new Date().toISOString()); // J = Updated_At
 
-        _dispatchEvent({
-          type: 'user.rejected',
-          entity: 'User',
-          entityId: userId,
-          user: data[i][6],
-          payload: { username: data[i][1], role: data[i][4] }
-        });
+          _dispatchEvent({
+            type: 'user.rejected',
+            entity: 'User',
+            entityId: userId,
+            user: data[i][6],
+            payload: { username: data[i][1], role: data[i][4] }
+          });
 
-        return { success: true, message: 'User rejected' };
+          return { success: true, message: 'User rejected' };
+        }
       }
-    }
-    return { error: 'User not found' };
+      return { error: 'User not found' };
+    });
   } catch (e) {
     return { error: e.message };
   }
@@ -214,27 +220,29 @@ function umUpdateUserRole(token, userId, newRole) {
       return { error: 'Invalid role. Valid roles: ' + VALID_ROLES.join(', ') };
     }
 
-    var sh = _getUsersSheet();
-    var data = sh.getDataRange().getValues();
+    return _withLock(function() {
+      var sh = _getUsersSheet();
+      var data = sh.getDataRange().getValues();
 
-    for (var i = 1; i < data.length; i++) {
-      if (data[i][0] === userId) {
-        var oldRole = data[i][4];
-        sh.getRange(i + 1, 5).setValue(newRole);                   // E = Role
-        sh.getRange(i + 1, 10).setValue(new Date().toISOString()); // J = Updated_At
+      for (var i = 1; i < data.length; i++) {
+        if (data[i][0] === userId) {
+          var oldRole = data[i][4];
+          sh.getRange(i + 1, 5).setValue(newRole);                   // E = Role
+          sh.getRange(i + 1, 10).setValue(new Date().toISOString()); // J = Updated_At
 
-        _dispatchEvent({
-          type: 'user.roleChanged',
-          entity: 'User',
-          entityId: userId,
-          user: data[i][6],
-          payload: { username: data[i][1], oldRole: oldRole, newRole: newRole }
-        });
+          _dispatchEvent({
+            type: 'user.roleChanged',
+            entity: 'User',
+            entityId: userId,
+            user: data[i][6],
+            payload: { username: data[i][1], oldRole: oldRole, newRole: newRole }
+          });
 
-        return { success: true, message: 'Role updated' };
+          return { success: true, message: 'Role updated' };
+        }
       }
-    }
-    return { error: 'User not found' };
+      return { error: 'User not found' };
+    });
   } catch (e) {
     return { error: e.message };
   }
@@ -254,24 +262,26 @@ function umDeleteUser(token, userId) {
     var permErr = _requirePermission(token, 'admin');
     if (permErr) return permErr;
 
-    var sh = _getUsersSheet();
-    var data = sh.getDataRange().getValues();
+    return _withLock(function() {
+      var sh = _getUsersSheet();
+      var data = sh.getDataRange().getValues();
 
-    for (var i = 1; i < data.length; i++) {
-      if (data[i][0] === userId) {
-        _dispatchEvent({
-          type: 'user.deleted',
-          entity: 'User',
-          entityId: userId,
-          user: data[i][6],
-          payload: { username: data[i][1], role: data[i][4] }
-        });
+      for (var i = 1; i < data.length; i++) {
+        if (data[i][0] === userId) {
+          _dispatchEvent({
+            type: 'user.deleted',
+            entity: 'User',
+            entityId: userId,
+            user: data[i][6],
+            payload: { username: data[i][1], role: data[i][4] }
+          });
 
-        sh.deleteRow(i + 1);
-        return { success: true, message: 'User deleted' };
+          sh.deleteRow(i + 1);
+          return { success: true, message: 'User deleted' };
+        }
       }
-    }
-    return { error: 'User not found' };
+      return { error: 'User not found' };
+    });
   } catch (e) {
     return { error: e.message };
   }
@@ -292,37 +302,39 @@ function umUpdateUser(token, userId, updates) {
     var permErr = _requirePermission(token, 'admin');
     if (permErr) return permErr;
 
-    var sh = _getUsersSheet();
-    var data = sh.getDataRange().getValues();
+    return _withLock(function() {
+      var sh = _getUsersSheet();
+      var data = sh.getDataRange().getValues();
 
-    for (var i = 1; i < data.length; i++) {
-      if (data[i][0] === userId) {
-        if (updates.role !== undefined) {
-          if (VALID_ROLES.indexOf(updates.role) === -1) {
-            return { error: 'Invalid role. Valid roles: ' + VALID_ROLES.join(', ') };
+      for (var i = 1; i < data.length; i++) {
+        if (data[i][0] === userId) {
+          if (updates.role !== undefined) {
+            if (VALID_ROLES.indexOf(updates.role) === -1) {
+              return { error: 'Invalid role. Valid roles: ' + VALID_ROLES.join(', ') };
+            }
+            sh.getRange(i + 1, 5).setValue(updates.role);  // E = Role
           }
-          sh.getRange(i + 1, 5).setValue(updates.role);  // E = Role
-        }
-        if (updates.name !== undefined) {
-          sh.getRange(i + 1, 6).setValue(updates.name);  // F = Name
-        }
-        if (updates.email !== undefined) {
-          sh.getRange(i + 1, 7).setValue(updates.email); // G = Email
-        }
-        sh.getRange(i + 1, 10).setValue(new Date().toISOString()); // J = Updated_At
+          if (updates.name !== undefined) {
+            sh.getRange(i + 1, 6).setValue(updates.name);  // F = Name
+          }
+          if (updates.email !== undefined) {
+            sh.getRange(i + 1, 7).setValue(updates.email); // G = Email
+          }
+          sh.getRange(i + 1, 10).setValue(new Date().toISOString()); // J = Updated_At
 
-        _dispatchEvent({
-          type: 'user.updated',
-          entity: 'User',
-          entityId: userId,
-          user: data[i][6],
-          payload: { username: data[i][1], updates: updates }
-        });
+          _dispatchEvent({
+            type: 'user.updated',
+            entity: 'User',
+            entityId: userId,
+            user: data[i][6],
+            payload: { username: data[i][1], updates: updates }
+          });
 
-        return { success: true, message: 'User updated' };
+          return { success: true, message: 'User updated' };
+        }
       }
-    }
-    return { error: 'User not found' };
+      return { error: 'User not found' };
+    });
   } catch (e) {
     return { error: e.message };
   }

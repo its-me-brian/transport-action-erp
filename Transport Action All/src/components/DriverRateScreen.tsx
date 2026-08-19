@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DollarSign, Plus, Search, Loader2, X, Save, Edit3 } from 'lucide-react';
 import { ScreenId } from '../types';
 import { getDriverRates, createDriverRate, updateDriverRate, getDrivers, DriverRateDTO } from '../services/api';
+import { useToast } from '../contexts/ToastContext';
 
 interface Props { onNavigate: (screen: ScreenId) => void; }
 
@@ -9,6 +10,7 @@ const VEHICLE_TYPES = ['Transfer', 'Dispo', 'HalfDay', 'FullDay'];
 const fmt = (n: number) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
 
 export default function DriverRateScreen({ onNavigate }: Props) {
+  const { showToast } = useToast();
   const [rates, setRates] = useState<DriverRateDTO[]>([]);
   const [drivers, setDrivers] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,7 +39,7 @@ export default function DriverRateScreen({ onNavigate }: Props) {
   });
 
   const handleCreate = async () => {
-    if (!form.driverId) { alert('Driver is required'); return; }
+    if (!form.driverId) { showToast('Driver is required', 'warning'); return; }
     setIsSaving(true);
     try {
       const r = await createDriverRate({
@@ -46,10 +48,9 @@ export default function DriverRateScreen({ onNavigate }: Props) {
         fullDayRate: parseFloat(form.fullDayRate) || 0, nightExtra: parseFloat(form.nightExtra) || 0,
         holidayExtra: parseFloat(form.holidayExtra) || 0, waitHourRate: parseFloat(form.waitHourRate) || 0,
       });
-      if (r.error) { alert(r.error); return; }
-      setForm({ driverId: '', vehicleType: 'Transfer', transferRate: '', halfDayRate: '', fullDayRate: '', nightExtra: '', holidayExtra: '', waitHourRate: '' });
-      await loadData();
-    } catch (err: any) { alert(err.message); } finally { setIsSaving(false); setShowCreateModal(false); }
+      if (r.error) { showToast(r.error, 'error'); return; }
+      await loadRates();
+    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsSaving(false); setShowCreateModal(false); }
   };
 
   const handleEdit = async () => {
@@ -62,9 +63,9 @@ export default function DriverRateScreen({ onNavigate }: Props) {
         NightExtra: parseFloat(form.nightExtra) || 0, HolidayExtra: parseFloat(form.holidayExtra) || 0,
         WaitHourRate: parseFloat(form.waitHourRate) || 0,
       });
-      if (r.error) { alert(r.error); return; }
-      await loadData();
-    } catch (err: any) { alert(err.message); } finally { setIsSaving(false); setEditTarget(null); }
+      if (r.error) { showToast(r.error, 'error'); return; }
+      await loadRates();
+    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsSaving(false); setEditTarget(null); }
   };
 
   const openEdit = (r: DriverRateDTO) => {
@@ -129,7 +130,23 @@ export default function DriverRateScreen({ onNavigate }: Props) {
 
       <div className="space-y-2">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3"><Loader2 className="w-8 h-8 text-primary animate-spin" /></div>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex items-center gap-3">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3.5 bg-surface-container-highest rounded w-28 animate-pulse" />
+                    <div className="h-3 bg-surface-container-highest rounded w-20 animate-pulse" />
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="h-2.5 bg-surface-container-highest rounded w-24 animate-pulse" />
+                    <div className="h-2.5 bg-surface-container-highest rounded w-16 animate-pulse" />
+                  </div>
+                </div>
+                <div className="h-4 bg-surface-container-highest rounded w-20 animate-pulse" />
+              </div>
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-outline-variant rounded-xl">
             <DollarSign className="w-10 h-10 text-outline" /><span className="text-[13px] text-on-surface-variant">No rates found</span>

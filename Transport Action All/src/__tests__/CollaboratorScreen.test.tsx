@@ -44,6 +44,10 @@ vi.mock('../contexts/AuthContext', () => ({
   }),
 }));
 
+vi.mock('../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
 const sampleCollaborators = [
   { id: 'COL-001', name: 'Transport SRL', vat: 'IT123', address: '', phone: '', email: '', paymentTerms: 30, active: true, notes: '', operatingCompany: 'TA', createdAt: '', updatedAt: '' },
   { id: 'COL-002', name: 'Movements SPA', vat: 'IT456', address: '', phone: '', email: '', paymentTerms: 60, active: true, notes: '', operatingCompany: 'TA', createdAt: '', updatedAt: '' },

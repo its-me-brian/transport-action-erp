@@ -34,6 +34,7 @@ import {
   Project
 } from '../services/api';
 import { exportToCSV, exportToPDF, formatDateExport, formatCurrencyExport } from '../utils/exportUtils';
+import { useToast } from '../contexts/ToastContext';
 
 interface InvoiceScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -67,6 +68,7 @@ const NEXT_TRANSITIONS: Record<string, { action: string; label: string; target: 
 };
 
 export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
+  const { showToast } = useToast();
   const [invoices, setInvoices] = useState<InvoiceDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -114,6 +116,7 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
         setProjectsList(projects || []);
       } catch (err) {
         console.error('Error loading select data:', err);
+        showToast('Error al cargar datos', 'error');
       }
     };
     loadSelectData();
@@ -134,6 +137,7 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
       setInvoices(result || []);
     } catch (err) {
       console.error('Error loading invoices:', err);
+      showToast('Error al cargar facturas', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -157,7 +161,7 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
 
   const handleCreate = async () => {
     if (!newInvoice.projectId.trim() || !newInvoice.clientId.trim()) {
-      alert('Project and Client are required');
+      showToast('Project and Client are required', 'warning');
       return;
     }
     setIsCreating(true);
@@ -168,11 +172,11 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
         dueDate: newInvoice.dueDate || undefined,
         notes: newInvoice.notes.trim() || undefined,
       });
-      if (result.error) { alert('Error: ' + result.error); return; }
+      if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setNewInvoice({ projectId: '', clientId: '', dueDate: '', notes: '' });
       await loadData();
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast('Error: ' + err.message, 'error');
     } finally {
       setIsCreating(false);
       setShowCreateModal(false);
@@ -189,12 +193,12 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
         default: return;
       }
       if (result?.error) {
-        alert('Error: ' + result.error);
+        showToast('Error: ' + result.error, 'error');
         return;
       }
       await loadData();
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast('Error: ' + err.message, 'error');
     } finally {
       setUpdatingStatus(null);
     }
@@ -205,12 +209,12 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
     setIsVoiding(true);
     try {
       const result = await voidInvoice(voidTarget.id, voidReason.trim());
-      if (result.error) { alert('Error: ' + result.error); return; }
+      if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setVoidTarget(null);
       setVoidReason('');
       await loadData();
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast('Error: ' + err.message, 'error');
     } finally {
       setIsVoiding(false);
     }
@@ -239,11 +243,11 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
       if (Object.keys(changes).length === 0) { setEditTarget(null); return; }
 
       const result = await editInvoice(editTarget.id, changes);
-      if (result.error) { alert('Error: ' + result.error); return; }
+      if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setEditTarget(null);
       await loadData();
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast('Error: ' + err.message, 'error');
     } finally {
       setIsEditing(false);
     }
@@ -448,9 +452,27 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
       {/* Invoices List */}
       <div id="invoices-list" className="space-y-2">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <span className="text-[13px] text-on-surface-variant">Loading invoices...</span>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-surface-container-highest animate-pulse shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 bg-surface-container-highest rounded w-14 animate-pulse" />
+                    <div className="h-3.5 bg-surface-container-highest rounded w-20 animate-pulse" />
+                    <div className="h-2.5 bg-surface-container-highest rounded w-16 animate-pulse" />
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="h-2.5 bg-surface-container-highest rounded w-24 animate-pulse" />
+                    <div className="h-2.5 bg-surface-container-highest rounded w-20 animate-pulse" />
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  <div className="h-7 bg-surface-container-highest rounded w-7 animate-pulse" />
+                  <div className="h-7 bg-surface-container-highest rounded w-7 animate-pulse" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-outline-variant rounded-xl">

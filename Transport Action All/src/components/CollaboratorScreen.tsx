@@ -25,6 +25,7 @@ import {
   deleteSupplierRate
 } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 interface CollaboratorScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -32,6 +33,7 @@ interface CollaboratorScreenProps {
 
 export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenProps) {
   const { token } = useAuth();
+  const { showToast } = useToast();
   const [collaborators, setCollaborators] = useState<CollaboratorDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,6 +66,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
       }
     } catch (err) {
       console.error('Error loading collaborators:', err);
+      showToast('Error al cargar colaboradores', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -78,6 +81,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
       }
     } catch (err) {
       console.error('Error loading rates:', err);
+      showToast('Error al cargar tarifas', 'error');
     } finally {
       setLoadingRates(false);
     }
@@ -95,7 +99,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
 
   const handleSave = async () => {
     if (!editCollaborator?.name?.trim()) {
-      alert('Name is required');
+      showToast('Name is required', 'warning');
       return;
     }
     setIsSaving(true);
@@ -111,15 +115,15 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
           notes: editCollaborator.notes || '',
           operatingCompany: editCollaborator.operatingCompany || ''
         });
-        if (result.error) { alert('Error: ' + result.error); return; }
+        if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       } else {
         const result = await updateCollaborator(editCollaborator.id!, editCollaborator);
-        if (result.error) { alert('Error: ' + result.error); return; }
+        if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       }
       setEditCollaborator(null);
       await loadCollaborators();
     } catch (err: any) {
-      alert('Error: ' + (err.message || err));
+      showToast('Error: ' + (err.message || err), 'error');
     } finally {
       setIsSaving(false);
     }
@@ -128,11 +132,11 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
   const handleDelete = async (id: string) => {
     try {
       const result = await deleteCollaborator(id);
-      if (result.error) { alert('Error: ' + result.error); return; }
+      if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setDeleteConfirm(null);
       await loadCollaborators();
     } catch (err: any) {
-      alert('Error: ' + (err.message || err));
+      showToast('Error: ' + (err.message || err), 'error');
     }
   };
 
@@ -166,15 +170,15 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
           validTo: editRate.validTo || '',
           operatingCompany: editRate.operatingCompany || ''
         });
-        if (result.error) { alert('Error: ' + result.error); return; }
+        if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       } else {
         const result = await updateSupplierRate(editRate.id!, editRate);
-        if (result.error) { alert('Error: ' + result.error); return; }
+        if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       }
       setEditRate(null);
       await loadRates(selectedCollaborator!.id);
     } catch (err: any) {
-      alert('Error: ' + (err.message || err));
+      showToast('Error: ' + (err.message || err), 'error');
     } finally {
       setIsSaving(false);
     }
@@ -183,10 +187,10 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
   const handleDeleteRate = async (rateId: string) => {
     try {
       const result = await deleteSupplierRate(rateId);
-      if (result.error) { alert('Error: ' + result.error); return; }
+      if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       await loadRates(selectedCollaborator!.id);
     } catch (err: any) {
-      alert('Error: ' + (err.message || err));
+      showToast('Error: ' + (err.message || err), 'error');
     }
   };
 
@@ -230,9 +234,26 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
       {/* Collaborators List */}
       <div id="collaborators-list" className="space-y-2">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <span className="text-[13px] text-on-surface-variant">Loading providers...</span>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex items-center gap-3">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3.5 bg-surface-container-highest rounded w-24 animate-pulse" />
+                    <div className="h-3 bg-surface-container-highest rounded w-16 animate-pulse" />
+                    <div className="h-3 bg-surface-container-highest rounded w-12 animate-pulse" />
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="h-2.5 bg-surface-container-highest rounded w-20 animate-pulse" />
+                    <div className="h-2.5 bg-surface-container-highest rounded w-28 animate-pulse" />
+                  </div>
+                </div>
+                <div className="flex gap-1.5">
+                  <div className="h-6 bg-surface-container-highest rounded w-12 animate-pulse" />
+                  <div className="h-6 bg-surface-container-highest rounded w-6 animate-pulse" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-outline-variant rounded-xl">

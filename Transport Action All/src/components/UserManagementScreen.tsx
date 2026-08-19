@@ -231,9 +231,22 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
       {/* Users Table */}
       <div className="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
         {isLoading ? (
-          <div className="flex items-center justify-center p-12 text-on-surface-variant text-[13px]">
-            <Loader2 className="w-5 h-5 animate-spin mr-2" />
-            Loading users...
+          <div className="p-4 space-y-0">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 py-3 border-b border-outline-variant/50">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="w-8 h-8 rounded-full bg-surface-container-highest animate-pulse" />
+                  <div className="space-y-1.5">
+                    <div className="h-3 bg-surface-container-highest rounded w-20 animate-pulse" />
+                    <div className="h-2.5 bg-surface-container-highest rounded w-28 animate-pulse" />
+                  </div>
+                </div>
+                <div className="h-3 bg-surface-container-highest rounded w-16 animate-pulse" />
+                <div className="h-3 bg-surface-container-highest rounded w-20 animate-pulse" />
+                <div className="h-3 bg-surface-container-highest rounded w-16 animate-pulse" />
+                <div className="h-3 bg-surface-container-highest rounded w-20 animate-pulse" />
+              </div>
+            ))}
           </div>
         ) : filteredUsers.length === 0 ? (
           <div className="p-12 text-center text-on-surface-variant text-[13px]">

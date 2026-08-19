@@ -18,6 +18,7 @@ import {
   deleteDocument 
 } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 interface DocumentScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -33,6 +34,7 @@ const MIME_ICONS: Record<string, typeof File> = {
 
 export default function DocumentScreen({ onNavigate }: DocumentScreenProps) {
   const { token } = useAuth();
+  const { showToast } = useToast();
   const [documents, setDocuments] = useState<DocumentDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,6 +55,7 @@ export default function DocumentScreen({ onNavigate }: DocumentScreenProps) {
       }
     } catch (err) {
       console.error('Error loading documents:', err);
+      showToast('Error al cargar documentos', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -62,13 +65,13 @@ export default function DocumentScreen({ onNavigate }: DocumentScreenProps) {
     try {
       const result = await deleteDocument(id);
       if (result.error) {
-        alert('Error: ' + result.error);
+        showToast('Error: ' + result.error, 'error');
         return;
       }
       setDeleteConfirm(null);
       await loadDocuments();
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast('Error: ' + err.message, 'error');
     }
   };
 
@@ -95,13 +98,13 @@ export default function DocumentScreen({ onNavigate }: DocumentScreenProps) {
       });
 
       if (result.error) {
-        alert('Error uploading: ' + result.error);
+        showToast('Error uploading: ' + result.error, 'error');
         return;
       }
 
       await loadDocuments();
     } catch (err: any) {
-      alert('Error uploading: ' + err.message);
+      showToast('Error uploading: ' + err.message, 'error');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -179,9 +182,20 @@ export default function DocumentScreen({ onNavigate }: DocumentScreenProps) {
       {/* Documents List */}
       <div id="documents-list" className="flex flex-col gap-2">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <span className="text-[13px] text-on-surface-variant">Loading documents...</span>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-surface-container-highest animate-pulse shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3.5 bg-surface-container-highest rounded w-36 animate-pulse" />
+                  <div className="h-2.5 bg-surface-container-highest rounded w-48 animate-pulse" />
+                </div>
+                <div className="flex gap-1">
+                  <div className="h-7 bg-surface-container-highest rounded w-7 animate-pulse" />
+                  <div className="h-7 bg-surface-container-highest rounded w-7 animate-pulse" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-outline-variant rounded-xl">

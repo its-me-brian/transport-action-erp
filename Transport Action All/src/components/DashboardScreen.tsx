@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useToast } from '../contexts/ToastContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Calendar as CalendarIcon, Plus, AlertCircle, AlertTriangle, Car, ArrowRight, 
@@ -31,6 +32,8 @@ export default function DashboardScreen({
   // State for active entity filter
   const [activeEntity, setActiveEntity] = useState<string>('All');
   const [companies, setCompanies] = useState<OperatingCompany[]>([]);
+
+  const { showToast } = useToast();
 
   useEffect(() => {
     getOperatingCompanies().then(c => { if (Array.isArray(c)) setCompanies(c); }).catch(e => console.error('Failed to load operating companies:', e));
@@ -264,14 +267,14 @@ export default function DashboardScreen({
       const failures = results.filter(r => r?.error);
       
       if (failures.length > 0) {
-        alert(`${failures.length} of ${selectedServiceIds.size} services could not be completed:\n${failures.map(f => f?.error).join('\n')}`);
+        showToast(`${failures.length} of ${selectedServiceIds.size} services could not be completed: ${failures.map(f => f?.error).join(', ')}`, 'error');
       }
       
       // Clear selection
       setSelectedServiceIds(new Set());
     } catch (error) {
       console.error('Failed to mark services as completed:', error);
-      alert('Failed to complete services: ' + (error as Error).message);
+      showToast('Failed to complete services: ' + (error as Error).message, 'error');
     } finally {
       setIsBulkCompleting(false);
     }
@@ -345,7 +348,7 @@ export default function DashboardScreen({
   const handleDoubleClick = useCallback((service: Service) => {
     // Completed services cannot be reverted — state machine is forward-only
     if (service.status === 'Completed') {
-      alert('This service is already completed. Completed services cannot be reverted to In Progress.');
+      showToast('This service is already completed. Completed services cannot be reverted to In Progress.', 'warning');
       return;
     }
     
@@ -498,7 +501,7 @@ export default function DashboardScreen({
       await Promise.all(promises);
       
       if (failedFields.length > 0) {
-        alert('Some fields could not be saved: ' + failedFields.join(', '));
+        showToast('Some fields could not be saved: ' + failedFields.join(', '), 'warning');
         // Do NOT update local state if any fields failed — keep UI in sync with backend
       } else {
         onServiceUpdate?.(editingService.id, editForm);
@@ -509,7 +512,7 @@ export default function DashboardScreen({
       setEditForm({});
     } catch (error) {
       console.error('Failed to save edit:', error);
-      alert('Failed to save changes. Please try again.');
+      showToast('Failed to save changes. Please try again.', 'error');
     }
   };
 
@@ -569,13 +572,13 @@ export default function DashboardScreen({
       const serviceId = cancellingService.backendId || cancellingService.id;
       const result = await deleteService(serviceId, cancelReason.trim() || undefined);
       if (result.error) {
-        alert('Error deleting service: ' + result.error);
+        showToast('Error deleting service: ' + result.error, 'error');
         return;
       }
       // Remove from local state
       onServiceUpdate?.(cancellingService.id, { status: 'Deleted' });
     } catch (err: any) {
-      alert('Error deleting service: ' + (err.message || 'Unknown error'));
+      showToast('Error deleting service: ' + (err.message || 'Unknown error'), 'error');
     } finally {
       setCancellingService(null);
       setCancelReason('');
@@ -600,13 +603,13 @@ export default function DashboardScreen({
       const serviceId = cancellingService.backendId || cancellingService.id;
       const result = await cancelService(serviceId, cancelReason.trim());
       if (result.error) {
-        alert('Error cancelling service: ' + result.error);
+        showToast('Error cancelling service: ' + result.error, 'error');
         return;
       }
       // Mark as cancelled in local state
       onServiceUpdate?.(cancellingService.id, { operationalStatus: 'Cancelado' });
     } catch (err: any) {
-      alert('Error cancelling service: ' + (err.message || 'Unknown error'));
+      showToast('Error cancelling service: ' + (err.message || 'Unknown error'), 'error');
     } finally {
       setCancellingService(null);
       setCancelReason('');
@@ -643,12 +646,12 @@ export default function DashboardScreen({
         });
       }
       if (result.error) {
-        alert('Error: ' + result.error);
+        showToast('Error: ' + result.error, 'error');
         return;
       }
-      alert(`${adjustmentType === 'revenue' ? 'Revenue' : 'Cost'} adjustment of ${amount} saved.`);
+      showToast(`${adjustmentType === 'revenue' ? 'Revenue' : 'Cost'} adjustment of ${amount} saved.`, 'success');
     } catch (err: any) {
-      alert('Error: ' + (err.message || 'Unknown error'));
+      showToast('Error: ' + (err.message || 'Unknown error'), 'error');
     } finally {
       setAdjustingService(null);
       setAdjustmentForm({ description: '', amount: '' });
@@ -851,10 +854,10 @@ export default function DashboardScreen({
                   try {
                     const result = await approveFinancial(service.id);
                     if (result.error) {
-                      alert('Error: ' + result.error);
+                      showToast('Error: ' + result.error, 'error');
                     }
                   } catch (err: any) {
-                    alert('Error: ' + err.message);
+                    showToast('Error: ' + err.message, 'error');
                   }
                 }}
                 className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-green-50 text-green-600 hover:bg-green-100 cursor-pointer"
@@ -871,10 +874,10 @@ export default function DashboardScreen({
                   try {
                     const result = await markFacturable(service.id);
                     if (result.error) {
-                      alert('Error: ' + result.error);
+                      showToast('Error: ' + result.error, 'error');
                     }
                   } catch (err: any) {
-                    alert('Error: ' + err.message);
+                    showToast('Error: ' + err.message, 'error');
                   }
                 }}
                 className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 hover:bg-purple-100 cursor-pointer"
@@ -891,10 +894,10 @@ export default function DashboardScreen({
                   try {
                     const result = await facturarService(service.id);
                     if (result.error) {
-                      alert('Error: ' + result.error);
+                      showToast('Error: ' + result.error, 'error');
                     }
                   } catch (err: any) {
-                    alert('Error: ' + err.message);
+                    showToast('Error: ' + err.message, 'error');
                   }
                 }}
                 className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 cursor-pointer"
@@ -911,10 +914,10 @@ export default function DashboardScreen({
                   try {
                     const result = await cobrarService(service.id);
                     if (result.error) {
-                      alert('Error: ' + result.error);
+                      showToast('Error: ' + result.error, 'error');
                     }
                   } catch (err: any) {
-                    alert('Error: ' + err.message);
+                    showToast('Error: ' + err.message, 'error');
                   }
                 }}
                 className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 cursor-pointer"
@@ -931,10 +934,10 @@ export default function DashboardScreen({
                   try {
                     const result = await closeService(service.id);
                     if (result.error) {
-                      alert('Error: ' + result.error);
+                      showToast('Error: ' + result.error, 'error');
                     }
                   } catch (err: any) {
-                    alert('Error: ' + err.message);
+                    showToast('Error: ' + err.message, 'error');
                   }
                 }}
                 className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-orange-50 text-orange-600 hover:bg-orange-100 cursor-pointer"
@@ -951,10 +954,10 @@ export default function DashboardScreen({
                   try {
                     const result = await cerrarComercialmente(service.id);
                     if (result.error) {
-                      alert('Error: ' + result.error);
+                      showToast('Error: ' + result.error, 'error');
                     }
                   } catch (err: any) {
-                    alert('Error: ' + err.message);
+                    showToast('Error: ' + err.message, 'error');
                   }
                 }}
                 className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-green-50 text-green-600 hover:bg-green-100 cursor-pointer"

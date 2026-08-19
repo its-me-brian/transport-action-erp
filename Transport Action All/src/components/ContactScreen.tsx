@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Users, Plus, Search, Loader2, X, Save, Edit3, Phone, Mail, MessageCircle } from 'lucide-react';
 import { ScreenId } from '../types';
 import { getContacts, createContact, updateContact, getClients, ContactDTO } from '../services/api';
+import { useToast } from '../contexts/ToastContext';
 
 interface Props { onNavigate: (screen: ScreenId) => void; }
 
 const fmtDate = (d: string) => { if (!d) return '-'; try { return new Date(d).toLocaleDateString('it-IT'); } catch { return d; } };
 
 export default function ContactScreen({ onNavigate }: Props) {
+  const { showToast } = useToast();
   const [contacts, setContacts] = useState<ContactDTO[]>([]);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,14 +38,13 @@ export default function ContactScreen({ onNavigate }: Props) {
   });
 
   const handleCreate = async () => {
-    if (!form.clientId || !form.name.trim()) { alert('Client and Name are required'); return; }
+    if (!form.clientId || !form.name.trim()) { showToast('Client and Name are required', 'warning'); return; }
     setIsSaving(true);
     try {
       const r = await createContact(form);
-      if (r.error) { alert(r.error); return; }
-      setForm({ clientId: '', name: '', role: '', phone: '', email: '', whatsapp: '', notes: '' });
-      await loadData();
-    } catch (err: any) { alert(err.message); } finally { setIsSaving(false); setShowCreateModal(false); }
+      if (r.error) { showToast(r.error, 'error'); return; }
+      await loadContacts();
+    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsSaving(false); setShowCreateModal(false); }
   };
 
   const handleEdit = async () => {
@@ -51,9 +52,9 @@ export default function ContactScreen({ onNavigate }: Props) {
     setIsSaving(true);
     try {
       const r = await updateContact(editTarget.id, form);
-      if (r.error) { alert(r.error); return; }
-      await loadData();
-    } catch (err: any) { alert(err.message); } finally { setIsSaving(false); setEditTarget(null); }
+      if (r.error) { showToast(r.error, 'error'); return; }
+      await loadContacts();
+    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsSaving(false); setEditTarget(null); }
   };
 
   const openEdit = (c: ContactDTO) => {
@@ -143,7 +144,27 @@ export default function ContactScreen({ onNavigate }: Props) {
 
       <div className="space-y-2">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3"><Loader2 className="w-8 h-8 text-primary animate-spin" /><span className="text-[13px] text-on-surface-variant">Loading...</span></div>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex items-center gap-3">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3.5 bg-surface-container-highest rounded w-28 animate-pulse" />
+                    <div className="h-3 bg-surface-container-highest rounded w-14 animate-pulse" />
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="h-2.5 bg-surface-container-highest rounded w-20 animate-pulse" />
+                    <div className="h-2.5 bg-surface-container-highest rounded w-28 animate-pulse" />
+                    <div className="h-2.5 bg-surface-container-highest rounded w-24 animate-pulse" />
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  <div className="h-2.5 bg-surface-container-highest rounded w-16 animate-pulse" />
+                  <div className="h-7 bg-surface-container-highest rounded w-7 animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-outline-variant rounded-xl">
             <Users className="w-10 h-10 text-outline" /><span className="text-[13px] text-on-surface-variant">No contacts found</span>

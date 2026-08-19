@@ -24,6 +24,10 @@ vi.mock('../services/api', () => ({
   getDrivers: (...args: any[]) => mockGetDrivers(...args),
 }));
 
+vi.mock('../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
 const mockOnNavigate = vi.fn();
 
 const sampleDrivers = [

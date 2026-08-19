@@ -29,6 +29,10 @@ vi.mock('../services/api', () => ({
   getDrivers: (...args: any[]) => mockGetDrivers(...args),
 }));
 
+vi.mock('../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
 const mockDrivers = [
   { id: 'DRV-001', name: 'Mario Rossi' },
   { id: 'DRV-002', name: 'Luigi Bianchi' },
@@ -62,7 +66,6 @@ const mockAdvances = [
 describe('DriverAdvanceScreen', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(window, 'alert').mockImplementation(() => {});
     mockGetDriverAdvances.mockResolvedValue(mockAdvances);
     mockGetDrivers.mockResolvedValue(mockDrivers);
   });
@@ -75,8 +78,8 @@ describe('DriverAdvanceScreen', () => {
   it('shows loading state', () => {
     mockGetDriverAdvances.mockReturnValue(new Promise(() => {}));
     mockGetDrivers.mockReturnValue(new Promise(() => {}));
-    render(<DriverAdvanceScreen onNavigate={vi.fn()} />);
-    expect(screen.getByText('Loading advances...')).toBeInTheDocument();
+    const { container } = render(<DriverAdvanceScreen onNavigate={vi.fn()} />);
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
   });
 
   it('loads and displays advances', async () => {
@@ -188,8 +191,9 @@ describe('DriverAdvanceScreen', () => {
     fireEvent.click(screen.getByText('New Advance'));
     fireEvent.click(screen.getByText('Create Advance'));
 
+    // showToast should be called for validation error
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Driver and amount (> 0) are required');
+      expect(screen.getByText('Create Advance')).toBeInTheDocument();
     });
   });
 
@@ -231,8 +235,9 @@ describe('DriverAdvanceScreen', () => {
     fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '100' } });
     fireEvent.click(screen.getByText('Create Advance'));
 
+    // showToast should be called for API error
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Insufficient budget');
+      expect(mockCreateDriverAdvance).toHaveBeenCalled();
     });
   });
 

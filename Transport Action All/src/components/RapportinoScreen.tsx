@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useToast } from '../contexts/ToastContext';
 import { 
   FileText, 
   Plus, 
@@ -20,6 +21,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { ScreenId } from '../types';
+import StatusBadge from './StatusBadge';
 import { 
   getRapportinoClients,
   getRapportinoDrivers,
@@ -62,6 +64,80 @@ type TabType = 'client' | 'driver' | 'collaborator';
 type ClientStatus = 'Borrador' | 'Revisado' | 'Enviado' | 'Aceptado' | 'Facturado';
 type DriverStatus = 'Borrador' | 'Revisado' | 'Enviado' | 'Aceptado' | 'Pagado';
 type CollaboratorStatus = 'Borrador' | 'Enviado' | 'Aceptado' | 'Pagado';
+
+// ─── Animated Status Flow Stepper ──────────────────────────────────────────────
+
+interface StatusFlowProps {
+  statuses: string[];
+  currentStatus: string;
+  statusConfig: Record<string, { icon: React.ElementType; color: string; bg: string }>;
+}
+
+function StatusFlow({ statuses, currentStatus, statusConfig }: StatusFlowProps) {
+  const currentIndex = statuses.indexOf(currentStatus);
+
+  return (
+    <div className="flex items-center w-full py-3">
+      {statuses.map((status, index) => {
+        const config = statusConfig[status] || statusConfig.Borrador;
+        const Icon = config.icon;
+        const isCompleted = index < currentIndex;
+        const isCurrent = index === currentIndex;
+        const isFuture = index > currentIndex;
+
+        return (
+          <React.Fragment key={status}>
+            {/* Status Node */}
+            <div className="flex flex-col items-center gap-1 shrink-0">
+              <div
+                className={`
+                  w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500
+                  ${isCompleted ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30' : ''}
+                  ${isCurrent ? `${config.bg} ${config.color} ring-2 ring-offset-1 ring-current shadow-lg animate-pulse` : ''}
+                  ${isFuture ? 'bg-surface-dim text-outline border border-outline-variant/50' : ''}
+                `}
+              >
+                {isCompleted ? (
+                  <CheckCircle className="w-4 h-4 text-white" />
+                ) : (
+                  <Icon className="w-4 h-4" />
+                )}
+              </div>
+              <span
+                className={`text-[9px] font-medium whitespace-nowrap transition-colors duration-300 ${
+                  isCurrent ? 'text-on-surface' : isCompleted ? 'text-emerald-600' : 'text-outline'
+                }`}
+              >
+                {status}
+              </span>
+            </div>
+
+            {/* Animated Connector Line */}
+            {index < statuses.length - 1 && (
+              <div className="flex-1 h-0.5 mx-1 relative overflow-hidden rounded-full bg-surface-dim">
+                <div
+                  className={`absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out ${
+                    index < currentIndex
+                      ? 'bg-emerald-500 w-full'
+                      : index === currentIndex
+                      ? 'bg-gradient-to-r from-emerald-500 to-outline-variant/30 animate-[shimmer_2s_ease-in-out_infinite]'
+                      : 'w-0'
+                  }`}
+                />
+                {/* Animated dot traveling along the line for current transition */}
+                {index === currentIndex && (
+                  <div className="absolute inset-y-0 left-0 w-full">
+                    <div className="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 animate-[travel_2s_ease-in-out_infinite]" />
+                  </div>
+                )}
+              </div>
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
 
 const PERIOD_TYPE_LABELS: Record<string, string> = {
   weekly: 'Semanal',
@@ -137,6 +213,198 @@ const COLLABORATOR_NEXT_STATUS_LABELS: Record<string, string> = {
   Aceptado: 'Pagar',
 };
 
+// ─── Memoized Card Components ─────────────────────────────────────────────────
+
+interface ClientCardProps {
+  rapportino: RapportinoClientDTO;
+  isUpdating: boolean;
+  nextAction: 'review' | 'send' | 'accept' | 'facturar' | null;
+  nextLabel: string | null;
+  onStatusUpdate: (id: string, action: 'review' | 'send' | 'accept' | 'facturar') => void;
+  onView: (r: RapportinoClientDTO) => void;
+  formatDate: (d: string) => string;
+}
+
+const ClientRapportinoCard = React.memo(function ClientRapportinoCard({
+  rapportino: r, isUpdating, nextAction, nextLabel, onStatusUpdate, onView, formatDate
+}: ClientCardProps) {
+  const sc = CLIENT_STATUS_CONFIG[r.status] || CLIENT_STATUS_CONFIG.Borrador;
+  const StatusIcon = sc.icon;
+  return (
+    <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors hover:bg-surface-dim/30">
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sc.bg}`}>
+        <StatusIcon className={`w-4 h-4 ${sc.color}`} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <StatusBadge status={r.status || 'Borrador'} size="xs" />
+          <span className="text-[11px] text-on-surface-variant font-mono">{r.id}</span>
+        </div>
+        <div className="flex items-center gap-3 mt-1 text-[12px] text-on-surface-variant">
+          <span className="font-medium">{r.clientId}</span>
+          {r.projectId && <span>{r.projectId}</span>}
+        </div>
+        <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
+          <span className="flex items-center gap-1">
+            <Calendar className="w-3 h-3" />
+            {PERIOD_TYPE_LABELS[r.periodType || 'weekly'] || r.periodType || 'Semanal'}: {formatDate(r.periodStart || r.weekStart)} → {formatDate(r.periodEnd || r.weekEnd)}
+          </span>
+          {r.sentAt && <span className="text-on-surface-variant">Enviado: {formatDate(r.sentAt)}</span>}
+          {r.acceptedAt && <span className="text-on-surface-variant">Aceptado: {formatDate(r.acceptedAt)}</span>}
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0">
+        {nextAction && nextLabel && (
+          <button
+            onClick={() => onStatusUpdate(r.id!, nextAction)}
+            disabled={isUpdating}
+            className="px-3 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary text-[11px] font-medium rounded transition-all duration-150 flex items-center gap-1 cursor-pointer disabled:opacity-50 active:scale-95"
+          >
+            {isUpdating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+            {nextLabel}
+          </button>
+        )}
+        <button
+          onClick={() => onView(r)}
+          className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-all duration-150 cursor-pointer active:scale-95"
+        >
+          <Eye className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+});
+
+interface DriverCardProps {
+  rapportino: RapportinoDriverDTO;
+  isUpdating: boolean;
+  nextAction: 'review' | 'send' | 'accept' | 'pay' | null;
+  nextLabel: string | null;
+  linkLoading: boolean;
+  onStatusUpdate: (id: string, action: 'review' | 'send' | 'accept' | 'pay') => void;
+  onGenerateLink: (r: RapportinoDriverDTO) => void;
+  onView: (r: RapportinoDriverDTO) => void;
+  formatDate: (d: string) => string;
+}
+
+const DriverRapportinoCard = React.memo(function DriverRapportinoCard({
+  rapportino: r, isUpdating, nextAction, nextLabel, linkLoading, onStatusUpdate, onGenerateLink, onView, formatDate
+}: DriverCardProps) {
+  const sc = DRIVER_STATUS_CONFIG[r.status] || DRIVER_STATUS_CONFIG.Borrador;
+  const StatusIcon = sc.icon;
+  return (
+    <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors hover:bg-surface-dim/30">
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sc.bg}`}>
+        <StatusIcon className={`w-4 h-4 ${sc.color}`} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <StatusBadge status={r.status || 'Borrador'} size="xs" />
+          <span className="text-[11px] text-on-surface-variant font-mono">{r.id}</span>
+        </div>
+        <div className="flex items-center gap-3 mt-1 text-[12px] text-on-surface-variant">
+          <span className="font-medium">{r.driverId}</span>
+          {r.projectId && <span>{r.projectId}</span>}
+        </div>
+        <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
+          <span className="flex items-center gap-1">
+            <Calendar className="w-3 h-3" />
+            {PERIOD_TYPE_LABELS[r.periodType || 'weekly'] || r.periodType || 'Semanal'}: {formatDate(r.periodStart || r.weekStart)} → {formatDate(r.periodEnd || r.weekEnd)}
+          </span>
+          {r.sentAt && <span className="text-on-surface-variant">Enviado: {formatDate(r.sentAt)}</span>}
+          {r.paidAt && <span className="text-on-surface-variant">Pagado: {formatDate(r.paidAt)}</span>}
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0">
+        <button
+          onClick={() => onGenerateLink(r)}
+          disabled={linkLoading}
+          title="Generar link para conductor"
+          className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-all duration-150 cursor-pointer disabled:opacity-50 active:scale-95"
+        >
+          <Link className="w-3.5 h-3.5" />
+        </button>
+        {nextAction && nextLabel && (
+          <button
+            onClick={() => onStatusUpdate(r.id!, nextAction)}
+            disabled={isUpdating}
+            className="px-3 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary text-[11px] font-medium rounded transition-all duration-150 flex items-center gap-1 cursor-pointer disabled:opacity-50 active:scale-95"
+          >
+            {isUpdating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+            {nextLabel}
+          </button>
+        )}
+        <button
+          onClick={() => onView(r)}
+          className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-all duration-150 cursor-pointer active:scale-95"
+        >
+          <Eye className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+});
+
+interface CollaboratorCardProps {
+  rapportino: RapportinoCollaboratorDTO;
+  isUpdating: boolean;
+  nextAction: 'send' | 'accept' | 'pay' | null;
+  nextLabel: string | null;
+  onStatusUpdate: (id: string, action: 'send' | 'accept' | 'pay') => void;
+  onView: (r: RapportinoCollaboratorDTO) => void;
+  formatDate: (d: string) => string;
+}
+
+const CollaboratorRapportinoCard = React.memo(function CollaboratorRapportinoCard({
+  rapportino: r, isUpdating, nextAction, nextLabel, onStatusUpdate, onView, formatDate
+}: CollaboratorCardProps) {
+  const sc = COLLABORATOR_STATUS_CONFIG[r.status] || COLLABORATOR_STATUS_CONFIG.Borrador;
+  const StatusIcon = sc.icon;
+  return (
+    <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors hover:bg-surface-dim/30">
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sc.bg}`}>
+        <StatusIcon className={`w-4 h-4 ${sc.color}`} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <StatusBadge status={r.status || 'Borrador'} size="xs" />
+          <span className="text-[11px] text-on-surface-variant font-mono">{r.id}</span>
+        </div>
+        <div className="flex items-center gap-3 mt-1 text-[12px] text-on-surface-variant">
+          <span className="font-medium">{r.collaboratorId}</span>
+          {r.projectId && <span>{r.projectId}</span>}
+        </div>
+        <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
+          <span className="flex items-center gap-1">
+            <Calendar className="w-3 h-3" />
+            {PERIOD_TYPE_LABELS[r.periodType || 'weekly'] || r.periodType || 'Semanal'}: {formatDate(r.periodStart)} → {formatDate(r.periodEnd)}
+          </span>
+          {r.sentAt && <span className="text-on-surface-variant">Enviado: {formatDate(r.sentAt)}</span>}
+          {r.paidAt && <span className="text-on-surface-variant">Pagado: {formatDate(r.paidAt)}</span>}
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0">
+        {nextAction && nextLabel && (
+          <button
+            onClick={() => onStatusUpdate(r.id!, nextAction)}
+            disabled={isUpdating}
+            className="px-3 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary text-[11px] font-medium rounded transition-all duration-150 flex items-center gap-1 cursor-pointer disabled:opacity-50 active:scale-95"
+          >
+            {isUpdating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+            {nextLabel}
+          </button>
+        )}
+        <button
+          onClick={() => onView(r)}
+          className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-all duration-150 cursor-pointer active:scale-95"
+        >
+          <Eye className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+});
+
 export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) {
   const [activeTab, setActiveTab] = useState<TabType>('client');
   const [clientRapportinos, setClientRapportinos] = useState<RapportinoClientDTO[]>([]);
@@ -151,6 +419,8 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
   const [filterDriver, setFilterDriver] = useState('');
   const [filterCollaborator, setFilterCollaborator] = useState('');
   const [filterProject, setFilterProject] = useState('');
+
+  const { showToast } = useToast();
 
   // Data for selects
   const [clientsList, setClientsList] = useState<ClientDTO[]>([]);
@@ -190,6 +460,7 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
         setCollaboratorsList(collaborators || []);
       } catch (err) {
         console.error('Error loading select data:', err);
+        showToast('Error al cargar datos de filtro', 'error');
       }
     };
     loadSelectData();
@@ -218,12 +489,13 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
       }
     } catch (err) {
       console.error('Error loading rapportinos:', err);
+      showToast('Error al cargar rapportinos', 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const filteredClients = clientRapportinos.filter(r => {
+  const filteredClients = useMemo(() => clientRapportinos.filter(r => {
     if (statusFilter !== 'All' && r.status !== statusFilter) return false;
     if (filterClient && r.clientId !== filterClient) return false;
     if (filterProject && r.projectId !== filterProject) return false;
@@ -234,9 +506,9 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
              r.projectId?.toLowerCase().includes(q);
     }
     return true;
-  });
+  }), [clientRapportinos, statusFilter, filterClient, filterProject, searchQuery]);
 
-  const filteredDrivers = driverRapportinos.filter(r => {
+  const filteredDrivers = useMemo(() => driverRapportinos.filter(r => {
     if (statusFilter !== 'All' && r.status !== statusFilter) return false;
     if (filterDriver && r.driverId !== filterDriver) return false;
     if (filterProject && r.projectId !== filterProject) return false;
@@ -247,9 +519,9 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
              r.projectId?.toLowerCase().includes(q);
     }
     return true;
-  });
+  }), [driverRapportinos, statusFilter, filterDriver, filterProject, searchQuery]);
 
-  const filteredCollaborators = collaboratorRapportinos.filter(r => {
+  const filteredCollaborators = useMemo(() => collaboratorRapportinos.filter(r => {
     if (statusFilter !== 'All' && r.status !== statusFilter) return false;
     if (filterCollaborator && r.collaboratorId !== filterCollaborator) return false;
     if (filterProject && r.projectId !== filterProject) return false;
@@ -260,9 +532,9 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
              r.projectId?.toLowerCase().includes(q);
     }
     return true;
-  });
+  }), [collaboratorRapportinos, statusFilter, filterCollaborator, filterProject, searchQuery]);
 
-  const handleClientStatusUpdate = async (rapportinoId: string, action: 'review' | 'send' | 'accept' | 'facturar') => {
+  const handleClientStatusUpdate = useCallback(async (rapportinoId: string, action: 'review' | 'send' | 'accept' | 'facturar') => {
     setUpdatingStatus(rapportinoId);
     try {
       let result;
@@ -273,18 +545,19 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
         case 'facturar': result = await facturarRapportino(rapportinoId); break;
       }
       if (result?.error) {
-        alert('Error: ' + result.error);
+        showToast(result.error, 'error');
         return;
       }
+      showToast('Rapportino actualizado correctamente', 'success');
       await loadData();
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast(err.message, 'error');
     } finally {
       setUpdatingStatus(null);
     }
-  };
+  }, [loadData, showToast]);
 
-  const handleDriverStatusUpdate = async (rapportinoId: string, action: 'review' | 'send' | 'accept' | 'pay') => {
+  const handleDriverStatusUpdate = useCallback(async (rapportinoId: string, action: 'review' | 'send' | 'accept' | 'pay') => {
     setUpdatingStatus(rapportinoId);
     try {
       let result;
@@ -295,16 +568,17 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
         case 'pay': result = await payRapportinoDriver(rapportinoId); break;
       }
       if (result?.error) {
-        alert('Error: ' + result.error);
+        showToast(result.error, 'error');
         return;
       }
+      showToast('Rapportino actualizado correctamente', 'success');
       await loadData();
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast(err.message, 'error');
     } finally {
       setUpdatingStatus(null);
     }
-  };
+  }, [loadData, showToast]);
 
   const getClientNextAction = (status: ClientStatus): 'review' | 'send' | 'accept' | 'facturar' | null => {
     const next = CLIENT_TRANSITIONS[status];
@@ -324,7 +598,7 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
     return map[next] || null;
   };
 
-  const handleCollaboratorStatusUpdate = async (rapportinoId: string, action: 'send' | 'accept' | 'pay') => {
+  const handleCollaboratorStatusUpdate = useCallback(async (rapportinoId: string, action: 'send' | 'accept' | 'pay') => {
     setUpdatingStatus(rapportinoId);
     try {
       let result;
@@ -334,16 +608,17 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
         case 'pay': result = await payRapportinoCollaborator(rapportinoId); break;
       }
       if (result?.error) {
-        alert('Error: ' + result.error);
+        showToast(result.error, 'error');
         return;
       }
+      showToast('Rapportino actualizado correctamente', 'success');
       await loadData();
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast(err.message, 'error');
     } finally {
       setUpdatingStatus(null);
     }
-  };
+  }, [loadData, showToast]);
 
   const getCollaboratorNextAction = (status: CollaboratorStatus): 'send' | 'accept' | 'pay' | null => {
     const next = COLLABORATOR_TRANSITIONS[status];
@@ -355,7 +630,7 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
   };
 
   // Driver Link handlers
-  const handleGenerateDriverLink = async (rapportino: RapportinoDriverDTO) => {
+  const handleGenerateDriverLink = useCallback(async (rapportino: RapportinoDriverDTO) => {
     setDriverLinkModal({ open: true, rapportino, loading: true, link: null, error: '', copied: false });
     try {
       const link = await generateDriverLink(
@@ -368,7 +643,7 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
     } catch (err: any) {
       setDriverLinkModal(prev => ({ ...prev, loading: false, error: err.message || 'Failed to generate link' }));
     }
-  };
+  }, []);
 
   const handleCopyLink = async (url: string) => {
     try {
@@ -632,9 +907,19 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
       {/* Rapportinos List */}
       <div id="rapportinos-list" className="space-y-2">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <span className="text-[13px] text-on-surface-variant">Cargando rapportinos...</span>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 animate-pulse">
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-surface-dim rounded w-1/3" />
+                  <div className="h-3 bg-surface-dim rounded w-1/2" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-16 bg-surface-dim rounded-full" />
+                  <div className="h-8 w-8 bg-surface-dim rounded-lg" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : (activeTab === 'client' ? filteredClients : activeTab === 'driver' ? filteredDrivers : filteredCollaborators).length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-outline-variant rounded-xl">
@@ -647,205 +932,46 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
             </p>
           </div>
         ) : activeTab === 'client' ? (
-          filteredClients.map(r => {
-            const sc = CLIENT_STATUS_CONFIG[r.status] || CLIENT_STATUS_CONFIG.Borrador;
-            const StatusIcon = sc.icon;
-            const nextAction = getClientNextAction(r.status as ClientStatus);
-            const nextLabel = r.status ? CLIENT_NEXT_STATUS_LABELS[r.status] : null;
-            return (
-              <div
-                key={r.id}
-                className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors hover:bg-surface-dim/30"
-              >
-                {/* Status icon */}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sc.bg}`}>
-                  <StatusIcon className={`w-4 h-4 ${sc.color}`} />
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${sc.bg} ${sc.color}`}>
-                      {r.status}
-                    </span>
-                    <span className="text-[11px] text-on-surface-variant font-mono">{r.id}</span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1 text-[12px] text-on-surface-variant">
-                    <span className="font-medium">{r.clientId}</span>
-                    {r.projectId && <span>{r.projectId}</span>}
-                  </div>
-                  <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {PERIOD_TYPE_LABELS[r.periodType || 'weekly'] || r.periodType || 'Semanal'}: {formatDate(r.periodStart || r.weekStart)} → {formatDate(r.periodEnd || r.weekEnd)}
-                    </span>
-                    {r.sentAt && <span className="text-on-surface-variant">Enviado: {formatDate(r.sentAt)}</span>}
-                    {r.acceptedAt && <span className="text-on-surface-variant">Aceptado: {formatDate(r.acceptedAt)}</span>}
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {nextAction && nextLabel && (
-                    <button
-                      onClick={() => handleClientStatusUpdate(r.id!, nextAction)}
-                      disabled={updatingStatus === r.id}
-                      className="px-3 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary text-[11px] font-medium rounded transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                    >
-                      {updatingStatus === r.id ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <Send className="w-3 h-3" />
-                      )}
-                      {nextLabel}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setViewTarget(r)}
-                    className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-colors cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            );
-          })
+          filteredClients.map(r => (
+            <ClientRapportinoCard
+              key={r.id}
+              rapportino={r}
+              isUpdating={updatingStatus === r.id}
+              nextAction={getClientNextAction(r.status as ClientStatus)}
+              nextLabel={r.status ? CLIENT_NEXT_STATUS_LABELS[r.status] : null}
+              onStatusUpdate={handleClientStatusUpdate}
+              onView={(rec) => setViewTarget(rec)}
+              formatDate={formatDate}
+            />
+          ))
         ) : activeTab === 'driver' ? (
-          filteredDrivers.map(r => {
-            const sc = DRIVER_STATUS_CONFIG[r.status] || DRIVER_STATUS_CONFIG.Borrador;
-            const StatusIcon = sc.icon;
-            const nextAction = getDriverNextAction(r.status as DriverStatus);
-            const nextLabel = r.status ? DRIVER_NEXT_STATUS_LABELS[r.status] : null;
-            return (
-              <div
-                key={r.id}
-                className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors hover:bg-surface-dim/30"
-              >
-                {/* Status icon */}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sc.bg}`}>
-                  <StatusIcon className={`w-4 h-4 ${sc.color}`} />
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${sc.bg} ${sc.color}`}>
-                      {r.status}
-                    </span>
-                    <span className="text-[11px] text-on-surface-variant font-mono">{r.id}</span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1 text-[12px] text-on-surface-variant">
-                    <span className="font-medium">{r.driverId}</span>
-                    {r.projectId && <span>{r.projectId}</span>}
-                  </div>
-                  <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {PERIOD_TYPE_LABELS[r.periodType || 'weekly'] || r.periodType || 'Semanal'}: {formatDate(r.periodStart || r.weekStart)} → {formatDate(r.periodEnd || r.weekEnd)}
-                    </span>
-                    {r.sentAt && <span className="text-on-surface-variant">Enviado: {formatDate(r.sentAt)}</span>}
-                    {r.paidAt && <span className="text-on-surface-variant">Pagado: {formatDate(r.paidAt)}</span>}
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    onClick={() => handleGenerateDriverLink(r)}
-                    disabled={driverLinkModal.loading && driverLinkModal.rapportino?.id === r.id}
-                    title="Generar link para conductor"
-                    className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    <Link className="w-3.5 h-3.5" />
-                  </button>
-                  {nextAction && nextLabel && (
-                    <button
-                      onClick={() => handleDriverStatusUpdate(r.id!, nextAction)}
-                      disabled={updatingStatus === r.id}
-                      className="px-3 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary text-[11px] font-medium rounded transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                    >
-                      {updatingStatus === r.id ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <Send className="w-3 h-3" />
-                      )}
-                      {nextLabel}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setViewTarget(r)}
-                    className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-colors cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            );
-          })
+          filteredDrivers.map(r => (
+            <DriverRapportinoCard
+              key={r.id}
+              rapportino={r}
+              isUpdating={updatingStatus === r.id}
+              nextAction={getDriverNextAction(r.status as DriverStatus)}
+              nextLabel={r.status ? DRIVER_NEXT_STATUS_LABELS[r.status] : null}
+              linkLoading={driverLinkModal.loading && driverLinkModal.rapportino?.id === r.id}
+              onStatusUpdate={handleDriverStatusUpdate}
+              onGenerateLink={handleGenerateDriverLink}
+              onView={(rec) => setViewTarget(rec)}
+              formatDate={formatDate}
+            />
+          ))
         ) : (
-          filteredCollaborators.map(r => {
-            const sc = COLLABORATOR_STATUS_CONFIG[r.status] || COLLABORATOR_STATUS_CONFIG.Borrador;
-            const StatusIcon = sc.icon;
-            const nextAction = getCollaboratorNextAction(r.status as CollaboratorStatus);
-            const nextLabel = r.status ? COLLABORATOR_NEXT_STATUS_LABELS[r.status] : null;
-            return (
-              <div
-                key={r.id}
-                className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors hover:bg-surface-dim/30"
-              >
-                {/* Status icon */}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sc.bg}`}>
-                  <StatusIcon className={`w-4 h-4 ${sc.color}`} />
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${sc.bg} ${sc.color}`}>
-                      {r.status}
-                    </span>
-                    <span className="text-[11px] text-on-surface-variant font-mono">{r.id}</span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1 text-[12px] text-on-surface-variant">
-                    <span className="font-medium">{r.collaboratorId}</span>
-                    {r.projectId && <span>{r.projectId}</span>}
-                  </div>
-                  <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {PERIOD_TYPE_LABELS[r.periodType || 'weekly'] || r.periodType || 'Semanal'}: {formatDate(r.periodStart)} → {formatDate(r.periodEnd)}
-                    </span>
-                    {r.sentAt && <span className="text-on-surface-variant">Enviado: {formatDate(r.sentAt)}</span>}
-                    {r.paidAt && <span className="text-on-surface-variant">Pagado: {formatDate(r.paidAt)}</span>}
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {nextAction && nextLabel && (
-                    <button
-                      onClick={() => handleCollaboratorStatusUpdate(r.id!, nextAction)}
-                      disabled={updatingStatus === r.id}
-                      className="px-3 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary text-[11px] font-medium rounded transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                    >
-                      {updatingStatus === r.id ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <Send className="w-3 h-3" />
-                      )}
-                      {nextLabel}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setViewTarget(r)}
-                    className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-colors cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            );
-          })
+          filteredCollaborators.map(r => (
+            <CollaboratorRapportinoCard
+              key={r.id}
+              rapportino={r}
+              isUpdating={updatingStatus === r.id}
+              nextAction={getCollaboratorNextAction(r.status as CollaboratorStatus)}
+              nextLabel={r.status ? COLLABORATOR_NEXT_STATUS_LABELS[r.status] : null}
+              onStatusUpdate={handleCollaboratorStatusUpdate}
+              onView={(rec) => setViewTarget(rec)}
+              formatDate={formatDate}
+            />
+          ))
         )}
       </div>
 
@@ -912,6 +1038,28 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
                   </p>
                 </div>
               </div>
+              {/* Animated Status Flow */}
+              <div className="mt-2">
+                <span className="text-on-surface-variant uppercase text-[10px]">Flujo de estado</span>
+                <StatusFlow
+                  statuses={
+                    activeTab === 'client'
+                      ? ['Borrador', 'Revisado', 'Enviado', 'Aceptado', 'Facturado']
+                      : activeTab === 'driver'
+                      ? ['Borrador', 'Revisado', 'Enviado', 'Aceptado', 'Pagado']
+                      : ['Borrador', 'Enviado', 'Aceptado', 'Pagado']
+                  }
+                  currentStatus={viewTarget.status || 'Borrador'}
+                  statusConfig={
+                    activeTab === 'client'
+                      ? CLIENT_STATUS_CONFIG
+                      : activeTab === 'driver'
+                      ? DRIVER_STATUS_CONFIG
+                      : COLLABORATOR_STATUS_CONFIG
+                  }
+                />
+              </div>
+
               {viewTarget.notes && (
                 <div>
                   <span className="text-on-surface-variant uppercase text-[10px]">Notas</span>

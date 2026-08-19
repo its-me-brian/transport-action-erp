@@ -91,6 +91,10 @@ describe('Driver Links API', () => {
     });
 
     it('should handle network errors', async () => {
+      // gasPostWithRetry retries 3 times on network errors, then throws
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
       await expect(

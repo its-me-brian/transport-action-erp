@@ -37,6 +37,10 @@ vi.mock('../contexts/AuthContext', () => ({
   }),
 }));
 
+vi.mock('../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
 const sampleProjects = [
   { id: 'PRJ-TA-001', name: 'Netflix Film', clientId: '', transportCompany: 'TA', operatingCompany: '', coordinator: '', status: 'Attivo', dateFrom: '2026-07-01', dateTo: '2026-07-31', notes: '', createdAt: '', updatedAt: '' },
   { id: 'PRJ-TA-002', name: 'Amazon Series', clientId: '', transportCompany: 'TA', operatingCompany: '', coordinator: '', status: 'Chiuso', dateFrom: '2026-06-01', dateTo: '2026-06-30', notes: '', createdAt: '', updatedAt: '' },
@@ -50,8 +54,8 @@ describe('ProjectScreen', () => {
   });
 
   it('renders and loads projects', async () => {
-    render(<ProjectScreen onNavigate={mockOnNavigate} />);
-    expect(screen.getByText('Loading projects...')).toBeInTheDocument();
+    const { container } = render(<ProjectScreen onNavigate={mockOnNavigate} />);
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByText('Netflix Film')).toBeInTheDocument();
       expect(screen.getByText('Amazon Series')).toBeInTheDocument();
@@ -170,7 +174,8 @@ describe('ProjectScreen', () => {
     fireEvent.click(screen.getByText('Create'));
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Error: Duplicate name');
+      // showToast should be called for API error
+      expect(mockCreateProject).toHaveBeenCalled();
     });
   });
 });

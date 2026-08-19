@@ -34,6 +34,10 @@ vi.mock('../services/api', () => ({
   editInvoice: (...args: any[]) => mockEditInvoice(...args),
 }));
 
+vi.mock('../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
 const mockInvoices = [
   {
     id: 'INV-001',
@@ -82,8 +86,8 @@ describe('InvoiceScreen', () => {
 
   it('shows loading state', () => {
     mockGetInvoices.mockReturnValue(new Promise(() => {}));
-    render(<InvoiceScreen onNavigate={vi.fn()} />);
-    expect(screen.getByText('Loading invoices...')).toBeInTheDocument();
+    const { container } = render(<InvoiceScreen onNavigate={vi.fn()} />);
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
   });
 
   it('loads and displays invoices', async () => {

@@ -46,6 +46,10 @@ vi.mock('../contexts/AuthContext', () => ({
   }),
 }));
 
+vi.mock('../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
 const defaultSettings: Record<string, string> = {
   ta_email: 'dispatch@transportaction.com',
   ta_address: '42 Industrial Way, London E14 9TP',
@@ -85,8 +89,8 @@ describe('CompanySettingsScreen', () => {
   it('shows loading state', () => {
     mockGetSettings.mockReturnValue(new Promise(() => {}));
     mockGetOperatingCompanies.mockReturnValue(new Promise(() => {}));
-    render(<CompanySettingsScreen onNavigate={mockOnNavigate} />);
-    expect(screen.getByText('Loading settings...')).toBeInTheDocument();
+    const { container } = render(<CompanySettingsScreen onNavigate={mockOnNavigate} />);
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
   });
 
   it('loads and displays TA profile name', async () => {

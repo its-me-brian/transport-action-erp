@@ -24,6 +24,10 @@ vi.mock('../services/api', () => ({
   getClients: (...args: any[]) => mockGetClients(...args),
 }));
 
+vi.mock('../contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
 const mockOnNavigate = vi.fn();
 
 const sampleClients = [

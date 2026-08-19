@@ -82,7 +82,8 @@ describe('FinancialDashboard', () => {
 
   it('shows loading state initially', () => {
     render(<FinancialDashboard onNavigate={mockOnNavigate} />);
-    expect(screen.getByText('Loading financial data...')).toBeInTheDocument();
+    const skeletons = document.querySelectorAll('.animate-pulse');
+    expect(skeletons.length).toBeGreaterThan(0);
   });
 
   it('renders KPI cards with correct values after load', async () => {
@@ -246,7 +247,7 @@ describe('FinancialDashboard', () => {
 
     render(<FinancialDashboard onNavigate={mockOnNavigate} />);
     await waitFor(() => {
-      expect(screen.queryByText('Loading financial data...')).not.toBeInTheDocument();
+      expect(screen.queryByText('Financial Overview')).toBeInTheDocument();
     });
     // Should still render with zero data, no crash
     expect(screen.getByText('Total Received')).toBeInTheDocument();

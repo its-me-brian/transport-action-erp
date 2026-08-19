@@ -180,9 +180,24 @@ export default function FinancialDashboard({ onNavigate }: Props) {
       </header>
 
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-3">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          <span className="text-[13px] text-on-surface-variant">Loading financial data...</span>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-outline-variant/30 p-4 space-y-2 animate-pulse">
+                <div className="h-3 bg-surface-dim rounded w-1/2" />
+                <div className="h-7 bg-surface-dim rounded w-2/3" />
+                <div className="h-3 bg-surface-dim rounded w-1/3" />
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-outline-variant/30 p-4 space-y-3 animate-pulse">
+                <div className="h-4 bg-surface-dim rounded w-1/3" />
+                <div className="h-40 bg-surface-dim rounded-lg" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <>

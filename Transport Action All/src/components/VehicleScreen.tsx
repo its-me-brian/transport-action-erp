@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Car, Plus, Search, Loader2, X, Save, Edit3, AlertTriangle } from 'lucide-react';
 import { ScreenId } from '../types';
 import { getVehicles, createVehicle, updateVehicle, VehicleDTO } from '../services/api';
+import { useToast } from '../contexts/ToastContext';
 
 interface Props { onNavigate: (screen: ScreenId) => void; }
 
@@ -12,6 +13,7 @@ const STATUSES = ['Disponible', 'En uso', 'Mantenimiento', 'Inactivo'];
 const fmtDate = (d: string) => { if (!d) return '-'; try { return new Date(d).toLocaleDateString('it-IT'); } catch { return d; } };
 
 export default function VehicleScreen({ onNavigate }: Props) {
+  const { showToast } = useToast();
   const [vehicles, setVehicles] = useState<VehicleDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,14 +43,13 @@ export default function VehicleScreen({ onNavigate }: Props) {
   };
 
   const handleCreate = async () => {
-    if (!form.plate.trim()) { alert('Plate is required'); return; }
+    if (!form.plate.trim()) { showToast('Plate is required', 'warning'); return; }
     setIsSaving(true);
     try {
       const r = await createVehicle({ ...form, capacity: parseInt(form.capacity) || 0 });
-      if (r.error) { alert(r.error); return; }
-      setForm({ plate: '', brand: '', model: '', type: 'Van', ownership: 'tercero', capacity: '', insuranceExpiry: '', inspectionExpiry: '', operatingCompany: '', notes: '' });
-      await loadData();
-    } catch (err: any) { alert(err.message); } finally { setIsSaving(false); setShowCreateModal(false); }
+      if (r.error) { showToast(r.error, 'error'); return; }
+      await loadVehicles();
+    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsSaving(false); setShowCreateModal(false); }
   };
 
   const handleEdit = async () => {
@@ -66,9 +67,9 @@ export default function VehicleScreen({ onNavigate }: Props) {
       if (form.operatingCompany !== editTarget.operatingCompany) changes.OperatingCompany = form.operatingCompany;
       if (form.notes !== editTarget.notes) changes.Notes = form.notes;
       const r = await updateVehicle(editTarget.id, changes);
-      if (r.error) { alert(r.error); return; }
-      await loadData();
-    } catch (err: any) { alert(err.message); } finally { setIsSaving(false); setEditTarget(null); }
+      if (r.error) { showToast(r.error, 'error'); return; }
+      await loadVehicles();
+    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsSaving(false); setEditTarget(null); }
   };
 
   const openEdit = (v: VehicleDTO) => {
@@ -178,7 +179,24 @@ export default function VehicleScreen({ onNavigate }: Props) {
 
       <div className="space-y-2">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3"><Loader2 className="w-8 h-8 text-primary animate-spin" /><span className="text-[13px] text-on-surface-variant">Loading...</span></div>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex items-center gap-3">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3.5 bg-surface-container-highest rounded w-20 animate-pulse" />
+                    <div className="h-3 bg-surface-container-highest rounded w-14 animate-pulse" />
+                    <div className="h-3 bg-surface-container-highest rounded w-16 animate-pulse" />
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="h-2.5 bg-surface-container-highest rounded w-24 animate-pulse" />
+                    <div className="h-2.5 bg-surface-container-highest rounded w-16 animate-pulse" />
+                  </div>
+                </div>
+                <div className="h-6 bg-surface-container-highest rounded w-6 animate-pulse" />
+              </div>
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-outline-variant rounded-xl">
             <Car className="w-10 h-10 text-outline" /><span className="text-[13px] text-on-surface-variant">No vehicles found</span>

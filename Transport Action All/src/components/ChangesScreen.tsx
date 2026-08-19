@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  AlertTriangle, 
   Plus, 
   Search, 
   Clock, 
@@ -10,11 +9,11 @@ import {
   X, 
   Save, 
   Trash2,
-  Filter,
   Bell
 } from 'lucide-react';
 import { ScreenId } from '../types';
 import { Change, getChanges, createChange, updateChange, deleteChange } from '../services/api';
+import { useToast } from '../contexts/ToastContext';
 
 interface ChangesScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -23,6 +22,7 @@ interface ChangesScreenProps {
 type StatusFilter = 'All' | 'Open' | 'Resolved';
 
 export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
+  const { showToast } = useToast();
   const [changes, setChanges] = useState<Change[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,6 +68,7 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
       }
     } catch (err) {
       console.error('Error loading changes:', err);
+      showToast('Error al cargar los cambios', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -89,11 +90,11 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
 
   const handleCreate = async () => {
     if (!newChange.description.trim()) {
-      alert('Description is required');
+      showToast('Description is required', 'warning');
       return;
     }
     if (!newChange.entityId.trim()) {
-      alert('Entity ID is required');
+      showToast('Entity ID is required', 'warning');
       return;
     }
     setIsSaving(true);
@@ -107,11 +108,11 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
         dueDate: newChange.dueDate || undefined,
         notes: newChange.notes || undefined
       });
-      if (result.error) { alert('Error: ' + result.error); return; }
+      if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setNewChange({ entityType: 'Service', entityId: '', type: 'other', description: '', priority: 'Medium', dueDate: '', notes: '' });
       await loadChanges();
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast('Error: ' + err.message, 'error');
     } finally {
       setIsSaving(false);
       setShowAddModal(false);
@@ -127,23 +128,23 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
         resolvedBy: 'user',
         notes: resolveNotes
       });
-      if (result.error) { alert('Error: ' + result.error); return; }
+      if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setResolveTarget(null);
       setResolveNotes('');
       await loadChanges();
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast('Error: ' + err.message, 'error');
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       const result = await deleteChange(id);
-      if (result.error) { alert('Error: ' + result.error); return; }
+      if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       setDeleteConfirm(null);
       await loadChanges();
     } catch (err: any) {
-      alert('Error: ' + err.message);
+      showToast('Error: ' + err.message, 'error');
     }
   };
 
@@ -229,9 +230,18 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
       {/* Changes List */}
       <div id="changes-list" className="space-y-2">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <span className="text-[13px] text-on-surface-variant">Loading changes...</span>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 animate-pulse">
+                <div className="w-8 h-8 rounded-full bg-surface-dim shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="flex gap-2"><div className="h-5 w-16 bg-surface-dim rounded" /><div className="h-5 w-12 bg-surface-dim rounded" /></div>
+                  <div className="h-3 w-3/4 bg-surface-dim rounded" />
+                  <div className="h-3 w-1/2 bg-surface-dim rounded" />
+                </div>
+                <div className="h-7 w-16 bg-surface-dim rounded shrink-0" />
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-outline-variant rounded-xl">

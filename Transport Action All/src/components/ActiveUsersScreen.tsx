@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Users, RefreshCw, Clock, Wifi } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { gasPost } from '../services/api';
 
 interface PresenceUser {
@@ -20,6 +21,7 @@ interface ActiveUsersScreenProps {
 
 export default function ActiveUsersScreen({ onNavigate }: ActiveUsersScreenProps) {
   const { token, can } = useAuth();
+  const { showToast } = useToast();
   const [users, setUsers] = useState<PresenceUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
@@ -33,6 +35,7 @@ export default function ActiveUsersScreen({ onNavigate }: ActiveUsersScreenProps
       }
     } catch (err) {
       console.error('Failed to load active users:', err);
+      showToast('Error al cargar usuarios activos', 'error');
     } finally {
       setIsLoading(false);
       setLastRefresh(new Date());
@@ -131,7 +134,32 @@ export default function ActiveUsersScreen({ onNavigate }: ActiveUsersScreenProps
 
       {/* Users List */}
       {isLoading && users.length === 0 ? (
-        <div className="text-center py-8 text-on-surface-variant">Loading...</div>
+        <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-surface-container">
+              <tr>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Status</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">User</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Role</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Last Seen</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Session</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">IP Address</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-outline-variant">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i} className="animate-pulse">
+                  <td className="px-4 py-3"><div className="flex gap-2"><div className="w-2.5 h-2.5 rounded-full bg-surface-dim" /><div className="w-4 h-4 bg-surface-dim rounded" /></div></td>
+                  <td className="px-4 py-3"><div className="space-y-1"><div className="h-4 w-32 bg-surface-dim rounded" /><div className="h-3 w-20 bg-surface-dim rounded" /></div></td>
+                  <td className="px-4 py-3"><div className="h-5 w-16 bg-surface-dim rounded-full" /></td>
+                  <td className="px-4 py-3"><div className="h-4 w-12 bg-surface-dim rounded" /></td>
+                  <td className="px-4 py-3"><div className="h-3 w-24 bg-surface-dim rounded" /></td>
+                  <td className="px-4 py-3"><div className="h-4 w-20 bg-surface-dim rounded" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : users.length === 0 ? (
         <div className="text-center py-12 text-on-surface-variant">
           <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />

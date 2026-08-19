@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link2, Plus, Trash2, Copy, Calendar, Filter, Search, LinkIcon, CheckCircle, ChevronDown, ExternalLink, X, Pencil, Download, FileText } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { gasPost, getDrivers, getProjects, DriverRecord, Project, updateDriverLink } from '../services/api';
 import { ScreenId } from '../types';
 import { exportToCSV, exportToPDF, formatDateExport } from '../utils/exportUtils';
@@ -38,6 +39,7 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; dot: string }> =
 
 export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps) {
   const { token, can } = useAuth();
+  const { showToast } = useToast();
   const [links, setLinks] = useState<DriverLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -92,6 +94,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
       if (Array.isArray(result)) setLinks(result);
     } catch (err) {
       console.error('Failed to load driver links:', err);
+      showToast('Error al cargar links de conductores', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -111,6 +114,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
       setProjectsList((Array.isArray(projects) ? projects : []).filter(p => p.status !== 'Archiviato'));
     } catch (err) {
       console.error('Failed to load select data:', err);
+      showToast('Error al cargar datos', 'error');
     }
   };
 
@@ -161,6 +165,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
       loadLinks();
     } catch (err) {
       console.error('Failed to create link:', err);
+      showToast('Error al crear link', 'error');
     } finally {
       setIsCreating(false);
     }
@@ -171,13 +176,14 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
     try {
       const result = await gasPost('deactivateDriverLink', { linkToken });
       if (result?.error) {
-        alert('Error: ' + result.error);
+        showToast('Error: ' + result.error, 'error');
         return;
       }
       loadLinks();
     } catch (err) {
       console.error('Failed to deactivate link:', err);
-      alert('Failed to revoke link. Please try again.');
+      showToast('Error al desactivar link', 'error');
+      showToast('Failed to revoke link. Please try again.', 'error');
     }
   };
 
@@ -367,9 +373,21 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
       {/* Content */}
       <div className="flex-1 overflow-auto">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-on-surface-variant">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3" />
-            <p className="text-sm">Loading links...</p>
+          <div className="space-y-3 p-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="border border-outline-variant/30 rounded-lg p-4 animate-pulse">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-surface-dim rounded w-1/4" />
+                    <div className="h-3 bg-surface-dim rounded w-1/3" />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="h-6 w-16 bg-surface-dim rounded-full" />
+                    <div className="h-8 w-8 bg-surface-dim rounded-lg" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : filteredLinks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
@@ -635,6 +653,14 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
                 </div>
               </div>
             </div>
+            {isCreating && (
+              <div className="mt-4 space-y-2">
+                <div className="h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+                  <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: '60%' }} />
+                </div>
+                <p className="text-[11px] text-on-surface-variant text-center">Generating link...</p>
+              </div>
+            )}
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowCreate(false)}
@@ -835,7 +861,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
               <button
                 onClick={async () => {
                   if (!editForm.driverId || !editForm.projectId || !editForm.dateFrom || !editForm.dateTo) {
-                    alert('All fields are required');
+                    showToast('All fields are required', 'warning');
                     return;
                   }
                   setIsSaving(true);
@@ -859,13 +885,13 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
                       FieldsSchema: JSON.stringify(fieldsSchemaJson),
                     });
                     if (result.error) {
-                      alert('Error: ' + result.error);
+                      showToast('Error: ' + result.error, 'error');
                     } else {
                       setEditingLink(null);
                       loadLinks(); // Reload to show updated data
                     }
                   } catch (err: any) {
-                    alert('Error: ' + (err.message || 'Unknown error'));
+                    showToast('Error: ' + (err.message || 'Unknown error'), 'error');
                   } finally {
                     setIsSaving(false);
                   }

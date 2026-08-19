@@ -11,6 +11,8 @@ import {
 } from './types';
 import { getServices, getDrivers, gasPost, DriverRecord } from './services/api';
 import { useAuth } from './contexts/AuthContext';
+import { ToastProvider } from './contexts/ToastContext';
+import ErrorBoundary from './components/ErrorBoundary';
 import Sidebar, { NAV_SECTIONS } from './components/Sidebar';
 import AuthScreen from './components/AuthScreen';
 import DashboardScreen from './components/DashboardScreen';
@@ -379,11 +381,19 @@ export default function App() {
   }
 
   if (!isAuthenticated) {
-    return <AuthScreen />;
+    return (
+      <ErrorBoundary>
+        <ToastProvider>
+          <AuthScreen />
+        </ToastProvider>
+      </ErrorBoundary>
+    );
   }
 
   return (
-    <div id="application-container" className="min-h-screen bg-background text-on-surface font-sans flex">
+    <ErrorBoundary>
+      <ToastProvider>
+        <div id="application-container" className="min-h-screen bg-background text-on-surface font-sans flex">
       {/* Desktop Sidebar Nav */}
       {!hideSidebar && (
         <Sidebar currentScreen={currentScreen} onNavigate={(scr) => handleNavigate(scr, 'none')} mode={sidebarMode} onModeChange={setSidebarMode} />
@@ -473,6 +483,8 @@ export default function App() {
           </AnimatePresence>
         </div>
       </div>
-    </div>
+      </div>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }
