@@ -449,6 +449,7 @@ export default function DashboardScreen({
         endTime: { field: 'EndTime' },
         km: { field: 'KmTotal', mapper: (v: string) => parseFloat(v) || 0 },
         diariaType: { field: 'DiariaType' },
+        vehicleType: { field: 'VehicleType' },
         // NOTE: status/OperationalStatus is NOT editable via updateServiceField.
         // State changes MUST go through Commands (assignDriver, confirmService, etc.)
         // NOTE: DriverID/VehicleID are NOT here — assignment MUST go through assignDriver()

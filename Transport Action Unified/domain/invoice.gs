@@ -107,6 +107,8 @@ const InvoiceRepository = {
   },
 
   toDTO(entity) {
+    const total = parseFloat(entity.Total) || 0;
+    const balance = this.getSaldo(entity.ID);
     return {
       id: entity.ID,
       invoiceNumber: entity.InvoiceNumber,
@@ -117,7 +119,8 @@ const InvoiceRepository = {
       subtotal: parseFloat(entity.Subtotal) || 0,
       taxRate: parseFloat(entity.TaxRate) || 0,
       taxAmount: parseFloat(entity.TaxAmount) || 0,
-      total: parseFloat(entity.Total) || 0,
+      total: total,
+      balance: balance,
       currency: entity.Currency,
       status: entity.Status,
       notes: entity.Notes,

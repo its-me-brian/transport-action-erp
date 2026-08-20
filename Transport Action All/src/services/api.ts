@@ -675,6 +675,9 @@ export interface DriverRecord {
   collaboratorId: string;
   type: string;
   email: string;
+  iban: string;
+  licenseType: string;
+  licenseExpiry: string;
   operatingCompany: string;
 }
 
@@ -700,6 +703,9 @@ export async function getDrivers(): Promise<DriverRecord[]> {
     collaboratorId: row.CollaboratorID || row.collaboratorId || '',
     type: row.Type || row.type || 'internal',
     email: row.Email || row.email || '',
+    iban: row.IBAN || row.iban || '',
+    licenseType: row.LicenseType || row.licenseType || '',
+    licenseExpiry: row.LicenseExpiry || row.licenseExpiry || '',
     operatingCompany: row.OperatingCompany || row.operatingCompany || '',
   }));
 }
@@ -1377,6 +1383,7 @@ export interface ExpenseDTO {
   status: string;      // "Draft" | "Confirmed" | "Cancelled"
   projectId: string;
   operatingCompany: string;
+  notes: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -1798,6 +1805,7 @@ export interface InvoiceDTO {
   taxRate: number;
   taxAmount: number;
   total: number;
+  balance: number;
   currency: string;
   status: string;
   notes: string;

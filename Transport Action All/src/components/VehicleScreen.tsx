@@ -49,7 +49,7 @@ export default function VehicleScreen({ onNavigate }: Props) {
     try {
       const r = await createVehicle({ ...form, capacity: parseInt(form.capacity) || 0 });
       if (r.error) { showToast(r.error, 'error'); return; }
-      await loadVehicles();
+      await loadData();
     } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsSaving(false); setShowCreateModal(false); }
   };
 
@@ -71,7 +71,7 @@ export default function VehicleScreen({ onNavigate }: Props) {
       if (form.notes !== editTarget.notes) changes.Notes = form.notes;
       const r = await updateVehicle(editTarget.id, changes);
       if (r.error) { showToast(r.error, 'error'); return; }
-      await loadVehicles();
+      await loadData();
     } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsSaving(false); setEditTarget(null); }
   };
 

@@ -57,6 +57,7 @@ const ExpenseRepository = {
       Status: 'Draft',
       ProjectID: data.ProjectID || '',
       OperatingCompany: data.OperatingCompany || '',
+      Notes: data.Notes || '',
       CreatedBy: _getActiveUser(),
       CreatedAt: now,
       UpdatedAt: now
@@ -81,6 +82,7 @@ const ExpenseRepository = {
       status: entity.Status,
       projectId: entity.ProjectID,
       operatingCompany: entity.OperatingCompany,
+      notes: entity.Notes || '',
       createdBy: entity.CreatedBy,
       createdAt: entity.CreatedAt,
       updatedAt: entity.UpdatedAt

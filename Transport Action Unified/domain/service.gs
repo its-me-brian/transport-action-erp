@@ -273,6 +273,7 @@ function apiUpdateServiceField(serviceId, field, value) {
       'FlightInfo', 'Time', 'Section', 'Production',
       'PickupLines', 'DropoffLines',
       'EstimatedRevenue', 'EstimatedCost',
+      'VehicleType',
       // Report/operational fields — used by WhatsApp parser and ReportsScreen
       'StartTime', 'EndTime', 'KmTotal', 'DiariaType', 'HasDiaria'
     ];
