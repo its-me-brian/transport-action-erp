@@ -108,36 +108,36 @@ export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Pro
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-on-surface">Driver Submissions</h1>
-        <p className="text-sm text-on-surface-variant mt-1">Raw responses from Rapportino form submissions</p>
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto overflow-x-hidden">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-on-surface">Driver Submissions</h1>
+        <p className="text-xs sm:text-sm text-on-surface-variant mt-1">Raw responses from Rapportino form submissions</p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-surface rounded-xl border border-outline-variant p-4 text-center">
-          <div className="text-2xl font-bold text-on-surface">{items.length}</div>
-          <div className="text-xs text-on-surface-variant mt-1">Total Submissions</div>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <div className="bg-surface rounded-xl border border-outline-variant p-3 sm:p-4 text-center">
+          <div className="text-xl sm:text-2xl font-bold text-on-surface">{items.length}</div>
+          <div className="text-[10px] sm:text-xs text-on-surface-variant mt-1">Total Submissions</div>
         </div>
-        <div className="bg-surface rounded-xl border border-outline-variant p-4 text-center">
-          <div className="text-2xl font-bold text-primary">{uniqueDrivers.length}</div>
-          <div className="text-xs text-on-surface-variant mt-1">Drivers</div>
+        <div className="bg-surface rounded-xl border border-outline-variant p-3 sm:p-4 text-center">
+          <div className="text-xl sm:text-2xl font-bold text-primary">{uniqueDrivers.length}</div>
+          <div className="text-[10px] sm:text-xs text-on-surface-variant mt-1">Drivers</div>
         </div>
-        <div className="bg-surface rounded-xl border border-outline-variant p-4 text-center">
-          <div className="text-2xl font-bold text-primary">{uniqueProjects.length}</div>
-          <div className="text-xs text-on-surface-variant mt-1">Projects</div>
+        <div className="bg-surface rounded-xl border border-outline-variant p-3 sm:p-4 text-center">
+          <div className="text-xl sm:text-2xl font-bold text-primary">{uniqueProjects.length}</div>
+          <div className="text-[10px] sm:text-xs text-on-surface-variant mt-1">Projects</div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 mb-4">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4 overflow-x-auto hide-scrollbar shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <Filter className="w-4 h-4 text-on-surface-variant" />
           <select
             value={filterDriver}
             onChange={e => setFilterDriver(e.target.value)}
-            className="px-3 py-1.5 border border-outline-variant rounded-lg text-sm"
+            className="px-3 py-1.5 border border-outline-variant rounded-lg text-sm shrink-0"
           >
             <option value="">All Drivers</option>
             {uniqueDrivers.map(d => (
@@ -148,7 +148,7 @@ export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Pro
         <select
           value={filterProject}
           onChange={e => setFilterProject(e.target.value)}
-          className="px-3 py-1.5 border border-outline-variant rounded-lg text-sm"
+          className="px-3 py-1.5 border border-outline-variant rounded-lg text-sm shrink-0"
         >
           <option value="">All Projects</option>
           {uniqueProjects.map(p => (
@@ -160,7 +160,8 @@ export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Pro
       {/* Table */}
       {isLoading ? (
         <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px]">
             <thead className="bg-surface-container">
               <tr>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Driver</th>
@@ -190,6 +191,7 @@ export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Pro
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       ) : filteredItems.length === 0 ? (
         <div className="text-center py-12 text-on-surface-variant">
@@ -198,7 +200,8 @@ export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Pro
         </div>
       ) : (
         <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px]">
             <thead className="bg-surface-container">
               <tr>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Driver</th>
@@ -236,21 +239,22 @@ export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Pro
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
       {/* Detail Modal */}
       {selectedItem && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-surface rounded-xl p-6 w-full max-w-lg shadow-xl max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-on-surface">Submission Details</h2>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface rounded-xl w-full max-w-lg shadow-xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-outline-variant shrink-0">
+              <h2 className="text-base sm:text-lg font-bold text-on-surface">Submission Details</h2>
               <button onClick={() => setSelectedItem(null)} className="p-1 hover:bg-surface-container rounded-lg">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3 text-sm">
+            <div className="px-4 sm:px-6 py-4 space-y-3 text-sm overflow-y-auto flex-1 min-h-0">
               <div className="flex justify-between py-2 border-b border-outline-variant">
                 <span className="text-on-surface-variant">ID</span>
                 <span className="font-mono text-xs">{selectedItem.ID}</span>
@@ -333,7 +337,7 @@ export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Pro
               </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-outline-variant">
+            <div className="px-4 sm:px-6 py-4 border-t border-outline-variant shrink-0">
               <button
                 onClick={() => setSelectedItem(null)}
                 className="w-full px-4 py-2.5 border border-outline-variant rounded-lg text-sm font-medium hover:bg-surface-container-low transition-colors"

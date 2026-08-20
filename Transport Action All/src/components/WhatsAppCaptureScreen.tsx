@@ -126,19 +126,19 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-on-surface flex items-center gap-3">
-          <MessageSquare className="w-7 h-7 text-green-600" />
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto overflow-x-hidden">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-on-surface flex items-center gap-2 sm:gap-3">
+          <MessageSquare className="w-6 h-6 sm:w-7 sm:h-7 text-green-600" />
           WhatsApp Capture
         </h1>
-        <p className="text-sm text-on-surface-variant mt-1">
+        <p className="text-xs sm:text-sm text-on-surface-variant mt-1">
           Paste a driver's WhatsApp message, parse it, and capture to inbox
         </p>
       </div>
 
       {/* Progress steps */}
-      <div className="flex items-center gap-2 mb-6 text-sm">
+      <div className="flex items-center gap-1.5 sm:gap-2 mb-4 sm:mb-6 text-xs sm:text-sm flex-wrap">
         <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full ${step === 'paste' ? 'bg-primary text-primary-foreground font-semibold' : step === 'review' || step === 'done' ? 'bg-green-100 text-green-800' : 'bg-surface-container text-on-surface-variant'}`}>
           <span>1. Paste</span>
         </div>
@@ -156,7 +156,7 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
           STEP 1: Paste message
           ============================================================================ */}
       {step === 'paste' && (
-        <div className="bg-surface rounded-xl border border-outline-variant p-6">
+        <div className="bg-surface rounded-xl border border-outline-variant p-4 sm:p-6">
           <label className="block text-sm font-semibold text-on-surface mb-2">
             Paste WhatsApp message
           </label>
@@ -197,8 +197,8 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
       {step === 'review' && (
         <div>
           {/* Project selector */}
-          <div className="bg-surface rounded-xl border border-outline-variant p-4 mb-4">
-            <div className="flex items-center gap-4">
+          <div className="bg-surface rounded-xl border border-outline-variant p-3 sm:p-4 mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
               <label className="text-sm font-semibold text-on-surface">Project:</label>
               <select
                 value={selectedProject}
@@ -236,7 +236,7 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
 
                   {/* Editable fields */}
                   <div className="p-4">
-                    <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                       {/* Driver select */}
                       <div>
                         <label className="block text-[11px] text-on-surface-variant mb-1">Driver</label>
@@ -323,7 +323,7 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 mt-6">
+          <div className="flex flex-col sm:flex-row gap-3 mt-6">
             <button
               onClick={handleCapture}
               disabled={!selectedProject || isCapturing}
@@ -356,7 +356,7 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
           STEP 3: Done
           ============================================================================ */}
       {step === 'done' && (
-        <div className="bg-surface rounded-xl border border-outline-variant p-8 text-center">
+        <div className="bg-surface rounded-xl border border-outline-variant p-6 sm:p-8 text-center">
           <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
             <Check className="w-8 h-8 text-green-600" />
           </div>
@@ -365,7 +365,7 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
             {reports.length} report(s) have been captured to the inbox.
             Go to the Inbox tab to review and approve them.
           </p>
-          <div className="flex gap-3 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
               onClick={() => _onNavigate('inbox')}
               className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-colors font-semibold text-sm"
@@ -383,7 +383,7 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
       )}
 
       {/* Info box */}
-      <div className="mt-6 p-4 bg-surface-container rounded-xl text-xs text-on-surface-variant">
+      <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-surface-container rounded-xl text-xs text-on-surface-variant">
         <div className="flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <div>

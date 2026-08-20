@@ -349,10 +349,10 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
   const isPendingReview = selectedItem?.Status === 'PENDING_REVIEW';
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-on-surface">Report Inbox</h1>
-        <p className="text-sm text-on-surface-variant mt-1">Unified capture layer for driver reports</p>
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto overflow-x-hidden">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-on-surface">Report Inbox</h1>
+        <p className="text-xs sm:text-sm text-on-surface-variant mt-1">Unified capture layer for driver reports</p>
       </div>
 
       {/* Stats */}
@@ -419,7 +419,8 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
       {/* Items Table */}
       {isLoading ? (
         <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px]">
             <thead className="bg-surface-container">
               <tr>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Source</th>
@@ -445,6 +446,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       ) : filteredItems.length === 0 ? (
         <div className="text-center py-12 text-on-surface-variant">
@@ -453,7 +455,8 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
         </div>
       ) : (
         <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px]">
             <thead className="bg-surface-container">
               <tr>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Source</th>
@@ -487,6 +490,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -494,30 +498,30 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
           COMPARISON MODAL — CAPTURED: Driver input vs Service reference
           ============================================================================ */}
       {selectedItem && isNormalizable && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-surface rounded-xl w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface rounded-xl w-full max-w-2xl shadow-xl max-h-[90vh] flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant">
-              <div>
-                <h2 className="text-lg font-bold text-on-surface">Review Driver Submission</h2>
-                <p className="text-xs text-on-surface-variant mt-0.5">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-outline-variant shrink-0">
+              <div className="min-w-0">
+                <h2 className="text-base sm:text-lg font-bold text-on-surface">Review Driver Submission</h2>
+                <p className="text-[11px] sm:text-xs text-on-surface-variant mt-0.5 truncate">
                   Compare driver input with transport list reference
                 </p>
               </div>
-              <button onClick={() => setSelectedItem(null)} className="p-1 hover:bg-surface-container rounded-lg">
+              <button onClick={() => setSelectedItem(null)} className="p-1 hover:bg-surface-container rounded-lg shrink-0">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Metadata */}
-            <div className="px-6 py-3 bg-surface-container flex flex-wrap gap-4 text-xs">
+            <div className="px-4 sm:px-6 py-3 bg-surface-container flex flex-wrap gap-2 sm:gap-4 text-xs shrink-0">
               <div><span className="text-on-surface-variant">Source:</span> {getSourceBadge(selectedItem.Source)}</div>
               <div><span className="text-on-surface-variant">Driver:</span> <strong>{driverName(selectedItem.DriverID, selectedItem)}</strong></div>
-              <div><span className="text-on-surface-variant">Project:</span> {projectName(selectedItem.ProjectID, selectedItem)}</div>
+              <div className="hidden sm:block"><span className="text-on-surface-variant">Project:</span> {projectName(selectedItem.ProjectID, selectedItem)}</div>
               <div><span className="text-on-surface-variant">Date:</span> {formatDisplayDate(selectedItem.ServiceDate)}</div>
             </div>
 
-            <div className="px-6 py-4">
+            <div className="px-4 sm:px-6 py-4 overflow-y-auto flex-1 min-h-0">
               {/* Service Reference — from API or from rawData fallback */}
               {(serviceRef || getRawData(selectedItem).production) && (
                 <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -569,7 +573,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
                   Driver Input (editable)
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] text-on-surface-variant mb-1">
                       Start Time
@@ -652,7 +656,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
             </div>
 
             {/* Actions */}
-            <div className="px-6 py-4 border-t border-outline-variant flex gap-3">
+            <div className="px-4 sm:px-6 py-4 border-t border-outline-variant flex flex-col sm:flex-row gap-3 shrink-0">
               {can('inbox.normalize') && (
                 <>
                   {/* Quick Approve — one click */}
@@ -690,17 +694,17 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
           STANDARD MODAL — NORMALIZED / PENDING_REVIEW / ACCEPTED / REJECTED
           ============================================================================ */}
       {selectedItem && !isNormalizable && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-surface rounded-xl p-6 w-full max-w-lg shadow-xl max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">Report Details</h2>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface rounded-xl w-full max-w-lg shadow-xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-outline-variant shrink-0">
+              <h2 className="text-base sm:text-lg font-bold">Report Details</h2>
               <button onClick={() => setSelectedItem(null)} className="p-1 hover:bg-surface-container rounded-lg">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Metadata */}
-            <div className="space-y-2 text-sm mb-4 pb-4 border-b border-outline-variant">
+            <div className="px-4 sm:px-6 py-4 space-y-2 text-sm mb-4 pb-4 border-b border-outline-variant overflow-y-auto flex-1 min-h-0">
               <div className="flex justify-between">
                 <span className="text-on-surface-variant">Source</span>
                 {getSourceBadge(selectedItem.Source)}
@@ -754,7 +758,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
             )}
 
             {/* Actions */}
-            <div className="flex gap-3 mt-4 pt-4 border-t border-outline-variant">
+            <div className="flex flex-col sm:flex-row gap-3 mt-4 pt-4 border-t border-outline-variant shrink-0 px-4 sm:px-6 py-4">
               {/* NORMALIZED → PENDING_REVIEW (submit to review) */}
               {isReviewable && can('inbox.review') && (
                 <button

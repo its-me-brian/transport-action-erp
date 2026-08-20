@@ -72,7 +72,7 @@ export default function DriverReportScreen({ onNavigate }: Props) {
           <input type="text" placeholder="Search reports..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
             className="w-full bg-surface-container-lowest border border-outline-variant pl-8 pr-3 py-1.5 text-[12px] rounded-lg focus:outline-none focus:border-primary text-on-surface" />
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-1 overflow-x-auto hide-scrollbar shrink-0">
           {['All', 'Pendiente', 'Aceptado', 'Rechazado'].map(s => (
             <button key={s} onClick={() => setStatusFilter(s)} className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ${statusFilter === s ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'}`}>{s}</button>
           ))}
