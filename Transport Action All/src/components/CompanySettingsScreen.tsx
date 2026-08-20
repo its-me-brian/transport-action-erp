@@ -795,8 +795,8 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
       {/* Modals */}
       {editingCompany && (
         <div id="company-edit-modal-backdrop" className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div id="company-edit-modal" className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 max-w-md w-full shadow-lg">
-            <div className="flex justify-between items-center mb-3">
+          <div id="company-edit-modal" className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 max-w-md w-full shadow-lg max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-3 shrink-0">
               <h3 className="text-[14px] font-semibold text-primary">
                 Edit {editingCompany === 'TA' ? 'Transport Action' : 'Movie Motion'}
               </h3>
@@ -804,7 +804,7 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="space-y-3 text-[12px]">
+            <div className="space-y-3 text-[12px] overflow-y-auto flex-1 min-h-0">
               <div>
                 <label className="block text-on-surface-variant font-medium mb-1 uppercase text-[11px]">Contact Email</label>
                 <input 
@@ -871,7 +871,7 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
                   />
                 </div>
               </div>
-              <div className="flex justify-end gap-2 pt-1">
+              <div className="flex justify-end gap-2 pt-1 shrink-0">
                 <button 
                   onClick={() => setEditingCompany(null)}
                   className="px-3 py-1.5 bg-surface-dim hover:bg-surface-container text-on-surface rounded font-medium"
@@ -892,8 +892,8 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
 
       {editingWhatsApp && (
         <div id="whatsapp-edit-modal-backdrop" className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div id="whatsapp-edit-modal" className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 max-w-lg w-full shadow-lg">
-            <div className="flex justify-between items-center mb-3">
+          <div id="whatsapp-edit-modal" className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 max-w-lg w-full shadow-lg max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-3 shrink-0">
               <h3 className="text-[14px] font-semibold text-emerald-600">
                 WhatsApp Template
               </h3>
@@ -901,7 +901,7 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="space-y-3 text-[12px]">
+            <div className="space-y-3 text-[12px] overflow-y-auto flex-1 min-h-0">
               <div>
                 <label className="block text-on-surface-variant font-medium mb-1 uppercase text-[11px]">Template</label>
                 <textarea 
@@ -914,7 +914,7 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
                   Variables: <code>[Driver_Name]</code>, <code>[Project_ID]</code>, <code>[Pickup_Time]</code>, <code>[Dropoff_Location]</code>, <code>[Link]</code>
                 </span>
               </div>
-              <div className="flex justify-end gap-2 pt-1">
+              <div className="flex justify-end gap-2 pt-1 shrink-0">
                 <button 
                   onClick={() => setEditingWhatsApp(false)}
                   className="px-3 py-1.5 bg-surface-dim hover:bg-surface-container text-on-surface rounded font-medium"
@@ -936,8 +936,8 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
       {/* Email Template Modal */}
       {editingEmailTemplate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 max-w-lg w-full shadow-lg">
-            <div className="flex justify-between items-center mb-3">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 max-w-lg w-full shadow-lg max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-3 shrink-0">
               <h3 className="text-[14px] font-semibold text-primary">
                 {editingEmailTemplate === 'orderConfirmation' && 'Order Confirmation Template'}
                 {editingEmailTemplate === 'weeklySummary' && 'Weekly Summary Template'}
@@ -947,7 +947,7 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="space-y-3 text-[12px]">
+            <div className="space-y-3 text-[12px] overflow-y-auto flex-1 min-h-0">
               <div>
                 <label className="block text-on-surface-variant font-medium mb-1 uppercase text-[11px]">Email Body</label>
                 <textarea 
@@ -960,7 +960,7 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
                   Variables: <code>[Client_Name]</code>, <code>[Driver_Name]</code>, <code>[Vehicle_Type]</code>, <code>[Pickup_Time]</code>, <code>[Pickup_Location]</code>, <code>[Dropoff_Location]</code>, <code>[PO_Number]</code>, <code>[Production]</code>, <code>[Date_Range]</code>, <code>[Total_Services]</code>, <code>[Completed]</code>, <code>[Cancelled]</code>, <code>[Total_Amount]</code>
                 </span>
               </div>
-              <div className="flex justify-end gap-2 pt-1">
+              <div className="flex justify-end gap-2 pt-1 shrink-0">
                 <button 
                   onClick={() => setEditingEmailTemplate(null)}
                   className="px-3 py-1.5 bg-surface-dim hover:bg-surface-container text-on-surface rounded font-medium"
@@ -1072,14 +1072,14 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
       {/* Create User Modal */}
       {showCreateUser && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-surface rounded-xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-4 border-b border-outline-variant">
+          <div className="bg-surface rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[14px] font-semibold text-on-surface">Create New User</h3>
               <button onClick={() => setShowCreateUser(false)}>
                 <X className="w-5 h-5 text-on-surface-variant" />
               </button>
             </div>
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-3 overflow-y-auto flex-1 min-h-0">
               <div>
                 <label className="block text-[11px] text-on-surface-variant mb-1">Username *</label>
                 <input
@@ -1130,7 +1130,7 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
                 </select>
               </div>
             </div>
-            <div className="flex items-center justify-end gap-2 p-4 border-t border-outline-variant">
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-outline-variant shrink-0">
               <button
                 onClick={() => setShowCreateUser(false)}
                 className="px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant text-[12px] hover:bg-surface-container-low"
@@ -1152,14 +1152,14 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
       {/* Edit User Modal */}
       {editingUser && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-surface rounded-xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-4 border-b border-outline-variant">
+          <div className="bg-surface rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[14px] font-semibold text-on-surface">Edit User: {editingUser.username}</h3>
               <button onClick={() => setEditingUser(null)}>
                 <X className="w-5 h-5 text-on-surface-variant" />
               </button>
             </div>
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-3 overflow-y-auto flex-1 min-h-0">
               <div>
                 <label className="block text-[11px] text-on-surface-variant mb-1">Full Name</label>
                 <input
@@ -1192,7 +1192,7 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
                 </select>
               </div>
             </div>
-            <div className="flex items-center justify-end gap-2 p-4 border-t border-outline-variant">
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-outline-variant shrink-0">
               <button
                 onClick={() => setEditingUser(null)}
                 className="px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant text-[12px] hover:bg-surface-container-low"
