@@ -197,7 +197,7 @@ function _serveDriverForm(token) {
       '<p>Il link e scaduto o non e valido.<br>Chiedi un nuovo link al coordinatore.</p>' +
       '</div></body></html>'
     );
-    errorHtml.addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
+    errorHtml.addMetaTag('viewport', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
     return errorHtml;
   }
 
@@ -465,7 +465,7 @@ function _serveDriverForm(token) {
   var htmlOutput = HtmlService.createHtmlOutput(html)
     .setTitle('Rapportino Transport')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  htmlOutput.addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
+  htmlOutput.addMetaTag('viewport', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
   return htmlOutput;
 }
 
