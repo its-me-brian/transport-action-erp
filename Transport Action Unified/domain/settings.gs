@@ -28,6 +28,18 @@ const SettingsRepository = {
   },
 
   /**
+   * Obtener valor como array (comma-separated string → string[])
+   * Si no existe la key, retorna el default.
+   */
+  getAsArray(key, defaultValues) {
+    const val = this.get(key);
+    if (val === null || val === undefined || val === '') {
+      return defaultValues || [];
+    }
+    return String(val).split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+  },
+
+  /**
    * Obtener múltiples settings por categoría
    */
   getByCategory(category) {
@@ -92,7 +104,9 @@ const SettingsRepository = {
       KmExtraRate: 0.30,
       ActiveCompany: 'TA',
       InvoicePrefix: 'INV',
-      ServicePrefix: 'SVC'
+      ServicePrefix: 'SVC',
+      vehicle_types: 'Van,Car',
+      service_types: 'Dispo,Transfer Airport,Transfer City'
     };
   }
 };
@@ -112,5 +126,41 @@ function apiSaveSettings(settings) {
   Object.entries(settings).forEach(([key, value]) => {
     SettingsRepository.set(key, value);
   });
+  return { success: true };
+}
+
+/**
+ * API: Obtener vehicle types como array
+ */
+function apiGetVehicleTypes() {
+  return SettingsRepository.getAsArray('vehicle_types', ['Van', 'Car']);
+}
+
+/**
+ * API: Guardar vehicle types (array → comma-separated)
+ */
+function apiSaveVehicleTypes(types) {
+  if (!Array.isArray(types)) {
+    return { success: false, error: 'types must be an array' };
+  }
+  SettingsRepository.set('vehicle_types', types.join(', '), 'system');
+  return { success: true };
+}
+
+/**
+ * API: Obtener service types como array
+ */
+function apiGetServiceTypes() {
+  return SettingsRepository.getAsArray('service_types', ['Dispo', 'Transfer Airport', 'Transfer City']);
+}
+
+/**
+ * API: Guardar service types (array → comma-separated)
+ */
+function apiSaveServiceTypes(types) {
+  if (!Array.isArray(types)) {
+    return { success: false, error: 'types must be an array' };
+  }
+  SettingsRepository.set('service_types', types.join(', '), 'system');
   return { success: true };
 }

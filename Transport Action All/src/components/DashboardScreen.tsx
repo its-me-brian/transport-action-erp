@@ -13,7 +13,7 @@ import {
   getDriverAvatar, isProductionVehicle
 } from '../types';
 import WhatsAppParser from './WhatsAppParser';
-import { getDrivers, DriverRecord, getSettings, updateServiceField, cerrarComercialmente, facturarService, cobrarService, closeService, deleteService, cancelService, adjustRevenue, adjustCost, completeService, assignDriver, approveFinancial, markFacturable, getOperatingCompanies, OperatingCompany } from '../services/api';
+import { getDrivers, DriverRecord, getSettings, updateServiceField, cerrarComercialmente, facturarService, cobrarService, closeService, deleteService, cancelService, adjustRevenue, adjustCost, completeService, assignDriver, approveFinancial, markFacturable, getOperatingCompanies, OperatingCompany, getVehicleTypes } from '../services/api';
 
 interface DashboardScreenProps {
   services: Service[];
@@ -32,11 +32,13 @@ export default function DashboardScreen({
   // State for active entity filter
   const [activeEntity, setActiveEntity] = useState<string>('All');
   const [companies, setCompanies] = useState<OperatingCompany[]>([]);
+  const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
 
   const { showToast } = useToast();
 
   useEffect(() => {
     getOperatingCompanies().then(c => { if (Array.isArray(c)) setCompanies(c); }).catch(e => console.error('Failed to load operating companies:', e));
+    getVehicleTypes().then(vt => setVehicleTypes(vt)).catch(() => {});
   }, []);
   
   // Selected day for detail view (null = show full week)
@@ -1775,8 +1777,7 @@ export default function DashboardScreen({
                       <select value={editForm.vehicleType || ''} onChange={e => setEditForm(prev => ({ ...prev, vehicleType: e.target.value }))}
                         className="bg-surface-dim border border-outline-variant rounded-lg px-3 py-2 text-[14px] text-on-surface focus:outline-none focus:border-primary">
                         <option value="">—</option>
-                        <option value="Van">Van</option>
-                        <option value="Car">Car</option>
+                        {vehicleTypes.map(vt => <option key={vt} value={vt}>{vt}</option>)}
                       </select>
                     </div>
                     <div className="flex flex-col gap-1">

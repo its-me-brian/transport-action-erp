@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Plus, Search, Loader2, X, Save, Edit3 } from 'lucide-react';
 import { ScreenId } from '../types';
-import { getRateCards, createRateCard, updateRateCard, getClients, RateCardDTO } from '../services/api';
+import { getRateCards, createRateCard, updateRateCard, getClients, RateCardDTO, getVehicleTypes, getServiceTypes } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import { getErrorMessage } from '../utils/errorUtils';
 
 interface Props { onNavigate: (screen: ScreenId) => void; }
 
-const VEHICLE_TYPES = ['Van', 'Car'];
 const fmt = (n: number) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
 
 export default function RateCardScreen({ onNavigate }: Props) {
@@ -20,15 +19,19 @@ export default function RateCardScreen({ onNavigate }: Props) {
   const [editTarget, setEditTarget] = useState<RateCardDTO | null>(null);
   const [form, setForm] = useState({ name: '', category: '', vehicleType: 'Van', basePrice: '', extraKmRate: '', extraHourRate: '', waitRate: '', nightFee: '', holidayFee: '', halfDayPrice: '', fullDayPrice: '', airportSurcharge: '', clientId: '', notes: '', serviceType: 'Dispo', includedKm: '', includedHours: '' });
   const [isSaving, setIsSaving] = useState(false);
+  const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
 
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [c, cl] = await Promise.all([getRateCards(), getClients()]);
+      const [c, cl, vt, st] = await Promise.all([getRateCards(), getClients(), getVehicleTypes(), getServiceTypes()]);
       setCards(c);
       setClients(Array.isArray(cl) ? cl : []);
+      setVehicleTypes(vt);
+      setServiceTypes(st);
     } finally { setIsLoading(false); }
   };
 
@@ -92,11 +95,11 @@ export default function RateCardScreen({ onNavigate }: Props) {
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Name *</label><input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
-        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Vehicle Type</label><select value={form.vehicleType} onChange={e => setForm({ ...form, vehicleType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">{VEHICLE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Vehicle Type</label><select value={form.vehicleType} onChange={e => setForm({ ...form, vehicleType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">{vehicleTypes.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Category</label><input type="text" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="e.g. Airport Transfer" /></div>
-        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Service Type</label><select value={form.serviceType} onChange={e => setForm({ ...form, serviceType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"><option value="Dispo">Dispo</option><option value="Transfer Airport">Transfer Airport</option><option value="Transfer City">Transfer City</option></select></div>
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Service Type</label><select value={form.serviceType} onChange={e => setForm({ ...form, serviceType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">{serviceTypes.map(st => <option key={st} value={st}>{st}</option>)}</select></div>
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Client</label><select value={form.clientId} onChange={e => setForm({ ...form, clientId: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"><option value="">Global</option>{clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
       </div>
       <div className="grid grid-cols-3 gap-3">

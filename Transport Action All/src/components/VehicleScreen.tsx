@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Car, Plus, Search, Loader2, X, Save, Edit3, AlertTriangle } from 'lucide-react';
 import { ScreenId } from '../types';
-import { getVehicles, createVehicle, updateVehicle, VehicleDTO } from '../services/api';
+import { getVehicles, createVehicle, updateVehicle, VehicleDTO, getVehicleTypes } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import { getErrorMessage } from '../utils/errorUtils';
 
 interface Props { onNavigate: (screen: ScreenId) => void; }
 
-const VEHICLE_TYPES = ['Van', 'Car'];
 const OWNERSHIP_TYPES = ['propio', 'tercero', 'alquiler'];
 const STATUSES = ['Disponible', 'En uso', 'Mantenimiento', 'Inactivo'];
 
@@ -23,12 +22,17 @@ export default function VehicleScreen({ onNavigate }: Props) {
   const [editTarget, setEditTarget] = useState<VehicleDTO | null>(null);
   const [form, setForm] = useState({ plate: '', brand: '', model: '', type: 'Van', ownership: 'tercero', capacity: '', status: 'Disponible', driverDefault: '', insuranceExpiry: '', inspectionExpiry: '', operatingCompany: '', notes: '' });
   const [isSaving, setIsSaving] = useState(false);
+  const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
 
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     setIsLoading(true);
-    try { setVehicles(await getVehicles()); } finally { setIsLoading(false); }
+    try {
+      const [v, vt] = await Promise.all([getVehicles(), getVehicleTypes()]);
+      setVehicles(v);
+      setVehicleTypes(vt);
+    } finally { setIsLoading(false); }
   };
 
   const filtered = vehicles.filter(v => {
@@ -92,7 +96,7 @@ export default function VehicleScreen({ onNavigate }: Props) {
           <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Type</label>
           <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}
             className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">
-            {VEHICLE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            {vehicleTypes.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
       </div>

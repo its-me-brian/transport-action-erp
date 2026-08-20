@@ -27,7 +27,7 @@ import {
   Edit3
 } from 'lucide-react';
 import { ScreenId } from '../types';
-import { getSettings, saveSettings, getUsers, approveUser, rejectUser, updateUserRole, deleteUser, createUser, updateUser, getAuditLog, AuditEntry, getOperatingCompanies, updateOperatingCompany, OperatingCompany } from '../services/api';
+import { getSettings, saveSettings, getUsers, approveUser, rejectUser, updateUserRole, deleteUser, createUser, updateUser, getAuditLog, AuditEntry, getOperatingCompanies, updateOperatingCompany, OperatingCompany, getVehicleTypes, getServiceTypes, saveVehicleTypes, saveServiceTypes } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 
@@ -108,6 +108,13 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
   const [editingEmailTemplate, setEditingEmailTemplate] = useState<'orderConfirmation' | 'weeklySummary' | 'invoice' | null>(null);
   const [tempEmailTemplate, setTempEmailTemplate] = useState('');
 
+  // Vehicle Types & Service Types (admin-configurable)
+  const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
+  const [newVehicleType, setNewVehicleType] = useState('');
+  const [newServiceType, setNewServiceType] = useState('');
+  const [isSavingEnums, setIsSavingEnums] = useState(false);
+
   // Vehicles — REMOVED: was dead config (fictional "Heavy Hauler Ultra" etc, never used in pricing)
   // Standard Rates — REMOVED: was dead config (€450/8.5%/1.5x never used in pricing engine)
 
@@ -116,10 +123,14 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
     setIsLoading(true);
     Promise.all([
       getSettings(),
-      getOperatingCompanies()
+      getOperatingCompanies(),
+      getVehicleTypes(),
+      getServiceTypes()
     ])
-      .then(([cfg, companies]) => {
+      .then(([cfg, companies, vt, st]) => {
         setConfig(cfg);
+        setVehicleTypes(vt);
+        setServiceTypes(st);
         setTaEmail(cfg.ta_email || 'dispatch@transportaction.com');
         setTaAddress(cfg.ta_address || '42 Industrial Way, London E14 9TP');
         setTaName(cfg.ta_name || 'Transport Action');
@@ -311,9 +322,15 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
         email_invoice: emailTemplates.invoice,
       };
       
-      const result = await saveSettings(toSave);
-      if (result.error) {
-        showToast('Error: ' + result.error, 'error');
+      const [settingsResult, vtResult, stResult] = await Promise.all([
+        saveSettings(toSave),
+        saveVehicleTypes(vehicleTypes),
+        saveServiceTypes(serviceTypes)
+      ]);
+
+      const errors = [settingsResult, vtResult, stResult].filter(r => r.error).map(r => r.error);
+      if (errors.length > 0) {
+        showToast('Error: ' + errors.join(', '), 'error');
       } else {
         showToast('Settings saved successfully!', 'success');
       }
@@ -583,34 +600,86 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
           {/* Service Types */}
           <div className="bg-surface-container-lowest rounded-lg p-4 border border-outline-variant">
             <h5 className="text-[13px] font-semibold text-on-surface mb-3">Service Types</h5>
-            <div className="space-y-2">
-              <div className="flex items-start gap-2">
-                <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-medium rounded">Dispo</span>
-                <span className="text-[11px] text-on-surface-variant">Full-day disposal. Base + extra km + extra hours + diaria.</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-medium rounded">Transfer Airport</span>
-                <span className="text-[11px] text-on-surface-variant">Fixed-price airport transfers. Includes airport surcharge.</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-medium rounded">Transfer City</span>
-                <span className="text-[11px] text-on-surface-variant">Fixed-price city transfers. Base rate applies.</span>
-              </div>
+            <div className="space-y-1.5 mb-3">
+              {serviceTypes.map((st, i) => (
+                <div key={i} className="flex items-center justify-between gap-2">
+                  <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-medium rounded">{st}</span>
+                  <button
+                    onClick={() => {
+                      const next = serviceTypes.filter((_, idx) => idx !== i);
+                      setServiceTypes(next);
+                    }}
+                    className="text-on-surface-variant hover:text-red-500 transition-colors cursor-pointer"
+                  ><X className="w-3 h-3" /></button>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-1.5">
+              <input
+                type="text"
+                value={newServiceType}
+                onChange={e => setNewServiceType(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && newServiceType.trim()) {
+                    setServiceTypes([...serviceTypes, newServiceType.trim()]);
+                    setNewServiceType('');
+                  }
+                }}
+                placeholder="New type..."
+                className="flex-1 bg-surface-dim border border-outline-variant rounded px-2 py-1 text-[11px] text-on-surface focus:outline-none focus:border-primary"
+              />
+              <button
+                onClick={() => {
+                  if (newServiceType.trim()) {
+                    setServiceTypes([...serviceTypes, newServiceType.trim()]);
+                    setNewServiceType('');
+                  }
+                }}
+                className="px-2 py-1 bg-primary/10 text-primary rounded text-[11px] font-medium hover:bg-primary/20 transition-colors cursor-pointer"
+              ><Plus className="w-3 h-3" /></button>
             </div>
           </div>
 
           {/* Vehicle Types */}
           <div className="bg-surface-container-lowest rounded-lg p-4 border border-outline-variant">
             <h5 className="text-[13px] font-semibold text-on-surface mb-3">Vehicle Types</h5>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="px-1.5 py-0.5 bg-secondary/10 text-secondary text-[10px] font-medium rounded">Van</span>
-                <span className="text-[11px] text-on-surface-variant">Standard production van. Default for most services.</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="px-1.5 py-0.5 bg-secondary/10 text-secondary text-[10px] font-medium rounded">Car</span>
-                <span className="text-[11px] text-on-surface-variant">Sedan/car for executive or small-party transport.</span>
-              </div>
+            <div className="space-y-1.5 mb-3">
+              {vehicleTypes.map((vt, i) => (
+                <div key={i} className="flex items-center justify-between gap-2">
+                  <span className="px-1.5 py-0.5 bg-secondary/10 text-secondary text-[10px] font-medium rounded">{vt}</span>
+                  <button
+                    onClick={() => {
+                      const next = vehicleTypes.filter((_, idx) => idx !== i);
+                      setVehicleTypes(next);
+                    }}
+                    className="text-on-surface-variant hover:text-red-500 transition-colors cursor-pointer"
+                  ><X className="w-3 h-3" /></button>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-1.5">
+              <input
+                type="text"
+                value={newVehicleType}
+                onChange={e => setNewVehicleType(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && newVehicleType.trim()) {
+                    setVehicleTypes([...vehicleTypes, newVehicleType.trim()]);
+                    setNewVehicleType('');
+                  }
+                }}
+                placeholder="New type..."
+                className="flex-1 bg-surface-dim border border-outline-variant rounded px-2 py-1 text-[11px] text-on-surface focus:outline-none focus:border-primary"
+              />
+              <button
+                onClick={() => {
+                  if (newVehicleType.trim()) {
+                    setVehicleTypes([...vehicleTypes, newVehicleType.trim()]);
+                    setNewVehicleType('');
+                  }
+                }}
+                className="px-2 py-1 bg-secondary/10 text-secondary rounded text-[11px] font-medium hover:bg-secondary/20 transition-colors cursor-pointer"
+              ><Plus className="w-3 h-3" /></button>
             </div>
           </div>
 

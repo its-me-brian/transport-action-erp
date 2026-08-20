@@ -16,12 +16,16 @@ const mockGetRateCards = vi.fn();
 const mockCreateRateCard = vi.fn();
 const mockUpdateRateCard = vi.fn();
 const mockGetClients = vi.fn();
+const mockGetVehicleTypes = vi.fn();
+const mockGetServiceTypes = vi.fn();
 
 vi.mock('../services/api', () => ({
   getRateCards: (...args: any[]) => mockGetRateCards(...args),
   createRateCard: (...args: any[]) => mockCreateRateCard(...args),
   updateRateCard: (...args: any[]) => mockUpdateRateCard(...args),
   getClients: (...args: any[]) => mockGetClients(...args),
+  getVehicleTypes: (...args: any[]) => mockGetVehicleTypes(...args),
+  getServiceTypes: (...args: any[]) => mockGetServiceTypes(...args),
 }));
 
 vi.mock('../contexts/ToastContext', () => ({
@@ -44,6 +48,8 @@ describe('RateCardScreen', () => {
     vi.clearAllMocks();
     mockGetRateCards.mockResolvedValue(sampleCards);
     mockGetClients.mockResolvedValue(sampleClients);
+    mockGetVehicleTypes.mockResolvedValue(['Van', 'Car']);
+    mockGetServiceTypes.mockResolvedValue(['Dispo', 'Transfer Airport', 'Transfer City']);
   });
 
   it('renders and loads rate cards', async () => {

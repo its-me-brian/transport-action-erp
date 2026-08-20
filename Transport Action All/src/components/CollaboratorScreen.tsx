@@ -22,7 +22,9 @@ import {
   SupplierRateDTO,
   createSupplierRate,
   updateSupplierRate,
-  deleteSupplierRate
+  deleteSupplierRate,
+  getVehicleTypes,
+  getServiceTypes
 } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -53,8 +55,14 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
   // Delete confirmation
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
+  // Vehicle Types & Service Types (admin-configurable)
+  const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
+
   useEffect(() => {
     loadCollaborators();
+    getVehicleTypes().then(vt => setVehicleTypes(vt)).catch(() => {});
+    getServiceTypes().then(st => setServiceTypes(st)).catch(() => {});
   }, []);
 
   const loadCollaborators = async () => {
@@ -452,17 +460,14 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
                     <label className="text-on-surface-variant uppercase text-[9px]">Service Type</label>
                     <select value={editRate.serviceType || 'Dispo'} onChange={e => setEditRate({ ...editRate, serviceType: e.target.value })}
                       className="w-full h-7 rounded border border-outline-variant bg-surface-container-lowest px-2 text-[11px]">
-                      <option value="Dispo">Dispo</option>
-                      <option value="Transfer Airport">Transfer Airport</option>
-                      <option value="Transfer City">Transfer City</option>
+                      {serviceTypes.map(st => <option key={st} value={st}>{st}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="text-on-surface-variant uppercase text-[9px]">Vehicle Type</label>
                     <select value={editRate.vehicleType || 'Van'} onChange={e => setEditRate({ ...editRate, vehicleType: e.target.value })}
                       className="w-full h-7 rounded border border-outline-variant bg-surface-container-lowest px-2 text-[11px]">
-                      <option value="Van">Van</option>
-                      <option value="Car">Car</option>
+                      {vehicleTypes.map(vt => <option key={vt} value={vt}>{vt}</option>)}
                     </select>
                   </div>
                   <div>

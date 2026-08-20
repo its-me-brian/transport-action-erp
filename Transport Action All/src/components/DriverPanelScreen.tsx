@@ -22,7 +22,7 @@ import {
   Pencil
 } from 'lucide-react';
 import { Driver, ScreenId, getDriverAvatar } from '../types';
-import { getDrivers, createDriver, updateDriver, deleteDriver, cleanupDrivers, DriverRecord, getSupplierRates, createSupplierRate, updateSupplierRate, deleteSupplierRate, SupplierRateDTO } from '../services/api';
+import { getDrivers, createDriver, updateDriver, deleteDriver, cleanupDrivers, DriverRecord, getSupplierRates, createSupplierRate, updateSupplierRate, deleteSupplierRate, SupplierRateDTO, getVehicleTypes, getServiceTypes } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 
 interface DriverPanelScreenProps {
@@ -83,6 +83,10 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
   const [isNewRate, setIsNewRate] = useState(false);
   
   // Cleanup handler
+
+  // Vehicle Types & Service Types (admin-configurable)
+  const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
   const handleCleanup = async () => {
     if (!confirm('Remove non-driver entries (roles, titles, departments) from the database?')) return;
     try {
@@ -112,7 +116,11 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
       .finally(() => setIsLoading(false));
   };
 
-  useEffect(() => { loadDrivers(); }, []);
+  useEffect(() => {
+    loadDrivers();
+    getVehicleTypes().then(vt => setVehicleTypes(vt)).catch(() => {});
+    getServiceTypes().then(st => setServiceTypes(st)).catch(() => {});
+  }, []);
 
   // Map DB drivers to the format the UI expects, with deduplication
   const mappedDbDrivers: Driver[] = (() => {
@@ -999,16 +1007,13 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                         <div>
                           <label className="text-[10px] text-on-surface-variant uppercase block mb-1">Service Type</label>
                           <select value={editRate.serviceType || 'Dispo'} onChange={e => setEditRate({ ...editRate, serviceType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]">
-                            <option value="Dispo">Dispo</option>
-                            <option value="Transfer Airport">Transfer Airport</option>
-                            <option value="Transfer City">Transfer City</option>
+                            {serviceTypes.map(st => <option key={st} value={st}>{st}</option>)}
                           </select>
                         </div>
                         <div>
                           <label className="text-[10px] text-on-surface-variant uppercase block mb-1">Vehicle Type</label>
                           <select value={editRate.vehicleType || 'Van'} onChange={e => setEditRate({ ...editRate, vehicleType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]">
-                            <option value="Van">Van</option>
-                            <option value="Car">Car</option>
+                            {vehicleTypes.map(vt => <option key={vt} value={vt}>{vt}</option>)}
                           </select>
                         </div>
                         <div>

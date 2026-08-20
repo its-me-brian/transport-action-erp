@@ -15,7 +15,7 @@ import {
   Plus
 } from 'lucide-react';
 import { Service, ScreenId } from '../types';
-import { getProjects, getDrivers, createService, createDriverOnTheFly } from '../services/api';
+import { getProjects, getDrivers, createService, createDriverOnTheFly, getVehicleTypes, getServiceTypes } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 
 interface NewServiceScreenProps {
@@ -50,6 +50,8 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
   // Dynamic data from API
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
   const [drivers, setDrivers] = useState<{ id: string; name: string; phone?: string }[]>([]);
+  const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
 
   // Driver autocomplete state
   const [driverSearch, setDriverSearch] = useState('');
@@ -65,6 +67,8 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
   useEffect(() => {
     getProjects().then(p => { if (Array.isArray(p)) setProjects(p.map((x: any) => ({ id: x.id, name: x.name }))); }).catch(e => console.error('Failed to load projects:', e));
     getDrivers().then(d => { if (Array.isArray(d)) setDrivers(d.map((x: any) => ({ id: x.id || x.name, name: x.name, phone: x.phone }))); }).catch(e => console.error('Failed to load drivers:', e));
+    getVehicleTypes().then(vt => setVehicleTypes(vt)).catch(() => {});
+    getServiceTypes().then(st => setServiceTypes(st)).catch(() => {});
   }, []);
 
   // Close driver dropdown on outside click
@@ -365,8 +369,9 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
                     className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary transition-colors cursor-pointer appearance-none"
                   >
                     <option value="Dispo">Dispo</option>
-                    <option value="Transfer Airport">Transfer Airport</option>
-                    <option value="Transfer City">Transfer City</option>
+                    {serviceTypes.filter(st => st !== 'Dispo').map(st => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
                   </select>
                   <ChevronDown className="w-4 h-4 text-on-surface-variant absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
@@ -389,8 +394,9 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
                     className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary transition-colors cursor-pointer appearance-none"
                   >
                     <option value="">Select type...</option>
-                    <option value="Van">Van</option>
-                    <option value="Car">Car</option>
+                    {vehicleTypes.map(vt => (
+                      <option key={vt} value={vt}>{vt}</option>
+                    ))}
                   </select>
                   <ChevronDown className="w-4 h-4 text-on-surface-variant absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>

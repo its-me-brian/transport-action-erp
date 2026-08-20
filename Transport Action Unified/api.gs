@@ -365,6 +365,22 @@ function _handleRoute(params, data) {
         _checkPermission(data, 'settings.write');
         result = apiSaveSettings(data.settings);
         break;
+      case 'getVehicleTypes':
+        _checkPermission(data, 'settings.read');
+        result = apiGetVehicleTypes();
+        break;
+      case 'saveVehicleTypes':
+        _checkPermission(data, 'settings.write');
+        result = apiSaveVehicleTypes(data.types);
+        break;
+      case 'getServiceTypes':
+        _checkPermission(data, 'settings.read');
+        result = apiGetServiceTypes();
+        break;
+      case 'saveServiceTypes':
+        _checkPermission(data, 'settings.write');
+        result = apiSaveServiceTypes(data.types);
+        break;
 
       // =====================================================================
       // CLIENTS

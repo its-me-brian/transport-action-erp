@@ -1598,6 +1598,33 @@ export async function saveSettings(settings: Record<string, string>): Promise<{ 
 }
 
 // ============================================================================
+// ENUM OPTIONS — Vehicle Types & Service Types (admin-configurable)
+// ============================================================================
+
+const DEFAULT_VEHICLE_TYPES = ['Van', 'Car'];
+const DEFAULT_SERVICE_TYPES = ['Dispo', 'Transfer Airport', 'Transfer City'];
+
+export async function getVehicleTypes(): Promise<string[]> {
+  const result = await gasGetWithRetry('getVehicleTypes');
+  if (Array.isArray(result) && result.length > 0) return result;
+  return DEFAULT_VEHICLE_TYPES;
+}
+
+export async function saveVehicleTypes(types: string[]): Promise<{ success?: boolean; error?: string }> {
+  return gasPostWithRetry('saveVehicleTypes', { types });
+}
+
+export async function getServiceTypes(): Promise<string[]> {
+  const result = await gasGetWithRetry('getServiceTypes');
+  if (Array.isArray(result) && result.length > 0) return result;
+  return DEFAULT_SERVICE_TYPES;
+}
+
+export async function saveServiceTypes(types: string[]): Promise<{ success?: boolean; error?: string }> {
+  return gasPostWithRetry('saveServiceTypes', { types });
+}
+
+// ============================================================================
 // RAPPORTINO DOMAIN API — Nuevo dominio (docs/02-DOMAIN.md)
 // ============================================================================
 

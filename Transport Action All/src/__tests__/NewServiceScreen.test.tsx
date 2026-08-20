@@ -17,11 +17,15 @@ import NewServiceScreen from '../components/NewServiceScreen';
 const mockGetProjects = vi.fn();
 const mockGetDrivers = vi.fn();
 const mockCreateService = vi.fn();
+const mockGetVehicleTypes = vi.fn();
+const mockGetServiceTypes = vi.fn();
 
 vi.mock('../services/api', () => ({
   getProjects: (...args: any[]) => mockGetProjects(...args),
   getDrivers: (...args: any[]) => mockGetDrivers(...args),
   createService: (...args: any[]) => mockCreateService(...args),
+  getVehicleTypes: (...args: any[]) => mockGetVehicleTypes(...args),
+  getServiceTypes: (...args: any[]) => mockGetServiceTypes(...args),
 }));
 
 const mockShowToast = vi.fn();
@@ -47,6 +51,8 @@ describe('NewServiceScreen', () => {
     vi.clearAllMocks();
     mockGetProjects.mockResolvedValue(mockProjects);
     mockGetDrivers.mockResolvedValue(mockDrivers);
+    mockGetVehicleTypes.mockResolvedValue(['Van', 'Car']);
+    mockGetServiceTypes.mockResolvedValue(['Dispo', 'Transfer Airport', 'Transfer City']);
   });
 
   it('renders the form heading', () => {

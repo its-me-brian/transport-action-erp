@@ -15,11 +15,13 @@ import VehicleScreen from '../components/VehicleScreen';
 const mockGetVehicles = vi.fn();
 const mockCreateVehicle = vi.fn();
 const mockUpdateVehicle = vi.fn();
+const mockGetVehicleTypes = vi.fn();
 
 vi.mock('../services/api', () => ({
   getVehicles: (...args: any[]) => mockGetVehicles(...args),
   createVehicle: (...args: any[]) => mockCreateVehicle(...args),
   updateVehicle: (...args: any[]) => mockUpdateVehicle(...args),
+  getVehicleTypes: (...args: any[]) => mockGetVehicleTypes(...args),
 }));
 
 vi.mock('../contexts/ToastContext', () => ({
@@ -37,6 +39,7 @@ describe('VehicleScreen', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetVehicles.mockResolvedValue(sampleVehicles);
+    mockGetVehicleTypes.mockResolvedValue(['Van', 'Car']);
   });
 
   it('renders and loads vehicles', async () => {
