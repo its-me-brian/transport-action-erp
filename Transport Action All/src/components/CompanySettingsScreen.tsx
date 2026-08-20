@@ -108,13 +108,8 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
   const [editingEmailTemplate, setEditingEmailTemplate] = useState<'orderConfirmation' | 'weeklySummary' | 'invoice' | null>(null);
   const [tempEmailTemplate, setTempEmailTemplate] = useState('');
 
-  // Vehicles
-  const [vehicles, setVehicles] = useState<Array<{ name: string; spec: string; tier: string }>>([]);
-
-  // Rates
-  const [rateBase, setRateBase] = useState('450.00');
-  const [rateFuel, setRateFuel] = useState('8.5');
-  const [rateNight, setRateNight] = useState('1.5');
+  // Vehicles — REMOVED: was dead config (fictional "Heavy Hauler Ultra" etc, never used in pricing)
+  // Standard Rates — REMOVED: was dead config (€450/8.5%/1.5x never used in pricing engine)
 
   // Load config from DB
   useEffect(() => {
@@ -139,27 +134,7 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
           weeklySummary: cfg.email_weekly_summary || 'Dear [Client_Name],\n\nWeekly transport summary for [Week_Date]:\n\nTotal Services: [Total_Services]\nCompleted: [Completed]\nCancelled: [Cancelled]\n\nDetailed report attached.\n\nBest regards,\nTransport Action',
           invoice: cfg.email_invoice || 'Invoice for transport services rendered.\n\nPO: [PO_Number]\nProduction: [Production]\nPeriod: [Date_Range]\n\nTotal: €[Total_Amount]\n\nPayment terms: Net 30 days.\n\nTransport Action',
         });
-        setRateBase(cfg.rate_base || '450.00');
-        setRateFuel(cfg.rate_fuel || '8.5');
-        setRateNight(cfg.rate_night || '1.5');
         
-        // Build vehicles array
-        const v: Array<{ name: string; spec: string; tier: string }> = [];
-        for (let i = 1; i <= 5; i++) {
-          const name = cfg[`vehicle_${i}_name`];
-          if (name) {
-            v.push({
-              name,
-              spec: cfg[`vehicle_${i}_spec`] || '',
-              tier: cfg[`vehicle_${i}_tier`] || 'Standard',
-            });
-          }
-        }
-        setVehicles(v.length > 0 ? v : [
-          { name: 'Heavy Hauler Ultra', spec: '40 Tons · Euro 6', tier: 'Standard' },
-          { name: 'Cinema Unit Van', spec: 'Custom Shelving · Insulated', tier: 'Premium' },
-        ]);
-
         // Load OperatingCompany data
         setOperatingCompanies(companies);
         const ta = companies.find((c: OperatingCompany) => c.id === 'TA');
@@ -334,17 +309,7 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
         email_order_confirmation: emailTemplates.orderConfirmation,
         email_weekly_summary: emailTemplates.weeklySummary,
         email_invoice: emailTemplates.invoice,
-        rate_base: rateBase,
-        rate_fuel: rateFuel,
-        rate_night: rateNight,
       };
-      
-      // Save vehicles
-      vehicles.forEach((v, i) => {
-        toSave[`vehicle_${i + 1}_name`] = v.name;
-        toSave[`vehicle_${i + 1}_spec`] = v.spec;
-        toSave[`vehicle_${i + 1}_tier`] = v.tier;
-      });
       
       const result = await saveSettings(toSave);
       if (result.error) {
@@ -606,114 +571,73 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
         </div>
       </section>
 
-      {/* Service Defaults */}
-      <section id="service-defaults-section" className="space-y-2">
+      {/* Pricing Reference */}
+      <section id="pricing-reference-section" className="space-y-2">
         <div className="flex items-center gap-2">
-          <Settings className="w-4 h-4 text-primary" />
-          <h3 className="text-[14px] font-semibold text-on-surface">Service Defaults</h3>
+          <Sliders className="w-4 h-4 text-primary" />
+          <h3 className="text-[14px] font-semibold text-on-surface">Pricing Reference</h3>
         </div>
+        <p className="text-[11px] text-on-surface-variant">Service types and vehicle types used across the system. Configure rates in Rate Cards (revenue) and Provider Rates (cost).</p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {/* Vehicle Fleet */}
-          <div id="vehicle-fleet-container" className="md:col-span-2 bg-surface-container-lowest rounded-lg p-4 border border-outline-variant">
-            <div className="flex items-center justify-between mb-3">
-              <h5 className="text-[14px] font-semibold text-on-surface">Vehicle Fleet</h5>
-              <button 
-                id="add-vehicle-btn"
-                onClick={() => setVehicles([...vehicles, { name: '', spec: '', tier: 'Standard' }])}
-                className="text-primary text-[11px] font-medium hover:underline cursor-pointer"
-              >
-                + Add Vehicle
-              </button>
-            </div>
-
+          {/* Service Types */}
+          <div className="bg-surface-container-lowest rounded-lg p-4 border border-outline-variant">
+            <h5 className="text-[13px] font-semibold text-on-surface mb-3">Service Types</h5>
             <div className="space-y-2">
-              {vehicles.map((v, idx) => (
-                <div key={idx} className="flex items-center gap-2 p-3 bg-surface-dim/30 rounded-lg border border-outline-variant/50">
-                  <div className="flex-1 grid grid-cols-3 gap-2">
-                    <input
-                      value={v.name}
-                      onChange={(e) => {
-                        const nv = [...vehicles];
-                        nv[idx].name = e.target.value;
-                        setVehicles(nv);
-                      }}
-                      placeholder="Vehicle name"
-                      className="bg-transparent border-b border-outline-variant focus:border-primary outline-none text-[13px] font-medium text-on-surface"
-                    />
-                    <input
-                      value={v.spec}
-                      onChange={(e) => {
-                        const nv = [...vehicles];
-                        nv[idx].spec = e.target.value;
-                        setVehicles(nv);
-                      }}
-                      placeholder="Specs"
-                      className="bg-transparent border-b border-outline-variant focus:border-primary outline-none text-[11px] text-on-surface-variant"
-                    />
-                    <select
-                      value={v.tier}
-                      onChange={(e) => {
-                        const nv = [...vehicles];
-                        nv[idx].tier = e.target.value;
-                        setVehicles(nv);
-                      }}
-                      className="bg-transparent border-b border-outline-variant focus:border-primary outline-none text-[11px] font-medium"
-                    >
-                      <option value="Standard">Standard</option>
-                      <option value="Premium">Premium</option>
-                    </select>
-                  </div>
-                  <button
-                    onClick={() => setVehicles(vehicles.filter((_, i) => i !== idx))}
-                    className="p-1 text-on-surface-variant hover:text-red-500 transition-colors cursor-pointer"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
+              <div className="flex items-start gap-2">
+                <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-medium rounded">Dispo</span>
+                <span className="text-[11px] text-on-surface-variant">Full-day disposal. Base + extra km + extra hours + diaria.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-medium rounded">Transfer Airport</span>
+                <span className="text-[11px] text-on-surface-variant">Fixed-price airport transfers. Includes airport surcharge.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-medium rounded">Transfer City</span>
+                <span className="text-[11px] text-on-surface-variant">Fixed-price city transfers. Base rate applies.</span>
+              </div>
             </div>
           </div>
 
-          {/* Standard Rates */}
-          <div id="standard-rates-container" className="bg-surface-container-lowest rounded-lg p-4 border border-outline-variant flex flex-col justify-between">
-            <div>
-              <h5 className="text-[14px] font-semibold text-on-surface mb-3">Standard Rates</h5>
-              <div className="space-y-3 text-[12px]">
-                <div className="flex justify-between items-end border-b border-outline-variant/50 pb-1">
-                  <span className="text-on-surface-variant">Base Call-out</span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-on-surface-variant">€</span>
-                    <input
-                      value={rateBase}
-                      onChange={(e) => setRateBase(e.target.value)}
-                      className="w-16 bg-transparent border-b border-outline-variant focus:border-primary outline-none text-right font-medium text-on-surface"
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-between items-end border-b border-outline-variant/50 pb-1">
-                  <span className="text-on-surface-variant">Fuel Surcharge</span>
-                  <div className="flex items-center gap-1">
-                    <input
-                      value={rateFuel}
-                      onChange={(e) => setRateFuel(e.target.value)}
-                      className="w-10 bg-transparent border-b border-outline-variant focus:border-primary outline-none text-right font-medium text-on-surface"
-                    />
-                    <span className="text-on-surface-variant">%</span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-end border-b border-outline-variant/50 pb-1">
-                  <span className="text-on-surface-variant">Night Loading</span>
-                  <div className="flex items-center gap-1">
-                    <input
-                      value={rateNight}
-                      onChange={(e) => setRateNight(e.target.value)}
-                      className="w-10 bg-transparent border-b border-outline-variant focus:border-primary outline-none text-right font-medium text-on-surface"
-                    />
-                    <span className="text-on-surface-variant">x</span>
-                  </div>
-                </div>
+          {/* Vehicle Types */}
+          <div className="bg-surface-container-lowest rounded-lg p-4 border border-outline-variant">
+            <h5 className="text-[13px] font-semibold text-on-surface mb-3">Vehicle Types</h5>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="px-1.5 py-0.5 bg-secondary/10 text-secondary text-[10px] font-medium rounded">Van</span>
+                <span className="text-[11px] text-on-surface-variant">Standard production van. Default for most services.</span>
               </div>
+              <div className="flex items-center gap-2">
+                <span className="px-1.5 py-0.5 bg-secondary/10 text-secondary text-[10px] font-medium rounded">Car</span>
+                <span className="text-[11px] text-on-surface-variant">Sedan/car for executive or small-party transport.</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Links */}
+          <div className="bg-surface-container-lowest rounded-lg p-4 border border-outline-variant">
+            <h5 className="text-[13px] font-semibold text-on-surface mb-3">Configure Rates</h5>
+            <div className="space-y-2">
+              <button
+                onClick={() => onNavigate('rate_cards')}
+                className="w-full flex items-center justify-between p-2 bg-surface-dim/30 rounded-lg hover:bg-surface-dim/60 transition-colors text-left cursor-pointer"
+              >
+                <div>
+                  <p className="text-[12px] font-medium text-on-surface">Rate Cards</p>
+                  <p className="text-[10px] text-on-surface-variant">Client revenue pricing</p>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-on-surface-variant" />
+              </button>
+              <button
+                onClick={() => onNavigate('providers')}
+                className="w-full flex items-center justify-between p-2 bg-surface-dim/30 rounded-lg hover:bg-surface-dim/60 transition-colors text-left cursor-pointer"
+              >
+                <div>
+                  <p className="text-[12px] font-medium text-on-surface">Provider Rates</p>
+                  <p className="text-[10px] text-on-surface-variant">Supplier & driver costs</p>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-on-surface-variant" />
+              </button>
             </div>
           </div>
         </div>
