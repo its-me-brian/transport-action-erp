@@ -121,9 +121,24 @@
    Mobile globals — prevent iOS annoyances
    ============================================ */
 
+/* Prevent horizontal overflow globally */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
+}
+
 /* Prevent double-tap zoom on mobile */
 html {
   touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
+/* Ensure all containers respect viewport */
+* {
+  box-sizing: border-box;
 }
 
 /* Prevent iOS auto-zoom on input focus (font-size must be ≥ 16px) */
@@ -131,13 +146,19 @@ input,
 select,
 textarea {
   font-size: 16px !important;
+  max-width: 100%;
 }
 
-/* Prevent iOS rubber-band bounce when scrolling past edges */
-html,
-body {
-  overscroll-behavior: none;
-  -webkit-overflow-scrolling: auto;
+/* Fix native select overflow */
+select {
+  max-width: 100%;
+  appearance: auto;
+}
+
+/* Make sure images don't overflow */
+img {
+  max-width: 100%;
+  height: auto;
 }
 
 /* Safe area padding for iPhone notch/home indicator */
@@ -145,6 +166,21 @@ body {
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Mobile: Reduce padding on very small screens (≤375px) */
+@media (max-width: 375px) {
+  .px-4 {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}
+
+/* iOS Safari: Fix viewport height issue */
+@supports (-webkit-touch-callout: none) {
+  .min-h-screen {
+    min-height: -webkit-fill-available;
+  }
 }
 
 /* StatusFlow animated connector keyframes */
