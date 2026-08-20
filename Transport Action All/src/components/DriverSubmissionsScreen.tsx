@@ -40,8 +40,15 @@ export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Pro
     }
   };
 
-  const driverName = (id: string) => driverMap[id] || id;
-  const projectName = (id: string) => projectMap[id] || id;
+  const driverName = (id: string, item?: DriverLinkResponse) => {
+    if (driverMap[id]) return driverMap[id];
+    return id || '—';
+  };
+  const projectName = (id: string, item?: DriverLinkResponse) => {
+    if (!id) return '—';
+    if (projectMap[id]) return projectMap[id];
+    return id;
+  };
 
   const loadItems = async () => {
     setIsLoading(true);

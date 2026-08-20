@@ -101,8 +101,30 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
     }
   };
 
-  const driverName = (id: string) => driverMap[id] || id;
-  const projectName = (id: string) => projectMap[id] || id;
+  const driverName = (id: string, item?: InboxItem) => {
+    if (driverMap[id]) return driverMap[id];
+    // Fallback: try to get name from rawData
+    if (item) {
+      try { const raw = JSON.parse(item.RawData || '{}'); if (raw.driverName) return raw.driverName; } catch {}
+    }
+    return id;
+  };
+  const projectName = (id: string, item?: InboxItem) => {
+    if (!id && !item) return '—';
+    if (projectMap[id]) return projectMap[id];
+    // Fallback: try to get name from rawData
+    if (item) {
+      try {
+        const raw = JSON.parse(item.RawData || '{}');
+        if (raw.projectName) return raw.projectName;
+      } catch {}
+    }
+    return id || '—';
+  };
+
+  const getRawData = (item: InboxItem) => {
+    try { return JSON.parse(item.RawData || '{}'); } catch { return {}; }
+  };
 
   const formatDisplayDate = (d: string) => {
     if (!d) return '—';
@@ -437,8 +459,8 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
               {filteredItems.map(item => (
                 <tr key={item.ID} className="hover:bg-surface-container-low transition-colors">
                   <td className="px-4 py-3">{getSourceBadge(item.Source)}</td>
-                  <td className="px-4 py-3 text-sm font-medium">{driverName(item.DriverID)}</td>
-                  <td className="px-4 py-3 text-sm text-on-surface-variant">{projectName(item.ProjectID)}</td>
+                  <td className="px-4 py-3 text-sm font-medium">{driverName(item.DriverID, item)}</td>
+                  <td className="px-4 py-3 text-sm text-on-surface-variant">{projectName(item.ProjectID, item)}</td>
                   <td className="px-4 py-3 text-sm">{formatDisplayDate(item.ServiceDate)}</td>
                   <td className="px-4 py-3">{getStatusBadge(item.Status)}</td>
                   <td className="px-4 py-3 text-xs text-on-surface-variant font-mono">{item.CorrelationID?.substring(0, 12)}...</td>
@@ -480,46 +502,53 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
             {/* Metadata */}
             <div className="px-6 py-3 bg-surface-container flex flex-wrap gap-4 text-xs">
               <div><span className="text-on-surface-variant">Source:</span> {getSourceBadge(selectedItem.Source)}</div>
-              <div><span className="text-on-surface-variant">Driver:</span> <strong>{driverName(selectedItem.DriverID)}</strong></div>
-              <div><span className="text-on-surface-variant">Project:</span> {projectName(selectedItem.ProjectID)}</div>
+              <div><span className="text-on-surface-variant">Driver:</span> <strong>{driverName(selectedItem.DriverID, selectedItem)}</strong></div>
+              <div><span className="text-on-surface-variant">Project:</span> {projectName(selectedItem.ProjectID, selectedItem)}</div>
               <div><span className="text-on-surface-variant">Date:</span> {formatDisplayDate(selectedItem.ServiceDate)}</div>
             </div>
 
             <div className="px-6 py-4">
-              {/* Service Reference (if available) */}
-              {serviceRef && (
+              {/* Service Reference — from API or from rawData fallback */}
+              {(serviceRef || getRawData(selectedItem).production) && (
                 <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">
                     Transport List Reference
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <span className="text-blue-600">Time:</span>{' '}
-                      <strong className="font-mono">{serviceRef.Time || '—'}</strong>
-                    </div>
+                    {serviceRef?.Time && (
+                      <div>
+                        <span className="text-blue-600">Time:</span>{' '}
+                        <strong className="font-mono">{serviceRef.Time}</strong>
+                      </div>
+                    )}
                     <div>
                       <span className="text-blue-600">Production:</span>{' '}
-                      {serviceRef.Production || '—'}
+                      {serviceRef?.Production || getRawData(selectedItem).production || '—'}
                     </div>
-                    {serviceRef.Section && (
+                    {(serviceRef?.Section || getRawData(selectedItem).section) && (
                       <div>
-                        <span className="text-blue-600">Section:</span> {serviceRef.Section}
+                        <span className="text-blue-600">Section:</span>{' '}
+                        {serviceRef?.Section || getRawData(selectedItem).section}
                       </div>
                     )}
-                    {serviceRef.PassengerName && (
+                    {(serviceRef?.PassengerName || getRawData(selectedItem).passengerName) && (
                       <div>
                         <span className="text-blue-600">Passenger:</span>{' '}
-                        {serviceRef.PassengerName}
-                        {serviceRef.PassengerRole && ` (${serviceRef.PassengerRole})`}
+                        {serviceRef?.PassengerName || getRawData(selectedItem).passengerName}
+                        {serviceRef?.PassengerRole && ` (${serviceRef.PassengerRole})`}
                       </div>
                     )}
-                    <div>
-                      <span className="text-blue-600">Status:</span>{' '}
-                      {serviceRef.OperationalStatus || '—'}
-                    </div>
-                    <div>
-                      <span className="text-blue-600">Vehicle:</span> {serviceRef.VehicleID || '—'}
-                    </div>
+                    {serviceRef?.OperationalStatus && (
+                      <div>
+                        <span className="text-blue-600">Status:</span> {serviceRef.OperationalStatus}
+                      </div>
+                    )}
+                    {(serviceRef?.VehicleID || getRawData(selectedItem).vehicleId) && (
+                      <div>
+                        <span className="text-blue-600">Vehicle:</span>{' '}
+                        {serviceRef?.VehicleID || getRawData(selectedItem).vehicleId}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -660,11 +689,11 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
               </div>
               <div className="flex justify-between">
                 <span className="text-on-surface-variant">Driver</span>
-                <span className="font-medium">{driverName(selectedItem.DriverID)}</span>
+                <span className="font-medium">{driverName(selectedItem.DriverID, selectedItem)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-on-surface-variant">Project</span>
-                <span>{projectName(selectedItem.ProjectID)}</span>
+                <span>{projectName(selectedItem.ProjectID, selectedItem)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-on-surface-variant">Date</span>

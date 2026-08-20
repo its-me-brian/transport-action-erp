@@ -542,9 +542,22 @@ function submitDriverLinkResponse(token, services) {
               }
             }
 
+            // Use service's real data when available (service is the source of truth)
+            var effectiveDriverId = (service && service.DriverID) || linkData.DriverID;
+            var effectiveProjectId = (service && service.ProjectID) || linkData.ProjectID || '';
+
             // Route through Inbox for unified traceability (Issue #11)
               var rawData = {
                 serviceId: svc.serviceId,
+                // Include display names for fallback (avoids extra lookups)
+                driverName: (function() {
+                  try { var d = DriverRepository.getById(effectiveDriverId); return d ? (d.Name || effectiveDriverId) : effectiveDriverId; } catch(e) { return effectiveDriverId; }
+                })(),
+                projectName: effectiveProjectId,
+                production: service ? (service.Production || '') : '',
+                section: service ? (service.Section || '') : '',
+                vehicleId: service ? (service.VehicleID || '') : '',
+                passengerName: service ? (service.PassengerName || '') : '',
                 startTime: svc.orarioInizio || '',
                 endTime: svc.orarioFine || '',
                 kmTotal: svc.kmTotali || 0,
@@ -563,7 +576,7 @@ function submitDriverLinkResponse(token, services) {
 
               var inboxResult = captureReport(
                 'driverlink', 'web_form',
-                linkData.DriverID, linkData.ProjectID,
+                effectiveDriverId, effectiveProjectId,
                 svc.dataServizio || new Date().toISOString().split('T')[0],
                 rawData
               );
