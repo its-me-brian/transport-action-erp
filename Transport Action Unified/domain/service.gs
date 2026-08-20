@@ -69,6 +69,10 @@ const ServiceRepository = {
       PickupLines: data.PickupLines ? JSON.stringify(data.PickupLines) : '[]',
       DropoffLines: data.DropoffLines ? JSON.stringify(data.DropoffLines) : '[]',
       FlightInfo: data.FlightInfo || '',
+      PickupMapsUrl: data.PickupMapsUrl || '',
+      DropoffMapsUrl: data.DropoffMapsUrl || '',
+      OriginalTransportDate: data.OriginalTransportDate || '',
+      PassengersList: data.PassengersList || '',
       Notes: data.Notes || '',
       DriverID: data.DriverID || '',
       VehicleID: data.VehicleID || '',
@@ -164,6 +168,10 @@ const ServiceRepository = {
         dropoffLines: JSON.parse(entity.DropoffLines || '[]'),
         flightInfo: entity.FlightInfo
       },
+      pickupMapsUrl: entity.PickupMapsUrl || '',
+      dropoffMapsUrl: entity.DropoffMapsUrl || '',
+      originalTransportDate: entity.OriginalTransportDate || '',
+      passengersList: entity.PassengersList || '',
       driverId: entity.DriverID,
       driverName: driverName,
       vehicleId: entity.VehicleID,
@@ -274,6 +282,7 @@ function apiUpdateServiceField(serviceId, field, value) {
       'PickupLines', 'DropoffLines',
       'EstimatedRevenue', 'EstimatedCost',
       'VehicleType',
+      'PickupMapsUrl', 'DropoffMapsUrl', 'PassengersList', 'OriginalTransportDate',
       // Report/operational fields — used by WhatsApp parser and ReportsScreen
       'StartTime', 'EndTime', 'KmTotal', 'DiariaType', 'HasDiaria'
     ];
@@ -285,6 +294,10 @@ function apiUpdateServiceField(serviceId, field, value) {
       'km': 'KmTotal',
       'diariaType': 'DiariaType',
       'hasDiaria': 'HasDiaria',
+      'pickupMapsUrl': 'PickupMapsUrl',
+      'dropoffMapsUrl': 'DropoffMapsUrl',
+      'passengersList': 'PassengersList',
+      'originalTransportDate': 'OriginalTransportDate',
     };
 
     // Resolve field name: frontend camelCase → backend PascalCase

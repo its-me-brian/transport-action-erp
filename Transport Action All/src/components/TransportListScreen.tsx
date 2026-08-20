@@ -29,7 +29,8 @@ import {
   UserPlus,
   Play,
   Pause,
-  BadgeCheck
+  BadgeCheck,
+  MapPin
 } from 'lucide-react';
 import { ScreenId, formatTimeDisplay } from '../types';
 import { 
@@ -706,7 +707,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
   };
 
   // Fields that can be persisted via updateServiceField (whitelisted in backend)
-  const PERSISTABLE_FIELDS = ['time', 'pickupLines', 'dropoffLines', 'flightInfo', 'notes', 'vehicle', 'driverPhone'];
+  const PERSISTABLE_FIELDS = ['time', 'pickupLines', 'dropoffLines', 'flightInfo', 'notes', 'vehicle', 'driverPhone', 'pickupMapsUrl', 'dropoffMapsUrl', 'passengersList', 'originalTransportDate'];
 
   const saveEdit = async () => {
     if (!editingCell) return;
@@ -1335,10 +1336,24 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
           </td>
         )}
         <td className="px-2 py-2 max-w-[180px] hidden md:table-cell">
-          <EditableCell rowId={service.id} field="pickupLines" value={pickupDisplay(service.pickupLines)} />
+          <div className="flex items-center gap-1">
+            <EditableCell rowId={service.id} field="pickupLines" value={pickupDisplay(service.pickupLines)} />
+            {service.pickupMapsUrl && (
+              <a href={service.pickupMapsUrl} target="_blank" rel="noopener noreferrer" title="Open pickup in Maps" className="shrink-0 text-primary/60 hover:text-primary transition-colors">
+                <MapPin className="w-3 h-3" />
+              </a>
+            )}
+          </div>
         </td>
         <td className="px-2 py-2 max-w-[180px] hidden md:table-cell">
-          <EditableCell rowId={service.id} field="dropoffLines" value={dropoffDisplay(service.dropoffLines)} />
+          <div className="flex items-center gap-1">
+            <EditableCell rowId={service.id} field="dropoffLines" value={dropoffDisplay(service.dropoffLines)} />
+            {service.dropoffMapsUrl && (
+              <a href={service.dropoffMapsUrl} target="_blank" rel="noopener noreferrer" title="Open dropoff in Maps" className="shrink-0 text-primary/60 hover:text-primary transition-colors">
+                <MapPin className="w-3 h-3" />
+              </a>
+            )}
+          </div>
         </td>
         <td className="px-2 py-2">
           <OperatingCompanyCell service={service} onUpdate={handleOperatingCompanyUpdate} />
@@ -1348,6 +1363,12 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
         </td>
         <td className="px-2 py-2 hidden xl:table-cell">
           <EditableCell rowId={service.id} field="notes" value={service.notes} />
+        </td>
+        <td className="px-2 py-2 hidden 2xl:table-cell">
+          <EditableCell rowId={service.id} field="passengersList" value={service.passengersList} />
+        </td>
+        <td className="px-2 py-2 hidden 2xl:table-cell">
+          <EditableCell rowId={service.id} field="originalTransportDate" value={service.originalTransportDate} />
         </td>
         {/* Lifecycle actions */}
         <td className="px-2 py-2 w-[120px]">
@@ -2176,6 +2197,8 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                         <th className="px-2 py-2">Company</th>
                         <th className="px-2 py-2 hidden xl:table-cell">Flight</th>
                         <th className="px-2 py-2 hidden xl:table-cell">Notes</th>
+                        <th className="px-2 py-2 hidden 2xl:table-cell">Pax List</th>
+                        <th className="px-2 py-2 hidden 2xl:table-cell">Orig. Date</th>
                         <th className="px-2 py-2 w-[120px]">Actions</th>
                       </tr>
                         </thead>
@@ -2184,7 +2207,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                             <React.Fragment key={group.section || 'nosection'}>
                               {group.section && (
                                 <tr>
-                                  <td colSpan={showRoles ? 13 : 12} className={`px-3 py-1 text-center text-[11px] font-bold ${getSectionStyle(group.section)}`} style={{ border: '1px solid #000' }}>
+                                  <td colSpan={showRoles ? 15 : 14} className={`px-3 py-1 text-center text-[11px] font-bold ${getSectionStyle(group.section)}`} style={{ border: '1px solid #000' }}>
                                     {group.section}
                                   </td>
                                 </tr>

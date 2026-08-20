@@ -32,6 +32,10 @@ export interface TransportService {
   passengers: Passenger[];
   pickupLines: string[];
   dropoffLines: string[];
+  pickupMapsUrl: string;
+  dropoffMapsUrl: string;
+  originalTransportDate: string;
+  passengersList: string;
   flightInfo: string;
   notes: string;
   status: string;
@@ -106,6 +110,10 @@ export function normalizeTransportService(raw: Record<string, any>): TransportSe
     passengers,
     pickupLines,
     dropoffLines,
+    pickupMapsUrl: raw.pickupMapsUrl || '',
+    dropoffMapsUrl: raw.dropoffMapsUrl || '',
+    originalTransportDate: raw.originalTransportDate || '',
+    passengersList: raw.passengersList || '',
     flightInfo: raw.flightInfo || '',
     notes: raw.notes || '',
     status: raw.status || '',
@@ -674,11 +682,13 @@ export interface DriverRecord {
   // Fields from backend not previously mapped
   collaboratorId: string;
   type: string;
+  driverOwnership: string;
   email: string;
   iban: string;
   licenseType: string;
   licenseExpiry: string;
   operatingCompany: string;
+  lastImportDate: string;
 }
 
 export async function getDrivers(): Promise<DriverRecord[]> {
@@ -702,11 +712,13 @@ export async function getDrivers(): Promise<DriverRecord[]> {
     status: row.Status || row.status || 'active',
     collaboratorId: row.CollaboratorID || row.collaboratorId || '',
     type: row.Type || row.type || 'internal',
+    driverOwnership: row.DriverOwnership || row.driverOwnership || 'own',
     email: row.Email || row.email || '',
     iban: row.IBAN || row.iban || '',
     licenseType: row.LicenseType || row.licenseType || '',
     licenseExpiry: row.LicenseExpiry || row.licenseExpiry || '',
     operatingCompany: row.OperatingCompany || row.operatingCompany || '',
+    lastImportDate: row.LastImportDate || row.lastImportDate || '',
   }));
 }
 
@@ -726,7 +738,7 @@ export async function createDriverOnTheFly(data: {
   return gasPostWithRetry('createDriverOnTheFly', data);
 }
 
-export async function updateDriver(id: string, fields: { name?: string; phone?: string; whatsapp?: string; vehiclePreferred?: string; notes?: string; status?: string; type?: string; collaboratorId?: string; email?: string; iban?: string; licenseType?: string; licenseExpiry?: string; operatingCompany?: string }): Promise<{ success: boolean; error?: string }> {
+export async function updateDriver(id: string, fields: { name?: string; phone?: string; whatsapp?: string; vehiclePreferred?: string; notes?: string; status?: string; type?: string; collaboratorId?: string; driverOwnership?: string; email?: string; iban?: string; licenseType?: string; licenseExpiry?: string; operatingCompany?: string }): Promise<{ success: boolean; error?: string }> {
   return gasPostWithRetry('updateDriver', { id, fields });
 }
 

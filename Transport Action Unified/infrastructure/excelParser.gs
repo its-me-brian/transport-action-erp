@@ -3,6 +3,61 @@
 // ============================================================================
 
 /**
+ * Extrae una URL de Google Maps de un texto de celda.
+ * Detecta: maps.app.goo.gl, goo.gl/maps, google.com/maps
+ * @param {string} cellText - Texto de la celda
+ * @returns {string} URL de Maps o ''
+ */
+function extractMapsUrl(cellText) {
+  if (!cellText) return '';
+  const urlMatch = cellText.match(/https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps?|google\.com\/maps)\S*/gi);
+  return urlMatch ? urlMatch[0] : '';
+}
+
+/**
+ * Limpia el texto de una celda removiendo URLs de Google Maps.
+ * @param {string} cellText - Texto de la celda
+ * @returns {string} Texto limpio sin URLs
+ */
+function cleanCellText(cellText) {
+  if (!cellText) return '';
+  return cellText.replace(/https?:\/\/\S*/gi, '').trim();
+}
+
+/**
+ * Parsea la fecha del header del Transport List.
+ * Formatos soportados:
+ *   "Transport List 5 Tuesday July 21th"
+ *   "Prep. Transport List Tuesday July 21th"
+ *   "Tuesday July 21th"
+ * @param {string} headerText - Texto del header
+ * @returns {string} ISO date string
+ */
+function parseTransportListDate(headerText) {
+  if (!headerText) return new Date().toISOString();
+  
+  // Pattern: DayName MonthName DayNumber (with ordinal suffix)
+  const dateMatch = headerText.match(
+    /(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?/i
+  );
+  
+  if (dateMatch) {
+    const monthName = dateMatch[2];
+    const day = parseInt(dateMatch[3]);
+    // Parse month — use a reference year to get the month index
+    const monthIdx = new Date(Date.parse(monthName + ' 1, 2026')).getMonth();
+    if (!isNaN(monthIdx)) {
+      const year = new Date().getFullYear();
+      const d = new Date(year, monthIdx, day);
+      return d.toISOString();
+    }
+  }
+  
+  // Fallback: try to extract from filename patterns like MM_DD
+  return new Date().toISOString();
+}
+
+/**
  * Parsea un archivo Excel de Transport List subido al Drive.
  * Formato esperado (Dolce_Italy):
  *   Row 1: Company/Production name
@@ -525,7 +580,7 @@ function _extractContactInfo(cells) {
 /**
  * Saves a driver to the Drivers sheet if not already present.
  * Updates phone if the driver exists but has no phone.
- * ERD-aligned: writes to 18-column Drivers sheet.
+ * Uses header-based mapping (resilient to column order changes).
  */
 function _saveDriverToSheet(name, phone, source) {
   try {
@@ -546,35 +601,85 @@ function _saveDriverToSheet(name, phone, source) {
     const normalize = (s) => s.toLowerCase().replace(/\s+/g, ' ').replace(/['']/g, "'").trim();
     const normalizedName = normalize(cleanName);
     
-      // Check if driver already exists by normalized name
-      const lastRow = sh.getLastRow();
-      if (lastRow >= 2) {
-        const names = sh.getRange(2, 2, lastRow - 1, 1).getValues();
+    // Read headers for header-based mapping
+    const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+    const headerMap = {};
+    headers.forEach((h, i) => { headerMap[h] = i; });
+    
+    // Check if driver already exists by normalized name
+    const lastRow = sh.getLastRow();
+    if (lastRow >= 2) {
+      const nameCol = headerMap['Name'];
+      if (nameCol !== undefined) {
+        const names = sh.getRange(2, nameCol + 1, lastRow - 1, 1).getValues();
         for (let r = 0; r < names.length; r++) {
           if (normalize(String(names[r][0])) === normalizedName) {
             // Update phone if empty and new phone available
-            const existingPhone = String(sh.getRange(r + 2, 5).getValue()).replace(/^'/, '').trim(); // Col E = Phone (D = CollaboratorID)
-            if (!existingPhone && cleanPhone) {
-              const phoneFormatted = cleanPhone.startsWith('+') ? "'" + cleanPhone : cleanPhone;
-              sh.getRange(r + 2, 5).setValue(phoneFormatted); // Phone
-              sh.getRange(r + 2, 6).setValue(phoneFormatted); // WhatsApp
+            const phoneCol = headerMap['Phone'];
+            if (phoneCol !== undefined) {
+              const existingPhone = String(sh.getRange(r + 2, phoneCol + 1).getValue()).replace(/^'/, '').trim();
+              if (!existingPhone && cleanPhone) {
+                const phoneFormatted = cleanPhone.startsWith('+') ? "'" + cleanPhone : cleanPhone;
+                sh.getRange(r + 2, phoneCol + 1).setValue(phoneFormatted); // Phone
+                const whatsappCol = headerMap['WhatsApp'];
+                if (whatsappCol !== undefined) {
+                  sh.getRange(r + 2, whatsappCol + 1).setValue(phoneFormatted); // WhatsApp
+                }
+              }
             }
             return; // Already exists
           }
         }
       }
+    }
     
-    // New driver — append with ERD-aligned columns
+    // New driver — build row using header-based mapping
     const now = new Date();
     const id = 'DRV-' + Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyyMMddHHmmss');
-    const dateFormatted = Utilities.formatDate(now, Session.getScriptTimeZone(), 'dd/MM/yyyy');
     const isoNow = now.toISOString();
     let phoneFormatted = cleanPhone || '';
     if (phoneFormatted.startsWith('+')) {
       phoneFormatted = "'" + phoneFormatted;
     }
-    // ERD columns: ID, Name, Type, CollaboratorID, Phone, WhatsApp, Email, IBAN, VehiclePreferred, LicenseType, LicenseExpiry, Status, OperatingCompany, Notes, Source, LastUsed, TotalRides, CreatedAt, UpdatedAt
-    sh.appendRow([id, cleanName, 'interno', '', phoneFormatted, phoneFormatted, '', '', '', '', '', 'Disponible', '', '', source || 'import', '', 0, isoNow, isoNow]);
+    
+    // Build data object — _create will map to correct columns
+    const data = {
+      ID: id,
+      Name: cleanName,
+      Type: 'interno',
+      DriverOwnership: 'own',
+      CollaboratorID: '',
+      Phone: phoneFormatted,
+      WhatsApp: phoneFormatted,
+      Email: '',
+      IBAN: '',
+      VehiclePreferred: '',
+      LicenseType: '',
+      LicenseExpiry: '',
+      Status: 'Disponible',
+      OperatingCompany: '',
+      Notes: '',
+      Source: source || 'import',
+      LastImportDate: isoNow,
+      LastUsed: '',
+      TotalRides: 0,
+      CreatedAt: isoNow,
+      UpdatedAt: isoNow
+    };
+    
+    // Build row array matching header order
+    const row = headers.map(header => {
+      const val = data[header];
+      if (val !== undefined) {
+        if (Array.isArray(val) || (typeof val === 'object' && val !== null)) {
+          return JSON.stringify(val);
+        }
+        return val;
+      }
+      return '';
+    });
+    
+    sh.appendRow(row);
   } catch (e) {
     Logger.log('Error saving driver: ' + e.message);
   }
@@ -612,21 +717,28 @@ function _buildServiceRecord(serv, production, dateStr, fileName, idx, importSeq
   const datePart = Utilities.formatDate(actualDate, Session.getScriptTimeZone(), 'yyyyMMdd');
   const id = 'TL-' + datePart + '-' + String(importSeq).padStart(2, '0') + String(idx + 1).padStart(3, '0');
   
-  // Extract Google Maps URL from 'to' and 'from' fields
+  // Extract Google Maps URLs from pickup/dropoff text
   const toRaw = String(serv.to || '');
   const fromRaw = String(serv.from || '');
-  const mapsUrlMatch = toRaw.match(/https?:\/\/(maps\.app\.goo\.gl|goo\.gl|google\.com\/maps)[^\s]*/i)
-    || fromRaw.match(/https?:\/\/(maps\.app\.goo\.gl|goo\.gl|google\.com\/maps)[^\s]*/i);
-  const mapsUrl = mapsUrlMatch ? mapsUrlMatch[0] : '';
-  // Clean destination: remove URL part
-  const toClean = toRaw.replace(/https?:\/\/[^\s]*/g, '').trim();
-  const fromClean = fromRaw.replace(/https?:\/\/[^\s]*/g, '').trim();
+  const pickupMapsUrl = extractMapsUrl(fromRaw) || extractMapsUrl(serv.pickupLines && serv.pickupLines[0] ? String(serv.pickupLines[0]) : '');
+  const dropoffMapsUrl = extractMapsUrl(toRaw) || extractMapsUrl(serv.dropoffLines && serv.dropoffLines[0] ? String(serv.dropoffLines[0]) : '');
   
-  // Build notes with maps URL if present
+  // Also check unmapped columns for Maps URLs (existing behavior)
+  const mapsUrlRegex = /https?:\/\/(maps\.app\.goo\.gl|goo\.gl|google\.com\/maps)[^\s]*/i;
+  let extraMapsUrl = '';
+  // (unmapped column scanning happens in the main loop — we pass it via serv.notes)
+  
+  // Clean destination: remove URL part
+  const toClean = cleanCellText(toRaw);
+  const fromClean = cleanCellText(fromRaw);
+  
+  // Build notes with extra maps URL if present (from unmapped columns)
   let notes = serv.notes || '';
-  if (mapsUrl) {
-    notes = notes ? notes + ' | maps:' + mapsUrl : 'maps:' + mapsUrl;
-  }
+  
+  // Build passengers list (semicolon-separated)
+  const passengersList = serv.passengers
+    ? serv.passengers.filter(Boolean).join('; ')
+    : '';
   
   // Fix phone: prepend ' to prevent Google Sheets #ERROR on + prefix
   let phone = serv.driverPhone || '';
@@ -643,6 +755,12 @@ function _buildServiceRecord(serv, production, dateStr, fileName, idx, importSeq
     });
   }
   
+  // Original transport date from header
+  let originalTransportDate = '';
+  if (dateStr) {
+    originalTransportDate = parseTransportListDate(dateStr);
+  }
+  
   return {
     id: id,
     vehicle: serv.vehicle,
@@ -652,12 +770,16 @@ function _buildServiceRecord(serv, production, dateStr, fileName, idx, importSeq
     passengers: passengers,
     pickupLines: serv.pickupLines || [],
     dropoffLines: serv.dropoffLines || [],
-    from: (serv.pickupLines && serv.pickupLines[0]) || '',
-    to: (serv.dropoffLines && serv.dropoffLines[0]) || '',
+    from: fromClean || (serv.pickupLines && serv.pickupLines[0]) || '',
+    to: toClean || (serv.dropoffLines && serv.dropoffLines[0]) || '',
+    pickupMapsUrl: pickupMapsUrl,
+    dropoffMapsUrl: dropoffMapsUrl,
     flightInfo: serv.flightInfo,
+    passengersList: passengersList,
     notes: notes,
     production: production,
     date: actualDate,
+    originalTransportDate: originalTransportDate,
     dateStr: dateStr,
     fileName: fileName,
     section: serv.section || '',

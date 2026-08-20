@@ -178,13 +178,21 @@ function _serveDriverForm(token) {
 
   _logLinkEvent(token, 'ACCESSED');
 
+  // Resolve driver name from ID
+  var driverName = linkData.DriverID;
+  try {
+    var driver = DriverRepository.getById(linkData.DriverID);
+    if (driver && driver.Name) driverName = driver.Name;
+  } catch(e) {}
+
   var services = _getServicesByDriverAndDateRange(linkData.DriverID, linkData.ProjectID, linkData.DateFrom, linkData.DateTo);
 
   if (!services || services.length === 0) {
     services = [{
       ID: '', Time: '', Production: '', Section: '',
       PassengerName: '', PassengerRole: '',
-      PickupLines: '[]', DropoffLines: '[]', VehicleID: ''
+      PickupLines: '[]', DropoffLines: '[]', VehicleID: '',
+      PickupMapsUrl: '', DropoffMapsUrl: ''
     }];
   }
 
@@ -195,12 +203,32 @@ function _serveDriverForm(token) {
     }
   } catch (e) {}
 
+  // Helper: detect if a string contains a Maps URL and render it as a clickable link
+  function renderAddressWithMaps(text, mapsUrl) {
+    if (!text) return '';
+    var escaped = _escapeHtml(text);
+    // If there's a dedicated Maps URL field, render address text + separate Maps link
+    if (mapsUrl) {
+      var safeUrl = _escapeHtml(mapsUrl);
+      return escaped + ' <a href="' + safeUrl + '" target="_blank" rel="noopener" class="maps-link"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Apri Maps</a>';
+    }
+    // Fallback: detect inline maps URLs in the text
+    var mapsRegex = /(https?:\/\/(?:maps\.app\.goo\.gl|goo\.gl\/maps|google\.com\/maps)[^\s,;]+)/gi;
+    return escaped.replace(mapsRegex, '<a href="$1" target="_blank" rel="noopener" class="maps-link"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Apri Maps</a>');
+  }
+
   var serviceCardsHtml = '';
   services.forEach(function(svc, index) {
     var pickupLines = [];
     var dropoffLines = [];
     try { pickupLines = JSON.parse(svc.PickupLines || '[]'); } catch(e) {}
     try { dropoffLines = JSON.parse(svc.DropoffLines || '[]'); } catch(e) {}
+
+    // Clean address text: remove inline maps URLs from address lines (they're now in dedicated fields)
+    function cleanAddress(text) {
+      if (!text) return '';
+      return text.replace(/\s*,?\s*https?:\/\/(?:maps\.app\.goo\.gl|goo\.gl\/maps|google\.com\/maps)[^\s,;]*/gi, '').trim();
+    }
 
     var passengerInfo = svc.PassengerName || '';
     if (svc.PassengerRole) passengerInfo += ' (' + svc.PassengerRole + ')';
@@ -216,19 +244,22 @@ function _serveDriverForm(token) {
       } catch(e) {}
     }
 
+    // Format time — if it's a raw time string like "07:10", display as "07:10"
+    var displayTime = svc.Time || '—';
+
     serviceCardsHtml +=
       '<div class="svc" id="svc-' + index + '" data-date="' + _escapeHtml(svc.Date || '') + '">' +
       '<div class="svc-hd">' +
       '<input type="checkbox" name="selectedServices" value="' + index + '" onchange="toggleServiceFields(' + index + ')">' +
-      '<span class="svc-time">' + _escapeHtml(svc.Time || '—') + '</span>' +
+      '<span class="svc-time">' + _escapeHtml(displayTime) + '</span>' +
       '<span class="svc-prod">' + _escapeHtml(svc.Production || '—') + '</span>' +
       (svcDate ? '<span class="svc-date">' + _escapeHtml(svcDate) + '</span>' : '') +
       '</div>' +
       '<div class="svc-det">' +
       (svc.Section ? '<div><b>Sezione:</b> ' + _escapeHtml(svc.Section) + '</div>' : '') +
       (passengerInfo ? '<div><b>Passeggero:</b> ' + _escapeHtml(passengerInfo) + '</div>' : '') +
-      (pickupLines.length > 0 ? '<div><b>Da:</b> ' + _escapeHtml(pickupLines.join(', ')) + '</div>' : '') +
-      (dropoffLines.length > 0 ? '<div><b>A:</b> ' + _escapeHtml(dropoffLines.join(', ')) + '</div>' : '') +
+      (pickupLines.length > 0 ? '<div><b>Da:</b> ' + renderAddressWithMaps(cleanAddress(pickupLines.join(', ')), svc.PickupMapsUrl) + '</div>' : '') +
+      (dropoffLines.length > 0 ? '<div><b>A:</b> ' + renderAddressWithMaps(cleanAddress(dropoffLines.join(', ')), svc.DropoffMapsUrl) + '</div>' : '') +
       '</div>' +
       '<div class="svc-fields" id="svc-fields-' + index + '" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #e5e7eb">' +
       '<div class="svc-fields-grid">' +
@@ -257,38 +288,44 @@ function _serveDriverForm(token) {
     '*{margin:0;padding:0;box-sizing:border-box}' +
     'body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,sans-serif;max-width:600px;margin:0 auto;padding:20px 16px;background:#fafafa;color:#1a1a2e;-webkit-font-smoothing:antialiased;line-height:1.5}' +
     '.hd{background:#1a1a2e;color:#fff;padding:32px 24px;border-radius:16px;margin-bottom:28px;text-align:center}' +
-    '.hd h1{font-size:20px;font-weight:700;letter-spacing:-.4px;margin-bottom:8px}' +
-    '.hd .meta{font-size:13px;opacity:.65;font-weight:400}' +
+    '.hd h1{font-size:20px;font-weight:700;letter-spacing:-.4px;margin-bottom:4px}' +
+    '.hd .driver-name{font-size:15px;font-weight:600;opacity:.85;margin-bottom:4px}' +
+    '.hd .meta{font-size:12px;opacity:.5;font-weight:400}' +
     '.sec{font-size:13px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;margin:28px 0 14px 0;padding-bottom:8px;border-bottom:1px solid #e5e7eb}' +
-    '.svc{background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .12s ease}' +
+    '.svc{background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .15s ease}' +
     '.svc:hover{border-color:#c7d2fe;box-shadow:0 2px 8px rgba(0,0,0,.04)}' +
     '.svc:has(input:checked){border-color:#4f46e5;background:#fafafe;box-shadow:0 0 0 3px rgba(79,70,229,.08)}' +
     '.svc:has(input:checked) .svc-time{background:#4f46e5}' +
     '.svc-hd{display:flex;align-items:center;gap:10px}' +
-    '.svc-hd input[type=checkbox]{width:16px;height:16px;accent-color:#4f46e5;flex-shrink:0}' +
-    '.svc-time{background:#374151;color:#fff;padding:3px 10px;border-radius:6px;font-weight:700;font-size:13px;transition:background .12s ease}' +
-    '.svc-prod{font-weight:700;font-size:14px;color:#1a1a2e}' +
-    '.svc-det{font-size:13px;color:#6b7280;line-height:1.6;margin-top:8px;padding-left:26px}' +
+    '.svc-hd input[type=checkbox]{width:18px;height:18px;accent-color:#4f46e5;flex-shrink:0}' +
+    '.svc-time{background:#374151;color:#fff;padding:3px 10px;border-radius:6px;font-weight:700;font-size:13px;transition:background .15s ease;white-space:nowrap}' +
+    '.svc-prod{font-weight:700;font-size:14px;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+    '.svc-det{font-size:13px;color:#6b7280;line-height:1.7;margin-top:8px;padding-left:28px}' +
     '.svc-det b{color:#374151;font-weight:600}' +
-    '.svc-date{margin-left:auto;font-size:12px;color:#6b7280;background:#f3f4f6;padding:2px 8px;border-radius:4px;white-space:nowrap}' +
+    '.svc-date{margin-left:auto;font-size:11px;color:#6b7280;background:#f3f4f6;padding:2px 8px;border-radius:4px;white-space:nowrap;flex-shrink:0}' +
+    '.maps-link{display:inline-flex;align-items:center;gap:3px;color:#4f46e5;font-weight:600;font-size:12px;text-decoration:none;padding:2px 8px;background:#eef2ff;border-radius:6px;margin-left:4px;transition:all .12s ease;white-space:nowrap}' +
+    '.maps-link:hover{background:#e0e7ff;color:#4338ca}' +
+    '.maps-link svg{flex-shrink:0}' +
     '.fg{margin-bottom:18px}' +
     '.fg label{display:block;margin-bottom:5px;font-weight:600;font-size:13px;color:#374151}' +
     '.req{color:#ef4444}' +
-    'input,select,textarea{width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;font-family:inherit;color:#1a1a2e;background:#fff;transition:border-color .12s,box-shadow .12s}' +
+    'input,select,textarea{width:100%;padding:12px 14px;border:1.5px solid #d1d5db;border-radius:10px;font-size:15px;font-family:inherit;color:#1a1a2e;background:#fff;transition:border-color .15s,box-shadow .15s}' +
     'input:focus,select:focus,textarea:focus{outline:none;border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,.1)}' +
     'textarea{height:80px;resize:vertical}' +
     'select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Cpath fill=\'%239ca3af\' d=\'M6 8L1 3h10z\'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}' +
-    '.btn{width:100%;padding:14px;background:#1a1a2e;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .12s ease;margin-top:8px}' +
+    '.svc-fields-grid{display:flex;flex-direction:column;gap:0}' +
+    '.btn{width:100%;padding:14px;background:#1a1a2e;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s ease;margin-top:8px}' +
     '.btn:hover{background:#2d2d4a;transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.12)}' +
     '.btn:active{transform:translateY(0)}' +
     '.btn:disabled{background:#9ca3af;cursor:not-allowed;transform:none;box-shadow:none}' +
     '.ok{background:#ecfdf5;border:1.5px solid #a7f3d0;border-radius:12px;padding:36px 24px;text-align:center}' +
     '.ok h3{margin-bottom:6px;color:#059669;font-size:20px;font-weight:700}' +
     '.ok p{color:#6b7280;font-size:15px}' +
-    '@media(max-width:480px){body{padding:12px 10px}.hd{padding:24px 16px}.hd h1{font-size:18px}}' +
+    '@media(max-width:480px){body{padding:12px 10px}.hd{padding:24px 16px}.hd h1{font-size:18px}.svc{padding:14px 12px}.svc-hd{gap:8px}.svc-det{padding-left:0}.svc-prod{font-size:13px}}' +
     '</style></head><body>' +
     '<div class="hd"><h1>Rapportino Transport</h1>' +
-    '<div class="meta">' + _escapeHtml(dateRangeInfo) + ' · ' + _escapeHtml(linkData.DriverID) + '</div></div>' +
+    '<div class="driver-name">' + _escapeHtml(driverName) + '</div>' +
+    '<div class="meta">' + _escapeHtml(dateRangeInfo) + '</div></div>' +
     '<form id="driverForm" onsubmit="return submitForm()">' +
     '<div class="sec">Seleziona il servizio</div>' +
     serviceCardsHtml +

@@ -43,11 +43,13 @@ interface EditModalDriver {
   status: 'Disponible' | 'Asignado' | 'Inactivo';
   type: string;
   collaboratorId: string;
+  driverOwnership: string;
   email: string;
   iban: string;
   licenseType: string;
   licenseExpiry: string;
   operatingCompany: string;
+  lastImportDate: string;
 }
 
 export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: DriverPanelScreenProps) {
@@ -194,6 +196,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
         status: editDriver.status,
         type: editDriver.type,
         collaboratorId: editDriver.collaboratorId,
+        driverOwnership: editDriver.driverOwnership,
         email: editDriver.email,
         iban: editDriver.iban,
         licenseType: editDriver.licenseType,
@@ -435,11 +438,13 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                         status: dr.status || 'Disponible',
                         type: dbRec?.type || 'interno',
                         collaboratorId: dbRec?.collaboratorId || '',
+                        driverOwnership: dbRec?.driverOwnership || 'own',
                         email: dbRec?.email || '',
                         iban: dbRec?.iban || '',
                         licenseType: dbRec?.licenseType || '',
                         licenseExpiry: dbRec?.licenseExpiry || '',
                         operatingCompany: dbRec?.operatingCompany || '',
+                        lastImportDate: dbRec?.lastImportDate || '',
                       });
                     }}
                     className="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-primary transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
@@ -520,11 +525,13 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                       status: dr.status || 'Disponible',
                       type: dbRec?.type || 'interno',
                       collaboratorId: dbRec?.collaboratorId || '',
+                      driverOwnership: dbRec?.driverOwnership || 'own',
                       email: dbRec?.email || '',
                       iban: dbRec?.iban || '',
                       licenseType: dbRec?.licenseType || '',
                       licenseExpiry: dbRec?.licenseExpiry || '',
                       operatingCompany: dbRec?.operatingCompany || '',
+                      lastImportDate: dbRec?.lastImportDate || '',
                     });
                   }}
                   className="flex-1 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary text-[12px] font-medium rounded transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
@@ -664,6 +671,29 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                     <option value="Transport Action">Transport Action</option>
                     <option value="Movie Motion">Movie Motion</option>
                   </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Driver Ownership</label>
+                  <select
+                    value={editDriver.driverOwnership}
+                    onChange={(e) => setEditDriver({ ...editDriver, driverOwnership: e.target.value })}
+                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="own">Propio (Own)</option>
+                    <option value="rented">Alquilado (Rented)</option>
+                    <option value="partner">Socio (Partner)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Last Import Date</label>
+                  <input
+                    type="text"
+                    value={editDriver.lastImportDate ? new Date(editDriver.lastImportDate).toLocaleDateString() : '—'}
+                    readOnly
+                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface-variant cursor-not-allowed"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
