@@ -18,6 +18,19 @@ function _hashPasswordForSetup(password, salt) {
   return digest.map(function(b) { return ('0' + (b & 0xFF).toString(16)).slice(-2); }).join('');
 }
 
+/**
+ * Helper: delete sheet if it exists, then create it fresh.
+ * Makes all _setup* functions idempotent.
+ */
+function _safeInsertSheet(ss, name, tabColor, headers) {
+  var existing = ss.getSheetByName(name);
+  if (existing) ss.deleteSheet(existing);
+  var sh = ss.insertSheet(name);
+  sh.setTabColor(tabColor);
+  sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold').setBackground(tabColor).setFontColor('#fff');
+  return sh;
+}
+
 function setup() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   
@@ -81,273 +94,195 @@ function setup() {
 // ============================================================================
 
 function _setupSettings(ss) {
-  var sh = ss.insertSheet('Settings');
-  sh.setTabColor('#455A64');
-  var h = ['ID', 'Category', 'Key', 'Value', 'Description', 'CreatedAt', 'UpdatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#455A64').setFontColor('#fff');
+  _safeInsertSheet(ss, 'Settings', '#455A64',
+    ['ID', 'Category', 'Key', 'Value', 'Description', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupSequence(ss) {
-  var sh = ss.insertSheet('Sequence');
-  sh.setTabColor('#607D8B');
-  var h = ['Entity', 'OperatingCompany', 'Year', 'Next'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#607D8B').setFontColor('#fff');
+  _safeInsertSheet(ss, 'Sequence', '#607D8B',
+    ['Entity', 'OperatingCompany', 'Year', 'Next']);
 }
 
 function _setupOperatingCompany(ss) {
-  var sh = ss.insertSheet('OperatingCompany');
-  sh.setTabColor('#1B5E20');
-  var h = ['ID', 'Name', 'VAT', 'Address', 'Phone', 'Email', 'Currency', 'DefaultTaxRate', 'Active', 'CreatedAt', 'UpdatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#1B5E20').setFontColor('#fff');
+  _safeInsertSheet(ss, 'OperatingCompany', '#1B5E20',
+    ['ID', 'Name', 'VAT', 'Address', 'Phone', 'Email', 'Currency', 'DefaultTaxRate', 'Active', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupClients(ss) {
-  var sh = ss.insertSheet('Clients');
-  sh.setTabColor('#0D47A1');
-  var h = ['ID', 'Name', 'Type', 'VAT', 'Address', 'Phone', 'Email', 'PaymentTerms', 'Notes', 'Active', 'CreatedAt', 'UpdatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#0D47A1').setFontColor('#fff');
+  _safeInsertSheet(ss, 'Clients', '#0D47A1',
+    ['ID', 'Name', 'Type', 'VAT', 'Address', 'Phone', 'Email', 'PaymentTerms', 'Notes', 'Active', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupContacts(ss) {
-  var sh = ss.insertSheet('Contacts');
-  sh.setTabColor('#1565C0');
-  var h = ['ID', 'ClientID', 'Name', 'Role', 'Phone', 'Email', 'WhatsApp', 'Notes', 'Active', 'CreatedAt', 'UpdatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#1565C0').setFontColor('#fff');
+  _safeInsertSheet(ss, 'Contacts', '#1565C0',
+    ['ID', 'ClientID', 'Name', 'Role', 'Phone', 'Email', 'WhatsApp', 'Notes', 'Active', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupProjects(ss) {
-  var sh = ss.insertSheet('Projects');
-  sh.setTabColor('#1B5E20');
-  var h = ['ID', 'ClientID', 'Name', 'TransportCompany', 'OperatingCompany', 'Coordinator', 'Status', 'DateFrom', 'DateTo', 'Notes', 'CreatedAt', 'UpdatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#1B5E20').setFontColor('#fff');
+  _safeInsertSheet(ss, 'Projects', '#1B5E20',
+    ['ID', 'ClientID', 'Name', 'TransportCompany', 'OperatingCompany', 'Coordinator', 'Status', 'DateFrom', 'DateTo', 'Notes', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupDrivers(ss) {
-  var sh = ss.insertSheet('Drivers');
-  sh.setTabColor('#4CAF50');
-  var h = ['ID', 'Name', 'Type', 'CollaboratorID', 'Phone', 'WhatsApp', 'Email', 'IBAN', 'VehiclePreferred', 'LicenseType', 'LicenseExpiry', 'Status', 'OperatingCompany', 'Notes', 'Source', 'LastUsed', 'TotalRides', 'CreatedAt', 'UpdatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#2E7D32').setFontColor('#fff');
+  var sh = _safeInsertSheet(ss, 'Drivers', '#4CAF50',
+    ['ID', 'Name', 'Type', 'CollaboratorID', 'Phone', 'WhatsApp', 'Email', 'IBAN', 'VehiclePreferred', 'LicenseType', 'LicenseExpiry', 'Status', 'OperatingCompany', 'Notes', 'Source', 'LastUsed', 'TotalRides', 'CreatedAt', 'UpdatedAt']);
   sh.getRange('E:E').setNumberFormat('@');
   sh.getRange('F:F').setNumberFormat('@');
 }
 
 function _setupVehicles(ss) {
-  var sh = ss.insertSheet('Vehicles');
-  sh.setTabColor('#006064');
-  var h = ['ID', 'Plate', 'Brand', 'Model', 'Type', 'Ownership', 'InsuranceExpiry', 'InspectionExpiry', 'Capacity', 'Status', 'DriverDefault', 'OperatingCompany', 'Notes', 'CreatedAt', 'UpdatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#006064').setFontColor('#fff');
+  _safeInsertSheet(ss, 'Vehicles', '#006064',
+    ['ID', 'Plate', 'Brand', 'Model', 'Type', 'Ownership', 'InsuranceExpiry', 'InspectionExpiry', 'Capacity', 'Status', 'DriverDefault', 'OperatingCompany', 'Notes', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupDriverRates(ss) {
-  var sh = ss.insertSheet('DriverRates');
-  sh.setTabColor('#004D40');
-  var h = ['ID', 'DriverID', 'VehicleType', 'TransferRate', 'HalfDayRate', 'FullDayRate', 'NightExtra', 'HolidayExtra', 'WaitHourRate', 'Active', 'CreatedAt', 'UpdatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#004D40').setFontColor('#fff');
+  _safeInsertSheet(ss, 'DriverRates', '#004D40',
+    ['ID', 'DriverID', 'VehicleType', 'TransferRate', 'HalfDayRate', 'FullDayRate', 'NightExtra', 'HolidayExtra', 'WaitHourRate', 'Active', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupDriverAdvances(ss) {
-  var sh = ss.insertSheet('DriverAdvances');
-  sh.setTabColor('#B71C1C');
-  var h = ['ID', 'DriverID', 'ProjectID', 'Amount', 'RemainingAmount', 'Date', 'Status', 'DeductedIn', 'Notes', 'CreatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#B71C1C').setFontColor('#fff');
+  _safeInsertSheet(ss, 'DriverAdvances', '#B71C1C',
+    ['ID', 'DriverID', 'ProjectID', 'Amount', 'RemainingAmount', 'Date', 'Status', 'DeductedIn', 'Notes', 'CreatedAt']);
 }
 
 function _setupCollaborators(ss) {
-  var sh = ss.insertSheet('Collaborators');
-  sh.setTabColor('#4A148C');
-  var h = ['ID', 'Name', 'VAT', 'Address', 'Phone', 'Email', 'PaymentTerms', 'Active', 'Notes', 'OperatingCompany', 'CreatedAt', 'UpdatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#4A148C').setFontColor('#fff');
+  _safeInsertSheet(ss, 'Collaborators', '#4A148C',
+    ['ID', 'Name', 'VAT', 'Address', 'Phone', 'Email', 'PaymentTerms', 'Active', 'Notes', 'OperatingCompany', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupSupplierRates(ss) {
-  var sh = ss.insertSheet('SupplierRates');
-  sh.setTabColor('#7B1FA2');
-  var h = ['ID', 'SupplierType', 'SupplierID', 'ProjectID', 'ServiceType', 'VehicleType', 'BaseRate', 'IncludedKm', 'IncludedHours', 'ExtraKmRate', 'ExtraHourRate', 'DiariaPiena', 'DiariaMezza', 'NightExtra', 'HolidayExtra', 'WaitHourRate', 'ValidFrom', 'ValidTo', 'Active', 'OperatingCompany', 'CreatedAt', 'UpdatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#7B1FA2').setFontColor('#fff');
+  _safeInsertSheet(ss, 'SupplierRates', '#7B1FA2',
+    ['ID', 'SupplierType', 'SupplierID', 'ProjectID', 'ServiceType', 'VehicleType', 'BaseRate', 'IncludedKm', 'IncludedHours', 'ExtraKmRate', 'ExtraHourRate', 'DiariaPiena', 'DiariaMezza', 'NightExtra', 'HolidayExtra', 'WaitHourRate', 'ValidFrom', 'ValidTo', 'Active', 'OperatingCompany', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupRateCards(ss) {
-  var sh = ss.insertSheet('RateCards');
-  sh.setTabColor('#E65100');
-  var h = ['ID', 'Name', 'Category', 'VehicleType', 'ServiceType', 'BasePrice', 'IncludedKm', 'IncludedHours', 'ExtraKmRate', 'ExtraHourRate', 'WaitRate', 'NightFee', 'HolidayFee', 'HalfDayPrice', 'FullDayPrice', 'AirportSurcharge', 'OperatingCompany', 'Active', 'Notes', 'ClientID', 'ProjectID', 'ValidFrom', 'ValidTo', 'CreatedAt', 'UpdatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#E65100').setFontColor('#fff');
+  _safeInsertSheet(ss, 'RateCards', '#E65100',
+    ['ID', 'Name', 'Category', 'VehicleType', 'ServiceType', 'BasePrice', 'IncludedKm', 'IncludedHours', 'ExtraKmRate', 'ExtraHourRate', 'WaitRate', 'NightFee', 'HolidayFee', 'HalfDayPrice', 'FullDayPrice', 'AirportSurcharge', 'OperatingCompany', 'Active', 'Notes', 'ClientID', 'ProjectID', 'ValidFrom', 'ValidTo', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupTransportLists(ss) {
-  var sh = ss.insertSheet('TransportLists');
-  sh.setTabColor('#2196F3');
-  var h = ['ID', 'ProjectID', 'FileName', 'ImportDate', 'Production', 'ProjectName', 'TransportCompany', 'TotalServices', 'ImportedBy', 'Notes', 'CreatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#1565C0').setFontColor('#fff');
+  _safeInsertSheet(ss, 'TransportLists', '#2196F3',
+    ['ID', 'ProjectID', 'FileName', 'ImportDate', 'Production', 'ProjectName', 'TransportCompany', 'TotalServices', 'ImportedBy', 'Notes', 'CreatedAt']);
 }
 
 function _setupServices(ss) {
-  var sh = ss.insertSheet('Services');
-  sh.setTabColor('#FF6F00');
-  // Extended columns: StartTime, EndTime, KmTotal, HasDiaria, IsFestivo, IsNotturno, DiariaType
-  // New fields: ProviderType, ProviderID, ServiceType, SourceType, SourceReference, VehicleType
-  var h = ['ID', 'ProjectID', 'TransportListID', 'Date', 'Time', 'Production', 'Section', 'PassengerName', 'PassengerRole', 'PassengerPhone', 'PassengerDepartment', 'PickupLines', 'DropoffLines', 'FlightInfo', 'Notes', 'DriverID', 'VehicleID', 'OperationalStatus', 'FinancialStatus', 'EstimatedRevenue', 'EstimatedCost', 'OperatingCompany', 'Normalized', 'CreatedAt', 'UpdatedAt', 'StartTime', 'EndTime', 'KmTotal', 'HasDiaria', 'IsFestivo', 'IsNotturno', 'DiariaType', 'ProviderType', 'ProviderID', 'ServiceType', 'SourceType', 'SourceReference', 'VehicleType'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#E65100').setFontColor('#fff');
+  _safeInsertSheet(ss, 'Services', '#FF6F00',
+    ['ID', 'ProjectID', 'TransportListID', 'Date', 'Time', 'Production', 'Section', 'PassengerName', 'PassengerRole', 'PassengerPhone', 'PassengerDepartment', 'PickupLines', 'DropoffLines', 'FlightInfo', 'Notes', 'DriverID', 'VehicleID', 'OperationalStatus', 'FinancialStatus', 'EstimatedRevenue', 'EstimatedCost', 'OperatingCompany', 'Normalized', 'CreatedAt', 'UpdatedAt', 'StartTime', 'EndTime', 'KmTotal', 'HasDiaria', 'IsFestivo', 'IsNotturno', 'DiariaType', 'ProviderType', 'ProviderID', 'ServiceType', 'SourceType', 'SourceReference', 'VehicleType', 'PickupMapsUrl', 'DropoffMapsUrl']);
 }
 
 function _setupServiceRevenueBreakdown(ss) {
-  var sh = ss.insertSheet('ServiceRevenueBreakdown');
-  sh.setTabColor('#1B5E20');
-  var h = ['ID', 'ServiceID', 'ItemType', 'Description', 'Quantity', 'UnitPrice', 'Total', 'RateCardID', 'Source', 'ReferenceLineID', 'Locked', 'CreatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#1B5E20').setFontColor('#fff');
+  _safeInsertSheet(ss, 'ServiceRevenueBreakdown', '#1B5E20',
+    ['ID', 'ServiceID', 'ItemType', 'Description', 'Quantity', 'UnitPrice', 'Total', 'RateCardID', 'Source', 'ReferenceLineID', 'Locked', 'CreatedAt']);
 }
 
 function _setupServiceCostBreakdown(ss) {
-  var sh = ss.insertSheet('ServiceCostBreakdown');
-  sh.setTabColor('#B71C1C');
-  var h = ['ID', 'ServiceID', 'ItemType', 'Description', 'Amount', 'DriverID', 'Source', 'ReferenceLineID', 'Locked', 'CreatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#B71C1C').setFontColor('#fff');
+  _safeInsertSheet(ss, 'ServiceCostBreakdown', '#B71C1C',
+    ['ID', 'ServiceID', 'ItemType', 'Description', 'Amount', 'DriverID', 'Source', 'ReferenceLineID', 'Locked', 'CreatedAt']);
 }
 
 function _setupDriverReports(ss) {
-  var sh = ss.insertSheet('DriverReports');
-  sh.setTabColor('#FF8F00');
-  var h = ['ID', 'ServiceID', 'DriverID', 'Version', 'PreviousReportID', 'StartTime', 'EndTime', 'KmTotal', 'HasDiaria', 'IsFestivo', 'IsNotturno', 'DiariaType', 'KmExtra', 'HoursExtra', 'Parking', 'Tolls', 'Fuel', 'WaitMinutes', 'Notes', 'Status', 'ApprovedBy', 'ApprovedDate', 'RejectedReason', 'Locked', 'SubmittedAt', 'CreatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#FF8F00').setFontColor('#fff');
+  _safeInsertSheet(ss, 'DriverReports', '#FF8F00',
+    ['ID', 'ServiceID', 'DriverID', 'Version', 'PreviousReportID', 'StartTime', 'EndTime', 'KmTotal', 'HasDiaria', 'IsFestivo', 'IsNotturno', 'DiariaType', 'KmExtra', 'HoursExtra', 'Parking', 'Tolls', 'Fuel', 'WaitMinutes', 'Notes', 'Status', 'ApprovedBy', 'ApprovedDate', 'RejectedReason', 'Locked', 'SubmittedAt', 'CreatedAt']);
 }
 
 function _setupRapportinoClients(ss) {
-  var sh = ss.insertSheet('RapportinoClients');
-  sh.setTabColor('#4A148C');
-  var h = ['ID', 'ProjectID', 'ClientID', 'PeriodType', 'PeriodStart', 'PeriodEnd', 'WeekStart', 'WeekEnd', 'Status', 'Notes', 'CreatedBy', 'CreatedAt', 'UpdatedAt', 'SentAt', 'AcceptedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#4A148C').setFontColor('#fff');
+  _safeInsertSheet(ss, 'RapportinoClients', '#4A148C',
+    ['ID', 'ProjectID', 'ClientID', 'PeriodType', 'PeriodStart', 'PeriodEnd', 'WeekStart', 'WeekEnd', 'Status', 'Notes', 'CreatedBy', 'CreatedAt', 'UpdatedAt', 'SentAt', 'AcceptedAt']);
 }
 
 function _setupRapportinoItems(ss) {
-  var sh = ss.insertSheet('RapportinoItems');
-  sh.setTabColor('#6A1B9A');
-  var h = ['ID', 'RapportinoClientID', 'ServiceID', 'Amount', 'LockedAmount', 'CreatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#6A1B9A').setFontColor('#fff');
+  _safeInsertSheet(ss, 'RapportinoItems', '#6A1B9A',
+    ['ID', 'RapportinoClientID', 'ServiceID', 'Amount', 'LockedAmount', 'CreatedAt']);
 }
 
 function _setupRapportinoDrivers(ss) {
-  var sh = ss.insertSheet('RapportinoDrivers');
-  sh.setTabColor('#7B1FA2');
-  var h = ['ID', 'ProjectID', 'DriverID', 'PeriodType', 'PeriodStart', 'PeriodEnd', 'WeekStart', 'WeekEnd', 'Status', 'Notes', 'CreatedBy', 'CreatedAt', 'UpdatedAt', 'SentAt', 'PaidAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#7B1FA2').setFontColor('#fff');
+  _safeInsertSheet(ss, 'RapportinoDrivers', '#7B1FA2',
+    ['ID', 'ProjectID', 'DriverID', 'PeriodType', 'PeriodStart', 'PeriodEnd', 'WeekStart', 'WeekEnd', 'Status', 'Notes', 'CreatedBy', 'CreatedAt', 'UpdatedAt', 'SentAt', 'PaidAt']);
 }
 
 function _setupRapportinoCollaborators(ss) {
-  var sh = ss.insertSheet('RapportinoCollaborators');
-  sh.setTabColor('#6A1B9A');
-  var h = ['ID', 'ProjectID', 'CollaboratorID', 'PeriodType', 'PeriodStart', 'PeriodEnd', 'Status', 'Notes', 'CreatedBy', 'CreatedAt', 'UpdatedAt', 'SentAt', 'AcceptedAt', 'PaidAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#6A1B9A').setFontColor('#fff');
+  _safeInsertSheet(ss, 'RapportinoCollaborators', '#6A1B9A',
+    ['ID', 'ProjectID', 'CollaboratorID', 'PeriodType', 'PeriodStart', 'PeriodEnd', 'Status', 'Notes', 'CreatedBy', 'CreatedAt', 'UpdatedAt', 'SentAt', 'AcceptedAt', 'PaidAt']);
 }
 
 function _setupRapportinoCollaboratorItems(ss) {
-  var sh = ss.insertSheet('RapportinoCollaboratorItems');
-  sh.setTabColor('#8E24AA');
-  var h = ['ID', 'RapportinoCollaboratorID', 'ServiceID', 'DriverID', 'Amount', 'LockedAmount', 'CreatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#8E24AA').setFontColor('#fff');
+  _safeInsertSheet(ss, 'RapportinoCollaboratorItems', '#8E24AA',
+    ['ID', 'RapportinoCollaboratorID', 'ServiceID', 'DriverID', 'Amount', 'LockedAmount', 'CreatedAt']);
 }
 
 function _setupInvoices(ss) {
-  var sh = ss.insertSheet('Invoices');
-  sh.setTabColor('#006064');
-  var h = ['ID', 'InvoiceNumber', 'ProjectID', 'ClientID', 'Date', 'DueDate', 'Subtotal', 'TaxRate', 'TaxAmount', 'Total', 'Currency', 'Status', 'Notes', 'VoidReason', 'CreatedBy', 'CreatedAt', 'UpdatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#006064').setFontColor('#fff');
+  _safeInsertSheet(ss, 'Invoices', '#006064',
+    ['ID', 'InvoiceNumber', 'ProjectID', 'ClientID', 'Date', 'DueDate', 'Subtotal', 'TaxRate', 'TaxAmount', 'Total', 'Currency', 'Status', 'Notes', 'VoidReason', 'CreatedBy', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupInvoiceItems(ss) {
-  var sh = ss.insertSheet('InvoiceItems');
-  sh.setTabColor('#00838F');
-  var h = ['ID', 'InvoiceID', 'RapportinoClientID', 'ServiceID', 'Amount', 'CreatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#00838F').setFontColor('#fff');
+  _safeInsertSheet(ss, 'InvoiceItems', '#00838F',
+    ['ID', 'InvoiceID', 'RapportinoClientID', 'ServiceID', 'Amount', 'CreatedAt']);
 }
 
 function _setupPayments(ss) {
-  var sh = ss.insertSheet('Payments');
-  sh.setTabColor('#00695C');
-  var h = ['ID', 'InvoiceID', 'ClientID', 'Amount', 'PaymentMethod', 'PaymentDate', 'Reference', 'Notes', 'Status', 'CreatedBy', 'CreatedAt', 'ConfirmedAt', 'ReconciledAt', 'CashReceivedBy', 'CashDate', 'CashReference'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#00695C').setFontColor('#fff');
+  _safeInsertSheet(ss, 'Payments', '#00695C',
+    ['ID', 'InvoiceID', 'ClientID', 'Amount', 'PaymentMethod', 'PaymentDate', 'Reference', 'Notes', 'Status', 'CreatedBy', 'CreatedAt', 'ConfirmedAt', 'ReconciledAt', 'CashReceivedBy', 'CashDate', 'CashReference']);
 }
 
 function _setupExpenses(ss) {
-  var sh = ss.insertSheet('Expenses');
-  sh.setTabColor('#880E4F');
-  var h = ['ID', 'OwnerType', 'OwnerID', 'Category', 'Description', 'Amount', 'ExpenseDate', 'AccountingDate', 'Status', 'ProjectID', 'OperatingCompany', 'CreatedBy', 'CreatedAt', 'UpdatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#880E4F').setFontColor('#fff');
+  _safeInsertSheet(ss, 'Expenses', '#880E4F',
+    ['ID', 'OwnerType', 'OwnerID', 'Category', 'Description', 'Amount', 'ExpenseDate', 'AccountingDate', 'Status', 'ProjectID', 'OperatingCompany', 'CreatedBy', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupChanges(ss) {
-  var sh = ss.insertSheet('Changes');
-  sh.setTabColor('#E65100');
-  var h = ['ID', 'EntityType', 'EntityID', 'Type', 'Description', 'Priority', 'DueDate', 'Status', 'CreatedBy', 'CreatedAt', 'ResolvedAt', 'ResolvedBy', 'Notes', 'UpdatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#E65100').setFontColor('#fff');
+  _safeInsertSheet(ss, 'Changes', '#E65100',
+    ['ID', 'EntityType', 'EntityID', 'Type', 'Description', 'Priority', 'DueDate', 'Status', 'CreatedBy', 'CreatedAt', 'ResolvedAt', 'ResolvedBy', 'Notes', 'UpdatedAt']);
 }
 
 function _setupDocuments(ss) {
-  var sh = ss.insertSheet('Documents');
-  sh.setTabColor('#455A64');
-  var h = ['ID', 'EntityType', 'EntityID', 'DocumentType', 'Filename', 'URL', 'FileSize', 'MimeType', 'UploadedBy', 'CreatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#455A64').setFontColor('#fff');
+  _safeInsertSheet(ss, 'Documents', '#455A64',
+    ['ID', 'EntityType', 'EntityID', 'DocumentType', 'Filename', 'URL', 'FileSize', 'MimeType', 'UploadedBy', 'CreatedAt']);
 }
 
 function _setupAuditLog(ss) {
-  var sh = ss.insertSheet('AuditLog');
-  sh.setTabColor('#D32F2F');
-  var h = ['ID', 'Timestamp', 'EntityType', 'EntityID', 'Action', 'Field', 'OldValue', 'NewValue', 'User', 'Source', 'Channel', 'CorrelationID'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#B71C1C').setFontColor('#fff');
+  _safeInsertSheet(ss, 'AuditLog', '#D32F2F',
+    ['ID', 'Timestamp', 'EntityType', 'EntityID', 'Action', 'Field', 'OldValue', 'NewValue', 'User', 'Source', 'Channel', 'CorrelationID']);
 }
 
 function _setupActivityFeed(ss) {
-  var sh = ss.insertSheet('ActivityFeed');
-  sh.setTabColor('#C62828');
-  var h = ['ID', 'Timestamp', 'EventType', 'EntityType', 'EntityID', 'Description', 'User', 'Metadata'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#C62828').setFontColor('#fff');
+  _safeInsertSheet(ss, 'ActivityFeed', '#C62828',
+    ['ID', 'Timestamp', 'EventType', 'EntityType', 'EntityID', 'Description', 'User', 'Metadata']);
 }
 
 function _setupReconciliation(ss) {
-  var sh = ss.insertSheet('Reconciliation');
-  sh.setTabColor('#880E4F');
-  var h = ['ID', 'ServiceID', 'ProjectID', 'ProductionStartTime', 'ProductionEndTime', 'ProductionKm', 'ProductionDiaria', 'ProductionFestivo', 'ProductionNotturno', 'DriverStartTime', 'DriverEndTime', 'DriverKm', 'DriverDiaria', 'DriverFestivo', 'DriverNotturno', 'FinalStartTime', 'FinalEndTime', 'FinalKm', 'FinalDiaria', 'FinalFestivo', 'FinalNotturno', 'Status', 'ResolvedBy', 'ResolvedAt', 'ResolutionNotes', 'CreatedAt', 'UpdatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#880E4F').setFontColor('#fff');
+  _safeInsertSheet(ss, 'Reconciliation', '#880E4F',
+    ['ID', 'ServiceID', 'ProjectID', 'ProductionStartTime', 'ProductionEndTime', 'ProductionKm', 'ProductionDiaria', 'ProductionFestivo', 'ProductionNotturno', 'DriverStartTime', 'DriverEndTime', 'DriverKm', 'DriverDiaria', 'DriverFestivo', 'DriverNotturno', 'FinalStartTime', 'FinalEndTime', 'FinalKm', 'FinalDiaria', 'FinalFestivo', 'FinalNotturno', 'Status', 'ResolvedBy', 'ResolvedAt', 'ResolutionNotes', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupUsers(ss) {
-  var sh = ss.insertSheet('Users');
-  sh.setTabColor('#1565C0');
-  var h = ['ID', 'Username', 'PasswordHash', 'Salt', 'DisplayName', 'Email', 'Role', 'Status', 'LastLogin', 'CreatedAt', 'UpdatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#1565C0').setFontColor('#fff');
+  _safeInsertSheet(ss, 'Users', '#1565C0',
+    ['ID', 'Username', 'PasswordHash', 'Salt', 'DisplayName', 'Email', 'Role', 'Status', 'LastLogin', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupDriverLinks(ss) {
-  var sh = ss.insertSheet('DriverLinks');
-  sh.setTabColor('#00796B');
-  var h = ['Token', 'DriverID', 'ProjectID', 'DateFrom', 'DateTo', 'Status', 'FieldsSchema', 'CreatedAt', 'ExpiresAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#00796B').setFontColor('#fff');
+  _safeInsertSheet(ss, 'DriverLinks', '#00796B',
+    ['Token', 'DriverID', 'ProjectID', 'DateFrom', 'DateTo', 'Status', 'FieldsSchema', 'CreatedAt', 'ExpiresAt']);
 }
 
 function _setupDriverLinkResponses(ss) {
-  var sh = ss.insertSheet('DriverLinkResponses');
-  sh.setTabColor('#00695C');
-  var h = ['ID', 'Token', 'DriverID', 'ProjectID', 'DataServizio', 'TipoServizio', 'OrarioInizio', 'OrarioFine', 'Descrizione', 'Clienti', 'Targa', 'KmTotali', 'Diaria', 'Note', 'SubmittedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#00695C').setFontColor('#fff');
+  _safeInsertSheet(ss, 'DriverLinkResponses', '#00695C',
+    ['ID', 'Token', 'DriverID', 'ProjectID', 'ServiceID', 'DataServizio', 'TipoServizio', 'OrarioInizio', 'OrarioFine', 'Descrizione', 'Clienti', 'Targa', 'KmTotali', 'Diaria', 'Note', 'SubmittedAt']);
 }
 
 function _setupDriverLinkEvents(ss) {
-  var sh = ss.insertSheet('DriverLinkEvents');
-  sh.setTabColor('#004D40');
-  var h = ['ID', 'Token', 'EventType', 'Metadata', 'CreatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#004D40').setFontColor('#fff');
+  _safeInsertSheet(ss, 'DriverLinkEvents', '#004D40',
+    ['ID', 'Token', 'EventType', 'Metadata', 'CreatedAt']);
 }
 
 function _setupDriverReportInbox(ss) {
-  var sh = ss.insertSheet('DriverReportInbox');
-  sh.setTabColor('#BF360C');
-  var h = ['ID', 'Source', 'Channel', 'DriverID', 'DriverName', 'ServiceDate', 'StartTime', 'EndTime', 'KmTotal', 'KmExtra', 'HoursExtra', 'Diaria', 'IsFestivo', 'IsNotturno', 'Parking', 'Tolls', 'Fuel', 'Notes', 'Status', 'NormalizedData', 'ServiceID', 'CorrelationID', 'ReviewedBy', 'ReviewedAt', 'RejectionReason', 'CreatedAt', 'UpdatedAt'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#BF360C').setFontColor('#fff');
+  _safeInsertSheet(ss, 'DriverReportInbox', '#BF360C',
+    ['ID', 'Source', 'Channel', 'DriverID', 'ProjectID', 'ServiceDate', 'RawData', 'NormalizedData', 'Status', 'CorrelationID', 'ReviewedBy', 'ReviewedAt', 'RejectionReason', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupPresence(ss) {
-  var sh = ss.insertSheet('Presence');
-  sh.setTabColor('#37474F');
-  var h = ['UserID', 'SessionID', 'DisplayName', 'Role', 'LastSeen', 'UserAgent', 'IPAddress', 'IsActive'];
-  sh.getRange(1,1,1,h.length).setValues([h]).setFontWeight('bold').setBackground('#37474F').setFontColor('#fff');
+  _safeInsertSheet(ss, 'Presence', '#37474F',
+    ['UserID', 'SessionID', 'DisplayName', 'Role', 'LastSeen', 'UserAgent', 'IPAddress', 'IsActive']);
 }
 
 function _setupDashboard(sh) {
@@ -358,5 +293,3 @@ function _setupDashboard(sh) {
 // ============================================================================
 // MENU
 // ============================================================================
-
-

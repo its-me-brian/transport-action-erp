@@ -1318,6 +1318,18 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
         <td className="px-2 py-2">
           <EditableCell rowId={service.id} field="vehicle" value={service.vehicle} />
         </td>
+        <td className="px-2 py-2 hidden lg:table-cell">
+          <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded ${
+            service.serviceType === 'transfer' ? 'bg-blue-50 text-blue-700' :
+            service.serviceType === 'fullDay' ? 'bg-purple-50 text-purple-700' :
+            service.serviceType === 'halfDay' ? 'bg-orange-50 text-orange-700' :
+            'bg-surface-dim text-on-surface-variant'
+          }`}>
+            {service.serviceType === 'fullDay' ? 'Full Day' :
+             service.serviceType === 'halfDay' ? 'Half Day' :
+             service.serviceType || 'disposal'}
+          </span>
+        </td>
         <td className="px-2 py-2">
           <DriverCell service={service} dbDrivers={dbDrivers} onUpdate={handleDriverUpdate} />
         </td>
@@ -2187,6 +2199,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                           />
                         </th>
                         <th className="px-2 py-2">Vehicle</th>
+                        <th className="px-2 py-2 hidden lg:table-cell">Type</th>
                         <th className="px-2 py-2">Driver</th>
                         <th className="px-2 py-2 hidden lg:table-cell">Phone</th>
                         <th className="px-2 py-2 w-[60px]">Time</th>
@@ -2207,7 +2220,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                             <React.Fragment key={group.section || 'nosection'}>
                               {group.section && (
                                 <tr>
-                                  <td colSpan={showRoles ? 15 : 14} className={`px-3 py-1 text-center text-[11px] font-bold ${getSectionStyle(group.section)}`} style={{ border: '1px solid #000' }}>
+                                  <td colSpan={showRoles ? 16 : 15} className={`px-3 py-1 text-center text-[11px] font-bold ${getSectionStyle(group.section)}`} style={{ border: '1px solid #000' }}>
                                     {group.section}
                                   </td>
                                 </tr>
@@ -2269,6 +2282,18 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                                 {service.section && (
                                   <span className="text-[9px] font-medium text-on-surface-variant bg-surface-dim px-1.5 py-0.5 rounded shrink-0">
                                     {service.section}
+                                  </span>
+                                )}
+                                {service.serviceType && (
+                                  <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded shrink-0 ${
+                                    service.serviceType === 'transfer' ? 'bg-blue-50 text-blue-700' :
+                                    service.serviceType === 'fullDay' ? 'bg-purple-50 text-purple-700' :
+                                    service.serviceType === 'halfDay' ? 'bg-orange-50 text-orange-700' :
+                                    'bg-surface-dim text-on-surface-variant'
+                                  }`}>
+                                    {service.serviceType === 'fullDay' ? 'Full Day' :
+                                     service.serviceType === 'halfDay' ? 'Half Day' :
+                                     service.serviceType}
                                   </span>
                                 )}
                               </div>

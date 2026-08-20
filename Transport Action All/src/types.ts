@@ -78,6 +78,7 @@ export interface Service {
   passengers?: string;    // Semicolon-separated passenger names
   vehicleType?: string;
   vehiclePlate?: string;
+  serviceType?: string;
   // Client info (resolved from Project → Client)
   clientId?: string;
   clientName?: string;
