@@ -50,6 +50,7 @@ var DEFAULT_FIELDS_SCHEMA = [
   { key: 'orarioInizio',     label: 'Ora Inizio',          type: 'time',     required: true },
   { key: 'orarioFine',       label: 'Ora Fine',            type: 'time',     required: true },
   { key: 'kmTotali',         label: 'KM Totali',           type: 'number',   required: true, min: 0 },
+  { key: 'targa',            label: 'Targa',               type: 'text',     required: false },
   { key: 'diaria',           label: 'Diaria',              type: 'select',   required: false, options: ['nessuna', 'piena', 'mezza'], defaultVal: 'nessuna' },
   { key: 'note',             label: 'Note',                type: 'textarea', required: false }
 ];
@@ -352,6 +353,7 @@ function _serveDriverForm(token) {
       '<div class="fg"><label>Ora Inizio *</label><input type="time" id="f-orarioInizio-' + index + '"' + disabledAttr + ' required></div>' +
       '<div class="fg"><label>Ora Fine *</label><input type="time" id="f-orarioFine-' + index + '"' + disabledAttr + ' required></div>' +
       '<div class="fg"><label>KM Totali *</label><input type="number" id="f-kmTotali-' + index + '" min="0"' + disabledAttr + ' required></div>' +
+      '<div class="fg"><label>Targa</label><input type="text" id="f-targa-' + index + '" placeholder="es. AB 123 CD"' + disabledAttr + '></div>' +
       '<div class="fg"><label>Diaria</label><select id="f-diaria-' + index + '"' + disabledAttr + '><option value="nessuna">Nessuna</option><option value="piena">Piena</option><option value="mezza">Mezza</option></select></div>' +
       '<div class="fg svc-notes"><label>Note</label><textarea id="f-note-' + index + '" placeholder="Note aggiuntive..."' + disabledAttr + '></textarea></div>' +
       '</div></div>' +
@@ -481,7 +483,7 @@ function _serveDriverForm(token) {
     '  var svc=SERVICES[idx];' +
     '  var d={serviceId:svc?svc.ID:"",dataServizio:svc?svc.Date||"":""};' +
     '  var prefix="f-";' +
-    '  ["orarioInizio","orarioFine","kmTotali","diaria","note"].forEach(function(k){' +
+    '  ["orarioInizio","orarioFine","kmTotali","targa","diaria","note"].forEach(function(k){' +
     '    var el=document.getElementById(prefix+k+"-"+idx);' +
     '    if(!el)return;' +
     '    d[k]=el.type==="number"?parseFloat(el.value)||0:el.value;' +
@@ -600,6 +602,7 @@ function submitDriverLinkResponse(token, services) {
                 production: service ? (service.Production || '') : '',
                 section: service ? (service.Section || '') : '',
                 vehicleId: service ? (service.VehicleID || '') : '',
+                targa: svc.targa || '',
                 passengerName: service ? (service.PassengerName || '') : '',
                 startTime: svc.orarioInizio || '',
                 endTime: svc.orarioFine || '',
