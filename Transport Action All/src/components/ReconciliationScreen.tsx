@@ -157,68 +157,70 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 pt-4 pb-3 border-b border-outline-variant">
+      <div className="flex items-center justify-between px-4 sm:px-6 pt-4 pb-3 border-b border-outline-variant shrink-0">
         <div className="flex items-center gap-2">
-          <ArrowLeftRight className="w-5 h-5 text-primary" />
-          <h1 className="text-lg font-bold text-on-surface">Reconciliation</h1>
+          <ArrowLeftRight className="w-5 h-5 text-primary shrink-0" />
+          <h1 className="text-base sm:text-lg font-bold text-on-surface">Reconciliation</h1>
         </div>
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-5 gap-3 px-6 py-3 border-b border-outline-variant bg-surface-container-lowest">
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3 px-4 sm:px-6 py-3 border-b border-outline-variant bg-surface-container-lowest">
         <div className="text-center">
-          <div className="text-2xl font-bold text-on-surface">{stats.total}</div>
-          <div className="text-xs text-on-surface-variant">Total</div>
+          <div className="text-xl sm:text-2xl font-bold text-on-surface">{stats.total}</div>
+          <div className="text-[10px] sm:text-xs text-on-surface-variant">Total</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-red-600">{stats.pendiente}</div>
-          <div className="text-xs text-on-surface-variant">Pending</div>
+          <div className="text-xl sm:text-2xl font-bold text-red-600">{stats.pendiente}</div>
+          <div className="text-[10px] sm:text-xs text-on-surface-variant">Pending</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-amber-600">{stats.enProceso}</div>
-          <div className="text-xs text-on-surface-variant">In Progress</div>
+          <div className="text-xl sm:text-2xl font-bold text-amber-600">{stats.enProceso}</div>
+          <div className="text-[10px] sm:text-xs text-on-surface-variant">In Progress</div>
         </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-green-600">{stats.resuelto}</div>
-          <div className="text-xs text-on-surface-variant">Resolved</div>
+        <div className="text-center hidden sm:block">
+          <div className="text-xl sm:text-2xl font-bold text-green-600">{stats.resuelto}</div>
+          <div className="text-[10px] sm:text-xs text-on-surface-variant">Resolved</div>
         </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-orange-600">{stats.conDiferencias}</div>
-          <div className="text-xs text-on-surface-variant">With Differences</div>
+        <div className="text-center hidden sm:block">
+          <div className="text-xl sm:text-2xl font-bold text-orange-600">{stats.conDiferencias}</div>
+          <div className="text-[10px] sm:text-xs text-on-surface-variant">With Differences</div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 px-6 py-3 border-b border-outline-variant">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search by service, project, or ID..."
-            className="w-full pl-9 pr-3 py-2 text-sm bg-surface-container border border-outline-variant rounded-lg focus:outline-none focus:border-primary"
-          />
-        </div>
-        <div className="flex items-center gap-1 bg-surface-container border border-outline-variant rounded-lg p-1">
-          {(['all', 'Pendiente', 'EnProceso', 'Resuelto'] as StatusFilter[]).map(status => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                statusFilter === status
-                  ? 'bg-primary text-on-primary'
-                  : 'text-on-surface-variant hover:bg-surface-container-high'
-              }`}
-            >
-              {status === 'all' ? 'All' : status}
-            </button>
-          ))}
+      <div className="px-4 sm:px-6 py-3 border-b border-outline-variant shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search by service, project, or ID..."
+              className="w-full pl-9 pr-3 py-2 text-sm bg-surface-container border border-outline-variant rounded-lg focus:outline-none focus:border-primary"
+            />
+          </div>
+          <div className="flex items-center gap-1 bg-surface-container border border-outline-variant rounded-lg p-1 overflow-x-auto hide-scrollbar shrink-0">
+            {(['all', 'Pendiente', 'EnProceso', 'Resuelto'] as StatusFilter[]).map(status => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
+                  statusFilter === status
+                    ? 'bg-primary text-on-primary'
+                    : 'text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                {status === 'all' ? 'All' : status}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto px-6 py-4">
+      <div className="flex-1 overflow-auto px-4 sm:px-6 py-4">
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -294,7 +296,7 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
                   {/* Expanded detail */}
                   {isExpanded && (
                     <div className="px-4 pb-4 border-t border-outline-variant">
-                      <div className="grid grid-cols-3 gap-4 mt-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-3">
                         {/* Production */}
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                           <h4 className="text-xs font-bold text-blue-700 mb-2">Production</h4>
@@ -362,9 +364,9 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
       {/* Resolve modal */}
       {resolvingId && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-surface rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-auto">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant">
-              <h2 className="text-lg font-bold text-on-surface">Resolve Reconciliation</h2>
+          <div className="bg-surface rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-outline-variant shrink-0">
+              <h2 className="text-base sm:text-lg font-bold text-on-surface">Resolve Reconciliation</h2>
               <button
                 onClick={() => setResolvingId(null)}
                 className="p-1 hover:bg-surface-container-high rounded-lg text-on-surface-variant"
@@ -372,8 +374,8 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
                 ×
               </button>
             </div>
-            <div className="px-6 py-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="px-4 sm:px-6 py-4 space-y-4 overflow-y-auto flex-1 min-h-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-on-surface-variant mb-1">Final Start Time</label>
                   <input
@@ -442,7 +444,7 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
                 />
               </div>
             </div>
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-outline-variant">
+            <div className="flex items-center justify-end gap-3 px-4 sm:px-6 py-4 border-t border-outline-variant shrink-0">
               <button
                 onClick={() => setResolvingId(null)}
                 className="px-4 py-2 text-sm font-medium text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors"

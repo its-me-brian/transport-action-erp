@@ -269,100 +269,105 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
   return (
     <div className="flex flex-col h-full">
       {/* Header bar */}
-      <div className="flex items-center justify-between px-6 pt-4 pb-3 border-b border-outline-variant shrink-0">
-        <div className="flex items-center gap-3">
-          <Link2 className="w-5 h-5 text-primary" />
-          <div>
-            <h1 className="text-lg font-bold text-on-surface">Driver Links</h1>
-            <p className="text-xs text-on-surface-variant">Manage weekly links for driver reporting</p>
+      <div className="flex items-center justify-between px-4 sm:px-6 pt-4 pb-3 border-b border-outline-variant shrink-0 gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Link2 className="w-5 h-5 text-primary shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-lg font-bold text-on-surface truncate">Driver Links</h1>
+            <p className="text-xs text-on-surface-variant hidden sm:block">Manage weekly links for driver reporting</p>
           </div>
           {links.length > 0 && (
-            <span className="ml-2 px-2.5 py-0.5 text-xs font-medium bg-surface-container rounded-full text-on-surface-variant">
+            <span className="ml-1 sm:ml-2 px-2 py-0.5 text-[11px] sm:text-xs font-medium bg-surface-container rounded-full text-on-surface-variant shrink-0">
               {activeCount} active
             </span>
           )}
         </div>
         {can('driverLink.generate') && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={handleExportExcel}
-              className="flex items-center gap-2 px-3 py-2 bg-surface border border-outline-variant text-on-surface text-sm font-medium rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer"
+              className="hidden sm:flex items-center gap-2 px-3 py-2 bg-surface border border-outline-variant text-on-surface text-sm font-medium rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer"
             >
               <Download className="w-4 h-4" />
               Excel
             </button>
             <button
               onClick={handleExportPDF}
-              className="flex items-center gap-2 px-3 py-2 bg-surface border border-outline-variant text-on-surface text-sm font-medium rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer"
+              className="hidden sm:flex items-center gap-2 px-3 py-2 bg-surface border border-outline-variant text-on-surface text-sm font-medium rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer"
             >
               <FileText className="w-4 h-4" />
               PDF
             </button>
             <button
               onClick={() => setShowCreate(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary text-sm font-medium rounded-lg hover:bg-primary-hover transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-primary text-on-primary text-sm font-medium rounded-lg hover:bg-primary-hover transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              Generate Link
+              <span className="hidden xs:inline">Generate Link</span>
+              <span className="xs:hidden">New</span>
             </button>
           </div>
         )}
       </div>
 
       {/* Filters bar */}
-      <div className="flex items-center gap-3 px-6 py-3 bg-surface-container-low border-b border-outline-variant shrink-0 flex-wrap">
-        <div className="flex items-center gap-2 flex-1 max-w-xs">
-          <Search className="w-4 h-4 text-on-surface-variant shrink-0" />
-          <input
-            type="text"
-            placeholder="Search by driver ID..."
-            value={filterDriver}
-            onChange={e => setFilterDriver(e.target.value)}
-            className="w-full px-3 py-1.5 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
-          />
-        </div>
-        <select
-          value={filterProject}
-          onChange={e => setFilterProject(e.target.value)}
-          className="px-3 py-1.5 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors cursor-pointer"
-        >
-          <option value="">All Projects</option>
-          {projectsList.map(p => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-        <select
-          value={filterStatus}
-          onChange={e => setFilterStatus(e.target.value)}
-          className="px-3 py-1.5 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors cursor-pointer"
-        >
-          <option value="">All Status</option>
-          <option value="ACTIVE">Active</option>
-          <option value="EXPIRED">Expired</option>
-          <option value="REVOKED">Revoked</option>
-        </select>
-        <div className="flex items-center gap-1">
-          <Calendar className="w-4 h-4 text-on-surface-variant" />
-          <input
-            type="date"
-            value={filterDateFrom}
-            onChange={e => setFilterDateFrom(e.target.value)}
-            placeholder="From"
-            className="px-2 py-1.5 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
-          />
-          <span className="text-on-surface-variant">—</span>
-          <input
-            type="date"
-            value={filterDateTo}
-            onChange={e => setFilterDateTo(e.target.value)}
-            placeholder="To"
-            className="px-2 py-1.5 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
-          />
+      <div className="px-4 sm:px-6 py-3 bg-surface-container-low border-b border-outline-variant shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Search className="w-4 h-4 text-on-surface-variant shrink-0" />
+            <input
+              type="text"
+              placeholder="Search by driver ID..."
+              value={filterDriver}
+              onChange={e => setFilterDriver(e.target.value)}
+              className="w-full px-3 py-1.5 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors min-w-0"
+            />
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar shrink-0">
+            <select
+              value={filterProject}
+              onChange={e => setFilterProject(e.target.value)}
+              className="px-3 py-1.5 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors cursor-pointer shrink-0"
+            >
+              <option value="">All Projects</option>
+              {projectsList.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value)}
+              className="px-3 py-1.5 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors cursor-pointer shrink-0"
+            >
+              <option value="">All Status</option>
+              <option value="ACTIVE">Active</option>
+              <option value="EXPIRED">Expired</option>
+              <option value="REVOKED">Revoked</option>
+            </select>
+            <div className="flex items-center gap-1 shrink-0">
+              <Calendar className="w-4 h-4 text-on-surface-variant" />
+              <input
+                type="date"
+                value={filterDateFrom}
+                onChange={e => setFilterDateFrom(e.target.value)}
+                placeholder="From"
+                className="px-2 py-1.5 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+              />
+              <span className="text-on-surface-variant">—</span>
+              <input
+                type="date"
+                value={filterDateTo}
+                onChange={e => setFilterDateTo(e.target.value)}
+                placeholder="To"
+                className="px-2 py-1.5 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+              />
+            </div>
+          </div>
         </div>
         {(filterDriver || filterProject || filterStatus || filterDateFrom || filterDateTo) && (
           <button
             onClick={() => { setFilterDriver(''); setFilterProject(''); setFilterStatus(''); setFilterDateFrom(''); setFilterDateTo(''); }}
-            className="text-xs text-primary hover:text-primary-hover font-medium transition-colors cursor-pointer"
+            className="text-xs text-primary hover:text-primary-hover font-medium transition-colors cursor-pointer mt-2 sm:mt-0"
           >
             Clear filters
           </button>
@@ -412,24 +417,25 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
             )}
           </div>
         ) : (
-          <div className="px-6 py-4">
+          <div className="px-4 sm:px-6 py-4">
             {/* Stats cards */}
-            <div className="grid grid-cols-3 gap-4 mb-5">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-5">
               {[
                 { label: 'Total Links', value: links.length, color: 'text-on-surface' },
                 { label: 'Active', value: activeCount, color: 'text-emerald-600' },
                 { label: 'Expired / Revoked', value: links.length - activeCount, color: 'text-on-surface-variant' },
               ].map(stat => (
-                <div key={stat.label} className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3">
-                  <p className="text-xs text-on-surface-variant mb-1">{stat.label}</p>
-                  <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+                <div key={stat.label} className="bg-surface-container-lowest border border-outline-variant rounded-xl px-3 sm:px-4 py-2.5 sm:py-3">
+                  <p className="text-[10px] sm:text-xs text-on-surface-variant mb-1">{stat.label}</p>
+                  <p className={`text-xl sm:text-2xl font-bold ${stat.color}`}>{stat.value}</p>
                 </div>
               ))}
             </div>
 
             {/* Table */}
             <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
-              <table className="w-full">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px]">
                 <thead className="bg-surface-container">
                   <tr>
                     <th className="text-left px-5 py-3 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Driver</th>
@@ -532,6 +538,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         )}
@@ -539,9 +546,9 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
 
       {/* Create Modal */}
       {showCreate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-surface rounded-2xl p-6 w-full max-w-md shadow-2xl border border-outline-variant">
-            <div className="flex items-center gap-3 mb-5">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm p-4">
+          <div className="bg-surface rounded-2xl w-full max-w-md shadow-2xl border border-outline-variant max-h-[90vh] flex flex-col">
+            <div className="flex items-center gap-3 mb-5 shrink-0 px-6 pt-6">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                 <LinkIcon className="w-5 h-5 text-primary" />
               </div>
@@ -550,7 +557,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
                 <p className="text-xs text-on-surface-variant">Create a new reporting link for a driver</p>
               </div>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto flex-1 min-h-0 px-6">
               <div>
                 <label className="block text-[12px] font-medium text-on-surface-variant mb-1.5">Driver</label>
                 <div className="relative">
@@ -653,14 +660,14 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
               </div>
             </div>
             {isCreating && (
-              <div className="mt-4 space-y-2">
+              <div className="mt-4 space-y-2 shrink-0 px-6">
                 <div className="h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
                   <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: '60%' }} />
                 </div>
                 <p className="text-[11px] text-on-surface-variant text-center">Generating link...</p>
               </div>
             )}
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-3 mt-6 shrink-0 px-6 pb-6">
               <button
                 onClick={() => setShowCreate(false)}
                 className="flex-1 px-4 py-2.5 border border-outline-variant rounded-lg text-sm font-medium text-on-surface hover:bg-surface-container-low transition-colors"
@@ -681,9 +688,9 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
 
       {/* Result Modal — shown after successful link creation */}
       {createdLink && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-surface rounded-2xl p-6 w-full max-w-md shadow-2xl border border-outline-variant">
-            <div className="flex items-center justify-between mb-5">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm p-4">
+          <div className="bg-surface rounded-2xl w-full max-w-md shadow-2xl border border-outline-variant max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between mb-5 shrink-0 px-6 pt-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
                   <CheckCircle className="w-5 h-5 text-emerald-600" />
@@ -697,7 +704,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
                 <X className="w-5 h-5 text-on-surface-variant" />
               </button>
             </div>
-            <div className="space-y-3 mb-5">
+            <div className="space-y-3 mb-5 overflow-y-auto flex-1 min-h-0 px-6">
               <div className="flex justify-between text-[13px]">
                 <span className="text-on-surface-variant">Driver</span>
                 <span className="font-medium text-on-surface">{createdLink.driverName}</span>
@@ -733,7 +740,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
                 </div>
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 shrink-0 px-6 pb-6">
               <a
                 href={createdLink.link}
                 target="_blank"
@@ -756,9 +763,9 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
 
       {/* Edit Modal */}
       {editingLink && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-surface rounded-2xl p-6 w-full max-w-md shadow-2xl border border-outline-variant">
-            <div className="flex items-center justify-between mb-5">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm p-4">
+          <div className="bg-surface rounded-2xl w-full max-w-md shadow-2xl border border-outline-variant max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between mb-5 shrink-0 px-6 pt-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
                   <Pencil className="w-5 h-5 text-blue-600" />
@@ -773,7 +780,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
               </button>
             </div>
 
-            <div className="space-y-4 mb-5">
+            <div className="space-y-4 mb-5 overflow-y-auto flex-1 min-h-0 px-6">
               <div>
                 <label className="block text-[12px] font-medium text-on-surface-variant mb-1">Driver</label>
                 <select
@@ -850,7 +857,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
               </div>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 shrink-0 px-6 pb-6">
               <button
                 onClick={() => setEditingLink(null)}
                 className="flex-1 px-4 py-2.5 border border-outline-variant rounded-lg text-sm font-medium text-on-surface hover:bg-surface-container-low transition-colors"
