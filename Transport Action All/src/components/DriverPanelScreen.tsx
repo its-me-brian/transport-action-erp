@@ -22,7 +22,7 @@ import {
   Pencil
 } from 'lucide-react';
 import { Driver, ScreenId, getDriverAvatar } from '../types';
-import { getDrivers, createDriver, updateDriver, deleteDriver, cleanupDrivers, DriverRecord } from '../services/api';
+import { getDrivers, createDriver, updateDriver, deleteDriver, cleanupDrivers, DriverRecord, getSupplierRates, createSupplierRate, updateSupplierRate, deleteSupplierRate, SupplierRateDTO } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 
 interface DriverPanelScreenProps {
@@ -74,6 +74,13 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
 
   // Delete confirmation
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  // SupplierRate modal for internal drivers
+  const [showRatesModal, setShowRatesModal] = useState<EditModalDriver | null>(null);
+  const [driverRates, setDriverRates] = useState<SupplierRateDTO[]>([]);
+  const [loadingRates, setLoadingRates] = useState(false);
+  const [editRate, setEditRate] = useState<Partial<SupplierRateDTO> | null>(null);
+  const [isNewRate, setIsNewRate] = useState(false);
   
   // Cleanup handler
   const handleCleanup = async () => {
@@ -213,6 +220,68 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
     } finally {
       setEditSaving(false);
       setEditDriver(null);
+    }
+  };
+
+  // SupplierRate functions for internal drivers
+  const loadDriverRates = async (driverId: string) => {
+    setLoadingRates(true);
+    try {
+      const result = await getSupplierRates({ supplierType: 'internal_driver', supplierId: driverId });
+      if (Array.isArray(result)) {
+        setDriverRates(result);
+      }
+    } catch (err) {
+      console.error('Error loading rates:', err);
+      showToast('Error loading rates', 'error');
+    } finally {
+      setLoadingRates(false);
+    }
+  };
+
+  const handleSaveRate = async () => {
+    if (!editRate || !showRatesModal) return;
+    try {
+      if (isNewRate) {
+        const result = await createSupplierRate({
+          supplierType: 'internal_driver',
+          supplierId: showRatesModal.id,
+          projectId: editRate.projectId || 'GLOBAL',
+          serviceType: editRate.serviceType || 'disposal',
+          vehicleType: editRate.vehicleType || 'Van',
+          baseRate: editRate.baseRate || 0,
+          includedKm: editRate.includedKm || 0,
+          includedHours: editRate.includedHours || 0,
+          extraKmRate: editRate.extraKmRate || 0,
+          extraHourRate: editRate.extraHourRate || 0,
+          diariaPiena: editRate.diariaPiena || 0,
+          diariaMezza: editRate.diariaMezza || 0,
+          nightExtra: editRate.nightExtra || 0,
+          holidayExtra: editRate.holidayExtra || 0,
+          waitHourRate: editRate.waitHourRate || 0,
+          validFrom: editRate.validFrom || '',
+          validTo: editRate.validTo || '',
+          operatingCompany: editRate.operatingCompany || '',
+        });
+        if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
+      } else {
+        const result = await updateSupplierRate(editRate.id!, editRate);
+        if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
+      }
+      setEditRate(null);
+      await loadDriverRates(showRatesModal.id);
+    } catch (err: any) {
+      showToast('Error: ' + (err.message || err), 'error');
+    }
+  };
+
+  const handleDeleteRate = async (rateId: string) => {
+    try {
+      const result = await deleteSupplierRate(rateId);
+      if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
+      if (showRatesModal) await loadDriverRates(showRatesModal.id);
+    } catch (err: any) {
+      showToast('Error: ' + (err.message || err), 'error');
     }
   };
 
@@ -742,21 +811,29 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant">
+            <div className="flex items-center justify-between px-5 py-3 border-t border-outline-variant">
               <button
-                onClick={() => setEditDriver(null)}
-                className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors cursor-pointer"
+                onClick={() => { setShowRatesModal(editDriver); loadDriverRates(editDriver.id); }}
+                className="px-4 py-1.5 text-[12px] font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors cursor-pointer"
               >
-                Cancel
+                💰 Supplier Rates
               </button>
-              <button
-                onClick={saveEdit}
-                disabled={editSaving}
-                className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-              >
-                {editSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                Save
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setEditDriver(null)}
+                  className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveEdit}
+                  disabled={editSaving}
+                  className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                >
+                  {editSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  Save
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -862,6 +939,113 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                 <Trash2 className="w-3.5 h-3.5" />
                 Delete
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== SUPPLIER RATES MODAL ===== */}
+      {showRatesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-lg shadow-xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
+              <div>
+                <h3 className="text-[15px] font-semibold text-on-surface">Supplier Rates — {showRatesModal.name}</h3>
+                <p className="text-[11px] text-on-surface-variant">Internal driver pricing</p>
+              </div>
+              <button onClick={() => { setShowRatesModal(null); setEditRate(null); }} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
+                <X className="w-4 h-4 text-on-surface-variant" />
+              </button>
+            </div>
+            <div className="px-5 py-4 max-h-[60vh] overflow-y-auto">
+              {loadingRates ? (
+                <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
+              ) : (
+                <>
+                  {/* Existing rates */}
+                  {driverRates.length > 0 ? (
+                    <div className="space-y-2 mb-4">
+                      {driverRates.map(rate => (
+                        <div key={rate.id} className="bg-surface-container-low border border-outline-variant rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[12px] font-semibold text-on-surface">{rate.serviceType}</span>
+                              <span className="text-[11px] text-on-surface-variant bg-surface-dim px-1.5 py-0.5 rounded">{rate.vehicleType}</span>
+                              {rate.projectId && rate.projectId !== 'GLOBAL' && <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">{rate.projectId}</span>}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => { setEditRate(rate); setIsNewRate(false); }} className="text-[11px] text-primary hover:underline cursor-pointer">Edit</button>
+                              <button onClick={() => handleDeleteRate(rate.id)} className="text-[11px] text-red-500 hover:underline cursor-pointer ml-2">Delete</button>
+                            </div>
+                          </div>
+                          <div className="text-[12px] text-on-surface-variant">
+                            Base: €{rate.baseRate} | Km: €{rate.extraKmRate}/km | Hour: €{rate.extraHourRate}/h | Night: €{rate.nightExtra} | Holiday: €{rate.holidayExtra}
+                          </div>
+                          <div className="text-[11px] text-on-surface-variant mt-0.5">
+                            Diaria Piena: €{rate.diariaPiena} | Mezza: €{rate.diariaMezza} | Included: {rate.includedKm}km / {rate.includedHours}h
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[12px] text-on-surface-variant mb-4">No rates configured for this driver.</p>
+                  )}
+
+                  {/* Add/Edit rate form */}
+                  {editRate ? (
+                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
+                      <h4 className="text-[13px] font-semibold text-on-surface">{isNewRate ? 'New Rate' : 'Edit Rate'}</h4>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="text-[10px] text-on-surface-variant uppercase block mb-1">Service Type</label>
+                          <select value={editRate.serviceType || 'disposal'} onChange={e => setEditRate({ ...editRate, serviceType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]">
+                            <option value="disposal">Disposal</option>
+                            <option value="transfer">Transfer</option>
+                            <option value="fullDay">Full Day</option>
+                            <option value="halfDay">Half Day</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-on-surface-variant uppercase block mb-1">Vehicle Type</label>
+                          <select value={editRate.vehicleType || 'Van'} onChange={e => setEditRate({ ...editRate, vehicleType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]">
+                            <option value="Van">Van</option>
+                            <option value="Car">Car</option>
+                            <option value="Minivan">Minivan</option>
+                            <option value="Bus">Bus</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-on-surface-variant uppercase block mb-1">Project</label>
+                          <input type="text" value={editRate.projectId || ''} onChange={e => setEditRate({ ...editRate, projectId: e.target.value || 'GLOBAL' })} placeholder="GLOBAL" className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Base Rate (€)</label><input type="number" step="0.01" value={editRate.baseRate || ''} onChange={e => setEditRate({ ...editRate, baseRate: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
+                        <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Included Km</label><input type="number" value={editRate.includedKm || ''} onChange={e => setEditRate({ ...editRate, includedKm: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
+                        <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Included Hours</label><input type="number" step="0.5" value={editRate.includedHours || ''} onChange={e => setEditRate({ ...editRate, includedHours: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
+                      </div>
+                      <div className="grid grid-cols-4 gap-3">
+                        <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Extra Km (€)</label><input type="number" step="0.01" value={editRate.extraKmRate || ''} onChange={e => setEditRate({ ...editRate, extraKmRate: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
+                        <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Extra Hour (€)</label><input type="number" step="0.01" value={editRate.extraHourRate || ''} onChange={e => setEditRate({ ...editRate, extraHourRate: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
+                        <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Night (€)</label><input type="number" step="0.01" value={editRate.nightExtra || ''} onChange={e => setEditRate({ ...editRate, nightExtra: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
+                        <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Holiday (€)</label><input type="number" step="0.01" value={editRate.holidayExtra || ''} onChange={e => setEditRate({ ...editRate, holidayExtra: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Diaria Piena (€)</label><input type="number" step="0.01" value={editRate.diariaPiena || ''} onChange={e => setEditRate({ ...editRate, diariaPiena: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
+                        <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Diaria Mezza (€)</label><input type="number" step="0.01" value={editRate.diariaMezza || ''} onChange={e => setEditRate({ ...editRate, diariaMezza: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
+                      </div>
+                      <div className="flex items-center justify-end gap-2 pt-2">
+                        <button onClick={() => setEditRate(null)} className="px-3 py-1 text-[12px] text-on-surface-variant hover:bg-surface-container rounded cursor-pointer">Cancel</button>
+                        <button onClick={handleSaveRate} className="px-3 py-1 bg-primary text-on-primary text-[12px] font-medium rounded hover:bg-primary-hover flex items-center gap-1 cursor-pointer"><Save className="w-3 h-3" /> Save Rate</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => { setEditRate({ serviceType: 'disposal', vehicleType: 'Van', projectId: 'GLOBAL', baseRate: 0, includedKm: 0, includedHours: 0, extraKmRate: 0, extraHourRate: 0, diariaPiena: 0, diariaMezza: 0, nightExtra: 0, holidayExtra: 0, waitHourRate: 0 }); setIsNewRate(true); }} className="w-full py-2 border border-dashed border-outline-variant rounded-lg text-[12px] text-primary font-medium hover:bg-primary/5 transition-colors cursor-pointer">
+                      + Add Supplier Rate
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>

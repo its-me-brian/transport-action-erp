@@ -32,6 +32,12 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
   const [serviceDate, setServiceDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [callTime, setCallTime] = useState('08:00');
   const [serviceType, setServiceType] = useState('disposal');
+  const [vehicleType, setVehicleType] = useState('');
+  const [vehiclePlate, setVehiclePlate] = useState('');
+  const [passengers, setPassengers] = useState('');
+  const [section, setSection] = useState('');
+  const [flightInfo, setFlightInfo] = useState('');
+  const [notes, setNotes] = useState('');
   const [pickupLocation, setPickupLocation] = useState('');
   const [dropoffLocation, setDropoffLocation] = useState('');
 
@@ -161,11 +167,14 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
       Time: `${callTime} - 16:00`,
       OperatingCompany: company,
       DriverID: selectedDriverId || undefined,
-      PassengerName: '',
+      PassengerName: passengers,
+      Section: section,
+      FlightInfo: flightInfo,
+      Notes: notes,
       PickupLines: [pickupLocation],
       DropoffLines: [dropoffLocation],
-      Notes: '',
       ServiceType: serviceType,
+      VehicleType: vehicleType,
       SourceType: 'manual',
     });
 
@@ -201,6 +210,10 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
       diariaType: 'none',
       rawText: '',
       serviceType,
+      vehicleType: vehicleType || undefined,
+      vehiclePlate: vehiclePlate || undefined,
+      passengers: passengers || undefined,
+      notes: notes || undefined,
       revenueBreakdown: { base: 0, kmOver: 0, hoursOver: 0, diaria: 0, notturno: 0 },
       costBreakdown: { base: 0, kmOver: 0, hoursOver: 0, diaria: 0, notturno: 0 },
       revenueValidated: false,
@@ -358,6 +371,99 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
                   </select>
                   <ChevronDown className="w-4 h-4 text-on-surface-variant absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Section: Vehicle & Details */}
+          <motion.div variants={sectionVariants} initial="hidden" animate="visible" transition={{ delay: 0.08 }}>
+            <h3 className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest mb-3">Vehicle & Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] text-on-surface-variant uppercase tracking-wide font-medium mb-1">
+                  Vehicle Type
+                </label>
+                <div className="relative">
+                  <select
+                    value={vehicleType}
+                    onChange={(e) => setVehicleType(e.target.value)}
+                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary transition-colors cursor-pointer appearance-none"
+                  >
+                    <option value="">Select type...</option>
+                    <option value="Van Disposal">Van Disposal</option>
+                    <option value="Van Transfer">Van Transfer</option>
+                    <option value="Production Van">Production Van</option>
+                    <option value="Cast Van">Cast Van</option>
+                    <option value="Car">Car</option>
+                    <option value="Minivan">Minivan</option>
+                    <option value="Bus">Bus</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-on-surface-variant absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[11px] text-on-surface-variant uppercase tracking-wide font-medium mb-1">
+                  Plate
+                </label>
+                <input
+                  type="text"
+                  placeholder="AB 123 CD"
+                  value={vehiclePlate}
+                  onChange={(e) => setVehiclePlate(e.target.value)}
+                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary transition-colors"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+              <div>
+                <label className="block text-[11px] text-on-surface-variant uppercase tracking-wide font-medium mb-1">
+                  Passengers
+                </label>
+                <input
+                  type="text"
+                  placeholder="Name1; Name2; Name3"
+                  value={passengers}
+                  onChange={(e) => setPassengers(e.target.value)}
+                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-on-surface-variant uppercase tracking-wide font-medium mb-1">
+                  Section
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. ROMA, PUGLIA"
+                  value={section}
+                  onChange={(e) => setSection(e.target.value)}
+                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary transition-colors"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+              <div>
+                <label className="block text-[11px] text-on-surface-variant uppercase tracking-wide font-medium mb-1">
+                  Flight Info
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. AZ1234 Arriving 14:30"
+                  value={flightInfo}
+                  onChange={(e) => setFlightInfo(e.target.value)}
+                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-on-surface-variant uppercase tracking-wide font-medium mb-1">
+                  Notes
+                </label>
+                <input
+                  type="text"
+                  placeholder="Additional notes..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary transition-colors"
+                />
               </div>
             </div>
           </motion.div>

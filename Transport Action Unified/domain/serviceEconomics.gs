@@ -88,25 +88,30 @@ const ServiceEconomics = {
       }
     }
 
-    // 4. NOCTURNIDAD
-    if (driverReport && driverReport.isNotturno && rateCard.NightFee > 0) {
-      items.push(this._createBreakdownItem(
-        'Night',
-        'Nocturnidad',
-        1,
-        rateCard.NightFee,
-        rateCard.ID,
-        'rate_card'
-      ));
+    // 4. NOCTURNIDAD — per-hour calculation (9:30pm - 6:30am = €10/h)
+    if (driverReport && driverReport.isNotturno && driverReport.startTime && driverReport.endTime) {
+      const nightHours = this._calculateNightHours(driverReport.startTime, driverReport.endTime);
+      if (nightHours > 0) {
+        const nightRate = rateCard.NightFee > 0 ? rateCard.NightFee : 10; // default €10/h
+        items.push(this._createBreakdownItem(
+          'Night',
+          'Nocturnidad (' + nightHours + 'h @ €' + nightRate + '/h)',
+          nightHours,
+          nightRate,
+          rateCard.ID,
+          'rate_card'
+        ));
+      }
     }
 
-    // 5. FESTIVO
-    if (driverReport && driverReport.isFestivo && rateCard.HolidayFee > 0) {
+    // 5. FESTIVO — 50% of base price
+    if (driverReport && driverReport.isFestivo && basePrice > 0) {
+      const holidayAmount = basePrice * 0.5;
       items.push(this._createBreakdownItem(
         'Holiday',
-        'Festivo',
+        'Festivo (50% de €' + basePrice + ')',
         1,
-        rateCard.HolidayFee,
+        holidayAmount,
         rateCard.ID,
         'rate_card'
       ));
@@ -253,23 +258,28 @@ const ServiceEconomics = {
       }
     }
 
-    // 4. NOCTURNIDAD (proveedor)
-    if (driverReport && driverReport.isNotturno && supplierRate.NightExtra > 0) {
-      items.push(this._createCostItem(
-        'Night',
-        'Nocturnidad proveedor',
-        supplierRate.NightExtra,
-        driverId,
-        'driver_rate'
-      ));
+    // 4. NOCTURNIDAD (proveedor) — per-hour calculation (9:30pm - 6:30am)
+    if (driverReport && driverReport.isNotturno && driverReport.startTime && driverReport.endTime) {
+      const nightHours = this._calculateNightHours(driverReport.startTime, driverReport.endTime);
+      if (nightHours > 0) {
+        const nightRate = supplierRate.NightExtra > 0 ? supplierRate.NightExtra : 10; // default €10/h
+        items.push(this._createCostItem(
+          'Night',
+          'Nocturnidad proveedor (' + nightHours + 'h @ €' + nightRate + '/h)',
+          nightHours * nightRate,
+          driverId,
+          'driver_rate'
+        ));
+      }
     }
 
-    // 5. FESTIVO (proveedor)
-    if (driverReport && driverReport.isFestivo && supplierRate.HolidayExtra > 0) {
+    // 5. FESTIVO (proveedor) — 50% of base rate
+    if (driverReport && driverReport.isFestivo && supplierRate.BaseRate > 0) {
+      const holidayAmount = supplierRate.BaseRate * 0.5;
       items.push(this._createCostItem(
         'Holiday',
-        'Festivo proveedor',
-        supplierRate.HolidayExtra,
+        'Festivo proveedor (50% de €' + supplierRate.BaseRate + ')',
+        holidayAmount,
         driverId,
         'driver_rate'
       ));
@@ -475,6 +485,54 @@ const ServiceEconomics = {
     let diff = end - start;
     if (diff < 0) diff += 24 * 60; // overnight
     return diff / 60;
+  },
+
+  /**
+   * Calculate night hours (21:30 - 06:30) within a service window.
+   * Night window: 9:30pm (1350 min) to 6:30am (390 min) — crosses midnight.
+   */
+  _calculateNightHours(startTime, endTime) {
+    if (!startTime || !endTime) return 0;
+    const [sh, sm] = startTime.split(':').map(Number);
+    const [eh, em] = endTime.split(':').map(Number);
+    const startMin = sh * 60 + sm;
+    const endMin = eh * 60 + em;
+
+    // Night window in minutes from midnight
+    const NIGHT_START = 21 * 60 + 30; // 21:30 = 1290
+    const NIGHT_END = 6 * 60 + 30;    // 06:30 = 390
+
+    let totalNightMinutes = 0;
+    let current = startMin;
+
+    // Handle services that span midnight
+    const serviceMinutes = endMin > startMin ? endMin - startMin : (24 * 60 - startMin + endMin);
+
+    for (let i = 0; i < Math.ceil(serviceMinutes / (24 * 60)); i++) {
+      const dayStart = current;
+      const dayEnd = current + Math.min(serviceMinutes - i * (24 * 60), 24 * 60);
+
+      // Check overlap with night window (same day: 21:30-24:00, next day: 00:00-06:30)
+      // Night part 1: 21:30 to midnight (1290 to 1440)
+      const nightStart1 = Math.max(dayStart, NIGHT_START);
+      const nightEnd1 = Math.min(dayEnd, 1440);
+      if (nightEnd1 > nightStart1) {
+        totalNightMinutes += nightEnd1 - nightStart1;
+      }
+
+      // Night part 2: midnight to 06:30 (0 to 390) — only if service started before 21:30
+      if (dayStart < NIGHT_START) {
+        const nightStart2 = Math.max(dayStart, 0);
+        const nightEnd2 = Math.min(dayEnd, NIGHT_END);
+        if (nightEnd2 > nightStart2) {
+          totalNightMinutes += nightEnd2 - nightStart2;
+        }
+      }
+
+      current += 24 * 60;
+    }
+
+    return Math.round((totalNightMinutes / 60) * 10) / 10; // round to 1 decimal
   },
 
   _createBreakdownItem(itemType, description, quantity, unitPrice, rateCardId, source) {

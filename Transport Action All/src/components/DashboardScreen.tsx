@@ -2036,7 +2036,10 @@ export default function DashboardScreen({
                         value={editForm.diariaType || 'none'}
                         onChange={e => {
                           const type = e.target.value as 'piena' | 'mezza' | 'none';
-                          const cost = type === 'piena' ? 50 : type === 'mezza' ? 35 : 0;
+                          // Use diaria cost from parametros/RateCard if available, otherwise fallback
+                          const pienaCost = editForm._costsFromParametros?.diariaPiena || 50;
+                          const mezzaCost = editForm._costsFromParametros?.diariaMezza || 35;
+                          const cost = type === 'piena' ? pienaCost : type === 'mezza' ? mezzaCost : 0;
                           setEditForm(prev => ({ 
                             ...prev, 
                             diariaType: type,
@@ -2047,14 +2050,14 @@ export default function DashboardScreen({
                         className="bg-surface-dim border border-outline-variant rounded-lg px-3 py-2 text-[14px] text-on-surface focus:outline-none focus:border-primary"
                       >
                         <option value="none">Nessuna (€0)</option>
-                        <option value="mezza">Mezza (€35)</option>
-                        <option value="piena">Piena (€50)</option>
+                        <option value="mezza">Mezza</option>
+                        <option value="piena">Piena</option>
                       </select>
                     </div>
 
                     {/* Km Over Input */}
                     <div className="flex flex-col gap-1">
-                      <label className="text-[11px] font-medium text-on-surface-variant uppercase">Km Over (Extra km beyond 100 included)</label>
+                      <label className="text-[11px] font-medium text-on-surface-variant uppercase">Km Over (Extra km beyond included)</label>
                       <div className="flex items-center gap-2">
                         <input
                           type="number"
@@ -2062,10 +2065,11 @@ export default function DashboardScreen({
                           value={editForm.kmOver ?? ''}
                           onChange={e => {
                             const kmOver = parseInt(e.target.value) || 0;
+                            const kmRate = editForm.kmCost || 1.50; // use rate from parametros/RateCard, default €1.50
                             setEditForm(prev => ({ 
                               ...prev, 
                               kmOver,
-                              kmOverCost: kmOver * 1.50, // €1.50 per extra km
+                              kmOverCost: kmOver * kmRate,
                             }));
                           }}
                           className="w-24 bg-surface-dim border border-outline-variant rounded-lg px-3 py-2 text-[14px] text-on-surface focus:outline-none focus:border-primary"
@@ -2074,7 +2078,7 @@ export default function DashboardScreen({
                         <span className="text-[12px] text-on-surface-variant">km</span>
                         {editForm.kmOver && editForm.kmOver > 0 && (
                           <span className="text-[12px] text-amber-600 font-medium">
-                            +€{(editForm.kmOver * 1.50).toFixed(2)}
+                            +€{(editForm.kmOver * (editForm.kmCost || 1.50)).toFixed(2)}
                           </span>
                         )}
                       </div>

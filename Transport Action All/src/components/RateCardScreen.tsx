@@ -18,7 +18,7 @@ export default function RateCardScreen({ onNavigate }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editTarget, setEditTarget] = useState<RateCardDTO | null>(null);
-  const [form, setForm] = useState({ name: '', category: '', vehicleType: 'Van', basePrice: '', extraKmRate: '', extraHourRate: '', waitRate: '', nightFee: '', holidayFee: '', halfDayPrice: '', fullDayPrice: '', airportSurcharge: '', clientId: '', notes: '' });
+  const [form, setForm] = useState({ name: '', category: '', vehicleType: 'Van', basePrice: '', extraKmRate: '', extraHourRate: '', waitRate: '', nightFee: '', holidayFee: '', halfDayPrice: '', fullDayPrice: '', airportSurcharge: '', clientId: '', notes: '', serviceType: 'disposal', includedKm: '', includedHours: '' });
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => { loadData(); }, []);
@@ -45,6 +45,18 @@ export default function RateCardScreen({ onNavigate }: Props) {
       const r = await createRateCard({
         name: form.name, category: form.category, vehicleType: form.vehicleType,
         basePrice: parseFloat(form.basePrice) || 0, clientId: form.clientId || undefined,
+        serviceType: form.serviceType || 'disposal',
+        includedKm: parseFloat(form.includedKm) || 0,
+        includedHours: parseFloat(form.includedHours) || 0,
+        extraKmRate: parseFloat(form.extraKmRate) || 0,
+        extraHourRate: parseFloat(form.extraHourRate) || 0,
+        waitRate: parseFloat(form.waitRate) || 0,
+        nightFee: parseFloat(form.nightFee) || 0,
+        holidayFee: parseFloat(form.holidayFee) || 0,
+        halfDayPrice: parseFloat(form.halfDayPrice) || 0,
+        fullDayPrice: parseFloat(form.fullDayPrice) || 0,
+        airportSurcharge: parseFloat(form.airportSurcharge) || 0,
+        notes: form.notes || undefined,
       });
       if (r.error) { showToast(r.error, 'error'); return; }
       await loadCards();
@@ -62,6 +74,9 @@ export default function RateCardScreen({ onNavigate }: Props) {
         NightFee: parseFloat(form.nightFee) || 0, HolidayFee: parseFloat(form.holidayFee) || 0,
         HalfDayPrice: parseFloat(form.halfDayPrice) || 0, FullDayPrice: parseFloat(form.fullDayPrice) || 0,
         AirportSurcharge: parseFloat(form.airportSurcharge) || 0, Notes: form.notes,
+        ServiceType: form.serviceType,
+        IncludedKm: parseFloat(form.includedKm) || 0,
+        IncludedHours: parseFloat(form.includedHours) || 0,
       });
       if (r.error) { showToast(r.error, 'error'); return; }
       await loadCards();
@@ -69,7 +84,7 @@ export default function RateCardScreen({ onNavigate }: Props) {
   };
 
   const openEdit = (c: RateCardDTO) => {
-    setForm({ name: c.name, category: c.category, vehicleType: c.vehicleType, basePrice: String(c.basePrice), extraKmRate: String(c.extraKmRate), extraHourRate: String(c.extraHourRate), waitRate: String(c.waitRate), nightFee: String(c.nightFee), holidayFee: String(c.holidayFee), halfDayPrice: String(c.halfDayPrice), fullDayPrice: String(c.fullDayPrice), airportSurcharge: String(c.airportSurcharge), clientId: c.clientId, notes: c.notes });
+    setForm({ name: c.name, category: c.category, vehicleType: c.vehicleType, basePrice: String(c.basePrice), extraKmRate: String(c.extraKmRate), extraHourRate: String(c.extraHourRate), waitRate: String(c.waitRate), nightFee: String(c.nightFee), holidayFee: String(c.holidayFee), halfDayPrice: String(c.halfDayPrice), fullDayPrice: String(c.fullDayPrice), airportSurcharge: String(c.airportSurcharge), clientId: c.clientId, notes: c.notes, serviceType: (c as any).serviceType || 'disposal', includedKm: String((c as any).includedKm || ''), includedHours: String((c as any).includedHours || '') });
     setEditTarget(c);
   };
 
@@ -79,14 +94,20 @@ export default function RateCardScreen({ onNavigate }: Props) {
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Name *</label><input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Vehicle Type</label><select value={form.vehicleType} onChange={e => setForm({ ...form, vehicleType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">{VEHICLE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Category</label><input type="text" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="e.g. Airport Transfer" /></div>
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Service Type</label><select value={form.serviceType} onChange={e => setForm({ ...form, serviceType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"><option value="disposal">Disposal</option><option value="transfer">Transfer</option><option value="fullDay">Full Day</option><option value="halfDay">Half Day</option></select></div>
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Client</label><select value={form.clientId} onChange={e => setForm({ ...form, clientId: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"><option value="">Global</option>{clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Base Price (EUR)</label><input type="number" step="0.01" value={form.basePrice} onChange={e => setForm({ ...form, basePrice: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Included Km</label><input type="number" step="1" value={form.includedKm} onChange={e => setForm({ ...form, includedKm: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="0" /></div>
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Included Hours</label><input type="number" step="0.5" value={form.includedHours} onChange={e => setForm({ ...form, includedHours: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="0" /></div>
+      </div>
+      <div className="grid grid-cols-3 gap-3">
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Half Day (EUR)</label><input type="number" step="0.01" value={form.halfDayPrice} onChange={e => setForm({ ...form, halfDayPrice: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Full Day (EUR)</label><input type="number" step="0.01" value={form.fullDayPrice} onChange={e => setForm({ ...form, fullDayPrice: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Airport Surcharge (EUR)</label><input type="number" step="0.01" value={form.airportSurcharge} onChange={e => setForm({ ...form, airportSurcharge: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
       </div>
       <div className="grid grid-cols-4 gap-3">
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Extra Km (EUR)</label><input type="number" step="0.01" value={form.extraKmRate} onChange={e => setForm({ ...form, extraKmRate: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
@@ -94,6 +115,7 @@ export default function RateCardScreen({ onNavigate }: Props) {
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Night Fee (EUR)</label><input type="number" step="0.01" value={form.nightFee} onChange={e => setForm({ ...form, nightFee: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Holiday (EUR)</label><input type="number" step="0.01" value={form.holidayFee} onChange={e => setForm({ ...form, holidayFee: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
       </div>
+      <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Notes</label><input type="text" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="Optional notes" /></div>
       <div className="flex items-center justify-end gap-2 pt-2">
         <button onClick={() => { setShowCreateModal(false); setEditTarget(null); }} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
         <button onClick={onSubmit} disabled={isSaving || !form.name.trim()} className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
