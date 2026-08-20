@@ -135,15 +135,14 @@ function acceptReport(inboxId, reviewedBy) {
       _assertValidTransition('DriverReportInbox', 'PENDING_REVIEW', 'ACCEPTED');
 
       // Parse normalized data and create DriverReport (Issue #12)
-      // IMPORTANT: Use NormalizedData (user-reviewed), NOT RawData (original capture)
+      // BUG FIX: serviceId comes from RawData (metadata), NOT NormalizedData (user edits)
       var reportId = null;
       try {
-        var dataSource = JSON.parse(item.NormalizedData || '{}');
-        // Fallback to RawData only if NormalizedData is empty (pre-normalizer items)
-        if (!item.NormalizedData || Object.keys(dataSource).length === 0) {
-          dataSource = JSON.parse(item.RawData || '{}');
-        }
-        var serviceId = dataSource.serviceId || '';
+        var rawSource = JSON.parse(item.RawData || '{}');
+        var normSource = JSON.parse(item.NormalizedData || '{}');
+        // Merge: prefer NormalizedData for user fields, always use RawData for serviceId
+        var dataSource = Object.assign({}, rawSource, normSource);
+        var serviceId = rawSource.serviceId || dataSource.serviceId || '';
         if (serviceId && item.DriverID) {
           var created = DriverReportCommands.createReport(serviceId, item.DriverID, {
             startTime: dataSource.startTime || '',

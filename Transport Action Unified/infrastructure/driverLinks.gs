@@ -533,8 +533,13 @@ function submitDriverLinkResponse(token, services) {
                 ServiceCommands.confirmService(svc.serviceId);
                 ServiceCommands.startService(svc.serviceId);
                 ServiceCommands.completeService(svc.serviceId);
+              } else if (status === 'Importado') {
+                // Driver is submitting — assign them and complete the chain
+                ServiceCommands.assignDriver(svc.serviceId, linkData.DriverID, '');
+                ServiceCommands.confirmService(svc.serviceId);
+                ServiceCommands.startService(svc.serviceId);
+                ServiceCommands.completeService(svc.serviceId);
               }
-              // Importado: cannot complete — driver not assigned
             }
 
             // Route through Inbox for unified traceability (Issue #11)
