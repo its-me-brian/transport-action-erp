@@ -402,7 +402,7 @@ export default function App() {
       {/* Main Body Column */}
       <div 
         id="main-body-column" 
-        className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${
+        className={`flex-1 flex flex-col h-dvh overflow-hidden transition-all duration-300 ${
           !hideSidebar 
             ? sidebarMode === 'hidden' 
               ? 'md:pl-0' 
