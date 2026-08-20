@@ -93,29 +93,29 @@ export default function AuthScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center p-3 sm:p-4">
       <motion.div
-        className="w-full max-w-md"
+        className="w-full max-w-[360px] sm:max-w-md"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
       >
         {/* Logo + Title */}
         <motion.div
-          className="text-center mb-8"
+          className="text-center mb-6 sm:mb-8"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
         >
-          <div className="w-20 h-20 mx-auto mb-4 rounded-2xl overflow-hidden bg-surface-container-highest border border-outline-variant shadow-lg">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-2xl overflow-hidden bg-surface-container-highest border border-outline-variant shadow-lg">
             <img 
               alt="Transport Action Logo" 
               className="w-full h-full object-contain" 
               src="/logo.jpg"
             />
           </div>
-          <h1 className="font-headline-lg text-primary font-bold text-2xl">Transport Movie System</h1>
-          <p className="text-on-surface-variant text-sm mt-1">Action</p>
+          <h1 className="text-primary font-bold text-xl sm:text-2xl leading-tight">Transport Movie<br className="sm:hidden" /> System</h1>
+          <p className="text-on-surface-variant text-xs sm:text-sm mt-1">Action</p>
         </motion.div>
 
         {/* Auth Card */}
@@ -129,7 +129,7 @@ export default function AuthScreen() {
           <div className="flex border-b border-outline-variant">
             <button
               onClick={() => { setMode('login'); resetFields(); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors cursor-pointer ${
+              className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-3 text-[13px] sm:text-sm font-medium transition-colors cursor-pointer ${
                 mode === 'login'
                   ? 'text-primary border-b-2 border-primary bg-primary/5'
                   : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low'
@@ -140,7 +140,7 @@ export default function AuthScreen() {
             </button>
             <button
               onClick={() => { setMode('register'); resetFields(); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors cursor-pointer ${
+              className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-3 text-[13px] sm:text-sm font-medium transition-colors cursor-pointer ${
                 mode === 'register'
                   ? 'text-primary border-b-2 border-primary bg-primary/5'
                   : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low'
@@ -151,7 +151,7 @@ export default function AuthScreen() {
             </button>
           </div>
 
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {/* Error/Success Messages */}
             {error && (
               <motion.div
@@ -178,20 +178,20 @@ export default function AuthScreen() {
 
             {/* Login Form */}
             {mode === 'login' && (
-              <form onSubmit={handleLogin} className="flex flex-col gap-4">
+              <form onSubmit={handleLogin} className="flex flex-col gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-[12px] font-medium text-on-surface-variant mb-1">Username</label>
+                  <label className="block text-[11px] sm:text-[12px] font-medium text-on-surface-variant mb-1">Username</label>
                   <input
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
-                    className="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                    className="w-full px-3 py-2 sm:py-2.5 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                     placeholder="Enter your username"
                   />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-on-surface-variant mb-1">Password</label>
+                  <label className="block text-[11px] sm:text-[12px] font-medium text-on-surface-variant mb-1">Password</label>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
@@ -199,7 +199,7 @@ export default function AuthScreen() {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       autoComplete="current-password"
-                      className="w-full px-3 py-2.5 pr-10 rounded-lg border border-outline-variant bg-surface text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                      className="w-full px-3 py-2 sm:py-2.5 pr-10 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                       placeholder="Enter your password"
                     />
                     <button
@@ -232,41 +232,41 @@ export default function AuthScreen() {
 
             {/* Register Form */}
             {mode === 'register' && (
-              <form onSubmit={handleRegister} className="flex flex-col gap-4">
+              <form onSubmit={handleRegister} className="flex flex-col gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-[12px] font-medium text-on-surface-variant mb-1">Username *</label>
+                  <label className="block text-[11px] sm:text-[12px] font-medium text-on-surface-variant mb-1">Username *</label>
                   <input
                     type="text"
                     value={regUsername}
                     onChange={(e) => setRegUsername(e.target.value)}
                     required
-                    className="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                    className="w-full px-3 py-2 sm:py-2.5 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                     placeholder="Choose a username"
                   />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-on-surface-variant mb-1">Email *</label>
+                  <label className="block text-[11px] sm:text-[12px] font-medium text-on-surface-variant mb-1">Email *</label>
                   <input
                     type="email"
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
                     required
-                    className="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                    className="w-full px-3 py-2 sm:py-2.5 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                     placeholder="your@email.com"
                   />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-on-surface-variant mb-1">Phone</label>
+                  <label className="block text-[11px] sm:text-[12px] font-medium text-on-surface-variant mb-1">Phone</label>
                   <input
                     type="tel"
                     value={regPhone}
                     onChange={(e) => setRegPhone(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                    className="w-full px-3 py-2 sm:py-2.5 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                     placeholder="+34 600 000 000"
                   />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-on-surface-variant mb-1">Password *</label>
+                  <label className="block text-[11px] sm:text-[12px] font-medium text-on-surface-variant mb-1">Password *</label>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
@@ -274,7 +274,7 @@ export default function AuthScreen() {
                       onChange={(e) => setRegPassword(e.target.value)}
                       required
                       minLength={6}
-                      className="w-full px-3 py-2.5 pr-10 rounded-lg border border-outline-variant bg-surface text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                      className="w-full px-3 py-2 sm:py-2.5 pr-10 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                       placeholder="Min 6 characters"
                     />
                     <button
@@ -287,14 +287,14 @@ export default function AuthScreen() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-on-surface-variant mb-1">Confirm Password *</label>
+                  <label className="block text-[11px] sm:text-[12px] font-medium text-on-surface-variant mb-1">Confirm Password *</label>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={regConfirm}
                     onChange={(e) => setRegConfirm(e.target.value)}
                     required
                     autoComplete="new-password"
-                    className="w-full px-3 py-2.5 pr-10 rounded-lg border border-outline-variant bg-surface text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                    className="w-full px-3 py-2 sm:py-2.5 pr-10 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                     placeholder="Repeat your password"
                   />
                 </div>
@@ -323,7 +323,7 @@ export default function AuthScreen() {
         </motion.div>
 
         {/* Footer */}
-        <p className="text-center text-[11px] text-on-surface-variant mt-6">
+        <p className="text-center text-[10px] sm:text-[11px] text-on-surface-variant mt-4 sm:mt-6 px-2">
           Transport Movie System &copy; {new Date().getFullYear()}
         </p>
       </motion.div>
