@@ -74,7 +74,11 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
     getVehicleTypes().then(vt => setVehicleTypes(vt)).catch(() => {});
     getServiceTypes().then(st => setServiceTypes(st)).catch(() => {});
     // Load all drivers for linking
-    getDrivers().then(list => setAllDrivers(Array.isArray(list) ? list : [])).catch(() => {});
+    getDrivers().then(list => {
+      setAllDrivers(Array.isArray(list) ? list : []);
+    }).catch(err => {
+      console.error('[CollaboratorScreen] Failed to load drivers:', err);
+    });
   }, []);
 
   const loadLinkedDrivers = async (collaboratorId: string) => {
@@ -83,7 +87,8 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
       const result = await getDriversByCollaborator(collaboratorId);
       setLinkedDrivers(Array.isArray(result) ? result : []);
     } catch (err) {
-      console.error('Error loading linked drivers:', err);
+      console.error('[CollaboratorScreen] Error loading linked drivers:', err);
+      showToast('Error al cargar conductores vinculados', 'error');
     } finally {
       setLoadingDrivers(false);
     }
@@ -127,10 +132,11 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
         showToast('Error: ' + result.error, 'error');
         return;
       }
-      showToast('Driver linked', 'success');
+      showToast('Conductor asociado', 'success');
       await loadLinkedDrivers(editCollaborator.id);
     } catch (err) {
-      showToast('Error: ' + (err.message || err), 'error');
+      console.error('[CollaboratorScreen] Error linking driver:', err);
+      showToast('Error al asociar conductor', 'error');
     }
   };
 
@@ -142,10 +148,11 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
         showToast('Error: ' + result.error, 'error');
         return;
       }
-      showToast('Driver unlinked', 'success');
+      showToast('Conductor desasociado', 'success');
       await loadLinkedDrivers(editCollaborator.id);
     } catch (err) {
-      showToast('Error: ' + (err.message || err), 'error');
+      console.error('[CollaboratorScreen] Error unlinking driver:', err);
+      showToast('Error al desasociar conductor', 'error');
     }
   };
 
@@ -447,13 +454,13 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
               {/* Linked Drivers Section — only for existing collaborators */}
               {!isNew && editCollaborator.id && (
                 <div className="border-t border-outline-variant pt-3 mt-1">
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-2">Linked Drivers</label>
+                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-2">Conductores del proveedor</label>
                   {loadingDrivers ? (
                     <div className="flex items-center gap-2 text-[11px] text-on-surface-variant py-2">
-                      <Loader2 className="w-3 h-3 animate-spin" /> Loading drivers...
+                      <Loader2 className="w-3 h-3 animate-spin" /> Cargando conductores...
                     </div>
                   ) : linkedDrivers.length === 0 ? (
-                    <p className="text-[11px] text-on-surface-variant py-1">No drivers linked to this provider</p>
+                    <p className="text-[11px] text-on-surface-variant py-1">No hay conductores asociados a este proveedor</p>
                   ) : (
                     <div className="space-y-1 mb-2">
                       {linkedDrivers.map(d => (
@@ -465,7 +472,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
                           </div>
                           <button onClick={() => handleUnlinkDriver(d.id)}
                             className="text-[10px] text-red-500 hover:text-red-600 font-medium cursor-pointer">
-                            Unlink
+                            Quitar
                           </button>
                         </div>
                       ))}
@@ -482,7 +489,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
                         onChange={e => { if (e.target.value) handleLinkDriver(e.target.value); }}
                         className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[12px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
                       >
-                        <option value="">— Add driver —</option>
+                        <option value="">— Asociar conductor —</option>
                         {available.map(d => (
                           <option key={d.id} value={d.id}>{d.name}{d.phone ? ` (${d.phone})` : ''}</option>
                         ))}
