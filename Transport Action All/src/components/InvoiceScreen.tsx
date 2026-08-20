@@ -404,7 +404,7 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
             placeholder="Driver ID..."
             value={driverFilter}
             onChange={e => setDriverFilter(e.target.value)}
-            className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 w-32 focus:outline-none focus:border-primary"
+            className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 w-full sm:w-32 focus:outline-none focus:border-primary"
           />
           <select
             value={filterClient}

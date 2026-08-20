@@ -817,10 +817,10 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
       </header>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-surface-dim rounded-lg p-1">
+      <div className="flex gap-1 bg-surface-dim rounded-lg p-1 overflow-x-auto hide-scrollbar">
         <button
           onClick={() => { setActiveTab('client'); setStatusFilter('All'); }}
-          className={`flex-1 py-2 text-[12px] font-medium rounded-md transition-colors cursor-pointer ${
+          className={`flex-1 min-w-0 py-2 px-2 text-[11px] sm:text-[12px] font-medium rounded-md transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === 'client'
               ? 'bg-primary text-on-primary'
               : 'text-on-surface-variant hover:bg-surface-container'
@@ -830,7 +830,7 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
         </button>
         <button
           onClick={() => { setActiveTab('driver'); setStatusFilter('All'); }}
-          className={`flex-1 py-2 text-[12px] font-medium rounded-md transition-colors cursor-pointer ${
+          className={`flex-1 min-w-0 py-2 px-2 text-[11px] sm:text-[12px] font-medium rounded-md transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === 'driver'
               ? 'bg-primary text-on-primary'
               : 'text-on-surface-variant hover:bg-surface-container'
@@ -840,7 +840,7 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
         </button>
         <button
           onClick={() => { setActiveTab('collaborator'); setStatusFilter('All'); }}
-          className={`flex-1 py-2 text-[12px] font-medium rounded-md transition-colors cursor-pointer ${
+          className={`flex-1 min-w-0 py-2 px-2 text-[11px] sm:text-[12px] font-medium rounded-md transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === 'collaborator'
               ? 'bg-primary text-on-primary'
               : 'text-on-surface-variant hover:bg-surface-container'
@@ -863,19 +863,19 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
               className="w-full bg-surface-container-lowest border border-outline-variant pl-8 pr-3 py-1.5 text-[12px] rounded-lg focus:outline-none focus:border-primary outline-none text-on-surface"
             />
           </div>
-          <div className="flex gap-2 items-center">
+          <div className="flex flex-col sm:flex-row gap-2 items-center">
             <input
               type="date"
               value={dateFrom}
               onChange={e => setDateFrom(e.target.value)}
-              className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:outline-none focus:border-primary cursor-pointer"
+              className="w-full sm:w-auto bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:outline-none focus:border-primary cursor-pointer"
             />
-            <span className="text-on-surface-variant text-[12px]">—</span>
+            <span className="hidden sm:inline text-on-surface-variant text-[12px]">—</span>
             <input
               type="date"
               value={dateTo}
               onChange={e => setDateTo(e.target.value)}
-              className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:outline-none focus:border-primary cursor-pointer"
+              className="w-full sm:w-auto bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:outline-none focus:border-primary cursor-pointer"
             />
           </div>
           <div className="flex gap-2 w-full sm:w-auto justify-end">

@@ -189,7 +189,7 @@ const DriverCell = React.memo(function DriverCell({ service, dbDrivers, onUpdate
         <ChevronDown className="w-3 h-3 opacity-0 group-hover:opacity-50 shrink-0" />
       </div>
       {isOpen && (
-        <div className="absolute z-50 top-full left-0 mt-1 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg min-w-[220px] max-h-[280px] flex flex-col">
+        <div className="absolute z-50 top-full left-0 mt-1 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg min-w-[180px] sm:min-w-[220px] max-h-[280px] flex flex-col">
           <div className="px-2 pt-2 pb-1 border-b border-outline-variant/50">
             <input
               ref={searchInputRef}

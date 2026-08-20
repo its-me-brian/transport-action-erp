@@ -317,7 +317,7 @@ export default function ExpenseScreen({ onNavigate }: Props) {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
           <p className="text-[11px] text-amber-700 uppercase">Draft</p>
           <p className="text-[16px] font-bold text-amber-800">{fmt(totals.draft)}</p>

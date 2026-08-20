@@ -220,7 +220,7 @@ export default function FinancialDashboard({ onNavigate }: Props) {
           {/* Quick Navigation */}
           <div>
             <h3 className="text-[13px] font-semibold text-on-surface mb-2">Quick Access</h3>
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
               {quickLinks.map((link, i) => {
                 const Icon = link.icon;
                 return (
@@ -299,7 +299,7 @@ export default function FinancialDashboard({ onNavigate }: Props) {
               </div>
             ) : estimatedVsActual ? (
               <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-3 text-[12px]">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[12px]">
                   <div className="bg-surface-container rounded-lg p-3">
                     <span className="text-on-surface-variant text-[10px] uppercase">Revenue</span>
                     <div className="flex items-center gap-2 mt-1">
@@ -373,7 +373,7 @@ export default function FinancialDashboard({ onNavigate }: Props) {
                 <span className="text-[12px] text-on-surface-variant">Loading...</span>
               </div>
             ) : cashFlow ? (
-              <div className="grid grid-cols-3 gap-3 text-[12px]">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[12px]">
                 <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
                   <span className="text-emerald-700 text-[10px] uppercase">Income</span>
                   <p className="font-bold text-emerald-600">{fmt(cashFlow.summary.totalIncome)}</p>

@@ -236,7 +236,7 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
           {/* Quick Navigation */}
           <div className="shrink-0">
             <h3 className="text-[13px] font-semibold text-on-surface mb-3">Quick Access</h3>
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
               {[
                 { label: 'Transport', screen: 'transport' as ScreenId, icon: Clock, color: 'text-primary' },
                 { label: 'Rapportinos', screen: 'rapportinos' as ScreenId, icon: FileText, color: 'text-purple-600' },
