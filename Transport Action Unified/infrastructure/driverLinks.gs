@@ -77,15 +77,18 @@ function _getServicesByDriverAndDateRange(driverId, projectId, dateFrom, dateTo)
       var dateB = b.Date || '';
       if (dateA < dateB) return -1;
       if (dateA > dateB) return 1;
-      // Same date: sort by Time (parse "10.20" → minutes since midnight for comparison)
+      // Same date: sort by Time (parse "10.20" or "7.1" → minutes since midnight)
       var parseTime = function(t) {
         if (!t) return 0;
-        var str = String(t).replace('.', ':');
+        var str = String(t).replace(/[.,]/, ':');
         var parts = str.split(':');
-        if (parts.length === 2) {
-          return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+        var hours = parseInt(parts[0], 10) || 0;
+        var mins = 0;
+        if (parts.length > 1 && parts[1]) {
+          var m = parts[1];
+          mins = m.length === 1 ? parseInt(m, 10) * 10 : parseInt(m, 10);
         }
-        return 0;
+        return hours * 60 + mins;
       };
       return parseTime(a.Time) - parseTime(b.Time);
     });
@@ -278,8 +281,29 @@ function _serveDriverForm(token) {
       serviceCardsHtml += '<div class="svc-date-sep">' + _escapeHtml(svcDate) + '</div>';
     }
 
-    // Format time — replace dot with colon for display (e.g., "10.20" → "10:20")
-    var displayTime = svc.Time ? String(svc.Time).replace('.', ':') : '—';
+    // Format time — normalize transport list format to HH:MM
+    // "7.1"→"07:10", "8.1"→"08:10", "10"→"10:00", "10.20"→"10:20", "9.45"→"09:45"
+    function _normalizeTime(raw) {
+      if (!raw) return '—';
+      var str = String(raw).trim();
+      // Replace dot or comma with colon
+      str = str.replace(/[.,]/, ':');
+      var parts = str.split(':');
+      var hours = parts[0] || '';
+      var mins = parts.length > 1 ? parts[1] : '';
+      // Pad hours to 2 digits
+      while (hours.length < 2) hours = '0' + hours;
+      // Normalize minutes: single digit means ×10 (e.g., "1"→"10", "2"→"20")
+      if (mins.length === 0) {
+        mins = '00';
+      } else if (mins.length === 1) {
+        mins = mins + '0';
+      } else {
+        mins = mins.substring(0, 2);
+      }
+      return hours + ':' + mins;
+    }
+    var displayTime = _normalizeTime(svc.Time);
 
     serviceCardsHtml +=
       '<div class="svc" id="svc-' + index + '" data-date="' + _escapeHtml(svc.Date || '') + '">' +
@@ -367,10 +391,9 @@ function _serveDriverForm(token) {
     '<div class="hd"><h1>Rapportino Transport</h1>' +
     '<div class="driver-name">' + _escapeHtml(driverName) + '</div>' +
     '<div class="meta">' + _escapeHtml(dateRangeInfo) + '</div></div>' +
-    '<form id="driverForm" onsubmit="return submitForm()">' +
+    '<form id="driverForm">' +
     '<div class="sec">Seleziona il servizio</div>' +
     serviceCardsHtml +
-    '<button type="submit" class="btn" id="submitBtn">Invia Rapportino</button>' +
     '</form>' +
     '<div id="successMsg" class="ok" style="display:none">' +
     '<h3>Rapportino inviato!</h3><p>Grazie per la collaborazione.</p></div>' +
@@ -382,28 +405,6 @@ function _serveDriverForm(token) {
     '  if(!box)return;' +
     '  var cb=document.querySelector("input[name=selectedServices][value=\\""+idx+"\\"]");' +
     '  box.style.display=cb&&cb.checked?"block":"none";' +
-    '}' +
-    'function submitForm(){' +
-    '  var btn=document.getElementById("submitBtn");' +
-    '  btn.disabled=true;' +
-    '  btn.textContent="Invio in corso...";' +
-    '  var checked=document.querySelectorAll("input[name=selectedServices]:checked");' +
-    '  if(!checked.length){showToast("Seleziona almeno un servizio","error");btn.disabled=false;btn.textContent="Invia Rapportino";return false;}' +
-    '  var allData=[];' +
-    '  checked.forEach(function(cb){' +
-    '    var idx=parseInt(cb.value,10);' +
-    '    var svc=SERVICES[idx];' +
-    '    var d={serviceId:svc?svc.ID:"",dataServizio:svc?svc.Date||"":""};' +
-    '    var prefix="f-";' +
-    '    ["orarioInizio","orarioFine","kmTotali","diaria","note"].forEach(function(k){' +
-    '      var el=document.getElementById(prefix+k+"-"+idx);' +
-    '      if(!el)return;' +
-    '      d[k]=el.type==="number"?parseFloat(el.value)||0:el.value;' +
-    '    });' +
-    '    allData.push(d);' +
-    '  });' +
-    '  submitData(allData, btn, "Invia Rapportino");' +
-    '  return false;' +
     '}' +
     'function submitSingleService(idx){' +
     '  var svc=SERVICES[idx];' +
