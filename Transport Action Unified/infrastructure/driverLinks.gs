@@ -179,18 +179,17 @@ function generateDriverLink(driverId, projectId, dateFrom, dateTo, baseUrl, fiel
 function _serveDriverForm(token) {
   var linkData = getDriverLinkByToken(token);
   if (!linkData) {
-    return HtmlService.createHtmlOutput(
-      '<!DOCTYPE html><html><head><meta charset="utf-8">' +
-      '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    var errorHtml = HtmlService.createHtmlOutput(
+      '<!DOCTYPE html><html lang="it"><head><meta charset="utf-8">' +
       '<title>Link non valido</title>' +
       '<style>' +
       '*{margin:0;padding:0;box-sizing:border-box}' +
-      'body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#fafafa;color:#1a1a2e}' +
-      '.card{background:#fff;border-radius:20px;padding:56px 40px;max-width:400px;width:90%;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.04),0 12px 40px rgba(0,0,0,.06)}' +
+      'body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#fafafa;color:#1a1a1a;padding:16px}' +
+      '.card{background:#fff;border-radius:20px;padding:56px 40px;max-width:400px;width:100%;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.04),0 12px 40px rgba(0,0,0,.06)}' +
       '.icon{width:72px;height:72px;margin:0 auto 24px;background:#fef2f2;border-radius:50%;display:flex;align-items:center;justify-content:center}' +
-      '.icon svg{width:36px;height:36px;color:#ef4444}' +
-      'h2{font-size:22px;font-weight:700;margin-bottom:10px;color:#1a1a2e;letter-spacing:-.4px}' +
-      'p{color:#6b7280;font-size:15px;line-height:1.6}' +
+      '.icon svg{width:36px;height:36px;color:#dc2626}' +
+      'h2{font-size:22px;font-weight:700;margin-bottom:10px;color:#1a1a1a;letter-spacing:-.4px}' +
+      'p{color:#5a5a5a;font-size:15px;line-height:1.6}' +
       '</style></head><body>' +
       '<div class="card">' +
       '<div class="icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg></div>' +
@@ -198,6 +197,8 @@ function _serveDriverForm(token) {
       '<p>Il link e scaduto o non e valido.<br>Chiedi un nuovo link al coordinatore.</p>' +
       '</div></body></html>'
     );
+    errorHtml.addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
+    return errorHtml;
   }
 
   _logLinkEvent(token, 'ACCESSED');
@@ -373,7 +374,7 @@ function _serveDriverForm(token) {
     '.fg{margin-bottom:18px}' +
     '.fg label{display:block;margin-bottom:5px;font-weight:600;font-size:13px;color:#1a1a1a}' +
     '.req{color:#dc2626}' +
-    'input,select,textarea{width:100%;padding:12px 14px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:15px;font-family:inherit;color:#1a1a1a;background:#fff;transition:border-color .15s,box-shadow .15s}' +
+    'input,select,textarea{width:100%;padding:12px 14px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:16px;font-family:inherit;color:#1a1a1a;background:#fff;transition:border-color .15s,box-shadow .15s}' +
     'input:focus,select:focus,textarea:focus{outline:none;border-color:#006948;box-shadow:0 0 0 3px rgba(0,105,72,.1)}' +
     'textarea{height:80px;resize:vertical}' +
     'select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Cpath fill=\'%239ca3af\' d=\'M6 8L1 3h10z\'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}' +
@@ -461,9 +462,11 @@ function _serveDriverForm(token) {
     '}' +
     '</script></body></html>';
 
-  return HtmlService.createHtmlOutput(html)
+  var htmlOutput = HtmlService.createHtmlOutput(html)
     .setTitle('Rapportino Transport')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  htmlOutput.addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
+  return htmlOutput;
 }
 
 // ============================================================================
