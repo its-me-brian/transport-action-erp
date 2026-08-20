@@ -995,7 +995,7 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
               value={logFilter}
               onChange={(e) => setLogFilter(e.target.value)}
               placeholder="Filter logs..."
-              className="px-3 py-1.5 rounded-lg border border-outline-variant bg-surface text-on-surface text-[12px] focus:outline-none focus:ring-1 focus:ring-primary w-48"
+              className="px-3 py-1.5 rounded-lg border border-outline-variant bg-surface text-on-surface text-[12px] focus:outline-none focus:ring-1 focus:ring-primary w-full sm:w-48"
             />
           </div>
           

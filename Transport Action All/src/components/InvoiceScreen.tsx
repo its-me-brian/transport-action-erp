@@ -373,8 +373,8 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
 
       {/* Filters */}
       <div id="invoice-filters" className="flex flex-col gap-2 px-3 py-2 bg-surface-dim border border-outline-variant rounded-lg">
-        <div className="flex flex-col sm:flex-row gap-2 items-center flex-wrap">
-          <div className="relative w-full sm:w-64">
+        <div className="flex flex-col gap-2">
+          <div className="relative w-full">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
             <input
               type="text"
@@ -384,64 +384,66 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
               className="w-full bg-surface-container-lowest border border-outline-variant pl-8 pr-3 py-1.5 text-[12px] rounded-lg focus:outline-none focus:border-primary outline-none text-on-surface"
             />
           </div>
-          <div className="flex gap-2 items-center">
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={e => setDateFrom(e.target.value)}
-              className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:outline-none focus:border-primary cursor-pointer"
-            />
-            <span className="text-on-surface-variant text-[12px]">—</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={e => setDateTo(e.target.value)}
-              className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:outline-none focus:border-primary cursor-pointer"
-            />
-          </div>
-          <input
-            type="text"
-            placeholder="Driver ID..."
-            value={driverFilter}
-            onChange={e => setDriverFilter(e.target.value)}
-            className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 w-full sm:w-32 focus:outline-none focus:border-primary"
-          />
-          <select
-            value={filterClient}
-            onChange={e => setFilterClient(e.target.value)}
-            className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer"
-          >
-            <option value="">All Clients</option>
-            {clientsList.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-          <select
-            value={filterProject}
-            onChange={e => setFilterProject(e.target.value)}
-            className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer"
-          >
-            <option value="">All Projects</option>
-            {projectsList.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-          <div className="flex gap-2 w-full sm:w-auto justify-end">
-            <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] font-medium rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer"
-            >
-              <option value="All">All Status</option>
-              {statuses.map(s => (
-                <option key={s} value={s}>{STATUS_CONFIG[s]?.label || s}</option>
-              ))}
-            </select>
+          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+            <div className="flex gap-2">
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={e => setDateFrom(e.target.value)}
+                className="flex-1 sm:flex-none bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:outline-none focus:border-primary cursor-pointer"
+              />
+              <span className="hidden sm:inline text-on-surface-variant text-[12px] self-center">—</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={e => setDateTo(e.target.value)}
+                className="flex-1 sm:flex-none bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:outline-none focus:border-primary cursor-pointer"
+              />
+            </div>
+            <div className="flex gap-2 overflow-x-auto hide-scrollbar">
+              <input
+                type="text"
+                placeholder="Driver ID..."
+                value={driverFilter}
+                onChange={e => setDriverFilter(e.target.value)}
+                className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 w-full sm:w-32 focus:outline-none focus:border-primary shrink-0"
+              />
+              <select
+                value={filterClient}
+                onChange={e => setFilterClient(e.target.value)}
+                className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer shrink-0"
+              >
+                <option value="">All Clients</option>
+                {clientsList.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              <select
+                value={filterProject}
+                onChange={e => setFilterProject(e.target.value)}
+                className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer shrink-0"
+              >
+                <option value="">All Projects</option>
+                {projectsList.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+                className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] font-medium rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer shrink-0"
+              >
+                <option value="All">All Status</option>
+                {statuses.map(s => (
+                  <option key={s} value={s}>{STATUS_CONFIG[s]?.label || s}</option>
+                ))}
+              </select>
+            </div>
           </div>
           {(searchQuery || statusFilter !== 'All' || dateFrom || dateTo || driverFilter || filterClient || filterProject) && (
             <button
               onClick={() => { setSearchQuery(''); setStatusFilter('All'); setDateFrom(''); setDateTo(''); setDriverFilter(''); setFilterClient(''); setFilterProject(''); }}
-              className="text-[11px] text-primary hover:text-primary-hover font-medium cursor-pointer"
+              className="text-[11px] text-primary hover:text-primary-hover font-medium cursor-pointer self-start"
             >
               Clear
             </button>

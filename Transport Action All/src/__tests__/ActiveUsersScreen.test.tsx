@@ -172,7 +172,7 @@ describe('ActiveUsersScreen', () => {
     expect(screen.getByText('Role')).toBeInTheDocument();
     expect(screen.getByText('Last Seen')).toBeInTheDocument();
     expect(screen.getByText('Session')).toBeInTheDocument();
-    expect(screen.getByText('IP Address')).toBeInTheDocument();
+    expect(screen.getByText('IP')).toBeInTheDocument();
   });
 
   it('handles gasPost error gracefully', async () => {

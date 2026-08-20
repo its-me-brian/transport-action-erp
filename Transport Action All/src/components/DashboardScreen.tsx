@@ -73,6 +73,7 @@ export default function DashboardScreen({
 
   // Bulk selection state
   const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(new Set());
+  const lastTapMapRef = React.useRef<Map<string, number>>(new Map());
   const [isBulkCompleting, setIsBulkCompleting] = useState(false);
 
   // Drivers database
@@ -767,6 +768,15 @@ export default function DashboardScreen({
     const isUnassigned = !service.driverName || service.driverName === 'Unassigned';
     const isCompleted = service.status === 'Completed';
     const isProduction = isProductionVehicle(service);
+    const lastTapRef = React.useRef<number>(0);
+    
+    const handleTouchEnd = React.useCallback(() => {
+      const now = Date.now();
+      if (now - lastTapRef.current < 300) {
+        onDoubleClick?.(service);
+      }
+      lastTapRef.current = now;
+    }, [onDoubleClick, service]);
     
     return (
       <div
@@ -783,7 +793,9 @@ export default function DashboardScreen({
                     ? 'border-outline-variant border-l-primary' 
                     : 'border-outline-variant border-l-secondary'
         }`}
+        style={{ touchAction: 'manipulation' }}
         onDoubleClick={() => onDoubleClick?.(service)}
+        onTouchEnd={handleTouchEnd}
       >
         {/* Checkbox */}
         <div className="absolute bottom-1.5 right-1.5 z-10">
@@ -1306,8 +1318,17 @@ export default function DashboardScreen({
                       left: `${left}%`,
                       width: `calc(${width}% - 4px)`,
                       minHeight: '24px',
+                      touchAction: 'manipulation',
                     }}
                     onDoubleClick={() => handleDoubleClick(service)}
+                    onTouchEnd={() => {
+                      const now = Date.now();
+                      const last = lastTapMapRef.current.get(service.id) || 0;
+                      if (now - last < 300) {
+                        handleDoubleClick(service);
+                      }
+                      lastTapMapRef.current.set(service.id, now);
+                    }}
                   >
                     {/* Checkbox for bulk selection - bottom right */}
                     <button

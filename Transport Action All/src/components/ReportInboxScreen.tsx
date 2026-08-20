@@ -356,37 +356,37 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-5 gap-4 mb-6">
-        <div className="bg-surface rounded-xl border border-outline-variant p-4 text-center">
-          <div className="text-2xl font-bold text-on-surface">{stats.total}</div>
-          <div className="text-xs text-on-surface-variant mt-1">Total</div>
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+        <div className="bg-surface rounded-xl border border-outline-variant p-3 text-center">
+          <div className="text-[20px] font-bold text-on-surface">{stats.total}</div>
+          <div className="text-[11px] text-on-surface-variant mt-1">Total</div>
         </div>
-        <div className="bg-surface rounded-xl border border-outline-variant p-4 text-center">
-          <div className="text-2xl font-bold text-blue-600">{stats.captured}</div>
-          <div className="text-xs text-on-surface-variant mt-1">Captured</div>
+        <div className="bg-surface rounded-xl border border-outline-variant p-3 text-center">
+          <div className="text-[20px] font-bold text-blue-600">{stats.captured}</div>
+          <div className="text-[11px] text-on-surface-variant mt-1">Captured</div>
         </div>
-        <div className="bg-surface rounded-xl border border-outline-variant p-4 text-center">
-          <div className="text-2xl font-bold text-yellow-600">{stats.pendingReview}</div>
-          <div className="text-xs text-on-surface-variant mt-1">Pending Review</div>
+        <div className="bg-surface rounded-xl border border-outline-variant p-3 text-center">
+          <div className="text-[20px] font-bold text-yellow-600">{stats.pendingReview}</div>
+          <div className="text-[11px] text-on-surface-variant mt-1">Pending Review</div>
         </div>
-        <div className="bg-surface rounded-xl border border-outline-variant p-4 text-center">
-          <div className="text-2xl font-bold text-green-600">{stats.accepted}</div>
-          <div className="text-xs text-on-surface-variant mt-1">Accepted</div>
+        <div className="bg-surface rounded-xl border border-outline-variant p-3 text-center">
+          <div className="text-[20px] font-bold text-green-600">{stats.accepted}</div>
+          <div className="text-[11px] text-on-surface-variant mt-1">Accepted</div>
         </div>
-        <div className="bg-surface rounded-xl border border-outline-variant p-4 text-center">
-          <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
-          <div className="text-xs text-on-surface-variant mt-1">Rejected</div>
+        <div className="bg-surface rounded-xl border border-outline-variant p-3 text-center">
+          <div className="text-[20px] font-bold text-red-600">{stats.rejected}</div>
+          <div className="text-[11px] text-on-surface-variant mt-1">Rejected</div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 mb-4">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row gap-2 overflow-x-auto hide-scrollbar">
+        <div className="flex items-center gap-2 shrink-0">
           <Filter className="w-4 h-4 text-on-surface-variant" />
           <select
             value={filterSource}
             onChange={e => setFilterSource(e.target.value)}
-            className="px-3 py-1.5 border border-outline-variant rounded-lg text-sm"
+            className="px-2 py-1.5 border border-outline-variant rounded-lg text-[12px] bg-surface focus:border-primary outline-none cursor-pointer"
           >
             <option value="">All Sources</option>
             <option value="whatsapp">WhatsApp</option>
@@ -397,7 +397,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
         <select
           value={filterStatus}
           onChange={e => setFilterStatus(e.target.value)}
-          className="px-3 py-1.5 border border-outline-variant rounded-lg text-sm"
+          className="px-2 py-1.5 border border-outline-variant rounded-lg text-[12px] bg-surface focus:border-primary outline-none cursor-pointer shrink-0"
         >
           <option value="">All Status</option>
           <option value="CAPTURED">Captured</option>
@@ -412,7 +412,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
           placeholder="Filter by Driver..."
           value={filterDriver}
           onChange={e => setFilterDriver(e.target.value)}
-          className="px-3 py-1.5 border border-outline-variant rounded-lg text-sm"
+          className="px-2 py-1.5 border border-outline-variant rounded-lg text-[12px] bg-surface focus:border-primary outline-none shrink-0 w-full sm:w-auto"
         />
       </div>
 

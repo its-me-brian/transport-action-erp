@@ -258,30 +258,32 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
             <table className="w-full text-[12px]">
               <thead>
                 <tr className="border-b border-outline-variant bg-surface-dim">
-                  <th className="text-left px-4 py-3 font-medium text-on-surface-variant">User</th>
-                  <th className="text-left px-4 py-3 font-medium text-on-surface-variant">Email</th>
-                  <th className="text-left px-4 py-3 font-medium text-on-surface-variant">Role</th>
-                  <th className="text-left px-4 py-3 font-medium text-on-surface-variant">Status</th>
-                  <th className="text-left px-4 py-3 font-medium text-on-surface-variant">Last Login</th>
-                  <th className="text-right px-4 py-3 font-medium text-on-surface-variant">Actions</th>
+                  <th className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">User</th>
+                  <th className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap hidden sm:table-cell">Email</th>
+                  <th className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Role</th>
+                  <th className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Status</th>
+                  <th className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap hidden md:table-cell">Last Login</th>
+                  <th className="text-right px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredUsers.map((u) => (
                   <tr key={u.id} className="border-b border-outline-variant/50 hover:bg-surface-dim/50 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
+                    <td className="px-3 sm:px-4 py-3">
+                      <div className="flex items-center gap-2 sm:gap-3">
                         <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[11px] font-bold shrink-0">
                           {u.username?.charAt(0).toUpperCase()}
                         </div>
-                        <div>
-                          <div className="font-medium text-on-surface">{u.username}</div>
-                          {u.name && <div className="text-[11px] text-on-surface-variant">{u.name}</div>}
+                        <div className="min-w-0">
+                          <div className="font-medium text-on-surface truncate">{u.username}</div>
+                          {u.name && <div className="text-[11px] text-on-surface-variant truncate">{u.name}</div>}
+                          {/* Show email on mobile since column is hidden */}
+                          <div className="text-[11px] text-on-surface-variant truncate sm:hidden">{u.email}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-on-surface-variant">{u.email}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 sm:px-4 py-3 text-on-surface-variant hidden sm:table-cell">{u.email}</td>
+                    <td className="px-3 sm:px-4 py-3">
                       <button
                         onClick={() => handleToggleRole(u.id, u.role)}
                         disabled={userAction === u.id}
@@ -297,7 +299,7 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
                         {u.role}
                       </button>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 sm:px-4 py-3">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium ${
                         u.status === 'approved' ? 'bg-green-50 text-green-700' :
                         u.status === 'pending' ? 'bg-amber-50 text-amber-700' :
@@ -309,10 +311,10 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
                         {u.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-on-surface-variant text-[11px]">
+                    <td className="px-3 sm:px-4 py-3 text-on-surface-variant text-[11px] hidden md:table-cell">
                       {u.lastLogin ? safeDate(u.lastLogin) : 'Never'}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-3 sm:px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         {u.status === 'pending' && (
                           <>

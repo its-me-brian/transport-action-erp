@@ -852,8 +852,8 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
 
       {/* Filters */}
       <div id="rapportino-filters" className="flex flex-col gap-2 px-3 py-2 bg-surface-dim border border-outline-variant rounded-lg">
-        <div className="flex flex-col sm:flex-row gap-2 items-center">
-          <div className="relative w-full sm:w-64">
+        <div className="flex flex-col gap-2">
+          <div className="relative w-full">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
             <input
               type="text"
@@ -863,83 +863,85 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
               className="w-full bg-surface-container-lowest border border-outline-variant pl-8 pr-3 py-1.5 text-[12px] rounded-lg focus:outline-none focus:border-primary outline-none text-on-surface"
             />
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 items-center">
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={e => setDateFrom(e.target.value)}
-              className="w-full sm:w-auto bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:outline-none focus:border-primary cursor-pointer"
-            />
-            <span className="hidden sm:inline text-on-surface-variant text-[12px]">—</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={e => setDateTo(e.target.value)}
-              className="w-full sm:w-auto bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:outline-none focus:border-primary cursor-pointer"
-            />
-          </div>
-          <div className="flex gap-2 w-full sm:w-auto justify-end">
-            <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] font-medium rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer"
-            >
-              <option value="All">Todos los estados</option>
-              {currentStatuses.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-            {activeTab === 'client' && (
+          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+            <div className="flex gap-2">
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={e => setDateFrom(e.target.value)}
+                className="flex-1 sm:flex-none bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:outline-none focus:border-primary cursor-pointer"
+              />
+              <span className="hidden sm:inline text-on-surface-variant text-[12px] self-center">—</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={e => setDateTo(e.target.value)}
+                className="flex-1 sm:flex-none bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:outline-none focus:border-primary cursor-pointer"
+              />
+            </div>
+            <div className="flex gap-2 overflow-x-auto hide-scrollbar">
               <select
-                value={filterClient}
-                onChange={e => setFilterClient(e.target.value)}
-                className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer"
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+                className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] font-medium rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer shrink-0"
               >
-                <option value="">Todos los clientes</option>
-                {clientsList.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                <option value="All">Todos los estados</option>
+                {currentStatuses.map(s => (
+                  <option key={s} value={s}>{s}</option>
                 ))}
               </select>
-            )}
-            {activeTab === 'driver' && (
+              {activeTab === 'client' && (
+                <select
+                  value={filterClient}
+                  onChange={e => setFilterClient(e.target.value)}
+                  className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer shrink-0"
+                >
+                  <option value="">Todos los clientes</option>
+                  {clientsList.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              )}
+              {activeTab === 'driver' && (
+                <select
+                  value={filterDriver}
+                  onChange={e => setFilterDriver(e.target.value)}
+                  className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer shrink-0"
+                >
+                  <option value="">Todos los conductores</option>
+                  {driversList.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              )}
+              {activeTab === 'collaborator' && (
+                <select
+                  value={filterCollaborator}
+                  onChange={e => setFilterCollaborator(e.target.value)}
+                  className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer shrink-0"
+                >
+                  <option value="">Todos los colaboradores</option>
+                  {collaboratorsList.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              )}
               <select
-                value={filterDriver}
-                onChange={e => setFilterDriver(e.target.value)}
-                className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer"
+                value={filterProject}
+                onChange={e => setFilterProject(e.target.value)}
+                className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer shrink-0"
               >
-                <option value="">Todos los conductores</option>
-                {driversList.map(d => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
+                <option value="">Todos los proyectos</option>
+                {projectsList.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
-            )}
-            {activeTab === 'collaborator' && (
-              <select
-                value={filterCollaborator}
-                onChange={e => setFilterCollaborator(e.target.value)}
-                className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer"
-              >
-                <option value="">Todos los colaboradores</option>
-                {collaboratorsList.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            )}
-            <select
-              value={filterProject}
-              onChange={e => setFilterProject(e.target.value)}
-              className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer"
-            >
-              <option value="">Todos los proyectos</option>
-              {projectsList.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+            </div>
           </div>
           {(dateFrom || dateTo || searchQuery || statusFilter !== 'All' || filterClient || filterDriver || filterCollaborator || filterProject) && (
             <button
               onClick={() => { setDateFrom(''); setDateTo(''); setSearchQuery(''); setStatusFilter('All'); setFilterClient(''); setFilterDriver(''); setFilterCollaborator(''); setFilterProject(''); }}
-              className="text-[11px] text-primary hover:text-primary-hover font-medium cursor-pointer"
+              className="text-[11px] text-primary hover:text-primary-hover font-medium cursor-pointer self-start"
             >
               Limpiar
             </button>
