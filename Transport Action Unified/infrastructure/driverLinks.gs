@@ -228,6 +228,25 @@ function _serveDriverForm(token) {
     }
   } catch (e) {}
 
+  // Check which services have already been submitted for this token
+  var submittedServiceIds = {};
+  try {
+    var sh = getSheet(SHEETS.DriverLinkResponses);
+    var data = sh.getDataRange().getValues();
+    var headers = data[0];
+    var tokenCol = headers.indexOf('Token');
+    var svcIdCol = headers.indexOf('ServiceID');
+    if (tokenCol !== -1 && svcIdCol !== -1) {
+      for (var si = 1; si < data.length; si++) {
+        if (String(data[si][tokenCol]) === String(token) && data[si][svcIdCol]) {
+          submittedServiceIds[String(data[si][svcIdCol])] = true;
+        }
+      }
+    }
+  } catch (e) {
+    Logger.log('Error checking submitted services: ' + e.message);
+  }
+
   // Helper: detect if a string contains a Maps URL and render it as a clickable link
   function renderAddressWithMaps(text, mapsUrl) {
     if (!text) return '';
@@ -305,14 +324,22 @@ function _serveDriverForm(token) {
       return hours + ':' + mins;
     }
     var displayTime = _normalizeTime(svc.Time);
+    var isSubmitted = submittedServiceIds[svc.ID] || false;
+    var submittedCls = isSubmitted ? ' svc-submitted' : '';
+    var submittedBadge = isSubmitted ? '<span class="svc-badge-ok">Inviato</span>' : '';
+    var disabledAttr = isSubmitted ? ' disabled' : '';
 
     serviceCardsHtml +=
-      '<div class="svc" id="svc-' + index + '" data-date="' + _escapeHtml(svc.Date || '') + '">' +
+      '<div class="svc' + submittedCls + '" id="svc-' + index + '" data-date="' + _escapeHtml(svc.Date || '') + '">' +
       '<div class="svc-hd">' +
-      '<input type="checkbox" name="selectedServices" value="' + index + '" onchange="toggleServiceFields(' + index + ')">' +
+      (isSubmitted
+        ? '<button type="button" class="btn-apri" disabled>Inviato</button>'
+        : '<button type="button" class="btn-apri" onclick="toggleServiceFields(' + index + ')" id="btn-apri-' + index + '">Apri</button>'
+      ) +
       '<span class="svc-time">' + _escapeHtml(displayTime) + '</span>' +
       '<span class="svc-prod">' + _escapeHtml(svc.Production || '—') + '</span>' +
       (svcDate ? '<span class="svc-date">' + _escapeHtml(svcDate) + '</span>' : '') +
+      submittedBadge +
       '</div>' +
       '<div class="svc-det">' +
       (svc.Section ? '<div><b>Sezione:</b> ' + _escapeHtml(svc.Section) + '</div>' : '') +
@@ -322,13 +349,18 @@ function _serveDriverForm(token) {
       '</div>' +
       '<div class="svc-fields" id="svc-fields-' + index + '" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #e5e7eb">' +
       '<div class="svc-fields-grid">' +
-      '<div class="fg"><label>Ora Inizio *</label><input type="time" id="f-orarioInizio-' + index + '" required></div>' +
-      '<div class="fg"><label>Ora Fine *</label><input type="time" id="f-orarioFine-' + index + '" required></div>' +
-      '<div class="fg"><label>KM Totali *</label><input type="number" id="f-kmTotali-' + index + '" min="0" required></div>' +
-      '<div class="fg"><label>Diaria</label><select id="f-diaria-' + index + '"><option value="nessuna">Nessuna</option><option value="piena">Piena</option><option value="mezza">Mezza</option></select></div>' +
-      '<div class="fg svc-notes"><label>Note</label><textarea id="f-note-' + index + '" placeholder="Note aggiuntive..."></textarea></div>' +
+      '<div class="fg"><label>Ora Inizio *</label><input type="time" id="f-orarioInizio-' + index + '"' + disabledAttr + ' required></div>' +
+      '<div class="fg"><label>Ora Fine *</label><input type="time" id="f-orarioFine-' + index + '"' + disabledAttr + ' required></div>' +
+      '<div class="fg"><label>KM Totali *</label><input type="number" id="f-kmTotali-' + index + '" min="0"' + disabledAttr + ' required></div>' +
+      '<div class="fg"><label>Diaria</label><select id="f-diaria-' + index + '"' + disabledAttr + '><option value="nessuna">Nessuna</option><option value="piena">Piena</option><option value="mezza">Mezza</option></select></div>' +
+      '<div class="fg svc-notes"><label>Note</label><textarea id="f-note-' + index + '" placeholder="Note aggiuntive..."' + disabledAttr + '></textarea></div>' +
       '</div></div>' +
-      '<div class="sec-svc-btn"><button type="button" class="btn-svc" onclick="submitSingleService(' + index + ')">Invia Rapportino</button></div>' +
+      '<div class="sec-svc-btn">' +
+      (isSubmitted
+        ? '<span class="svc-submitted-label">Rapportino già inviato</span>'
+        : '<button type="button" class="btn-svc" onclick="submitSingleService(' + index + ')">Invia Rapportino</button>'
+      ) +
+      '</div>' +
       '<input type="hidden" id="serviceId-' + index + '" value="' + _escapeHtml(svc.ID || '') + '">' +
       '</div>';
   });
@@ -358,10 +390,13 @@ function _serveDriverForm(token) {
     '.sec{font-size:13px;font-weight:700;color:#5a5a5a;text-transform:uppercase;letter-spacing:.8px;margin:28px 0 14px 0;padding-bottom:8px;border-bottom:1px solid #e0e0e0}' +
     '.svc{background:#fff;border:1.5px solid #e0e0e0;border-radius:12px;padding:16px;margin-bottom:10px;transition:all .15s ease}' +
     '.svc:hover{border-color:#c0c0c0;box-shadow:0 2px 8px rgba(0,0,0,.04)}' +
-    '.svc:has(input:checked){border-color:#006948;background:#f0faf6;box-shadow:0 0 0 3px rgba(0,105,72,.08)}' +
-    '.svc:has(input:checked) .svc-time{background:#006948}' +
+    '.svc.open{border-color:#006948;background:#f0faf6;box-shadow:0 0 0 3px rgba(0,105,72,.08)}' +
+    '.svc.open .svc-time{background:#006948}' +
     '.svc-hd{display:flex;align-items:center;gap:10px}' +
-    '.svc-hd input[type=checkbox]{width:18px;height:18px;accent-color:#006948;flex-shrink:0}' +
+    '.btn-apri{background:none;border:1.5px solid #e0e0e0;color:#006948;font-size:12px;font-weight:600;padding:4px 10px;border-radius:6px;cursor:pointer;transition:all .15s ease;white-space:nowrap;flex-shrink:0}' +
+    '.btn-apri:hover{background:#f0faf6;border-color:#006948}' +
+    '.btn-apri.open{background:#006948;color:#fff;border-color:#006948}' +
+    '.btn-apri:disabled{background:#e0e0e0;color:#999;border-color:#e0e0e0;cursor:not-allowed}' +
     '.svc-time{background:#1a1a1a;color:#fff;padding:3px 10px;border-radius:6px;font-weight:700;font-size:13px;transition:background .15s ease;white-space:nowrap}' +
     '.svc-prod{font-weight:700;font-size:14px;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
     '.svc-det{font-size:13px;color:#5a5a5a;line-height:1.7;margin-top:8px;padding-left:28px}' +
@@ -391,6 +426,10 @@ function _serveDriverForm(token) {
     '.ok h3{margin-bottom:6px;color:#006948;font-size:20px;font-weight:700}' +
     '.ok p{color:#5a5a5a;font-size:15px}' +
     '.sec-svc-btn{display:flex;justify-content:flex-end;margin-top:4px}' +
+    '.svc-submitted{opacity:.65;border-color:#a7f3d0;background:#f0fdf4}' +
+    '.svc-submitted .svc-time{background:#059669}' +
+    '.svc-badge-ok{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#059669;color:#fff;border-radius:6px;font-size:11px;font-weight:700;margin-left:auto}' +
+    '.svc-submitted-label{font-size:13px;color:#059669;font-weight:600;font-style:italic}' +
     '@media(max-width:480px){' +
     'body{padding:16px 14px;font-size:15px}' +
     '.hd{padding:28px 18px;border-radius:14px;margin-bottom:24px}' +
@@ -400,7 +439,7 @@ function _serveDriverForm(token) {
     '.sec{font-size:12px;margin:24px 0 14px 0}' +
     '.svc{padding:16px 14px;border-radius:14px;margin-bottom:12px}' +
     '.svc-hd{gap:10px;flex-wrap:wrap}' +
-    '.svc-hd input[type=checkbox]{width:22px;height:22px}' +
+    '.btn-apri{font-size:13px;padding:5px 12px}' +
     '.svc-time{font-size:14px;padding:4px 12px}' +
     '.svc-prod{font-size:14px}' +
     '.svc-det{padding-left:0;font-size:14px;line-height:1.8}' +
@@ -431,8 +470,12 @@ function _serveDriverForm(token) {
     'function toggleServiceFields(idx){' +
     '  var box=document.getElementById("svc-fields-"+idx);' +
     '  if(!box)return;' +
-    '  var cb=document.querySelector("input[name=selectedServices][value=\\""+idx+"\\"]");' +
-    '  box.style.display=cb&&cb.checked?"block":"none";' +
+    '  var svc=document.getElementById("svc-"+idx);' +
+    '  var btn=document.getElementById("btn-apri-"+idx);' +
+    '  var isOpen=box.style.display==="block";' +
+    '  box.style.display=isOpen?"none":"block";' +
+    '  if(svc){isOpen?svc.classList.remove("open"):svc.classList.add("open")}' +
+    '  if(btn){btn.textContent=isOpen?"Apri":"Chiudi";isOpen?btn.classList.remove("open"):btn.classList.add("open")}' +
     '}' +
     'function submitSingleService(idx){' +
     '  var svc=SERVICES[idx];' +
