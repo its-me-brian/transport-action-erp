@@ -136,35 +136,37 @@ function acceptReport(inboxId, reviewedBy) {
 
       // Parse normalized data and create DriverReport (Issue #12)
       // BUG FIX: serviceId comes from RawData (metadata), NOT NormalizedData (user edits)
-      var reportId = null;
-      try {
-        var rawSource = JSON.parse(item.RawData || '{}');
-        var normSource = JSON.parse(item.NormalizedData || '{}');
-        // Merge: prefer NormalizedData for user fields, always use RawData for serviceId
-        var dataSource = Object.assign({}, rawSource, normSource);
-        var serviceId = rawSource.serviceId || dataSource.serviceId || '';
-        if (serviceId && item.DriverID) {
-          var created = DriverReportCommands.createReport(serviceId, item.DriverID, {
-            startTime: dataSource.startTime || '',
-            endTime: dataSource.endTime || '',
-            kmTotal: dataSource.kmTotal || 0,
-            hasDiaria: dataSource.hasDiaria || false,
-            isFestivo: dataSource.isFestivo || false,
-            isNotturno: dataSource.isNotturno || false,
-            diariaType: dataSource.diariaType || 'none',
-            kmExtra: dataSource.kmExtra || 0,
-            hoursExtra: dataSource.hoursExtra || 0,
-            parking: dataSource.parking || 0,
-            tolls: dataSource.tolls || 0,
-            fuel: dataSource.fuel || 0,
-            waitMinutes: dataSource.waitMinutes || 0,
-            notes: dataSource.notes || ''
-          });
-          reportId = created ? created.ID : null;
-        }
-      } catch (e) {
-        Logger.log('Error creating DriverReport from inbox: ' + e.message);
+      // CRITICAL: If createReport fails, abort accept — don't mark ACCEPTED silently
+      var rawSource = JSON.parse(item.RawData || '{}');
+      var normSource = JSON.parse(item.NormalizedData || '{}');
+      // Merge: prefer NormalizedData for user fields, always use RawData for serviceId
+      var dataSource = Object.assign({}, rawSource, normSource);
+      var serviceId = rawSource.serviceId || dataSource.serviceId || '';
+
+      if (!serviceId) {
+        return { success: false, error: 'No serviceId found in RawData. Cannot create DriverReport.' };
       }
+      if (!item.DriverID) {
+        return { success: false, error: 'No DriverID on inbox item. Cannot create DriverReport.' };
+      }
+
+      var created = DriverReportCommands.createReport(serviceId, item.DriverID, {
+        startTime: dataSource.startTime || '',
+        endTime: dataSource.endTime || '',
+        kmTotal: dataSource.kmTotal || 0,
+        hasDiaria: dataSource.hasDiaria || false,
+        isFestivo: dataSource.isFestivo || false,
+        isNotturno: dataSource.isNotturno || false,
+        diariaType: dataSource.diariaType || 'none',
+        kmExtra: dataSource.kmExtra || 0,
+        hoursExtra: dataSource.hoursExtra || 0,
+        parking: dataSource.parking || 0,
+        tolls: dataSource.tolls || 0,
+        fuel: dataSource.fuel || 0,
+        waitMinutes: dataSource.waitMinutes || 0,
+        notes: dataSource.notes || ''
+      });
+      var reportId = created ? created.ID : null;
 
       _update(SHEETS.DriverReportInbox, inboxId, {
         Status: 'ACCEPTED',

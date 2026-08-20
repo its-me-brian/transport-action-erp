@@ -1,18 +1,22 @@
 import React, { useState } from 'react';
-import { ClipboardCheck, Inbox, FileCheck } from 'lucide-react';
+import { ClipboardCheck, Inbox, FileCheck, Send, MessageSquare } from 'lucide-react';
 import { ScreenId } from '../types';
 import ReportInboxScreen from './ReportInboxScreen';
 import DriverReportScreen from './DriverReportScreen';
+import DriverSubmissionsScreen from './DriverSubmissionsScreen';
+import WhatsAppCaptureScreen from './WhatsAppCaptureScreen';
 
 interface Props {
   onNavigate: (screen: ScreenId) => void;
 }
 
-type ReportsTab = 'inbox' | 'reports';
+type ReportsTab = 'inbox' | 'reports' | 'submissions' | 'whatsapp';
 
 const TABS: { id: ReportsTab; label: string; icon: React.ElementType }[] = [
-  { id: 'inbox',   label: 'Inbox',   icon: Inbox },
-  { id: 'reports', label: 'Reports', icon: FileCheck },
+  { id: 'inbox',        label: 'Inbox',        icon: Inbox },
+  { id: 'reports',      label: 'Reports',      icon: FileCheck },
+  { id: 'submissions',  label: 'Submissions',  icon: Send },
+  { id: 'whatsapp',     label: 'WhatsApp',     icon: MessageSquare },
 ];
 
 export default function DriverReportsScreen({ onNavigate }: Props) {
@@ -48,6 +52,8 @@ export default function DriverReportsScreen({ onNavigate }: Props) {
       <div className="flex-1 overflow-auto">
         {activeTab === 'inbox' && <ReportInboxScreen onNavigate={onNavigate} />}
         {activeTab === 'reports' && <DriverReportScreen onNavigate={onNavigate} />}
+        {activeTab === 'submissions' && <DriverSubmissionsScreen onNavigate={onNavigate} />}
+        {activeTab === 'whatsapp' && <WhatsAppCaptureScreen onNavigate={onNavigate} />}
       </div>
     </div>
   );

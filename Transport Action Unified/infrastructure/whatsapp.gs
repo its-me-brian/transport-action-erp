@@ -381,3 +381,161 @@ function buildAgencyWhatsAppMessage(services, agencyName, dateStr) {
   msg += 'Grazie, Transport Action';
   return msg;
 }
+
+// ============================================================================
+// WHATSAPP CAPTURE — Parse text and capture into inbox
+// ============================================================================
+
+/**
+ * Parse WhatsApp text and return structured results for preview.
+ * Does NOT capture yet — just parses and returns for coordinator review.
+ *
+ * @param {string} text - Raw WhatsApp message text
+ * @returns {Array} Array of parsed report objects
+ */
+function parseWhatsAppForCapture(text) {
+  try {
+    if (!text || text.trim().length < 5) {
+      return { success: false, error: 'Message too short to parse' };
+    }
+
+    // Try multi-report first (chat export format)
+    var reports = parseMultipleDriverReports(text);
+
+    // If multi-report returns nothing, try single report
+    if (!reports || reports.length === 0) {
+      var single = parseDriverReport(text);
+      if (single) {
+        reports = [single];
+      }
+    }
+
+    if (!reports || reports.length === 0) {
+      return { success: false, error: 'Could not parse any reports from the message. Check the format.' };
+    }
+
+    // Enrich with available drivers for matching
+    var drivers = [];
+    try {
+      var allDrivers = DriverRepository.getAll();
+      drivers = allDrivers.map(function(d) {
+        return { id: d.ID, name: d.Name || d.ID };
+      });
+    } catch (e) {}
+
+    // Try auto-match driver by name
+    reports.forEach(function(r) {
+      r.matchedDriverId = '';
+      if (r.driverName && drivers.length > 0) {
+        var lowerName = r.driverName.toLowerCase().trim();
+        var match = drivers.find(function(d) {
+          return (d.name || '').toLowerCase().trim() === lowerName ||
+                 (d.id || '').toLowerCase().trim() === lowerName;
+        });
+        // Fuzzy: check if driver name contains the parsed name
+        if (!match) {
+          match = drivers.find(function(d) {
+            var dn = (d.name || '').toLowerCase();
+            return dn.indexOf(lowerName) !== -1 || lowerName.indexOf(dn) !== -1;
+          });
+        }
+        if (match) r.matchedDriverId = match.id;
+      }
+    });
+
+    return {
+      success: true,
+      reports: reports,
+      drivers: drivers,
+      reportCount: reports.length
+    };
+
+  } catch (e) {
+    return { success: false, error: 'Parse error: ' + e.message };
+  }
+}
+
+/**
+ * Capture parsed WhatsApp reports into the inbox.
+ * Called after coordinator reviews and confirms the parsed data.
+ *
+ * @param {Array} reports - Array of parsed report objects (with edits from coordinator)
+ * @param {string} projectId - Project ID to associate
+ * @returns {Object} { success, captured: number, results: [...] }
+ */
+function captureWhatsAppReports(reports, projectId) {
+  try {
+    if (!reports || !reports.length) {
+      return { success: false, error: 'No reports to capture' };
+    }
+    if (!projectId) {
+      return { success: false, error: 'Project ID is required' };
+    }
+
+    var results = [];
+    var captured = 0;
+
+    reports.forEach(function(r) {
+      try {
+        var driverId = r.matchedDriverId || r.driverId || '';
+        var serviceDate = r.dateParsed || r.date || new Date().toISOString().split('T')[0];
+
+        // Build rawData matching the DriverLink format for consistency
+        var rawData = {
+          serviceId: r.serviceId || '',
+          startTime: r.startTime || '',
+          endTime: r.endTime || '',
+          kmTotal: r.kmTotal || 0,
+          hasDiaria: r.diariaType === 'piena' || r.diariaType === 'mezza',
+          isFestivo: r.isFestivo || false,
+          isNotturno: r.isNotturno || false,
+          diariaType: r.diariaType || 'none',
+          kmExtra: r.kmOver || 0,
+          hoursExtra: r.overtimeHours || 0,
+          parking: r.parking || 0,
+          tolls: r.tolls || 0,
+          fuel: r.fuel || 0,
+          waitMinutes: r.waitMinutes || 0,
+          notes: r.notes || r.rawText || ''
+        };
+
+        if (driverId) {
+          var inboxResult = captureReport(
+            'whatsapp', 'manual',
+            driverId, projectId,
+            serviceDate, rawData
+          );
+          results.push({
+            success: inboxResult.success,
+            inboxId: inboxResult.inboxId || null,
+            driverName: r.driverName || driverId,
+            error: inboxResult.error || null
+          });
+          if (inboxResult.success) captured++;
+        } else {
+          results.push({
+            success: false,
+            driverName: r.driverName || 'Unknown',
+            error: 'No driver matched — assign manually'
+          });
+        }
+      } catch (e) {
+        results.push({
+          success: false,
+          driverName: r.driverName || 'Unknown',
+          error: e.message
+        });
+      }
+    });
+
+    return {
+      success: captured > 0,
+      captured: captured,
+      total: reports.length,
+      results: results
+    };
+
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}

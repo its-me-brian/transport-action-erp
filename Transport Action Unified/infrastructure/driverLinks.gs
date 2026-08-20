@@ -874,6 +874,52 @@ function _notifyDriverSubmission(token, services) {
 }
 
 // ============================================================================
+// GET DRIVER LINK RESPONSES — Query raw submissions from drivers
+// ============================================================================
+
+/**
+ * Obtiene todas las respuestas de conductores (envíos del Rapportino).
+ * @param {Object} [filters] - Filtros opcionales: driverId, projectId, serviceId, token
+ * @returns {Array} Lista de respuestas ordenadas por SubmittedAt descendente
+ */
+function getDriverLinkResponses(filters) {
+  try {
+    var sh = getSheet(SHEETS.DriverLinkResponses);
+    var data = sh.getDataRange().getValues();
+    if (data.length < 2) return [];
+
+    var headers = data[0];
+    var results = [];
+
+    for (var i = 1; i < data.length; i++) {
+      var row = {};
+      headers.forEach(function(h, j) { row[h] = data[i][j]; });
+
+      // Apply filters
+      if (filters) {
+        if (filters.driverId && row.DriverID !== filters.driverId) continue;
+        if (filters.projectId && row.ProjectID !== filters.projectId) continue;
+        if (filters.serviceId && row.ServiceID !== filters.serviceId) continue;
+        if (filters.token && row.Token !== filters.token) continue;
+      }
+
+      results.push(row);
+    }
+
+    // Sort by SubmittedAt descending
+    results.sort(function(a, b) {
+      return new Date(b.SubmittedAt || 0) - new Date(a.SubmittedAt || 0);
+    });
+
+    return results;
+
+  } catch (e) {
+    Logger.log('getDriverLinkResponses error: ' + e.message);
+    return [];
+  }
+}
+
+// ============================================================================
 // GET DRIVER LINK EVENTS (FASE 15B)
 // ============================================================================
 

@@ -1261,6 +1261,26 @@ case 'rejectDriverReport':
         break;
 
       // =====================================================================
+      // DRIVER LINK RESPONSES
+      // =====================================================================
+      case 'getDriverLinkResponses':
+        _checkPermission(data, 'inbox.list');
+        result = getDriverLinkResponses(data.filters);
+        break;
+
+      // =====================================================================
+      // WHATSAPP CAPTURE
+      // =====================================================================
+      case 'parseWhatsApp':
+        _checkPermission(data, 'inbox.list');
+        result = parseWhatsAppForCapture(data.text);
+        break;
+      case 'captureWhatsAppReports':
+        _checkPermission(data, 'inbox.normalize');
+        result = captureWhatsAppReports(data.reports, data.projectId);
+        break;
+
+      // =====================================================================
       // PRESENCE (FASE 15E)
       // =====================================================================
       case 'heartbeat':

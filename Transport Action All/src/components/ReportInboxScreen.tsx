@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Inbox, Check, X, Lock, Eye, Filter, ChevronDown, Send, Edit3 } from 'lucide-react';
+import { Inbox, Check, X, Lock, Eye, Filter, Send, Edit3, Zap, ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { getInboxItems, normalizeReport, submitToReview, acceptReport, rejectReport, lockReport } from '../services/api';
+import {
+  getInboxItems, normalizeReport, submitToReview, acceptReport,
+  rejectReport, lockReport, getServiceById, getDrivers, getProjects
+} from '../services/api';
 
 interface InboxItem {
   ID: string;
@@ -41,6 +44,18 @@ const DEFAULT_NORMALIZED: NormalizedFields = {
   notes: '',
 };
 
+// Service reference data (from transport list)
+interface ServiceRef {
+  Time: string;
+  Production: string;
+  Section: string;
+  PassengerName: string;
+  PassengerRole: string;
+  VehicleID: string;
+  OperationalStatus: string;
+  DriverID: string;
+}
+
 interface ReportInboxScreenProps {
   onNavigate: (screen: string) => void;
 }
@@ -51,6 +66,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
   const [items, setItems] = useState<InboxItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<InboxItem | null>(null);
+  const [serviceRef, setServiceRef] = useState<ServiceRef | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -62,9 +78,40 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
   const [filterStatus, setFilterStatus] = useState('');
   const [filterDriver, setFilterDriver] = useState('');
 
+  // ID → Name lookup maps
+  const [driverMap, setDriverMap] = useState<Record<string, string>>({});
+  const [projectMap, setProjectMap] = useState<Record<string, string>>({});
+
   useEffect(() => {
     loadItems();
+    loadLookups();
   }, []);
+
+  const loadLookups = async () => {
+    try {
+      const [drivers, projects] = await Promise.all([getDrivers(), getProjects()]);
+      const dMap: Record<string, string> = {};
+      if (Array.isArray(drivers)) drivers.forEach((d: any) => { dMap[d.id] = d.name || d.id; });
+      const pMap: Record<string, string> = {};
+      if (Array.isArray(projects)) projects.forEach((p: any) => { pMap[p.id] = p.name || p.id; });
+      setDriverMap(dMap);
+      setProjectMap(pMap);
+    } catch (err) {
+      console.error('Failed to load lookups:', err);
+    }
+  };
+
+  const driverName = (id: string) => driverMap[id] || id;
+  const projectName = (id: string) => projectMap[id] || id;
+
+  const formatDisplayDate = (d: string) => {
+    if (!d) return '—';
+    try {
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return d;
+      return dt.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch { return d; }
+  };
 
   const loadItems = async () => {
     setIsLoading(true);
@@ -98,10 +145,11 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
     }
   };
 
-  // When selecting an item, pre-fill normalize form
-  const handleSelectItem = (item: InboxItem) => {
+  // When selecting an item, pre-fill normalize form + fetch service ref
+  const handleSelectItem = async (item: InboxItem) => {
     setSelectedItem(item);
     setRejectReason('');
+    setServiceRef(null);
 
     // Pre-fill form from NormalizedData if exists, else from RawData
     if (item.NormalizedData) {
@@ -109,6 +157,24 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
     } else {
       setNormForm(parseRawData(item.RawData));
     }
+
+    // Fetch service reference data for comparison
+    try {
+      const raw = JSON.parse(item.RawData || '{}');
+      const serviceId = raw.serviceId || '';
+      if (serviceId) {
+        const svc = await getServiceById(serviceId);
+        if (svc) setServiceRef(svc);
+      }
+    } catch {
+      // Service not found — show form without reference
+    }
+  };
+
+  // Compare driver input vs service reference
+  const getFieldDiff = (driverValue: string | number, refValue: string | number | undefined): boolean => {
+    if (!refValue && refValue !== 0) return false;
+    return String(driverValue) !== String(refValue);
   };
 
   // Normalize: CAPTURED → NORMALIZED
@@ -121,6 +187,26 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
     } catch (err) {
       console.error('Failed to normalize report:', err);
       showToast('Error al normalizar el reporte', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Quick Approve: CAPTURED → NORMALIZED → PENDING_REVIEW → ACCEPTED (one click)
+  const handleQuickApprove = async (inboxId: string) => {
+    setIsSaving(true);
+    try {
+      await normalizeReport(inboxId, normForm);
+      await submitToReview(inboxId);
+      await acceptReport(inboxId);
+      setSelectedItem(null);
+      showToast('Reporte aprobado y creado exitosamente', 'success');
+      loadItems();
+    } catch (err) {
+      console.error('Quick approve failed:', err);
+      showToast('Error en la aprobación rápida. Intentá paso a paso.', 'error');
+      // Reload to show current state
+      loadItems();
     } finally {
       setIsSaving(false);
     }
@@ -147,6 +233,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
     try {
       await acceptReport(inboxId);
       setSelectedItem(null);
+      showToast('Reporte aceptado y creado', 'success');
       loadItems();
     } catch (err) {
       console.error('Failed to accept report:', err);
@@ -290,7 +377,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
         </select>
         <input
           type="text"
-          placeholder="Filter by Driver ID..."
+          placeholder="Filter by Driver..."
           value={filterDriver}
           onChange={e => setFilterDriver(e.target.value)}
           className="px-3 py-1.5 border border-outline-variant rounded-lg text-sm"
@@ -350,9 +437,9 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
               {filteredItems.map(item => (
                 <tr key={item.ID} className="hover:bg-surface-container-low transition-colors">
                   <td className="px-4 py-3">{getSourceBadge(item.Source)}</td>
-                  <td className="px-4 py-3 text-sm font-medium">{item.DriverID}</td>
-                  <td className="px-4 py-3 text-sm text-on-surface-variant">{item.ProjectID}</td>
-                  <td className="px-4 py-3 text-sm">{item.ServiceDate}</td>
+                  <td className="px-4 py-3 text-sm font-medium">{driverName(item.DriverID)}</td>
+                  <td className="px-4 py-3 text-sm text-on-surface-variant">{projectName(item.ProjectID)}</td>
+                  <td className="px-4 py-3 text-sm">{formatDisplayDate(item.ServiceDate)}</td>
                   <td className="px-4 py-3">{getStatusBadge(item.Status)}</td>
                   <td className="px-4 py-3 text-xs text-on-surface-variant font-mono">{item.CorrelationID?.substring(0, 12)}...</td>
                   <td className="px-4 py-3 text-right">
@@ -371,57 +458,86 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
         </div>
       )}
 
-      {/* Detail / Normalize Modal */}
-      {selectedItem && (
+      {/* ============================================================================
+          COMPARISON MODAL — CAPTURED: Driver input vs Service reference
+          ============================================================================ */}
+      {selectedItem && isNormalizable && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-surface rounded-xl p-6 w-full max-w-lg shadow-xl max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">
-                {isNormalizable ? 'Normalize Report' : 'Report Details'}
-              </h2>
+          <div className="bg-surface rounded-xl w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant">
+              <div>
+                <h2 className="text-lg font-bold text-on-surface">Review Driver Submission</h2>
+                <p className="text-xs text-on-surface-variant mt-0.5">
+                  Compare driver input with transport list reference
+                </p>
+              </div>
               <button onClick={() => setSelectedItem(null)} className="p-1 hover:bg-surface-container rounded-lg">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Metadata */}
-            <div className="space-y-2 text-sm mb-4 pb-4 border-b border-outline-variant">
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Source</span>
-                {getSourceBadge(selectedItem.Source)}
-              </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Channel</span>
-                <span>{selectedItem.Channel}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Driver</span>
-                <span className="font-medium">{selectedItem.DriverID}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Project</span>
-                <span>{selectedItem.ProjectID}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Date</span>
-                <span>{selectedItem.ServiceDate}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Status</span>
-                {getStatusBadge(selectedItem.Status)}
-              </div>
+            <div className="px-6 py-3 bg-surface-container flex flex-wrap gap-4 text-xs">
+              <div><span className="text-on-surface-variant">Source:</span> {getSourceBadge(selectedItem.Source)}</div>
+              <div><span className="text-on-surface-variant">Driver:</span> <strong>{driverName(selectedItem.DriverID)}</strong></div>
+              <div><span className="text-on-surface-variant">Project:</span> {projectName(selectedItem.ProjectID)}</div>
+              <div><span className="text-on-surface-variant">Date:</span> {formatDisplayDate(selectedItem.ServiceDate)}</div>
             </div>
 
-            {/* Normalize Form — shown for CAPTURED items */}
-            {isNormalizable && can('inbox.normalize') && (
-              <div className="space-y-3 mb-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-on-surface mb-2">
-                  <Edit3 className="w-4 h-4 text-primary" />
-                  Normalize Fields
+            <div className="px-6 py-4">
+              {/* Service Reference (if available) */}
+              {serviceRef && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">
+                    Transport List Reference
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-blue-600">Time:</span>{' '}
+                      <strong className="font-mono">{serviceRef.Time || '—'}</strong>
+                    </div>
+                    <div>
+                      <span className="text-blue-600">Production:</span>{' '}
+                      {serviceRef.Production || '—'}
+                    </div>
+                    {serviceRef.Section && (
+                      <div>
+                        <span className="text-blue-600">Section:</span> {serviceRef.Section}
+                      </div>
+                    )}
+                    {serviceRef.PassengerName && (
+                      <div>
+                        <span className="text-blue-600">Passenger:</span>{' '}
+                        {serviceRef.PassengerName}
+                        {serviceRef.PassengerRole && ` (${serviceRef.PassengerRole})`}
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-blue-600">Status:</span>{' '}
+                      {serviceRef.OperationalStatus || '—'}
+                    </div>
+                    <div>
+                      <span className="text-blue-600">Vehicle:</span> {serviceRef.VehicleID || '—'}
+                    </div>
+                  </div>
                 </div>
+              )}
+
+              {/* Driver Input Fields — Editable */}
+              <div className="space-y-3">
+                <div className="text-xs font-semibold text-on-surface uppercase tracking-wider mb-2">
+                  Driver Input (editable)
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] text-on-surface-variant mb-1">Start Time</label>
+                    <label className="block text-[11px] text-on-surface-variant mb-1">
+                      Start Time
+                      {serviceRef?.Time && getFieldDiff(normForm.startTime, serviceRef.Time) && (
+                        <span className="ml-1 text-amber-600"> diff</span>
+                      )}
+                    </label>
                     <input
                       type="time"
                       value={normForm.startTime}
@@ -482,7 +598,83 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
                   />
                 </div>
               </div>
-            )}
+            </div>
+
+            {/* Actions */}
+            <div className="px-6 py-4 border-t border-outline-variant flex gap-3">
+              {can('inbox.normalize') && (
+                <>
+                  {/* Quick Approve — one click */}
+                  <button
+                    onClick={() => handleQuickApprove(selectedItem.ID)}
+                    disabled={isSaving}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 font-semibold"
+                  >
+                    <Zap className="w-4 h-4" />
+                    {isSaving ? 'Processing...' : 'Quick Approve'}
+                  </button>
+                  {/* Step-by-step normalize */}
+                  <button
+                    onClick={() => handleNormalize(selectedItem.ID)}
+                    disabled={isSaving}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 border border-outline-variant rounded-lg text-sm font-medium hover:bg-surface-container-low transition-colors disabled:opacity-50"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    {isSaving ? 'Saving...' : 'Normalize Only'}
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => setSelectedItem(null)}
+                className="px-4 py-2.5 border border-outline-variant rounded-lg text-sm font-medium hover:bg-surface-container-low transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================================
+          STANDARD MODAL — NORMALIZED / PENDING_REVIEW / ACCEPTED / REJECTED
+          ============================================================================ */}
+      {selectedItem && !isNormalizable && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-surface rounded-xl p-6 w-full max-w-lg shadow-xl max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold">Report Details</h2>
+              <button onClick={() => setSelectedItem(null)} className="p-1 hover:bg-surface-container rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Metadata */}
+            <div className="space-y-2 text-sm mb-4 pb-4 border-b border-outline-variant">
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Source</span>
+                {getSourceBadge(selectedItem.Source)}
+              </div>
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Channel</span>
+                <span>{selectedItem.Channel}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Driver</span>
+                <span className="font-medium">{driverName(selectedItem.DriverID)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Project</span>
+                <span>{projectName(selectedItem.ProjectID)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Date</span>
+                <span>{formatDisplayDate(selectedItem.ServiceDate)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Status</span>
+                {getStatusBadge(selectedItem.Status)}
+              </div>
+            </div>
 
             {/* Show normalized data for NORMALIZED items (read-only) */}
             {selectedItem.Status === 'NORMALIZED' && selectedItem.NormalizedData && (
@@ -495,7 +687,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
             )}
 
             {/* Show raw data for non-captured items */}
-            {!isNormalizable && selectedItem.RawData && (
+            {selectedItem.RawData && (
               <div className="mb-4">
                 <div className="text-sm font-semibold text-on-surface mb-2">Raw Data</div>
                 <pre className="p-2 bg-surface-container rounded text-xs overflow-x-auto">
@@ -512,18 +704,6 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
 
             {/* Actions */}
             <div className="flex gap-3 mt-4 pt-4 border-t border-outline-variant">
-              {/* CAPTURED → NORMALIZED (normalize) */}
-              {isNormalizable && can('inbox.normalize') && (
-                <button
-                  onClick={() => handleNormalize(selectedItem.ID)}
-                  disabled={isSaving}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  {isSaving ? 'Saving...' : 'Normalize'}
-                </button>
-              )}
-
               {/* NORMALIZED → PENDING_REVIEW (submit to review) */}
               {isReviewable && can('inbox.review') && (
                 <button
@@ -571,7 +751,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
               )}
 
               {/* Close button for other statuses */}
-              {!isNormalizable && !isReviewable && !isPendingReview && (
+              {!isReviewable && !isPendingReview && (
                 <button
                   onClick={() => setSelectedItem(null)}
                   className="flex-1 px-4 py-2.5 border border-outline-variant rounded-lg text-sm font-medium hover:bg-surface-container-low transition-colors"

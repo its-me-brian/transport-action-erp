@@ -434,6 +434,13 @@ export async function getServices(filters?: {
 }
 
 /**
+ * Get a single service by ID (for comparison/reference in inbox normalization).
+ */
+export async function getServiceById(id: string): Promise<any> {
+  return gasGetWithRetry('getService', { id });
+}
+
+/**
  * Update a single field on a Service entity.
  * Validates lock state (Validado/Cerrado) before allowing changes.
  */
@@ -2353,7 +2360,11 @@ export async function acceptReport(
   inboxId: string,
   reviewedBy?: string
 ): Promise<{ success?: boolean; error?: string }> {
-  return gasPostWithRetry('acceptReport', { inboxId, reviewedBy });
+  const result = await gasPostWithRetry('acceptReport', { inboxId, reviewedBy });
+  if (result && result.success === false) {
+    throw new Error(result.error || 'acceptReport failed');
+  }
+  return result;
 }
 
 export async function rejectReport(
@@ -2368,6 +2379,80 @@ export async function lockReport(
   inboxId: string
 ): Promise<{ success?: boolean; error?: string }> {
   return gasPostWithRetry('lockReport', { inboxId });
+}
+
+// ============================================================================
+// DRIVER LINK RESPONSES — Raw submissions from Rapportino form
+// ============================================================================
+
+export interface DriverLinkResponse {
+  ID: string;
+  Token: string;
+  DriverID: string;
+  ProjectID: string;
+  ServiceID: string;
+  DataServizio: string;
+  TipoServizio: string;
+  OrarioInizio: string;
+  OrarioFine: string;
+  Descrizione: string;
+  Clienti: string;
+  Targa: string;
+  KmTotali: number;
+  Diaria: string;
+  Note: string;
+  SubmittedAt: string;
+}
+
+export async function getDriverLinkResponses(
+  filters?: { driverId?: string; projectId?: string; serviceId?: string; token?: string }
+): Promise<DriverLinkResponse[]> {
+  return gasPostWithRetry('getDriverLinkResponses', { filters: filters || {} });
+}
+
+// ============================================================================
+// WHATSAPP — Parse and capture driver messages
+// ============================================================================
+
+export interface WhatsAppParsedReport {
+  driverName: string;
+  date: string;
+  dateParsed: string;
+  startTime: string;
+  endTime: string;
+  kmTotal: number;
+  kmOver: number;
+  diariaType: string;
+  rawText: string;
+  matchedDriverId: string;
+  serviceId?: string;
+  driverId?: string;
+}
+
+export interface WhatsAppParseResult {
+  success: boolean;
+  reports?: WhatsAppParsedReport[];
+  drivers?: { id: string; name: string }[];
+  reportCount?: number;
+  error?: string;
+}
+
+export interface WhatsAppCaptureResult {
+  success: boolean;
+  captured: number;
+  total: number;
+  results: { success: boolean; inboxId: string | null; driverName: string; error: string | null }[];
+}
+
+export async function parseWhatsApp(text: string): Promise<WhatsAppParseResult> {
+  return gasPostWithRetry('parseWhatsApp', { text });
+}
+
+export async function captureWhatsAppReports(
+  reports: WhatsAppParsedReport[],
+  projectId: string
+): Promise<WhatsAppCaptureResult> {
+  return gasPostWithRetry('captureWhatsAppReports', { reports, projectId });
 }
 
 
