@@ -151,15 +151,25 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
   };
 
   // Parse raw data into normalized fields for editing
+  // Supports both Italian (orarioInizio...) and English (startTime...) field names
   const parseRawData = (rawJson: string): NormalizedFields => {
     try {
       const raw = JSON.parse(rawJson || '{}');
+      const toTime = (v: any) => {
+        if (!v) return '';
+        // If it's already HH:MM format, return as-is
+        if (/^\d{1,2}:\d{2}$/.test(String(v))) return String(v);
+        // If it's "H.M" transport list format, normalize
+        const s = String(v).replace(/[.,]/, ':');
+        if (/^\d{1,2}:\d{2}$/.test(s)) return s;
+        return String(v);
+      };
       return {
-        startTime: raw.startTime || raw.start || '',
-        endTime: raw.endTime || raw.end || '',
-        kmTotal: raw.kmTotal || raw.km || 0,
-        kmOver: raw.kmOver || 0,
-        diariaType: raw.diariaType || 'none',
+        startTime: toTime(raw.startTime || raw.start || raw.orarioInizio || ''),
+        endTime: toTime(raw.endTime || raw.end || raw.orarioFine || ''),
+        kmTotal: parseFloat(raw.kmTotal || raw.km || raw.kmTotali) || 0,
+        kmOver: parseFloat(raw.kmOver || raw.kmExtra) || 0,
+        diariaType: raw.diariaType || raw.diaria || 'none',
         notes: raw.notes || raw.note || '',
       };
     } catch {
@@ -627,6 +637,18 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
                   />
                 </div>
               </div>
+
+              {/* Raw data preview from driver submission */}
+              {selectedItem.RawData && (
+                <details className="mt-3">
+                  <summary className="text-xs text-on-surface-variant cursor-pointer hover:text-on-surface font-medium">
+                    Raw data from driver submission
+                  </summary>
+                  <pre className="mt-2 p-3 bg-surface-container rounded-lg text-xs overflow-x-auto max-h-32 font-mono">
+                    {JSON.stringify(getRawData(selectedItem), null, 2)}
+                  </pre>
+                </details>
+              )}
             </div>
 
             {/* Actions */}
