@@ -139,10 +139,9 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
         fieldsSchema,
       });
 
-      // Build the link URL from result
+      // Build the link URL — ALWAYS use VITE_GAS_WEBAPP_URL to match the current deployment
       const token = result?.token || result?.Token || '';
-      const gasUrl = result?.link || result?.Link || '';
-      const link = gasUrl || `${import.meta.env.VITE_GAS_WEBAPP_URL}?action=driverForm&token=${token}`;
+      const link = `${import.meta.env.VITE_GAS_WEBAPP_URL}?action=driverForm&token=${token}`;
 
       // Show result modal
       setCreatedLink({
