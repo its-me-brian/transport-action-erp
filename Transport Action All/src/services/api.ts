@@ -56,7 +56,8 @@ export interface TransportService {
 export function normalizeTransportService(raw: Record<string, any>): TransportService {
   let passengers: Passenger[] = [];
 
-  // New format: passengers is already an array of {name, role}
+  // Handle passengers: array of objects, array of strings, semicolon-joined string,
+  // or single passenger object from backend DTO (raw.passenger = { name, role, phone })
   if (Array.isArray(raw.passengers) && raw.passengers.length > 0) {
     if (typeof raw.passengers[0] === 'object' && raw.passengers[0] !== null) {
       passengers = raw.passengers.map((p: any) => ({
@@ -64,8 +65,7 @@ export function normalizeTransportService(raw: Record<string, any>): TransportSe
         role: String(p.role || '')
       }));
     } else {
-      // Array of strings (shouldn't happen, but handle it)
-      passengers = raw.passengers.map((name: string, i: number) => ({
+      passengers = raw.passengers.map((name: string) => ({
         name: String(name || ''),
         role: ''
       }));
@@ -78,32 +78,55 @@ export function normalizeTransportService(raw: Record<string, any>): TransportSe
       name,
       role: roles[i] || ''
     }));
+  } else if (raw.passenger && typeof raw.passenger === 'object' && raw.passenger.name) {
+    // Backend DTO format: passenger = { name, role, phone, department }
+    passengers = [{ name: String(raw.passenger.name || ''), role: String(raw.passenger.role || '') }];
   }
 
-  // Handle pickupLines/dropoffLines: new format has arrays, old has from/to strings
+  // Handle pickupLines/dropoffLines: backend DTO nests in route.pickupLines,
+  // upload preview uses top-level pickupLines or from/to strings
   let pickupLines: string[] = [];
   let dropoffLines: string[] = [];
 
-  if (Array.isArray(raw.pickupLines)) {
-    pickupLines = raw.pickupLines.filter(Boolean);
+  const srcPickup = raw.pickupLines || (raw.route && raw.route.pickupLines) || [];
+  const srcDropoff = raw.dropoffLines || (raw.route && raw.route.dropoffLines) || [];
+
+  if (Array.isArray(srcPickup)) {
+    pickupLines = srcPickup.filter(Boolean);
   } else if (typeof raw.from === 'string' && raw.from) {
     pickupLines = [raw.from];
   }
 
-  if (Array.isArray(raw.dropoffLines)) {
-    dropoffLines = raw.dropoffLines.filter(Boolean);
+  if (Array.isArray(srcDropoff)) {
+    dropoffLines = srcDropoff.filter(Boolean);
   } else if (typeof raw.to === 'string' && raw.to) {
     dropoffLines = [raw.to];
   }
 
+  // Backend DTO uses driverName/vehicleType; upload preview uses driver/vehicle
+  const driver = raw.driver || raw.driverName || '';
+  const vehicle = raw.vehicle || raw.vehicleType || '';
+
+  // Backend DTO sends passenger.phone; upload preview sends driverPhone
+  const driverPhone = raw.driverPhone || (raw.passenger && raw.passenger.phone) || '';
+
+  // Backend DTO sends operationalStatus; upload preview sends status
+  const status = raw.status || raw.operationalStatus || '';
+
+  // Backend DTO sends transportListId; upload preview sends importId
+  const importId = raw.importId || raw.transportListId || '';
+
+  // Backend DTO nests flightInfo in route; upload preview has it at top level
+  const flightInfo = raw.flightInfo || (raw.route && raw.route.flightInfo) || '';
+
   return {
     id: raw.id || '',
-    importId: raw.importId || '',
+    importId,
     date: typeof raw.date === 'string' ? raw.date : '',
     production: raw.production || '',
-    vehicle: raw.vehicle || '',
-    driver: raw.driver || '',
-    driverPhone: raw.driverPhone || '',
+    vehicle,
+    driver,
+    driverPhone,
     time: typeof raw.time === 'string' ? raw.time : '',
     from: pickupLines[0] || raw.from || '',
     to: dropoffLines[0] || raw.to || '',
@@ -114,9 +137,9 @@ export function normalizeTransportService(raw: Record<string, any>): TransportSe
     dropoffMapsUrl: raw.dropoffMapsUrl || '',
     originalTransportDate: raw.originalTransportDate || '',
     passengersList: raw.passengersList || '',
-    flightInfo: raw.flightInfo || '',
+    flightInfo,
     notes: raw.notes || '',
-    status: raw.status || '',
+    status,
     normalized: raw.normalized || '',
     section: raw.section,
     servicio: raw.servicio || '',

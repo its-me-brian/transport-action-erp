@@ -249,6 +249,13 @@ function _parseTransportListRows(allData, fileName, importSeq) {
   // Parsear desde headerRow + 1
   i = headerRow + 1;
   
+  // Track last vehicle/driver for services that share the same vehicle (no vehicle/driver in row)
+  let lastVehicle = '';
+  let lastVehicleType = '';
+  let lastDriver = '';
+  let lastDriverPhone = '';
+  let lastServiceType = 'Dispo';
+  
   while (i < allData.length) {
     const row = allData[i];
     const vehicleCell = String(row[colMap.vehicle] || '').trim();
@@ -379,6 +386,17 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       hasThenPickup: false
     };
     
+    // Inherit vehicle/driver from previous service if this row has no vehicle/driver
+    // (same vehicle, different time/passengers — e.g., second dispo of the day)
+    if (!vehicleCell && !driverCell && timeCell) {
+      servicio.vehicle = lastVehicle;
+      servicio.vehicleType = lastVehicleType;
+      servicio.driver = lastDriver;
+      servicio.driverPhone = lastDriverPhone;
+      servicio.serviceType = lastServiceType;
+      servicio.notes = 'Same vehicle as previous service';
+    }
+    
     // Extract Google Maps URLs from ALL columns (including unmapped H, I, etc.)
     const mapsUrlRegex = /https?:\/\/(maps\.app\.goo\.gl|goo\.gl|google\.com\/maps)[^\s]*/i;
     const mappedIndices = new Set([colMap.vehicle, colMap.driver, colMap.time, colMap.passengers, colMap.from, colMap.to, colMap.servicio, colMap.flightInfo, colMap.section].filter(v => v !== undefined));
@@ -455,9 +473,15 @@ function _parseTransportListRows(allData, fileName, importSeq) {
         j++;
         continue;
       }
-      
-      // Sub-fila con pasajero adicional
-      if (sub4 && !sub0) {
+
+      // Nuevo servicio: tiene hora + pasajeros pero sin vehículo/conductor
+      // (mismo vehículo del servicio anterior, distinto horario/pasajeros)
+      if (sub2 && sub4 && !sub0 && !sub1) {
+        break;
+      }
+
+      // Sub-fila con pasajero adicional (sin hora, sin vehículo)
+      if (sub4 && !sub0 && !sub2) {
         const parsed = _parsePassengerLine(sub4);
         servicio.passengers.push(parsed.name);
         servicio.passengerRoles.push(parsed.role);
@@ -504,6 +528,13 @@ function _parseTransportListRows(allData, fileName, importSeq) {
     // Guardar servicio
     servicios.push(_buildServiceRecord(servicio, production, dateStr, fileName, servicioIdx, importSeq));
     servicioIdx++;
+    
+    // Track vehicle/driver for next service that shares the same vehicle
+    if (servicio.vehicle) lastVehicle = servicio.vehicle;
+    if (servicio.vehicleType) lastVehicleType = servicio.vehicleType;
+    if (servicio.driver) lastDriver = servicio.driver;
+    if (servicio.driverPhone) lastDriverPhone = servicio.driverPhone;
+    if (servicio.serviceType) lastServiceType = servicio.serviceType;
     
     i = j;
   }

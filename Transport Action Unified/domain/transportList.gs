@@ -48,6 +48,25 @@ const TransportListRepository = {
   },
 
   toDTO(entity) {
+    // Compute date range from services
+    let dateRange = '';
+    try {
+      var services = ServiceRepository.getByTransportList(entity.ID);
+      if (services && services.length > 0) {
+        var dates = services
+          .map(function(s) { return s.Date; })
+          .filter(function(d) { return d && d.trim(); })
+          .sort();
+        if (dates.length > 0) {
+          dateRange = dates[0] === dates[dates.length - 1]
+            ? dates[0]
+            : dates[0] + ' — ' + dates[dates.length - 1];
+        }
+      }
+    } catch (e) {
+      // Ignore — dateRange is optional
+    }
+
     return {
       id: entity.ID,
       projectId: entity.ProjectID,
@@ -59,6 +78,7 @@ const TransportListRepository = {
       totalServices: entity.TotalServices,
       importedBy: entity.ImportedBy,
       notes: entity.Notes,
+      dateRange: dateRange,
       createdAt: entity.CreatedAt
     };
   }
@@ -388,9 +408,21 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
 function apiImportTransportListWithProject(data) {
   try {
     if (!data.services || data.services.length === 0) {
-      return { success: false, error: 'No services to import' };
+      return { error: 'No services to import' };
     }
-    
+
+    // === DUPLICATE IMPORT CHECK ===
+    // Prevent importing the same file twice (would create duplicate services)
+    if (data.importId) {
+      var existingServices = ServiceRepository.getByTransportList(data.importId);
+      if (existingServices && existingServices.length > 0) {
+        return {
+          error: 'Duplicate import: ' + data.importId + ' already has ' +
+                 existingServices.length + ' services. Cannot import the same file twice.'
+        };
+      }
+    }
+
     var ss = SpreadsheetApp.openById(CONFIG.DB_SHEET_ID);
     
     // === CLIENT RESOLUTION ===
