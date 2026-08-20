@@ -61,14 +61,35 @@ var DEFAULT_FIELDS_SCHEMA = [
 function _getServicesByDriverAndDateRange(driverId, projectId, dateFrom, dateTo) {
   try {
     var services = ServiceRepository.getAllByDriver(driverId);
+    var filtered;
     if (projectId) {
-      return services.filter(function(s) {
+      filtered = services.filter(function(s) {
         return s.Date >= dateFrom && s.Date <= dateTo && s.OperationalStatus !== 'Validado' && s.ProjectID === projectId;
       });
+    } else {
+      filtered = services.filter(function(s) {
+        return s.Date >= dateFrom && s.Date <= dateTo && s.OperationalStatus !== 'Validado';
+      });
     }
-    return services.filter(function(s) {
-      return s.Date >= dateFrom && s.Date <= dateTo && s.OperationalStatus !== 'Validado';
+    // Sort by Date then Time (chronological order)
+    filtered.sort(function(a, b) {
+      var dateA = a.Date || '';
+      var dateB = b.Date || '';
+      if (dateA < dateB) return -1;
+      if (dateA > dateB) return 1;
+      // Same date: sort by Time (parse "10.20" → minutes since midnight for comparison)
+      var parseTime = function(t) {
+        if (!t) return 0;
+        var str = String(t).replace('.', ':');
+        var parts = str.split(':');
+        if (parts.length === 2) {
+          return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+        }
+        return 0;
+      };
+      return parseTime(a.Time) - parseTime(b.Time);
     });
+    return filtered;
   } catch (e) {
     return [];
   }
@@ -218,6 +239,7 @@ function _serveDriverForm(token) {
   }
 
   var serviceCardsHtml = '';
+  var lastDate = '';
   services.forEach(function(svc, index) {
     var pickupLines = [];
     var dropoffLines = [];
@@ -235,17 +257,29 @@ function _serveDriverForm(token) {
 
     // Format service date
     var svcDate = '';
+    var svcDateKey = '';
     if (svc.Date) {
       try {
         var d = new Date(svc.Date);
         if (!isNaN(d.getTime())) {
           svcDate = _formatDateIT(d);
+          svcDateKey = svcDate;
         }
       } catch(e) {}
     }
+    if (!svcDate && svc.Date) {
+      svcDate = String(svc.Date);
+      svcDateKey = svcDate;
+    }
 
-    // Format time — if it's a raw time string like "07:10", display as "07:10"
-    var displayTime = svc.Time || '—';
+    // Add date separator when date changes
+    if (svcDateKey && svcDateKey !== lastDate) {
+      lastDate = svcDateKey;
+      serviceCardsHtml += '<div class="svc-date-sep">' + _escapeHtml(svcDate) + '</div>';
+    }
+
+    // Format time — replace dot with colon for display (e.g., "10.20" → "10:20")
+    var displayTime = svc.Time ? String(svc.Time).replace('.', ':') : '—';
 
     serviceCardsHtml +=
       '<div class="svc" id="svc-' + index + '" data-date="' + _escapeHtml(svc.Date || '') + '">' +
@@ -269,6 +303,7 @@ function _serveDriverForm(token) {
       '<div class="fg"><label>Diaria</label><select id="f-diaria-' + index + '"><option value="nessuna">Nessuna</option><option value="piena">Piena</option><option value="mezza">Mezza</option></select></div>' +
       '<div class="fg svc-notes"><label>Note</label><textarea id="f-note-' + index + '" placeholder="Note aggiuntive..."></textarea></div>' +
       '</div></div>' +
+      '<div class="sec-svc-btn"><button type="button" class="btn-svc" onclick="submitSingleService(' + index + ')">Invia Rapportino</button></div>' +
       '<input type="hidden" id="serviceId-' + index + '" value="' + _escapeHtml(svc.ID || '') + '">' +
       '</div>';
   });
@@ -287,40 +322,46 @@ function _serveDriverForm(token) {
     '<style>' +
     '*{margin:0;padding:0;box-sizing:border-box}' +
     'body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,sans-serif;max-width:600px;margin:0 auto;padding:20px 16px;background:#fafafa;color:#1a1a2e;-webkit-font-smoothing:antialiased;line-height:1.5}' +
-    '.hd{background:#1a1a2e;color:#fff;padding:32px 24px;border-radius:16px;margin-bottom:28px;text-align:center}' +
+    '.hd{background:#006948;color:#fff;padding:32px 24px;border-radius:16px;margin-bottom:28px;text-align:center}' +
     '.hd h1{font-size:20px;font-weight:700;letter-spacing:-.4px;margin-bottom:4px}' +
     '.hd .driver-name{font-size:15px;font-weight:600;opacity:.85;margin-bottom:4px}' +
     '.hd .meta{font-size:12px;opacity:.5;font-weight:400}' +
     '.sec{font-size:13px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;margin:28px 0 14px 0;padding-bottom:8px;border-bottom:1px solid #e5e7eb}' +
-    '.svc{background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .15s ease}' +
-    '.svc:hover{border-color:#c7d2fe;box-shadow:0 2px 8px rgba(0,0,0,.04)}' +
-    '.svc:has(input:checked){border-color:#4f46e5;background:#fafafe;box-shadow:0 0 0 3px rgba(79,70,229,.08)}' +
-    '.svc:has(input:checked) .svc-time{background:#4f46e5}' +
+    '.svc{background:#fff;border:1.5px solid #e0e0e0;border-radius:12px;padding:16px;margin-bottom:10px;transition:all .15s ease}' +
+    '.svc:hover{border-color:#c0c0c0;box-shadow:0 2px 8px rgba(0,0,0,.04)}' +
+    '.svc:has(input:checked){border-color:#006948;background:#f0faf6;box-shadow:0 0 0 3px rgba(0,105,72,.08)}' +
+    '.svc:has(input:checked) .svc-time{background:#006948}' +
     '.svc-hd{display:flex;align-items:center;gap:10px}' +
-    '.svc-hd input[type=checkbox]{width:18px;height:18px;accent-color:#4f46e5;flex-shrink:0}' +
-    '.svc-time{background:#374151;color:#fff;padding:3px 10px;border-radius:6px;font-weight:700;font-size:13px;transition:background .15s ease;white-space:nowrap}' +
-    '.svc-prod{font-weight:700;font-size:14px;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
-    '.svc-det{font-size:13px;color:#6b7280;line-height:1.7;margin-top:8px;padding-left:28px}' +
-    '.svc-det b{color:#374151;font-weight:600}' +
-    '.svc-date{margin-left:auto;font-size:11px;color:#6b7280;background:#f3f4f6;padding:2px 8px;border-radius:4px;white-space:nowrap;flex-shrink:0}' +
-    '.maps-link{display:inline-flex;align-items:center;gap:3px;color:#4f46e5;font-weight:600;font-size:12px;text-decoration:none;padding:2px 8px;background:#eef2ff;border-radius:6px;margin-left:4px;transition:all .12s ease;white-space:nowrap}' +
-    '.maps-link:hover{background:#e0e7ff;color:#4338ca}' +
+    '.svc-hd input[type=checkbox]{width:18px;height:18px;accent-color:#006948;flex-shrink:0}' +
+    '.svc-time{background:#1a1a1a;color:#fff;padding:3px 10px;border-radius:6px;font-weight:700;font-size:13px;transition:background .15s ease;white-space:nowrap}' +
+    '.svc-prod{font-weight:700;font-size:14px;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+    '.svc-det{font-size:13px;color:#5a5a5a;line-height:1.7;margin-top:8px;padding-left:28px}' +
+    '.svc-det b{color:#1a1a1a;font-weight:600}' +
+    '.svc-date-sep{font-size:13px;font-weight:700;color:#006948;text-transform:uppercase;letter-spacing:.8px;margin:20px 0 10px 0;padding:6px 12px;background:#f0faf6;border-radius:8px;border-left:3px solid #006948}' +
+    '.svc-date{margin-left:auto;font-size:11px;color:#5a5a5a;background:#f0f0f3;padding:2px 8px;border-radius:4px;white-space:nowrap;flex-shrink:0}' +
+    '.maps-link{display:inline-flex;align-items:center;gap:3px;color:#006948;font-weight:600;font-size:12px;text-decoration:none;padding:2px 8px;background:#e6f5ee;border-radius:6px;margin-left:4px;transition:all .12s ease;white-space:nowrap}' +
+    '.maps-link:hover{background:#cce9db;color:#005137}' +
     '.maps-link svg{flex-shrink:0}' +
     '.fg{margin-bottom:18px}' +
-    '.fg label{display:block;margin-bottom:5px;font-weight:600;font-size:13px;color:#374151}' +
-    '.req{color:#ef4444}' +
-    'input,select,textarea{width:100%;padding:12px 14px;border:1.5px solid #d1d5db;border-radius:10px;font-size:15px;font-family:inherit;color:#1a1a2e;background:#fff;transition:border-color .15s,box-shadow .15s}' +
-    'input:focus,select:focus,textarea:focus{outline:none;border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,.1)}' +
+    '.fg label{display:block;margin-bottom:5px;font-weight:600;font-size:13px;color:#1a1a1a}' +
+    '.req{color:#dc2626}' +
+    'input,select,textarea{width:100%;padding:12px 14px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:15px;font-family:inherit;color:#1a1a1a;background:#fff;transition:border-color .15s,box-shadow .15s}' +
+    'input:focus,select:focus,textarea:focus{outline:none;border-color:#006948;box-shadow:0 0 0 3px rgba(0,105,72,.1)}' +
     'textarea{height:80px;resize:vertical}' +
     'select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Cpath fill=\'%239ca3af\' d=\'M6 8L1 3h10z\'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}' +
     '.svc-fields-grid{display:flex;flex-direction:column;gap:0}' +
-    '.btn{width:100%;padding:14px;background:#1a1a2e;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s ease;margin-top:8px}' +
-    '.btn:hover{background:#2d2d4a;transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.12)}' +
+    '.btn-svc{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;background:#006948;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s ease;margin-top:10px}' +
+    '.btn-svc:hover{background:#005137;transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,105,72,.2)}' +
+    '.btn-svc:active{transform:translateY(0)}' +
+    '.btn-svc:disabled{background:#c0c0c0;cursor:not-allowed;transform:none;box-shadow:none}' +
+    '.btn{width:100%;padding:14px;background:#006948;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s ease;margin-top:8px}' +
+    '.btn:hover{background:#005137;transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,105,72,.15)}' +
     '.btn:active{transform:translateY(0)}' +
-    '.btn:disabled{background:#9ca3af;cursor:not-allowed;transform:none;box-shadow:none}' +
-    '.ok{background:#ecfdf5;border:1.5px solid #a7f3d0;border-radius:12px;padding:36px 24px;text-align:center}' +
-    '.ok h3{margin-bottom:6px;color:#059669;font-size:20px;font-weight:700}' +
-    '.ok p{color:#6b7280;font-size:15px}' +
+    '.btn:disabled{background:#c0c0c0;cursor:not-allowed;transform:none;box-shadow:none}' +
+    '.ok{background:#f0faf6;border:1.5px solid #a7f3d0;border-radius:12px;padding:36px 24px;text-align:center}' +
+    '.ok h3{margin-bottom:6px;color:#006948;font-size:20px;font-weight:700}' +
+    '.ok p{color:#5a5a5a;font-size:15px}' +
+    '.sec-svc-btn{display:flex;justify-content:flex-end;margin-top:4px}' +
     '@media(max-width:480px){body{padding:12px 10px}.hd{padding:24px 16px}.hd h1{font-size:18px}.svc{padding:14px 12px}.svc-hd{gap:8px}.svc-det{padding-left:0}.svc-prod{font-size:13px}}' +
     '</style></head><body>' +
     '<div class="hd"><h1>Rapportino Transport</h1>' +
@@ -347,7 +388,7 @@ function _serveDriverForm(token) {
     '  btn.disabled=true;' +
     '  btn.textContent="Invio in corso...";' +
     '  var checked=document.querySelectorAll("input[name=selectedServices]:checked");' +
-    '  if(!checked.length){alert("Seleziona almeno un servizio");btn.disabled=false;btn.textContent="Invia Rapportino";return false;}' +
+    '  if(!checked.length){showToast("Seleziona almeno un servizio","error");btn.disabled=false;btn.textContent="Invia Rapportino";return false;}' +
     '  var allData=[];' +
     '  checked.forEach(function(cb){' +
     '    var idx=parseInt(cb.value,10);' +
@@ -361,11 +402,34 @@ function _serveDriverForm(token) {
     '    });' +
     '    allData.push(d);' +
     '  });' +
+    '  submitData(allData, btn, "Invia Rapportino");' +
+    '  return false;' +
+    '}' +
+    'function submitSingleService(idx){' +
+    '  var svc=SERVICES[idx];' +
+    '  var d={serviceId:svc?svc.ID:"",dataServizio:svc?svc.Date||"":""};' +
+    '  var prefix="f-";' +
+    '  ["orarioInizio","orarioFine","kmTotali","diaria","note"].forEach(function(k){' +
+    '    var el=document.getElementById(prefix+k+"-"+idx);' +
+    '    if(!el)return;' +
+    '    d[k]=el.type==="number"?parseFloat(el.value)||0:el.value;' +
+    '  });' +
+    '  var btn=document.querySelector("#svc-"+idx+" .btn-svc");' +
+    '  if(btn){btn.disabled=true;btn.textContent="Invio...";}' +
+    '  submitData([d], btn, "Invia Rapportino");' +
+    '}' +
+    'function submitData(data, btn, resetText){' +
     '  google.script.run' +
     '    .withSuccessHandler(function(){document.getElementById("driverForm").style.display="none";document.getElementById("successMsg").style.display="block"})' +
-    '    .withFailureHandler(function(e){alert("Errore: "+e.message);btn.disabled=false;btn.textContent="Invia Rapportino"})' +
-    '    .submitDriverLinkResponse(TOKEN,allData);' +
-    '  return false;' +
+    '    .withFailureHandler(function(e){showToast("Errore: "+e.message,"error");if(btn){btn.disabled=false;btn.textContent=resetText;}})' +
+    '    .submitDriverLinkResponse(TOKEN,data);' +
+    '}' +
+    'function showToast(msg,type){' +
+    '  var t=document.createElement("div");' +
+    '  t.textContent=msg;' +
+    '  t.style.cssText="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:12px 20px;border-radius:10px;font-size:14px;font-weight:600;z-index:9999;transition:opacity .3s;"+(type==="error"?"background:#dc2626;color:#fff":"background:#006948;color:#fff");' +
+    '  document.body.appendChild(t);' +
+    '  setTimeout(function(){t.style.opacity="0";setTimeout(function(){t.remove()},300)},3000);' +
     '}' +
     '</script></body></html>';
 
