@@ -340,17 +340,21 @@ function _serveDriverForm(token) {
     dateRangeInfo = dateFrom + ' — ' + dateTo;
   }
 
-  var html = '<!DOCTYPE html><html><head><meta charset="utf-8">' +
-    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+  var html = '<!DOCTYPE html><html lang="it"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">' +
+    '<meta name="apple-mobile-web-app-capable" content="yes">' +
+    '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">' +
+    '<meta name="theme-color" content="#006948">' +
+    '<meta name="mobile-web-app-capable" content="yes">' +
     '<title>Rapportino Transport</title>' +
     '<style>' +
     '*{margin:0;padding:0;box-sizing:border-box}' +
-    'body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,sans-serif;max-width:600px;margin:0 auto;padding:20px 16px;background:#fafafa;color:#1a1a2e;-webkit-font-smoothing:antialiased;line-height:1.5}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,sans-serif;max-width:600px;margin:0 auto;padding:20px 16px;padding:20px calc(16px + env(safe-area-inset-right)) 20px calc(16px + env(safe-area-inset-left));background:#fafafa;color:#1a1a2e;-webkit-font-smoothing:antialiased;line-height:1.5;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}' +
     '.hd{background:#006948;color:#fff;padding:32px 24px;border-radius:16px;margin-bottom:28px;text-align:center}' +
     '.hd h1{font-size:20px;font-weight:700;letter-spacing:-.4px;margin-bottom:4px}' +
     '.hd .driver-name{font-size:15px;font-weight:600;opacity:.85;margin-bottom:4px}' +
     '.hd .meta{font-size:12px;opacity:.5;font-weight:400}' +
-    '.sec{font-size:13px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;margin:28px 0 14px 0;padding-bottom:8px;border-bottom:1px solid #e5e7eb}' +
+    '.sec{font-size:13px;font-weight:700;color:#5a5a5a;text-transform:uppercase;letter-spacing:.8px;margin:28px 0 14px 0;padding-bottom:8px;border-bottom:1px solid #e0e0e0}' +
     '.svc{background:#fff;border:1.5px solid #e0e0e0;border-radius:12px;padding:16px;margin-bottom:10px;transition:all .15s ease}' +
     '.svc:hover{border-color:#c0c0c0;box-shadow:0 2px 8px rgba(0,0,0,.04)}' +
     '.svc:has(input:checked){border-color:#006948;background:#f0faf6;box-shadow:0 0 0 3px rgba(0,105,72,.08)}' +
@@ -386,7 +390,30 @@ function _serveDriverForm(token) {
     '.ok h3{margin-bottom:6px;color:#006948;font-size:20px;font-weight:700}' +
     '.ok p{color:#5a5a5a;font-size:15px}' +
     '.sec-svc-btn{display:flex;justify-content:flex-end;margin-top:4px}' +
-    '@media(max-width:480px){body{padding:12px 10px}.hd{padding:24px 16px}.hd h1{font-size:18px}.svc{padding:14px 12px}.svc-hd{gap:8px}.svc-det{padding-left:0}.svc-prod{font-size:13px}}' +
+    '@media(max-width:480px){' +
+    'body{padding:16px 14px;font-size:15px}' +
+    '.hd{padding:28px 18px;border-radius:14px;margin-bottom:24px}' +
+    '.hd h1{font-size:19px;margin-bottom:6px}' +
+    '.hd .driver-name{font-size:16px}' +
+    '.hd .meta{font-size:13px}' +
+    '.sec{font-size:12px;margin:24px 0 14px 0}' +
+    '.svc{padding:16px 14px;border-radius:14px;margin-bottom:12px}' +
+    '.svc-hd{gap:10px;flex-wrap:wrap}' +
+    '.svc-hd input[type=checkbox]{width:22px;height:22px}' +
+    '.svc-time{font-size:14px;padding:4px 12px}' +
+    '.svc-prod{font-size:14px}' +
+    '.svc-det{padding-left:0;font-size:14px;line-height:1.8}' +
+    '.svc-det b{font-size:14px}' +
+    '.svc-date-sep{font-size:14px;padding:10px 14px;margin:24px 0 12px 0;border-radius:10px}' +
+    '.svc-date{font-size:12px;padding:3px 10px}' +
+    '.btn-svc{width:100%;min-height:48px;font-size:15px;padding:14px 20px;border-radius:12px}' +
+    '.maps-link{font-size:13px;padding:4px 12px}' +
+    '.fg label{font-size:14px}' +
+    'input,select,textarea{font-size:16px !important;padding:14px 16px;border-radius:12px}' +
+    '.ok{padding:40px 20px;border-radius:14px}' +
+    '.ok h3{font-size:22px}' +
+    '.ok p{font-size:16px}' +
+    '}' +
     '</style></head><body>' +
     '<div class="hd"><h1>Rapportino Transport</h1>' +
     '<div class="driver-name">' + _escapeHtml(driverName) + '</div>' +
@@ -434,7 +461,9 @@ function _serveDriverForm(token) {
     '}' +
     '</script></body></html>';
 
-  return HtmlService.createHtmlOutput(html).setTitle('Rapportino Transport');
+  return HtmlService.createHtmlOutput(html)
+    .setTitle('Rapportino Transport')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 // ============================================================================
