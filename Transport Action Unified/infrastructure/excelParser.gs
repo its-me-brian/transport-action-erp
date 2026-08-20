@@ -25,6 +25,31 @@ function cleanCellText(cellText) {
 }
 
 /**
+ * Convert a Google Sheets cell value to a clean string.
+ * Handles Date objects (from time/date cells) by formatting them properly
+ * instead of letting String() produce "Wed Jul 07 2026 08:15:00...".
+ * @param {*} cellValue - Raw cell value from getValues()
+ * @returns {string} Clean string representation
+ */
+function _cellToStr(cellValue) {
+  if (cellValue === null || cellValue === undefined) return '';
+  if (cellValue instanceof Date) {
+    // Check if it looks like a time-only value (hours < 24, no year significance)
+    const h = cellValue.getHours();
+    const m = cellValue.getMinutes();
+    // If it's just a time (no significant date component), return HH:mm
+    if (cellValue.getFullYear() === 1899 || (h < 24 && cellValue.getDate() === 1)) {
+      return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+    }
+    // Otherwise it's a full date — return dd/MM/yyyy
+    const day = String(cellValue.getDate()).padStart(2, '0');
+    const month = String(cellValue.getMonth() + 1).padStart(2, '0');
+    return day + '/' + month + '/' + cellValue.getFullYear();
+  }
+  return String(cellValue).trim();
+}
+
+/**
  * Parsea la fecha del header del Transport List.
  * Formatos soportados:
  *   "Transport List 5 Tuesday July 21th"
@@ -258,15 +283,15 @@ function _parseTransportListRows(allData, fileName, importSeq) {
   
   while (i < allData.length) {
     const row = allData[i];
-    const vehicleCell = String(row[colMap.vehicle] || '').trim();
-    const driverCell = colMap.driver !== undefined ? String(row[colMap.driver] || '').trim() : '';
-    const timeCell = colMap.time !== undefined ? String(row[colMap.time] || '').trim() : '';
-    const passengerCell = colMap.passengers !== undefined ? String(row[colMap.passengers] || '').trim() : '';
-    const fromCell = colMap.from !== undefined ? String(row[colMap.from] || '').trim() : '';
-    const toCell = colMap.to !== undefined ? String(row[colMap.to] || '').trim() : '';
-    const servicioCell = colMap.servicio !== undefined ? String(row[colMap.servicio] || '').trim() : '';
-    const flightCell = colMap.flightInfo !== undefined ? String(row[colMap.flightInfo] || '').trim() : '';
-    const sectionCell = colMap.section !== undefined ? String(row[colMap.section] || '').trim() : '';
+    const vehicleCell = _cellToStr(row[colMap.vehicle]);
+    const driverCell = colMap.driver !== undefined ? _cellToStr(row[colMap.driver]) : '';
+    const timeCell = colMap.time !== undefined ? _cellToStr(row[colMap.time]) : '';
+    const passengerCell = colMap.passengers !== undefined ? _cellToStr(row[colMap.passengers]) : '';
+    const fromCell = colMap.from !== undefined ? _cellToStr(row[colMap.from]) : '';
+    const toCell = colMap.to !== undefined ? _cellToStr(row[colMap.to]) : '';
+    const servicioCell = colMap.servicio !== undefined ? _cellToStr(row[colMap.servicio]) : '';
+    const flightCell = colMap.flightInfo !== undefined ? _cellToStr(row[colMap.flightInfo]) : '';
+    const sectionCell = colMap.section !== undefined ? _cellToStr(row[colMap.section]) : '';
     
     // Si la fila está vacía, saltar
     const allEmpty = !vehicleCell && !driverCell && !timeCell && !passengerCell && !fromCell && !toCell && !servicioCell;
@@ -402,7 +427,7 @@ function _parseTransportListRows(allData, fileName, importSeq) {
     const mappedIndices = new Set([colMap.vehicle, colMap.driver, colMap.time, colMap.passengers, colMap.from, colMap.to, colMap.servicio, colMap.flightInfo, colMap.section].filter(v => v !== undefined));
     for (let c = 0; c < row.length; c++) {
       if (mappedIndices.has(c)) continue;
-      const cellStr = String(row[c] || '').trim();
+      const cellStr = _cellToStr(row[c]);
       const urlMatch = cellStr.match(mapsUrlRegex);
       if (urlMatch) {
         servicio.notes = servicio.notes ? servicio.notes + ' | maps:' + urlMatch[0] : 'maps:' + urlMatch[0];
@@ -420,12 +445,12 @@ function _parseTransportListRows(allData, fileName, importSeq) {
     let j = i + 1;
     while (j < allData.length) {
       const subRow = allData[j];
-      const sub0 = colMap.vehicle !== undefined ? String(subRow[colMap.vehicle] || '').trim() : '';
-      const sub1 = colMap.driver !== undefined ? String(subRow[colMap.driver] || '').trim() : '';
-      const sub2 = colMap.time !== undefined ? String(subRow[colMap.time] || '').trim() : '';
-      const sub4 = colMap.passengers !== undefined ? String(subRow[colMap.passengers] || '').trim() : '';
-      const sub5 = colMap.from !== undefined ? String(subRow[colMap.from] || '').trim() : '';
-      const sub6 = colMap.to !== undefined ? String(subRow[colMap.to] || '').trim() : '';
+      const sub0 = colMap.vehicle !== undefined ? _cellToStr(subRow[colMap.vehicle]) : '';
+      const sub1 = colMap.driver !== undefined ? _cellToStr(subRow[colMap.driver]) : '';
+      const sub2 = colMap.time !== undefined ? _cellToStr(subRow[colMap.time]) : '';
+      const sub4 = colMap.passengers !== undefined ? _cellToStr(subRow[colMap.passengers]) : '';
+      const sub5 = colMap.from !== undefined ? _cellToStr(subRow[colMap.from]) : '';
+      const sub6 = colMap.to !== undefined ? _cellToStr(subRow[colMap.to]) : '';
       
       // Detectar si es inicio de nuevo servicio
       const isNewService = (sub0 && sub1 && sub2 && !sub0.startsWith('+') && 
@@ -443,7 +468,7 @@ function _parseTransportListRows(allData, fileName, importSeq) {
           vehicleType: servicio.vehicleType,
           driver: driverCell,
           driverPhone: servicio.driverPhone,
-          time: sub2 || sub0 === 'THEN' ? (colMap.time !== undefined ? String(subRow[colMap.time] || '').trim() : '') : servicio.time,
+          time: sub2 || sub0 === 'THEN' ? (colMap.time !== undefined ? _cellToStr(subRow[colMap.time]) : '') : servicio.time,
           passengers: [],
           passengerRoles: [],
           pickupLines: [],

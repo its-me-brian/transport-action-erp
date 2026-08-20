@@ -388,6 +388,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
   const [dateStr, setDateStr] = useState<string>('');
   const [services, setServices] = useState<TransportService[]>([]);
   const [footerContacts, setFooterContacts] = useState<{name: string; role: string; phone: string; email: string}[]>([]);
+  const [fileUrl, setFileUrl] = useState<string>('');
   
   // Edit state
   const [editingCell, setEditingCell] = useState<{ rowId: string; field: string } | null>(null);
@@ -626,6 +627,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
       setProduction(result.production || '');
       setProjectName(result.projectName || '');
       setTransportCompany(result.transportCompany || '');
+      setFileUrl(result.fileUrl || '');
       // Close any history preview when loading a new transport
       setViewingHistory(null);
 
@@ -1072,6 +1074,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
         clientId: importModalClientId || undefined,
         projectId: importModalProjectId || undefined,
         operatingCompany: importModalOperatingCompany || 'TA',
+        fileUrl: fileUrl || undefined,
       });
 
       if (result.error) {
@@ -1136,6 +1139,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
           projectName: proj?.name || projectName || '',
           projectId: selectedProjectId,
           operatingCompany: importModalOperatingCompany || 'TA',
+          fileUrl: fileUrl || undefined,
         });
 
         if (result.error) {
@@ -1151,6 +1155,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
           production: production || '',
           projectName: projectName || '',
           operatingCompany: importModalOperatingCompany || 'TA',
+          fileUrl: fileUrl || undefined,
         });
 
         if (result.error) {

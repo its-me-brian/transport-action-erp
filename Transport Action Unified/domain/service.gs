@@ -114,8 +114,8 @@ const ServiceRepository = {
       if (driver) driverName = driver.Name || '';
     }
     
-    // Resolve vehicle type from VehicleID
-    let vehicleType = '';
+    // Resolve vehicle type: first from VehicleID (linked vehicle), fallback to entity.VehicleType (imported value)
+    let vehicleType = entity.VehicleType || '';
     if (entity.VehicleID) {
       const vehicle = VehicleRepository.getById(entity.VehicleID);
       if (vehicle) vehicleType = vehicle.Type || '';

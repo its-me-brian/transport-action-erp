@@ -38,6 +38,7 @@ const TransportListRepository = {
       TotalServices: data.TotalServices || 0,
       ImportedBy: data.ImportedBy || '',
       Notes: data.Notes || '',
+      FileURL: data.FileURL || '',
       CreatedAt: now
     });
   },
@@ -79,6 +80,7 @@ const TransportListRepository = {
       importedBy: entity.ImportedBy,
       notes: entity.Notes,
       dateRange: dateRange,
+      fileURL: entity.FileURL || '',
       createdAt: entity.CreatedAt
     };
   }
@@ -111,6 +113,19 @@ function apiCreateTransportList(data) {
 // ============================================================================
 // TRANSPORT LIST — Upload & Import
 // ============================================================================
+
+/**
+ * Get or create the "Transport Lists Archive" folder in Google Drive.
+ * Stores original Excel files for record-keeping.
+ */
+function _getOrCreateArchiveFolder() {
+  var folderName = 'Transport Lists Archive';
+  var folders = DriveApp.getFoldersByName(folderName);
+  if (folders.hasNext()) {
+    return folders.next();
+  }
+  return DriveApp.createFolder(folderName);
+}
 
 /**
  * Get next import sequence number for a given date prefix.
@@ -148,9 +163,15 @@ function uploadTransportListFile(fileData, fileName) {
     
     var result = parseTransportListExcel(tempFile.getId(), importSeq);
     
-    tempFile.setTrashed(true);
+    if (result.error) {
+      tempFile.setTrashed(true);
+      return result;
+    }
     
-    if (result.error) return result;
+    // Archive: move to "Transport Lists Archive" folder instead of trashing
+    var archiveFolder = _getOrCreateArchiveFolder();
+    tempFile.setName(today + '-' + String(importSeq).padStart(2, '0') + '_' + fileName);
+    tempFile.moveTo(archiveFolder);
     
     return {
       success: true,
@@ -164,6 +185,7 @@ function uploadTransportListFile(fileData, fileName) {
       servicios: result.servicios,
       fileName: fileName,
       importDate: new Date().toISOString(),
+      fileUrl: tempFile.getUrl(),
       _debug: result._debug || null
     };
     
@@ -483,7 +505,8 @@ function apiImportTransportListWithProject(data) {
       TransportCompany: '',
       TotalServices: servicesCreated,
       ImportedBy: '',
-      Notes: 'Imported via domain endpoint'
+      Notes: 'Imported via domain endpoint',
+      FileURL: data.fileUrl || ''
     });
     
     _dispatchEvent({

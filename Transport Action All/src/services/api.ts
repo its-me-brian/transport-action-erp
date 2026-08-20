@@ -655,6 +655,7 @@ export async function importTransportListWithProject(data: {
   clientId?: string;
   projectId?: string;
   operatingCompany: string;
+  fileUrl?: string;
 }): Promise<{ success: boolean; servicesCreated?: number; clientId?: string; projectId?: string; error?: string }> {
   return gasPostWithRetry('importTransportListWithProject', data);
 }
