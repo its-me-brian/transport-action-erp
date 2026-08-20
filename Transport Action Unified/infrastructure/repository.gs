@@ -9,6 +9,7 @@
 /**
  * Obtiene todas las filas de una hoja como array de objetos.
  * La primera fila son los headers.
+ * Excluye registros soft-deleted (DeletedAt set).
  */
 function _getAll(sheetName) {
   const sheet = getSheet(sheetName);
@@ -17,6 +18,7 @@ function _getAll(sheetName) {
 
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+  const deletedAtCol = headers.indexOf('DeletedAt');
 
   return data.map(row => {
     const obj = {};
@@ -24,11 +26,16 @@ function _getAll(sheetName) {
       obj[header] = row[i];
     });
     return obj;
+  }).filter(obj => {
+    // Exclude soft-deleted records
+    if (deletedAtCol >= 0 && obj.DeletedAt) return false;
+    return true;
   });
 }
 
 /**
  * Obtiene una fila por ID (columna A).
+ * Excluye registros soft-deleted.
  */
 function _getById(sheetName, id) {
   const sheet = getSheet(sheetName);
@@ -39,10 +46,13 @@ function _getById(sheetName, id) {
   const idCol = headers.indexOf('ID');
   if (idCol === -1) return null;
 
+  const deletedAtCol = headers.indexOf('DeletedAt');
   const data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
 
   for (let i = 0; i < data.length; i++) {
     if (String(data[i][idCol]) === String(id)) {
+      // Skip soft-deleted
+      if (deletedAtCol >= 0 && data[i][deletedAtCol]) return null;
       const obj = {};
       headers.forEach((header, j) => {
         obj[header] = data[i][j];
@@ -66,6 +76,7 @@ function _find(sheetName, filter) {
 
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+  const deletedAtCol = headers.indexOf('DeletedAt');
 
   const toObj = (row) => {
     const obj = {};
@@ -73,9 +84,14 @@ function _find(sheetName, filter) {
     return obj;
   };
 
+  const isNotDeleted = (row) => {
+    if (deletedAtCol >= 0 && row[deletedAtCol]) return false;
+    return true;
+  };
+
   // Callback pattern: (row) => boolean
   if (typeof filter === 'function') {
-    return data.filter(row => filter(toObj(row))).map(toObj);
+    return data.filter(row => isNotDeleted(row) && filter(toObj(row))).map(toObj);
   }
 
   // Object pattern: { fieldName: value }
@@ -91,6 +107,10 @@ function _find(sheetName, filter) {
     return Object.entries(filterCols).every(([colIdx, val]) => {
       return String(row[colIdx]) === String(val);
     });
+  }).filter(row => {
+    // Exclude soft-deleted records
+    if (deletedAtCol >= 0 && row[deletedAtCol]) return false;
+    return true;
   }).map(toObj);
 }
 
@@ -202,7 +222,127 @@ function _update(sheetName, id, changes) {
 }
 
 /**
- * Elimina una fila por ID.
+ * Soft delete: marca un registro como eliminado sin borrarlo.
+ * Los queries automáticos lo excluyen.
+ */
+function _softDelete(sheetName, id) {
+  return _update(sheetName, id, { DeletedAt: new Date().toISOString() });
+}
+
+/**
+ * Dependency check: verifica si una entidad tiene dependientes antes de borrar.
+ * Retorna { canDelete: boolean, dependencies: Array<{sheet, count}> }
+ */
+function _checkDependencies(entityType, entityId) {
+  const dependencies = [];
+  
+  // Map entity type to its ID prefix and the sheets that reference it
+  const _DEP_MAP = {
+    'Driver': {
+      idPrefix: 'DRV',
+      references: [
+        { sheet: 'Services', field: 'DriverID' },
+        { sheet: 'DriverReports', field: 'DriverID' },
+        { sheet: 'DriverAdvances', field: 'DriverID' },
+        { sheet: 'RapportinoDrivers', field: 'DriverID' },
+        { sheet: 'SupplierRates', field: 'SupplierID', condition: row => row.SupplierType === 'internal_driver' },
+        { sheet: 'DriverLinks', field: 'DriverID' },
+        { sheet: 'DriverLinkResponses', field: 'DriverID' }
+      ]
+    },
+    'Client': {
+      idPrefix: 'CLI',
+      references: [
+        { sheet: 'Projects', field: 'ClientID' },
+        { sheet: 'RateCards', field: 'ClientID' },
+        { sheet: 'RapportinoClients', field: 'ClientID' }
+      ]
+    },
+    'Project': {
+      idPrefix: 'PRJ',
+      references: [
+        { sheet: 'Services', field: 'ProjectID' },
+        { sheet: 'RateCards', field: 'ProjectID' },
+        { sheet: 'RapportinoClients', field: 'ProjectID' },
+        { sheet: 'RapportinoDrivers', field: 'ProjectID' },
+        { sheet: 'RapportinoCollaborators', field: 'ProjectID' },
+        { sheet: 'SupplierRates', field: 'ProjectID' }
+      ]
+    },
+    'Collaborator': {
+      idPrefix: 'COL',
+      references: [
+        { sheet: 'Drivers', field: 'CollaboratorID' },
+        { sheet: 'SupplierRates', field: 'SupplierID', condition: row => row.SupplierType === 'collaborator' },
+        { sheet: 'RapportinoCollaborators', field: 'CollaboratorID' }
+      ]
+    },
+    'Vehicle': {
+      idPrefix: 'VEH',
+      references: [
+        { sheet: 'Services', field: 'VehicleID' }
+      ]
+    }
+  };
+  
+  const config = _DEP_MAP[entityType];
+  if (!config) return { canDelete: true, dependencies: [] };
+  
+  for (const ref of config.references) {
+    try {
+      let rows = _find(ref.sheet, { [ref.field]: entityId });
+      if (ref.condition) {
+        rows = rows.filter(ref.condition);
+      }
+      if (rows.length > 0) {
+        dependencies.push({ sheet: ref.sheet, count: rows.length });
+      }
+    } catch (e) {
+      // Sheet might not exist — skip
+    }
+  }
+  
+  return {
+    canDelete: dependencies.length === 0,
+    dependencies
+  };
+}
+
+/**
+ * Safe delete: verifica dependencias y hace soft delete.
+ * Retorna { success, deleted, dependencies? }
+ */
+function _safeDelete(entityType, entityId) {
+  const check = _checkDependencies(entityType, entityId);
+  
+  if (!check.canDelete) {
+    return {
+      success: false,
+      deleted: false,
+      dependencies: check.dependencies,
+      error: 'Cannot delete: ' + check.dependencies.map(d => d.sheet + ' (' + d.count + ')').join(', ')
+    };
+  }
+  
+  // Find the sheet name for this entity type
+  const sheetMap = {
+    'Driver': 'Drivers',
+    'Client': 'Clients',
+    'Project': 'Projects',
+    'Collaborator': 'Collaborators',
+    'Vehicle': 'Vehicles'
+  };
+  
+  const sheetName = sheetMap[entityType];
+  if (!sheetName) return { success: false, error: 'Unknown entity type: ' + entityType };
+  
+  _softDelete(sheetName, entityId);
+  return { success: true, deleted: true };
+}
+
+/**
+ * Elimina una fila por ID (PHYSICAL — only for audit/temp data).
+ * For normal entities, use _safeDelete or _softDelete instead.
  */
 function _delete(sheetName, id) {
   const sheet = getSheet(sheetName);

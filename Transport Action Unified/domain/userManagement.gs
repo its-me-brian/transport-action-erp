@@ -276,7 +276,7 @@ function umDeleteUser(token, userId) {
             payload: { username: data[i][1], role: data[i][4] }
           });
 
-          sh.deleteRow(i + 1);
+          _softDelete('Users', userId);
           return { success: true, message: 'User deleted' };
         }
       }

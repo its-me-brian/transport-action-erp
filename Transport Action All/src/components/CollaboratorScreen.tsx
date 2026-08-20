@@ -9,7 +9,8 @@ import {
   Trash2, 
   Pencil,
   CheckCircle,
-  PauseCircle
+  PauseCircle,
+  Truck
 } from 'lucide-react';
 import { ScreenId } from '../types';
 import { 
@@ -24,7 +25,11 @@ import {
   updateSupplierRate,
   deleteSupplierRate,
   getVehicleTypes,
-  getServiceTypes
+  getServiceTypes,
+  getDriversByCollaborator,
+  updateDriver,
+  getDrivers,
+  DriverRecord
 } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -59,11 +64,30 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
   const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
   const [serviceTypes, setServiceTypes] = useState<string[]>([]);
 
+  // Linked Drivers for current collaborator being edited
+  const [linkedDrivers, setLinkedDrivers] = useState<DriverRecord[]>([]);
+  const [allDrivers, setAllDrivers] = useState<DriverRecord[]>([]);
+  const [loadingDrivers, setLoadingDrivers] = useState(false);
+
   useEffect(() => {
     loadCollaborators();
     getVehicleTypes().then(vt => setVehicleTypes(vt)).catch(() => {});
     getServiceTypes().then(st => setServiceTypes(st)).catch(() => {});
+    // Load all drivers for linking
+    getDrivers().then(list => setAllDrivers(Array.isArray(list) ? list : [])).catch(() => {});
   }, []);
+
+  const loadLinkedDrivers = async (collaboratorId: string) => {
+    setLoadingDrivers(true);
+    try {
+      const result = await getDriversByCollaborator(collaboratorId);
+      setLinkedDrivers(Array.isArray(result) ? result : []);
+    } catch (err) {
+      console.error('Error loading linked drivers:', err);
+    } finally {
+      setLoadingDrivers(false);
+    }
+  };
 
   const loadCollaborators = async () => {
     setIsLoading(true);
@@ -92,6 +116,36 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
       showToast('Error al cargar tarifas', 'error');
     } finally {
       setLoadingRates(false);
+    }
+  };
+
+  const handleLinkDriver = async (driverId: string) => {
+    if (!editCollaborator?.id) return;
+    try {
+      const result = await updateDriver(driverId, { collaboratorId: editCollaborator.id });
+      if (result.error) {
+        showToast('Error: ' + result.error, 'error');
+        return;
+      }
+      showToast('Driver linked', 'success');
+      await loadLinkedDrivers(editCollaborator.id);
+    } catch (err) {
+      showToast('Error: ' + (err.message || err), 'error');
+    }
+  };
+
+  const handleUnlinkDriver = async (driverId: string) => {
+    if (!editCollaborator?.id) return;
+    try {
+      const result = await updateDriver(driverId, { collaboratorId: '' });
+      if (result.error) {
+        showToast('Error: ' + result.error, 'error');
+        return;
+      }
+      showToast('Driver unlinked', 'success');
+      await loadLinkedDrivers(editCollaborator.id);
+    } catch (err) {
+      showToast('Error: ' + (err.message || err), 'error');
     }
   };
 
@@ -130,6 +184,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
         if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
       }
       setEditCollaborator(null);
+      setLinkedDrivers([]);
       await loadCollaborators();
     } catch (err) {
       showToast('Error: ' + (err.message || err), 'error');
@@ -300,7 +355,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
                   Rates
                 </button>
                 <button
-                  onClick={() => { setEditCollaborator(c); setIsNew(false); }}
+                  onClick={() => { setEditCollaborator(c); setIsNew(false); loadLinkedDrivers(c.id); }}
                   className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-colors cursor-pointer"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -388,10 +443,58 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
                 </button>
                 <span className="text-[12px] text-on-surface">{editCollaborator.active ? 'Active' : 'Inactive'}</span>
               </div>
+
+              {/* Linked Drivers Section — only for existing collaborators */}
+              {!isNew && editCollaborator.id && (
+                <div className="border-t border-outline-variant pt-3 mt-1">
+                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-2">Linked Drivers</label>
+                  {loadingDrivers ? (
+                    <div className="flex items-center gap-2 text-[11px] text-on-surface-variant py-2">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Loading drivers...
+                    </div>
+                  ) : linkedDrivers.length === 0 ? (
+                    <p className="text-[11px] text-on-surface-variant py-1">No drivers linked to this provider</p>
+                  ) : (
+                    <div className="space-y-1 mb-2">
+                      {linkedDrivers.map(d => (
+                        <div key={d.id} className="flex items-center justify-between bg-surface-container rounded-lg px-3 py-1.5 text-[12px]">
+                          <div className="flex items-center gap-2">
+                            <Truck className="w-3 h-3 text-on-surface-variant" />
+                            <span className="text-on-surface font-medium">{d.name}</span>
+                            {d.phone && <span className="text-on-surface-variant text-[10px]">{d.phone}</span>}
+                          </div>
+                          <button onClick={() => handleUnlinkDriver(d.id)}
+                            className="text-[10px] text-red-500 hover:text-red-600 font-medium cursor-pointer">
+                            Unlink
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Add driver dropdown */}
+                  {(() => {
+                    const linkedIds = new Set(linkedDrivers.map(d => d.id));
+                    const available = allDrivers.filter(d => !linkedIds.has(d.id));
+                    if (available.length === 0) return null;
+                    return (
+                      <select
+                        value=""
+                        onChange={e => { if (e.target.value) handleLinkDriver(e.target.value); }}
+                        className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[12px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
+                      >
+                        <option value="">— Add driver —</option>
+                        {available.map(d => (
+                          <option key={d.id} value={d.id}>{d.name}{d.phone ? ` (${d.phone})` : ''}</option>
+                        ))}
+                      </select>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">
-              <button onClick={() => setEditCollaborator(null)} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors cursor-pointer">Cancel</button>
+              <button onClick={() => { setEditCollaborator(null); setLinkedDrivers([]); }} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors cursor-pointer">Cancel</button>
               <button onClick={handleSave} disabled={isSaving || !editCollaborator.name?.trim()}
                 className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
                 {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}

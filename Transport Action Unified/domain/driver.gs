@@ -26,6 +26,10 @@ const DriverRepository = {
     return drivers.find(d => d.Name === name);
   },
 
+  getByCollaborator(collaboratorId) {
+    return _find(this.SHEET, row => row.CollaboratorID === collaboratorId);
+  },
+
   getByPhone(phone) {
     const drivers = _getAll(this.SHEET);
     return drivers.find(d => d.Phone === phone || d.WhatsApp === phone);
@@ -114,6 +118,11 @@ function apiGetDriver(id) {
   return DriverRepository.toDTO(entity);
 }
 
+function apiGetDriversByCollaborator(collaboratorId) {
+  if (!collaboratorId) throw new ValidationError('collaboratorId is required');
+  return DriverRepository.getByCollaborator(collaboratorId).map(DriverRepository.toDTO);
+}
+
 function apiCreateDriver(data) {
   if (!data.Name) throw new ValidationError('Name is required');
   if (!data.Phone) throw new ValidationError('Phone is required');
@@ -133,7 +142,10 @@ function apiUpdateDriver(id, changes) {
 function apiDeleteDriver(id) {
   const entity = DriverRepository.getById(id);
   if (!entity) throw new NotFoundError('Driver', id);
-  _delete(DriverRepository.SHEET, id);
+  const result = _safeDelete('Driver', id);
+  if (!result.success) {
+    return { success: false, error: result.error, dependencies: result.dependencies };
+  }
   _dispatchEvent({ type: 'driver.deleted', entity: 'Driver', entityId: id });
   return { success: true };
 }
@@ -198,12 +210,22 @@ function apiCleanupDrivers() {
     var data = sh.getRange(2, 2, lastRow - 1, 1).getValues(); // Column B = name
     var rejectPatterns = /^(ad's|assistant|as per|transport|coordinator|manager|captain|dept|department|office|ops|operations|vacancy|unassigned|tbd|n\/a)/i;
     
+    // Get headers to find ID column
+    var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+    var idCol = headers.indexOf('ID');
+    if (idCol === -1) return { error: 'ID column not found' };
+    
+    var idData = sh.getRange(2, idCol + 1, lastRow - 1, 1).getValues();
+    
     var removed = 0;
     for (var i = data.length - 1; i >= 0; i--) {
       var name = String(data[i][0] || '').trim();
       if (!name || rejectPatterns.test(name)) {
-        sh.deleteRow(i + 2); // +2 because we started at row 2 and 0-indexed
-        removed++;
+        var driverId = String(idData[i][0] || '').trim();
+        if (driverId) {
+          _softDelete(SHEETS.Drivers, driverId);
+          removed++;
+        }
       }
     }
     

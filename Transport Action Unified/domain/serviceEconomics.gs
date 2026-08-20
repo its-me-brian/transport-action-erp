@@ -88,10 +88,14 @@ const ServiceEconomics = {
       }
     }
 
-    // 4. NOCTURNIDAD — per-hour calculation (9:30pm - 6:30am = €10/h)
-    if (driverReport && driverReport.isNotturno && driverReport.startTime && driverReport.endTime) {
+    // 4. NOCTURNIDAD — per-hour calculation (21:30 - 06:30)
+    // AUTO-CALCULATED from service hours — no checkbox needed
+    // Admin can still override via isNotturno flag (force enable/disable)
+    if (driverReport && driverReport.startTime && driverReport.endTime) {
       const nightHours = this._calculateNightHours(driverReport.startTime, driverReport.endTime);
-      if (nightHours > 0) {
+      // Admin override: isNotturno === false means "force disable night fee"
+      const isNightDisabled = driverReport.isNotturno === false;
+      if (nightHours > 0 && !isNightDisabled) {
         const nightRate = rateCard.NightFee > 0 ? rateCard.NightFee : 10; // default €10/h
         items.push(this._createBreakdownItem(
           'Night',
@@ -104,14 +108,16 @@ const ServiceEconomics = {
       }
     }
 
-    // 5. FESTIVO — 50% of base price
+    // 5. FESTIVO — HolidayFee from RateCard, fallback to 50% of base price
     if (driverReport && driverReport.isFestivo && basePrice > 0) {
-      const holidayAmount = basePrice * 0.5;
+      const holidayRate = rateCard.HolidayFee > 0 ? rateCard.HolidayFee : basePrice * 0.5;
       items.push(this._createBreakdownItem(
         'Holiday',
-        'Festivo (50% de €' + basePrice + ')',
+        rateCard.HolidayFee > 0
+          ? 'Festivo (€' + holidayRate + ')'
+          : 'Festivo (50% de €' + basePrice + ')',
         1,
-        holidayAmount,
+        holidayRate,
         rateCard.ID,
         'rate_card'
       ));
@@ -258,10 +264,12 @@ const ServiceEconomics = {
       }
     }
 
-    // 4. NOCTURNIDAD (proveedor) — per-hour calculation (9:30pm - 6:30am)
-    if (driverReport && driverReport.isNotturno && driverReport.startTime && driverReport.endTime) {
+    // 4. NOCTURNIDAD (proveedor) — per-hour calculation (21:30 - 06:30)
+    // AUTO-CALCULATED from service hours — same logic as revenue side
+    if (driverReport && driverReport.startTime && driverReport.endTime) {
       const nightHours = this._calculateNightHours(driverReport.startTime, driverReport.endTime);
-      if (nightHours > 0) {
+      const isNightDisabled = driverReport.isNotturno === false;
+      if (nightHours > 0 && !isNightDisabled) {
         const nightRate = supplierRate.NightExtra > 0 ? supplierRate.NightExtra : 10; // default €10/h
         items.push(this._createCostItem(
           'Night',
@@ -273,13 +281,15 @@ const ServiceEconomics = {
       }
     }
 
-    // 5. FESTIVO (proveedor) — 50% of base rate
+    // 5. FESTIVO (proveedor) — HolidayExtra from SupplierRate, fallback to 50% of base
     if (driverReport && driverReport.isFestivo && supplierRate.BaseRate > 0) {
-      const holidayAmount = supplierRate.BaseRate * 0.5;
+      const holidayRate = supplierRate.HolidayExtra > 0 ? supplierRate.HolidayExtra : supplierRate.BaseRate * 0.5;
       items.push(this._createCostItem(
         'Holiday',
-        'Festivo proveedor (50% de €' + supplierRate.BaseRate + ')',
-        holidayAmount,
+        supplierRate.HolidayExtra > 0
+          ? 'Festivo proveedor (€' + holidayRate + ')'
+          : 'Festivo proveedor (50% de €' + supplierRate.BaseRate + ')',
+        holidayRate,
         driverId,
         'driver_rate'
       ));

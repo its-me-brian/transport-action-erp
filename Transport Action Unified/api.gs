@@ -485,6 +485,10 @@ function _handleRoute(params, data) {
         _checkPermission(data, 'driver.list');
         result = apiGetDriver(data.id);
         break;
+      case 'getDriversByCollaborator':
+        _checkPermission(data, 'driver.list');
+        result = apiGetDriversByCollaborator(data.collaboratorId);
+        break;
       case 'createDriver':
         _checkPermission(data, 'driver.create');
         result = apiCreateDriver(_normalizeToPascal(data, FIELD_MAPS.driver));

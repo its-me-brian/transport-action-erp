@@ -75,7 +75,13 @@ function apiGetCollaborators(filters) {
   let collaborators = CollaboratorRepository.getAll();
   if (filters) {
     if (filters.active !== undefined) {
-      collaborators = collaborators.filter(c => (c.Active === 'true' || c.Active === true) === filters.active);
+      // Normalize filters.active: query params arrive as strings ("true"/"false"),
+      // but booleans also come through as actual booleans from GAS post body.
+      var activeFilter = filters.active === 'true' || filters.active === true;
+      collaborators = collaborators.filter(c => {
+        var isActive = c.Active === 'true' || c.Active === true;
+        return isActive === activeFilter;
+      });
     }
     if (filters.operatingCompany) {
       collaborators = collaborators.filter(c => c.OperatingCompany === filters.operatingCompany);
@@ -108,7 +114,10 @@ function apiUpdateCollaborator(id, changes) {
 function apiDeleteCollaborator(id) {
   const entity = CollaboratorRepository.getById(id);
   if (!entity) throw new NotFoundError('Collaborator', id);
-  _delete(CollaboratorRepository.SHEET, id);
+  const result = _safeDelete('Collaborator', id);
+  if (!result.success) {
+    return { success: false, error: result.error, dependencies: result.dependencies };
+  }
   _dispatchEvent({ type: 'collaborator.deleted', entity: 'Collaborator', entityId: id });
   return { success: true };
 }

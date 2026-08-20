@@ -44,7 +44,7 @@ const RapportinoItemRepository = {
   },
 
   delete(id) {
-    return _delete(this.SHEET, id);
+    return _softDelete(this.SHEET, id);
   },
 
   calculateTotal(rapportinoId, field) {

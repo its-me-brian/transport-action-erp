@@ -347,7 +347,7 @@ function apiDeleteService(serviceId, reason) {
       );
     }
 
-    _delete(ServiceRepository.SHEET, serviceId);
+    _softDelete(ServiceRepository.SHEET, serviceId);
 
     _dispatchEvent({
       type: 'service.deleted',

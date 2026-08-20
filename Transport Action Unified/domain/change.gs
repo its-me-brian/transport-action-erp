@@ -149,7 +149,7 @@ function apiDeleteChange(data) {
   var entity = ChangeRepository.getById(data.id);
   if (!entity) throw new NotFoundError('Change', data.id);
   
-  _delete(ChangeRepository.SHEET, data.id);
+  _softDelete(ChangeRepository.SHEET, data.id);
   return { success: true };
 }
 

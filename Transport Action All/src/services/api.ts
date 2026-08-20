@@ -777,6 +777,34 @@ export async function deleteDriver(id: string): Promise<{ success: boolean; erro
   return gasPostWithRetry('deleteDriver', { id });
 }
 
+export async function getDriversByCollaborator(collaboratorId: string): Promise<DriverRecord[]> {
+  const result = await gasGetWithRetry('getDriversByCollaborator', { collaboratorId });
+  if (result && result.error) {
+    console.warn('getDriversByCollaborator error:', result.error);
+    return [];
+  }
+  if (!Array.isArray(result)) return [];
+  return result.map(row => ({
+    id: row.ID || row.id || '',
+    name: row.Name || row.name || '',
+    phone: row.Phone || row.phone || '',
+    whatsapp: row.WhatsApp || row.whatsapp || '',
+    vehiclePreferred: row.VehiclePreferred || row.vehiclePreferred || '',
+    notes: row.Notes || row.notes || '',
+    status: row.Status || row.status || 'Disponible',
+    type: row.Type || row.type || 'interno',
+    collaboratorId: row.CollaboratorID || row.collaboratorId || '',
+    driverOwnership: row.DriverOwnership || row.driverOwnership || 'own',
+    email: row.Email || row.email || '',
+    iban: row.IBAN || row.iban || '',
+    licenseType: row.LicenseType || row.licenseType || '',
+    licenseExpiry: row.LicenseExpiry || row.licenseExpiry || '',
+    operatingCompany: row.OperatingCompany || row.operatingCompany || '',
+    source: row.Source || row.source || 'manual',
+    lastImportDate: row.LastImportDate || row.lastImportDate || '',
+  }));
+}
+
 export async function cleanupDrivers(): Promise<{ removed: number; error?: string }> {
   return gasGetWithRetry('apiCleanupDrivers');
 }

@@ -22,7 +22,7 @@ import {
   Pencil
 } from 'lucide-react';
 import { Driver, ScreenId, getDriverAvatar } from '../types';
-import { getDrivers, createDriver, updateDriver, deleteDriver, cleanupDrivers, DriverRecord, getSupplierRates, createSupplierRate, updateSupplierRate, deleteSupplierRate, SupplierRateDTO, getVehicleTypes, getServiceTypes } from '../services/api';
+import { getDrivers, createDriver, updateDriver, deleteDriver, cleanupDrivers, DriverRecord, getSupplierRates, createSupplierRate, updateSupplierRate, deleteSupplierRate, SupplierRateDTO, getVehicleTypes, getServiceTypes, getCollaborators } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 
 interface DriverPanelScreenProps {
@@ -66,6 +66,9 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
   // Edit modal
   const [editDriver, setEditDriver] = useState<EditModalDriver | null>(null);
   const [editSaving, setEditSaving] = useState(false);
+
+  // Collaborators list for dropdown
+  const [collaborators, setCollaborators] = useState<{ id: string; name: string }[]>([]);
 
   // Add driver modal
   const [showAddModal, setShowAddModal] = useState(false);
@@ -120,6 +123,12 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
     loadDrivers();
     getVehicleTypes().then(vt => setVehicleTypes(vt)).catch(() => {});
     getServiceTypes().then(st => setServiceTypes(st)).catch(() => {});
+    // Load collaborators for the dropdown
+    getCollaborators({ active: true }).then(list => {
+      setCollaborators(Array.isArray(list) ? list.map(c => ({ id: c.id, name: c.name })) : []);
+    }).catch(err => {
+      console.error('[DriverPanel] Failed to load collaborators:', err);
+    });
   }, []);
 
   // Map DB drivers to the format the UI expects, with deduplication
@@ -730,25 +739,42 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                   <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Type</label>
                   <select
                     value={editDriver.type}
-                    onChange={(e) => setEditDriver({ ...editDriver, type: e.target.value })}
+                    onChange={(e) => setEditDriver({ ...editDriver, type: e.target.value, collaboratorId: e.target.value === 'interno' ? '' : editDriver.collaboratorId })}
                     className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
                   >
                     <option value="interno">Interno (Propio)</option>
                     <option value="colaborador">Colaborador</option>
                   </select>
                 </div>
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Operating Company</label>
-                  <select
-                    value={editDriver.operatingCompany}
-                    onChange={(e) => setEditDriver({ ...editDriver, operatingCompany: e.target.value })}
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
-                  >
-                    <option value="">—</option>
-                    <option value="Transport Action">Transport Action</option>
-                    <option value="Movie Motion">Movie Motion</option>
-                  </select>
-                </div>
+                {editDriver.type === 'colaborador' && (
+                  <div>
+                    <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Collaborator / Provider</label>
+                    <select
+                      value={editDriver.collaboratorId}
+                      onChange={(e) => setEditDriver({ ...editDriver, collaboratorId: e.target.value })}
+                      className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
+                    >
+                      <option value="">— Select collaborator —</option>
+                      {collaborators.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {editDriver.type !== 'colaborador' && (
+                  <div>
+                    <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Operating Company</label>
+                    <select
+                      value={editDriver.operatingCompany}
+                      onChange={(e) => setEditDriver({ ...editDriver, operatingCompany: e.target.value })}
+                      className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
+                    >
+                      <option value="">—</option>
+                      <option value="Transport Action">Transport Action</option>
+                      <option value="Movie Motion">Movie Motion</option>
+                    </select>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>

@@ -116,7 +116,10 @@ function apiUpdateVehicle(id, changes) {
 function apiDeleteVehicle(id) {
   const entity = VehicleRepository.getById(id);
   if (!entity) throw new NotFoundError('Vehicle', id);
-  _delete(VehicleRepository.SHEET, id);
+  const result = _safeDelete('Vehicle', id);
+  if (!result.success) {
+    return { success: false, error: result.error, dependencies: result.dependencies };
+  }
   _dispatchEvent({ type: 'vehicle.deleted', entity: 'Vehicle', entityId: id });
   return { success: true };
 }

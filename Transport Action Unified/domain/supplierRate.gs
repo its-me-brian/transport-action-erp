@@ -119,7 +119,11 @@ function apiGetSupplierRates(filters) {
     if (filters.serviceType) rates = rates.filter(r => r.ServiceType === filters.serviceType);
     if (filters.vehicleType) rates = rates.filter(r => r.VehicleType === filters.vehicleType);
     if (filters.active !== undefined) {
-      rates = rates.filter(r => (r.Active === 'true' || r.Active === true) === filters.active);
+      var activeFilter = filters.active === 'true' || filters.active === true;
+      rates = rates.filter(r => {
+        var isActive = r.Active === 'true' || r.Active === true;
+        return isActive === activeFilter;
+      });
     }
   }
   return rates.map(SupplierRateRepository.toDTO);
@@ -154,7 +158,7 @@ function apiUpdateSupplierRate(id, changes) {
 function apiDeleteSupplierRate(id) {
   const entity = SupplierRateRepository.getById(id);
   if (!entity) throw new NotFoundError('SupplierRate', id);
-  _delete(SupplierRateRepository.SHEET, id);
+  _softDelete(SupplierRateRepository.SHEET, id);
   _dispatchEvent({ type: 'supplier_rate.deleted', entity: 'SupplierRate', entityId: id });
   return { success: true };
 }

@@ -96,7 +96,7 @@ function apiUpdateDriverRate(id, changes) {
 function apiDeleteDriverRate(id) {
   const entity = DriverRateRepository.getById(id);
   if (!entity) throw new NotFoundError('DriverRate', id);
-  _delete(DriverRateRepository.SHEET, id);
+  _softDelete(DriverRateRepository.SHEET, id);
   _dispatchEvent({ type: 'driverrate.deleted', entity: 'DriverRate', entityId: id });
   return { success: true };
 }

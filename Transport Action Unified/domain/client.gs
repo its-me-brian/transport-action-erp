@@ -99,7 +99,10 @@ function apiUpdateClient(id, changes) {
 function apiDeleteClient(id) {
   const entity = ClientRepository.getById(id);
   if (!entity) throw new NotFoundError('Client', id);
-  _delete(ClientRepository.SHEET, id);
+  const result = _safeDelete('Client', id);
+  if (!result.success) {
+    return { success: false, error: result.error, dependencies: result.dependencies };
+  }
   _dispatchEvent({ type: 'client.deleted', entity: 'Client', entityId: id });
   return { success: true };
 }

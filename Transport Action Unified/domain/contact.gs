@@ -91,7 +91,7 @@ function apiUpdateContact(id, changes) {
 function apiDeleteContact(id) {
   const entity = ContactRepository.getById(id);
   if (!entity) throw new NotFoundError('Contact', id);
-  _delete(ContactRepository.SHEET, id);
+  _softDelete(ContactRepository.SHEET, id);
   _dispatchEvent({ type: 'contact.deleted', entity: 'Contact', entityId: id });
   return { success: true };
 }

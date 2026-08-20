@@ -122,7 +122,7 @@ function apiUpdateRateCard(id, changes) {
 function apiDeleteRateCard(id) {
   const entity = RateCardRepository.getById(id);
   if (!entity) throw new NotFoundError('RateCard', id);
-  _delete(RateCardRepository.SHEET, id);
+  _softDelete(RateCardRepository.SHEET, id);
   _dispatchEvent({ type: 'ratecard.deleted', entity: 'RateCard', entityId: id });
   return { success: true };
 }

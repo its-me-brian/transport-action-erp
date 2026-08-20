@@ -35,6 +35,7 @@ function runMigrations() {
     { version: 5, fn: migrate_005_project_transport_company },
     { version: 6, fn: migrate_006_infra_tables },
     { version: 7, fn: migrate_007_invoice_items_serviceid },
+    { version: 8, fn: migrate_008_soft_delete_all_entities },
   ];
 
   const pending = migrations
@@ -470,5 +471,63 @@ function migrate_007_invoice_items_serviceid() {
     }
   } else {
     Logger.log('Migration 007: ServiceID column already exists');
+  }
+}
+
+// ============================================================================
+// MIGRATION 008 — Add DeletedAt column to all entities for soft delete
+// Converts physical deletes to soft deletes across the entire data model.
+// Idempotent — safe to run multiple times.
+// ============================================================================
+
+function migrate_008_soft_delete_all_entities() {
+  const ss = SpreadsheetApp.openById(CONFIG.DB_SHEET_ID);
+
+  function _headerMap(sh) {
+    const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+    const map = {};
+    headers.forEach((h, i) => { map[h] = i + 1; });
+    return map;
+  }
+
+  function _ensureColumn(sh, headerMap, colName, after, color) {
+    if (headerMap[colName]) return false;
+    const afterCol = headerMap[after] || sh.getLastColumn();
+    sh.insertColumnAfter(afterCol);
+    sh.getRange(1, afterCol + 1)
+      .setValue(colName)
+      .setFontWeight('bold')
+      .setBackground(color || '#455A64')
+      .setFontColor('#fff');
+    Logger.log('Migration 008: Added ' + colName + ' column to ' + sh.getName());
+    return true;
+  }
+
+  // Sheets that need DeletedAt for soft delete
+  const sheetsToAddDeletedAt = [
+    { name: 'Services', after: 'UpdatedAt', color: '#FF6F00' },
+    { name: 'RateCards', after: 'UpdatedAt', color: '#E65100' },
+    { name: 'Contacts', after: 'UpdatedAt', color: '#1565C0' },
+    { name: 'Changes', after: 'UpdatedAt', color: '#E65100' },
+    { name: 'Documents', after: 'CreatedAt', color: '#455A64' },
+    { name: 'DriverRates', after: 'UpdatedAt', color: '#004D40' },
+    { name: 'SupplierRates', after: 'UpdatedAt', color: '#7B1FA2' },
+    { name: 'ServiceRevenueBreakdown', after: 'CreatedAt', color: '#1B5E20' },
+    { name: 'ServiceCostBreakdown', after: 'CreatedAt', color: '#B71C1C' },
+    { name: 'RapportinoItems', after: 'CreatedAt', color: '#6A1B9A' },
+    { name: 'RapportinoCollaborators', after: 'UpdatedAt', color: '#6A1B9A' },
+    { name: 'RapportinoCollaboratorItems', after: 'CreatedAt', color: '#8E24AA' },
+    { name: 'InvoiceItems', after: 'CreatedAt', color: '#00838F' },
+    { name: 'Users', after: 'UpdatedAt', color: '#D32F2F' },
+  ];
+
+  for (const config of sheetsToAddDeletedAt) {
+    const sh = ss.getSheetByName(config.name);
+    if (!sh) {
+      Logger.log('Migration 008: ' + config.name + ' sheet not found, skipping');
+      continue;
+    }
+    const hm = _headerMap(sh);
+    _ensureColumn(sh, hm, 'DeletedAt', config.after, config.color);
   }
 }

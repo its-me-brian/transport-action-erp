@@ -123,7 +123,10 @@ function apiUpdateProject(id, changes) {
 function apiDeleteProject(id) {
   const entity = ProjectRepository.getById(id);
   if (!entity) throw new NotFoundError('Project', id);
-  _delete(ProjectRepository.SHEET, id);
+  const result = _safeDelete('Project', id);
+  if (!result.success) {
+    return { success: false, error: result.error, dependencies: result.dependencies };
+  }
   _dispatchEvent({ type: 'project.deleted', entity: 'Project', entityId: id });
   return { success: true };
 }

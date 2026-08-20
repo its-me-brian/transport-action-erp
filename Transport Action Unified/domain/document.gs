@@ -38,7 +38,7 @@ const DocumentRepository = {
   },
 
   delete(id) {
-    return _delete(this.SHEET, id);
+    return _softDelete(this.SHEET, id);
   },
 
   toDTO(entity) {
