@@ -1038,7 +1038,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
   // --- View history entry ---
   const handleViewHistory = async (entry: any) => {
     try {
-      const result = await getServicesByTransportListId(entry.id);
+      const result = await getServicesByTransportListId(entry.fileName || entry.id);
       const rawServices = (Array.isArray(result) ? result : []).map((s: any) => ({
         ...s,
         date: s.date || s.dateStr || '',
@@ -1594,7 +1594,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                     </thead>
                     <tbody className="text-[12px] text-on-surface divide-y divide-outline-variant/50">
                       {history.slice(0, 20).map((entry) => (
-                        <tr key={entry.importId} className="hover:bg-surface-dim/50 transition-colors">
+                        <tr key={entry.id || entry.fileName} className="hover:bg-surface-dim/50 transition-colors">
                        <td className="px-3 py-2 whitespace-nowrap text-[11px]">
                              <span className="text-on-surface-variant">Import</span>{' '}
                              <span className="font-medium text-on-surface">{formatImportDate(entry.importDate)}</span>
@@ -1650,7 +1650,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                 <div className="md:hidden space-y-2">
                   {history.slice(0, 10).map((entry) => (
                     <div
-                      key={entry.importId}
+                      key={entry.id || entry.fileName}
                       className="border border-outline-variant rounded-lg p-3 bg-surface-container-lowest active:bg-surface-dim transition-colors"
                     >
                       <div className="flex items-center justify-between mb-1.5">

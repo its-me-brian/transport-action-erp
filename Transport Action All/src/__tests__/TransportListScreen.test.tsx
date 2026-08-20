@@ -99,8 +99,8 @@ const sampleServices = [
 ];
 
 const sampleHistory = [
-  { id: 'TL-001', importDate: '2026-07-20T10:00:00Z', fileName: 'transport.xlsx', production: 'Film Production', totalServices: 10, totalDrivers: 5, status: 'registered', dateRange: '2026-07-20/2026-07-26' },
-  { id: 'TL-002', importDate: '2026-07-13T08:00:00Z', fileName: 'transport2.xlsx', production: 'Another Production', totalServices: 8, totalDrivers: 3, status: 'parsed', dateRange: '' },
+  { id: 'TL-001', importDate: '2026-07-20T10:00:00Z', fileName: 'IMP-20260720-01', production: 'Film Production', totalServices: 10, totalDrivers: 5, status: 'registered', dateRange: '2026-07-20/2026-07-26' },
+  { id: 'TL-002', importDate: '2026-07-13T08:00:00Z', fileName: 'IMP-20260713-01', production: 'Another Production', totalServices: 8, totalDrivers: 3, status: 'parsed', dateRange: '' },
 ];
 
 describe('TransportListScreen', () => {
@@ -202,7 +202,7 @@ describe('TransportListScreen — History view loads services', () => {
     fireEvent.click(viewButtons[0]);
 
     await waitFor(() => {
-      expect(mockGetServicesByTransportListId).toHaveBeenCalledWith('TL-001');
+      expect(mockGetServicesByTransportListId).toHaveBeenCalledWith('IMP-20260720-01');
     });
   });
 
@@ -322,7 +322,7 @@ describe('TransportListScreen — Error paths', () => {
     });
     fireEvent.click(screen.getAllByText('View')[0]);
     await waitFor(() => {
-      expect(mockGetServicesByTransportListId).toHaveBeenCalledWith('TL-001');
+      expect(mockGetServicesByTransportListId).toHaveBeenCalledWith('IMP-20260720-01');
     });
     // Should not crash
   });
@@ -401,7 +401,7 @@ describe('TransportListScreen — Error paths', () => {
     });
     fireEvent.click(screen.getAllByText('View')[0]);
     await waitFor(() => {
-      expect(mockGetServicesByTransportListId).toHaveBeenCalledWith('TL-001');
+      expect(mockGetServicesByTransportListId).toHaveBeenCalledWith('IMP-20260720-01');
     });
     // Should show empty/unassigned for missing driver
     expect(screen.getAllByText('(vacío)').length).toBeGreaterThanOrEqual(1);
