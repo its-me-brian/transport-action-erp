@@ -30,7 +30,7 @@ const ServiceEconomics = {
       return 'Van';
     })();
 
-    const serviceType = service.ServiceType || 'Disposizione';
+    const serviceType = service.ServiceType || 'Dispo';
 
     const rateCard = RateCardRepository.getByClientAndType(
       client.ID, 
@@ -146,7 +146,7 @@ const ServiceEconomics = {
     }
 
     // 8. AIRPORT SURCHARGE (si es transfer airport)
-    if (serviceType === 'Airport' && rateCard.AirportSurcharge > 0) {
+    if ((serviceType === 'Airport' || serviceType === 'Transfer Airport') && rateCard.AirportSurcharge > 0) {
       items.push(this._createBreakdownItem(
         'AirportSurcharge',
         'Suplemento aeropuerto',
@@ -184,7 +184,7 @@ const ServiceEconomics = {
     // Buscar SupplierRate
     const projectId = service.ProjectID || 'GLOBAL';
     const vehicleType = service.VehicleType || 'Van';
-    const serviceType = service.ServiceType || 'Disposizione';
+    const serviceType = service.ServiceType || 'Dispo';
 
     let supplierRate = SupplierRateRepository.getByCriteria(
       providerType,
@@ -439,9 +439,11 @@ const ServiceEconomics = {
 
   _getBasePrice(rateCard, serviceType) {
     switch (serviceType) {
+      case 'Transfer Airport':
+      case 'Transfer City':
       case 'Transfer':
         return rateCard.BasePrice || 0;
-      case 'Disposizione':
+      case 'Dispo':
         return rateCard.FullDayPrice || rateCard.HalfDayPrice || rateCard.BasePrice || 0;
       case 'HalfDay':
         return rateCard.HalfDayPrice || 0;

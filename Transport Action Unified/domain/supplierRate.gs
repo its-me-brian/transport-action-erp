@@ -52,7 +52,7 @@ const SupplierRateRepository = {
       SupplierType: data.SupplierType || '',
       SupplierID: data.SupplierID || '',
       ProjectID: data.ProjectID || '',
-      ServiceType: data.ServiceType || 'Disposizione',
+      ServiceType: data.ServiceType || 'Dispo',
       VehicleType: data.VehicleType || 'Van',
       BaseRate: parseFloat(data.BaseRate) || 0,
       IncludedKm: parseFloat(data.IncludedKm) || 0,

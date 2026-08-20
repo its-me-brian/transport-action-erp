@@ -134,12 +134,12 @@ export default function DriverReportScreen({ onNavigate }: Props) {
       {/* View Detail Modal */}
       {viewTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[15px] font-semibold text-on-surface">Report Detail — {viewTarget.id}</h3>
               <button onClick={() => setViewTarget(null)} className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
-            <div className="px-5 py-4 space-y-2 text-[13px]">
+            <div className="px-5 py-4 space-y-2 text-[13px] overflow-y-auto flex-1 min-h-0">
               <div className="grid grid-cols-2 gap-2"><span className="text-on-surface-variant">Service:</span><span>{viewTarget.serviceId}</span></div>
               <div className="grid grid-cols-2 gap-2"><span className="text-on-surface-variant">Driver:</span><span>{viewTarget.driverId}</span></div>
               <div className="grid grid-cols-2 gap-2"><span className="text-on-surface-variant">Version:</span><span>v{viewTarget.version}</span></div>
@@ -162,17 +162,17 @@ export default function DriverReportScreen({ onNavigate }: Props) {
       {/* Reject Modal */}
       {rejectTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-sm shadow-xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-sm shadow-xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[15px] font-semibold text-on-surface">Reject Report</h3>
               <button onClick={() => setRejectTarget(null)} className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
-            <div className="px-5 py-4">
+            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0">
               <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Reason *</label>
               <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary resize-none" rows={3} placeholder="Explain why..." />
             </div>
-            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant">
+            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">
               <button onClick={() => setRejectTarget(null)} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
               <button onClick={handleReject} disabled={isProcessing || !rejectReason.trim()} className="px-4 py-1.5 bg-red-500 text-white text-[12px] font-medium rounded-lg hover:bg-red-600 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
                 {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />} Reject

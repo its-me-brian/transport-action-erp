@@ -31,7 +31,7 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
   const [project, setProject] = useState('');
   const [serviceDate, setServiceDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [callTime, setCallTime] = useState('08:00');
-  const [serviceType, setServiceType] = useState('disposal');
+  const [serviceType, setServiceType] = useState('Dispo');
   const [vehicleType, setVehicleType] = useState('');
   const [vehiclePlate, setVehiclePlate] = useState('');
   const [passengers, setPassengers] = useState('');
@@ -364,10 +364,9 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
                     onChange={(e) => setServiceType(e.target.value)}
                     className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary transition-colors cursor-pointer appearance-none"
                   >
-                    <option value="disposal">Disposal</option>
-                    <option value="transfer">Transfer</option>
-                    <option value="fullDay">Full Day</option>
-                    <option value="halfDay">Half Day</option>
+                    <option value="Dispo">Dispo</option>
+                    <option value="Transfer Airport">Transfer Airport</option>
+                    <option value="Transfer City">Transfer City</option>
                   </select>
                   <ChevronDown className="w-4 h-4 text-on-surface-variant absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
@@ -390,13 +389,8 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
                     className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary transition-colors cursor-pointer appearance-none"
                   >
                     <option value="">Select type...</option>
-                    <option value="Van Disposal">Van Disposal</option>
-                    <option value="Van Transfer">Van Transfer</option>
-                    <option value="Production Van">Production Van</option>
-                    <option value="Cast Van">Cast Van</option>
+                    <option value="Van">Van</option>
                     <option value="Car">Car</option>
-                    <option value="Minivan">Minivan</option>
-                    <option value="Bus">Bus</option>
                   </select>
                   <ChevronDown className="w-4 h-4 text-on-surface-variant absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
@@ -637,9 +631,9 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.2 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl w-full max-w-sm mx-4 p-5 space-y-4"
+              className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl w-full max-w-sm mx-4 max-h-[90vh] flex flex-col"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between px-5 py-4 shrink-0">
                 <h3 className="text-[14px] font-semibold text-on-surface">Create New Driver</h3>
                 <button
                   type="button"
@@ -650,25 +644,27 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
                 </button>
               </div>
 
-              <p className="text-[12px] text-on-surface-variant">
-                Driver: <strong className="text-on-surface">{driverSearch}</strong>
-              </p>
+              <div className="px-5 py-4 space-y-4 overflow-y-auto flex-1 min-h-0">
+                <p className="text-[12px] text-on-surface-variant">
+                  Driver: <strong className="text-on-surface">{driverSearch}</strong>
+                </p>
 
-              <div>
-                <label className="block text-[11px] text-on-surface-variant uppercase tracking-wide font-medium mb-1">
-                  Phone Number *
-                </label>
-                <input
-                  type="tel"
-                  placeholder="+34 600 000 000"
-                  value={newDriverPhone}
-                  onChange={(e) => setNewDriverPhone(e.target.value)}
-                  autoFocus
-                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary transition-colors"
-                />
+                <div>
+                  <label className="block text-[11px] text-on-surface-variant uppercase tracking-wide font-medium mb-1">
+                    Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="+34 600 000 000"
+                    value={newDriverPhone}
+                    onChange={(e) => setNewDriverPhone(e.target.value)}
+                    autoFocus
+                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary transition-colors"
+                  />
+                </div>
               </div>
 
-              <div className="flex gap-2 justify-end">
+              <div className="flex gap-2 justify-end px-5 py-4 shrink-0">
                 <button
                   type="button"
                   onClick={() => { setShowCreateDriverModal(false); setNewDriverPhone(''); }}

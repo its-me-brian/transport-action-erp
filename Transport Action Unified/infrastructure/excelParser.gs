@@ -311,32 +311,59 @@ function _parseTransportListRows(allData, fileName, importSeq) {
     
     
     // Esta fila parece ser el inicio de un servicio
-    // Classify service type based on "Servicio" column
-    let serviceType = 'disposal'; // default
-    if (servicioCell) {
-      const lowerServicio = servicioCell.toLowerCase();
-      if (lowerServicio.indexOf('transfer') > -1) {
-        serviceType = 'transfer';
-      } else if (lowerServicio.indexOf('disposal') > -1 || lowerServicio.indexOf('dispo') > -1) {
-        serviceType = 'disposal';
-      } else if (lowerServicio.indexOf('full day') > -1 || lowerServicio.indexOf('fullday') > -1) {
-        serviceType = 'fullDay';
-      } else if (lowerServicio.indexOf('half day') > -1 || lowerServicio.indexOf('halfday') > -1) {
-        serviceType = 'halfDay';
-      } else if (lowerServicio.indexOf('night') > -1) {
-        serviceType = 'night';
-      }
-    }
-    // Also check vehicle type for classification
+    // Classify service type from VEHICLE column (e.g. "Disposal Van", "Transfer Airport Van")
+    // or from "Servicio" column if present
+    let serviceType = 'Dispo'; // default
+    let vehicleType = 'Van';   // default
+
+    // Parse from VEHICLE column: "Disposal Van" → service=Dispo, vehicle=Van
+    //                          "Production Van2" → skip (production)
+    //                          "Transfer Airport Van" → service=Transfer Airport, vehicle=Van
     if (vehicleCell) {
       const lowerVehicle = vehicleCell.toLowerCase();
-      if (lowerVehicle.indexOf('transfer') > -1) {
-        serviceType = 'transfer';
+      
+      // Skip production vehicles
+      if (lowerVehicle.indexOf('production') > -1 || lowerVehicle.indexOf('prod ') > -1) {
+        i++;
+        continue;
+      }
+      
+      // Extract vehicle type
+      if (lowerVehicle.indexOf('van') > -1) {
+        vehicleType = 'Van';
+      } else if (lowerVehicle.indexOf('car') > -1 || lowerVehicle.indexOf('sedan') > -1) {
+        vehicleType = 'Car';
+      }
+      
+      // Extract service type from vehicle cell
+      if (lowerVehicle.indexOf('transfer airport') > -1) {
+        serviceType = 'Transfer Airport';
+      } else if (lowerVehicle.indexOf('transfer city') > -1) {
+        serviceType = 'Transfer City';
+      } else if (lowerVehicle.indexOf('transfer') > -1) {
+        serviceType = 'Transfer Airport'; // default transfer = airport
+      } else if (lowerVehicle.indexOf('disposal') > -1 || lowerVehicle.indexOf('dispo') > -1) {
+        serviceType = 'Dispo';
+      }
+    }
+    
+    // Override from "Servicio" column if present (some transport lists have it)
+    if (servicioCell) {
+      const lowerServicio = servicioCell.toLowerCase();
+      if (lowerServicio.indexOf('transfer airport') > -1) {
+        serviceType = 'Transfer Airport';
+      } else if (lowerServicio.indexOf('transfer city') > -1) {
+        serviceType = 'Transfer City';
+      } else if (lowerServicio.indexOf('transfer') > -1) {
+        serviceType = 'Transfer Airport';
+      } else if (lowerServicio.indexOf('disposal') > -1 || lowerServicio.indexOf('dispo') > -1) {
+        serviceType = 'Dispo';
       }
     }
     
     let servicio = {
       vehicle: vehicleCell,
+      vehicleType: vehicleType,
       driver: driverCell,
       driverPhone: '',
       time: timeCell,
@@ -395,6 +422,7 @@ function _parseTransportListRows(allData, fileName, importSeq) {
         
         servicio = {
           vehicle: vehicleCell,
+          vehicleType: servicio.vehicleType,
           driver: driverCell,
           driverPhone: servicio.driverPhone,
           time: sub2 || sub0 === 'THEN' ? (colMap.time !== undefined ? String(subRow[colMap.time] || '').trim() : '') : servicio.time,
@@ -764,6 +792,7 @@ function _buildServiceRecord(serv, production, dateStr, fileName, idx, importSeq
   return {
     id: id,
     vehicle: serv.vehicle,
+    vehicleType: serv.vehicleType || 'Van',
     driver: serv.driver,
     driverPhone: phone,
     time: serv.time,
@@ -784,7 +813,7 @@ function _buildServiceRecord(serv, production, dateStr, fileName, idx, importSeq
     fileName: fileName,
     section: serv.section || '',
     servicio: serv.servicio || '',
-    serviceType: serv.serviceType || 'disposal',
+    serviceType: serv.serviceType || 'Dispo',
     hasThenPickup: serv.hasThenPickup || false
   };
 }

@@ -241,15 +241,15 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
       {/* Add/Edit Modal */}
       {editClient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[15px] font-semibold text-on-surface">{isNew ? 'Add Client' : 'Edit Client'}</h3>
               <button onClick={() => setEditClient(null)} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
                 <X className="w-4 h-4 text-on-surface-variant" />
               </button>
             </div>
 
-            <div className="px-5 py-4 space-y-3">
+            <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
               <div>
                 <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Name *</label>
                 <input type="text" value={editClient.name || ''} onChange={e => setEditClient({ ...editClient, name: e.target.value })}
@@ -300,7 +300,7 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 px-5 py-4 border-t border-outline-variant">
+            <div className="flex justify-end gap-2 px-5 py-4 border-t border-outline-variant shrink-0">
               <button onClick={() => setEditClient(null)}
                 className="px-4 py-2 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
                 Cancel

@@ -164,7 +164,7 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
             value={messageText}
             onChange={e => setMessageText(e.target.value)}
             className="w-full h-48 px-4 py-3 border border-outline-variant rounded-xl text-sm font-mono resize-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            placeholder={`Example formats:\n\n8:30 - 21:30 | 73km | Van Disposal\n\nInizio 8:30 Fine 21:30 km 73 diaria piena\n\n7/7/26 Isidoro dragone\nInizio 8:00\nFine 20:00\nKm totali 120\nDiaria piena`}
+            placeholder={`Example formats:\n\n8:30 - 21:30 | 73km | Dispo\n\nInizio 8:30 Fine 21:30 km 73 diaria piena\n\n7/7/26 Isidoro dragone\nInizio 8:00\nFine 20:00\nKm totali 120\nDiaria piena`}
           />
           <div className="flex items-center justify-between mt-4">
             <span className="text-xs text-on-surface-variant">
@@ -388,7 +388,7 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
           <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <div>
             <strong>Supported formats:</strong> The parser handles common Italian driver message formats
-            like "8:30 - 21:30 | 73km | Van Disposal" or "Inizio 8:30 Fine 21:30 km 73 diaria piena".
+            like "8:30 - 21:30 | 73km | Dispo" or "Inizio 8:30 Fine 21:30 km 73 diaria piena".
             Multi-message WhatsApp chat exports are also supported.
           </div>
         </div>

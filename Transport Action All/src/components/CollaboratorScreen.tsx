@@ -155,7 +155,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
           supplierType: 'collaborator',
           supplierId: selectedCollaborator!.id,
           projectId: editRate.projectId || '',
-          serviceType: editRate.serviceType || 'Disposizione',
+          serviceType: editRate.serviceType || 'Dispo',
           vehicleType: editRate.vehicleType || 'Van',
           baseRate: editRate.baseRate || 0,
           includedKm: editRate.includedKm || 0,
@@ -316,15 +316,15 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
       {/* Add/Edit Modal */}
       {editCollaborator && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[15px] font-semibold text-on-surface">{isNew ? 'Add Provider' : 'Edit Provider'}</h3>
               <button onClick={() => setEditCollaborator(null)} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
                 <X className="w-4 h-4 text-on-surface-variant" />
               </button>
             </div>
 
-            <div className="px-5 py-4 space-y-3">
+            <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
               <div>
                 <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Name *</label>
                 <input type="text" value={editCollaborator.name || ''} onChange={e => setEditCollaborator({ ...editCollaborator, name: e.target.value })}
@@ -382,7 +382,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant">
+            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">
               <button onClick={() => setEditCollaborator(null)} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors cursor-pointer">Cancel</button>
               <button onClick={handleSave} disabled={isSaving || !editCollaborator.name?.trim()}
                 className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
@@ -404,7 +404,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
                 <p className="text-[11px] text-on-surface-variant">{selectedCollaborator.name}</p>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => { setEditRate({ serviceType: 'Disposizione', vehicleType: 'Van', baseRate: 0, includedKm: 0, includedHours: 0, extraKmRate: 0, extraHourRate: 0, diariaPiena: 0, diariaMezza: 0, nightExtra: 0, holidayExtra: 0 }); setIsNewRate(true); }}
+                <button onClick={() => { setEditRate({ serviceType: 'Dispo', vehicleType: 'Van', baseRate: 0, includedKm: 0, includedHours: 0, extraKmRate: 0, extraHourRate: 0, diariaPiena: 0, diariaMezza: 0, nightExtra: 0, holidayExtra: 0 }); setIsNewRate(true); }}
                   className="flex items-center gap-1 px-2.5 py-1 bg-primary text-on-primary text-[11px] font-medium rounded-lg hover:bg-primary-hover cursor-pointer">
                   <Plus className="w-3 h-3" /> Add Rate
                 </button>
@@ -450,11 +450,11 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
                 <div className="grid grid-cols-3 gap-2 text-[11px]">
                   <div>
                     <label className="text-on-surface-variant uppercase text-[9px]">Service Type</label>
-                    <select value={editRate.serviceType || 'Disposizione'} onChange={e => setEditRate({ ...editRate, serviceType: e.target.value })}
+                    <select value={editRate.serviceType || 'Dispo'} onChange={e => setEditRate({ ...editRate, serviceType: e.target.value })}
                       className="w-full h-7 rounded border border-outline-variant bg-surface-container-lowest px-2 text-[11px]">
-                      <option value="Disposizione">Disposizione</option>
-                      <option value="Trasferta">Trasferta</option>
-                      <option value="Noleggio">Noleggio</option>
+                      <option value="Dispo">Dispo</option>
+                      <option value="Transfer Airport">Transfer Airport</option>
+                      <option value="Transfer City">Transfer City</option>
                     </select>
                   </div>
                   <div>
@@ -462,8 +462,6 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
                     <select value={editRate.vehicleType || 'Van'} onChange={e => setEditRate({ ...editRate, vehicleType: e.target.value })}
                       className="w-full h-7 rounded border border-outline-variant bg-surface-container-lowest px-2 text-[11px]">
                       <option value="Van">Van</option>
-                      <option value="Bus">Bus</option>
-                      <option value="Minibus">Minibus</option>
                       <option value="Car">Car</option>
                     </select>
                   </div>

@@ -8,7 +8,7 @@
  * 
  * Mapeo:
  * - DriverRate.DriverID → SupplierRate.SupplierID (con SupplierType = 'internal_driver')
- * - DriverRate.VehicleType → SupplierRate.VehicleType + ServiceType = 'Disposizione' (default)
+ * - DriverRate.VehicleType → SupplierRate.VehicleType + ServiceType = 'Dispo' (default)
  * - DriverRate.TransferRate → SupplierRate.BaseRate (para Transfer)
  * - DriverRate.HalfDayRate → SupplierRate.BaseRate (para HalfDay/Disposizione)
  * - DriverRate.FullDayRate → SupplierRate.BaseRate (para FullDay/Disposizione)
@@ -63,7 +63,7 @@ function migrateDriverRatesToSupplierRates() {
         }
 
         // Crear SupplierRate para cada tipo de servicio relevante
-        var serviceTypes = ['Transfer', 'Disposizione'];
+        var serviceTypes = ['Transfer', 'Dispo'];
         
         serviceTypes.forEach(function(serviceType) {
           var baseRate = 0;

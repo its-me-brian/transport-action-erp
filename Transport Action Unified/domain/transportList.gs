@@ -354,8 +354,8 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
       EstimatedCost: '',
       OperatingCompany: operatingCompany || '',
       Normalized: false,
-      ServiceType: svc.serviceType || 'disposal',
-      VehicleType: svc.vehicle || '',
+      ServiceType: svc.serviceType || 'Dispo',
+      VehicleType: svc.vehicleType || 'Van',
       ProviderType: '',
       ProviderID: ''
     });

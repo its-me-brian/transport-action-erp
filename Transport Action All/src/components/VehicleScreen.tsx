@@ -7,7 +7,7 @@ import { getErrorMessage } from '../utils/errorUtils';
 
 interface Props { onNavigate: (screen: ScreenId) => void; }
 
-const VEHICLE_TYPES = ['Van', 'Minivan', 'Sedan', 'SUV', 'Bus', 'Coach', 'Other'];
+const VEHICLE_TYPES = ['Van', 'Car'];
 const OWNERSHIP_TYPES = ['propio', 'tercero', 'alquiler'];
 const STATUSES = ['Disponible', 'En uso', 'Mantenimiento', 'Inactivo'];
 
@@ -244,24 +244,24 @@ export default function VehicleScreen({ onNavigate }: Props) {
 
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-lg shadow-xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-lg shadow-xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[15px] font-semibold text-on-surface">New Vehicle</h3>
               <button onClick={() => setShowCreateModal(false)} className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
-            <div className="px-5 py-4"><VehicleForm onSubmit={handleCreate} submitLabel="Save" /></div>
+            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0"><VehicleForm onSubmit={handleCreate} submitLabel="Save" /></div>
           </div>
         </div>
       )}
 
       {editTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-lg shadow-xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-lg shadow-xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[15px] font-semibold text-on-surface">Edit Vehicle — {editTarget.plate}</h3>
               <button onClick={() => setEditTarget(null)} className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
-            <div className="px-5 py-4"><VehicleForm onSubmit={handleEdit} submitLabel="Update" /></div>
+            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0"><VehicleForm onSubmit={handleEdit} submitLabel="Update" /></div>
           </div>
         </div>
       )}

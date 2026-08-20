@@ -7,7 +7,7 @@ import { getErrorMessage } from '../utils/errorUtils';
 
 interface Props { onNavigate: (screen: ScreenId) => void; }
 
-const VEHICLE_TYPES = ['Van', 'Minivan', 'Sedan', 'SUV', 'Bus', 'Coach'];
+const VEHICLE_TYPES = ['Van', 'Car'];
 const fmt = (n: number) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
 
 export default function RateCardScreen({ onNavigate }: Props) {
@@ -18,7 +18,7 @@ export default function RateCardScreen({ onNavigate }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editTarget, setEditTarget] = useState<RateCardDTO | null>(null);
-  const [form, setForm] = useState({ name: '', category: '', vehicleType: 'Van', basePrice: '', extraKmRate: '', extraHourRate: '', waitRate: '', nightFee: '', holidayFee: '', halfDayPrice: '', fullDayPrice: '', airportSurcharge: '', clientId: '', notes: '', serviceType: 'disposal', includedKm: '', includedHours: '' });
+  const [form, setForm] = useState({ name: '', category: '', vehicleType: 'Van', basePrice: '', extraKmRate: '', extraHourRate: '', waitRate: '', nightFee: '', holidayFee: '', halfDayPrice: '', fullDayPrice: '', airportSurcharge: '', clientId: '', notes: '', serviceType: 'Dispo', includedKm: '', includedHours: '' });
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => { loadData(); }, []);
@@ -45,7 +45,7 @@ export default function RateCardScreen({ onNavigate }: Props) {
       const r = await createRateCard({
         name: form.name, category: form.category, vehicleType: form.vehicleType,
         basePrice: parseFloat(form.basePrice) || 0, clientId: form.clientId || undefined,
-        serviceType: form.serviceType || 'disposal',
+        serviceType: form.serviceType || 'Dispo',
         includedKm: parseFloat(form.includedKm) || 0,
         includedHours: parseFloat(form.includedHours) || 0,
         extraKmRate: parseFloat(form.extraKmRate) || 0,
@@ -84,7 +84,7 @@ export default function RateCardScreen({ onNavigate }: Props) {
   };
 
   const openEdit = (c: RateCardDTO) => {
-    setForm({ name: c.name, category: c.category, vehicleType: c.vehicleType, basePrice: String(c.basePrice), extraKmRate: String(c.extraKmRate), extraHourRate: String(c.extraHourRate), waitRate: String(c.waitRate), nightFee: String(c.nightFee), holidayFee: String(c.holidayFee), halfDayPrice: String(c.halfDayPrice), fullDayPrice: String(c.fullDayPrice), airportSurcharge: String(c.airportSurcharge), clientId: c.clientId, notes: c.notes, serviceType: (c as any).serviceType || 'disposal', includedKm: String((c as any).includedKm || ''), includedHours: String((c as any).includedHours || '') });
+    setForm({ name: c.name, category: c.category, vehicleType: c.vehicleType, basePrice: String(c.basePrice), extraKmRate: String(c.extraKmRate), extraHourRate: String(c.extraHourRate), waitRate: String(c.waitRate), nightFee: String(c.nightFee), holidayFee: String(c.holidayFee), halfDayPrice: String(c.halfDayPrice), fullDayPrice: String(c.fullDayPrice), airportSurcharge: String(c.airportSurcharge), clientId: c.clientId, notes: c.notes, serviceType: (c as any).serviceType || 'Dispo', includedKm: String((c as any).includedKm || ''), includedHours: String((c as any).includedHours || '') });
     setEditTarget(c);
   };
 
@@ -96,7 +96,7 @@ export default function RateCardScreen({ onNavigate }: Props) {
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Category</label><input type="text" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="e.g. Airport Transfer" /></div>
-        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Service Type</label><select value={form.serviceType} onChange={e => setForm({ ...form, serviceType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"><option value="disposal">Disposal</option><option value="transfer">Transfer</option><option value="fullDay">Full Day</option><option value="halfDay">Half Day</option></select></div>
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Service Type</label><select value={form.serviceType} onChange={e => setForm({ ...form, serviceType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"><option value="Dispo">Dispo</option><option value="Transfer Airport">Transfer Airport</option><option value="Transfer City">Transfer City</option></select></div>
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Client</label><select value={form.clientId} onChange={e => setForm({ ...form, clientId: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"><option value="">Global</option>{clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
       </div>
       <div className="grid grid-cols-3 gap-3">
@@ -185,24 +185,24 @@ export default function RateCardScreen({ onNavigate }: Props) {
 
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-lg shadow-xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-lg shadow-xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[15px] font-semibold text-on-surface">New Rate Card</h3>
               <button onClick={() => setShowCreateModal(false)} className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
-            <div className="px-5 py-4"><CardForm onSubmit={handleCreate} submitLabel="Save" /></div>
+            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0"><CardForm onSubmit={handleCreate} submitLabel="Save" /></div>
           </div>
         </div>
       )}
 
       {editTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-lg shadow-xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-lg shadow-xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[15px] font-semibold text-on-surface">Edit Rate Card — {editTarget.name}</h3>
               <button onClick={() => setEditTarget(null)} className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
-            <div className="px-5 py-4"><CardForm onSubmit={handleEdit} submitLabel="Update" /></div>
+            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0"><CardForm onSubmit={handleEdit} submitLabel="Update" /></div>
           </div>
         </div>
       )}

@@ -19,7 +19,7 @@ const RateCardRepository = {
 
   getByClientAndType(clientId, vehicleType, serviceType) {
     const cards = this.getByClient(clientId);
-    return cards.find(c => c.VehicleType === vehicleType && c.ServiceType === (serviceType || 'Disposizione') && (c.Active === 'true' || c.Active === true));
+    return cards.find(c => c.VehicleType === vehicleType && c.ServiceType === (serviceType || 'Dispo') && (c.Active === 'true' || c.Active === true));
   },
 
   getActive() {
@@ -33,7 +33,7 @@ const RateCardRepository = {
       Name: data.Name || '',
       Category: data.Category || '',
       VehicleType: data.VehicleType || 'Van',
-      ServiceType: data.ServiceType || 'Disposizione',
+      ServiceType: data.ServiceType || 'Dispo',
       BasePrice: data.BasePrice || 0,
       IncludedKm: parseFloat(data.IncludedKm) || 0,
       IncludedHours: parseFloat(data.IncludedHours) || 0,
@@ -68,7 +68,7 @@ const RateCardRepository = {
       name: entity.Name,
       category: entity.Category,
       vehicleType: entity.VehicleType,
-      serviceType: entity.ServiceType || 'Disposizione',
+      serviceType: entity.ServiceType || 'Dispo',
       basePrice: entity.BasePrice,
       includedKm: parseFloat(entity.IncludedKm) || 0,
       includedHours: parseFloat(entity.IncludedHours) || 0,
@@ -107,7 +107,7 @@ function apiGetRateCards(clientId) {
 function apiCreateRateCard(data) {
   if (!data.ClientID) throw new ValidationError('ClientID is required');
   if (!data.VehicleType) throw new ValidationError('VehicleType is required');
-  if (!data.ServiceType) data.ServiceType = 'Disposizione';
+  if (!data.ServiceType) data.ServiceType = 'Dispo';
   const entity = RateCardRepository.create(data);
   return RateCardRepository.toDTO(entity);
 }

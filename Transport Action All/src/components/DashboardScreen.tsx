@@ -1775,13 +1775,8 @@ export default function DashboardScreen({
                       <select value={editForm.vehicleType || ''} onChange={e => setEditForm(prev => ({ ...prev, vehicleType: e.target.value }))}
                         className="bg-surface-dim border border-outline-variant rounded-lg px-3 py-2 text-[14px] text-on-surface focus:outline-none focus:border-primary">
                         <option value="">—</option>
-                        <option value="Van Disposal">Van Disposal</option>
-                        <option value="Van Transfer">Van Transfer</option>
-                        <option value="Production Van">Production Van</option>
-                        <option value="Cast Van">Cast Van</option>
+                        <option value="Van">Van</option>
                         <option value="Car">Car</option>
-                        <option value="Minivan">Minivan</option>
-                        <option value="Bus">Bus</option>
                       </select>
                     </div>
                     <div className="flex flex-col gap-1">

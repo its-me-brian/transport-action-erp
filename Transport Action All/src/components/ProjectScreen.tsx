@@ -431,8 +431,8 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
       {/* Add/Edit Modal */}
       {editProject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[15px] font-semibold text-on-surface">
                 {isNew ? 'New Project' : 'Edit Project'}
               </h3>
@@ -441,7 +441,7 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
               </button>
             </div>
 
-            <div className="px-5 py-4 space-y-3">
+            <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
               <div>
                 <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Project Name *</label>
                 <input
@@ -542,7 +542,7 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant">
+            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">
               <button
                 onClick={() => setEditProject(null)}
                 className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors cursor-pointer"

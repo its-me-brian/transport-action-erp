@@ -149,11 +149,11 @@ const ENUMS = {
 
   // === SERVICE TYPE ===
   ServiceType: [
-    'Transfer',
-    'Disposizione',
+    'Dispo',
+    'Transfer Airport',
+    'Transfer City',
     'Extra',
     'Shuttle',
-    'Airport',
     'Other'
   ],
 

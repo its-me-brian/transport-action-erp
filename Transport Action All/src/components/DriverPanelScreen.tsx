@@ -636,9 +636,9 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
       {/* ===== EDIT MODAL ===== */}
       {editDriver && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-container">
                   <img className="w-full h-full object-cover" src={getDriverAvatar(editDriver.name)} alt="" />
@@ -654,7 +654,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
             </div>
 
             {/* Fields */}
-            <div className="px-5 py-4 space-y-3">
+            <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
               <div>
                 <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Name</label>
                 <input
@@ -692,7 +692,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                   type="text"
                   value={editDriver.vehiclePreferred}
                   onChange={(e) => setEditDriver({ ...editDriver, vehiclePreferred: e.target.value })}
-                  placeholder="e.g. Production Van1"
+                   placeholder="e.g. Van"
                   className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
                 />
               </div>
@@ -842,8 +842,8 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
       {/* ===== ADD DRIVER MODAL ===== */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <Plus className="w-5 h-5 text-primary" />
@@ -855,7 +855,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
               </button>
             </div>
 
-            <div className="px-5 py-4 space-y-3">
+            <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
               <div>
                 <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Name *</label>
                 <input
@@ -889,7 +889,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant">
+            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">
               <button
                 onClick={() => setShowAddModal(false)}
                 className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors cursor-pointer"
@@ -912,8 +912,8 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
       {/* ===== DELETE CONFIRM ===== */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-sm shadow-xl p-5">
-            <div className="flex items-center gap-3 mb-4">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-sm shadow-xl p-5 max-h-[90vh] flex flex-col">
+            <div className="flex items-center gap-3 mb-4 shrink-0">
               <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
                 <AlertCircle className="w-5 h-5 text-red-500" />
               </div>
@@ -922,10 +922,10 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                 <p className="text-[12px] text-on-surface-variant">This action cannot be undone.</p>
               </div>
             </div>
-            <p className="text-[13px] text-on-surface mb-4">
+            <p className="text-[13px] text-on-surface mb-4 overflow-y-auto flex-1 min-h-0">
               Are you sure you want to delete <strong>{allDrivers.find(d => d.id === deleteConfirm)?.name}</strong>?
             </p>
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center justify-end gap-2 shrink-0">
               <button
                 onClick={() => setDeleteConfirm(null)}
                 className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors cursor-pointer"
@@ -947,8 +947,8 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
       {/* ===== SUPPLIER RATES MODAL ===== */}
       {showRatesModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-lg shadow-xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-lg shadow-xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <div>
                 <h3 className="text-[15px] font-semibold text-on-surface">Supplier Rates — {showRatesModal.name}</h3>
                 <p className="text-[11px] text-on-surface-variant">Internal driver pricing</p>
@@ -957,7 +957,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                 <X className="w-4 h-4 text-on-surface-variant" />
               </button>
             </div>
-            <div className="px-5 py-4 max-h-[60vh] overflow-y-auto">
+            <div className="px-5 py-4 max-h-[60vh] overflow-y-auto flex-1 min-h-0">
               {loadingRates ? (
                 <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
               ) : (
@@ -998,11 +998,10 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                       <div className="grid grid-cols-3 gap-3">
                         <div>
                           <label className="text-[10px] text-on-surface-variant uppercase block mb-1">Service Type</label>
-                          <select value={editRate.serviceType || 'disposal'} onChange={e => setEditRate({ ...editRate, serviceType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]">
-                            <option value="disposal">Disposal</option>
-                            <option value="transfer">Transfer</option>
-                            <option value="fullDay">Full Day</option>
-                            <option value="halfDay">Half Day</option>
+                          <select value={editRate.serviceType || 'Dispo'} onChange={e => setEditRate({ ...editRate, serviceType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]">
+                            <option value="Dispo">Dispo</option>
+                            <option value="Transfer Airport">Transfer Airport</option>
+                            <option value="Transfer City">Transfer City</option>
                           </select>
                         </div>
                         <div>
@@ -1010,8 +1009,6 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                           <select value={editRate.vehicleType || 'Van'} onChange={e => setEditRate({ ...editRate, vehicleType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]">
                             <option value="Van">Van</option>
                             <option value="Car">Car</option>
-                            <option value="Minivan">Minivan</option>
-                            <option value="Bus">Bus</option>
                           </select>
                         </div>
                         <div>
@@ -1040,7 +1037,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                       </div>
                     </div>
                   ) : (
-                    <button onClick={() => { setEditRate({ serviceType: 'disposal', vehicleType: 'Van', projectId: 'GLOBAL', baseRate: 0, includedKm: 0, includedHours: 0, extraKmRate: 0, extraHourRate: 0, diariaPiena: 0, diariaMezza: 0, nightExtra: 0, holidayExtra: 0, waitHourRate: 0 }); setIsNewRate(true); }} className="w-full py-2 border border-dashed border-outline-variant rounded-lg text-[12px] text-primary font-medium hover:bg-primary/5 transition-colors cursor-pointer">
+                    <button onClick={() => { setEditRate({ serviceType: 'Dispo', vehicleType: 'Van', projectId: 'GLOBAL', baseRate: 0, includedKm: 0, includedHours: 0, extraKmRate: 0, extraHourRate: 0, diariaPiena: 0, diariaMezza: 0, nightExtra: 0, holidayExtra: 0, waitHourRate: 0 }); setIsNewRate(true); }} className="w-full py-2 border border-dashed border-outline-variant rounded-lg text-[12px] text-primary font-medium hover:bg-primary/5 transition-colors cursor-pointer">
                       + Add Supplier Rate
                     </button>
                   )}
