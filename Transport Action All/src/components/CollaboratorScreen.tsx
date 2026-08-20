@@ -338,7 +338,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
                 <input type="text" value={editCollaborator.name || ''} onChange={e => setEditCollaborator({ ...editCollaborator, name: e.target.value })}
                   className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">VAT</label>
                   <input type="text" value={editCollaborator.vat || ''} onChange={e => setEditCollaborator({ ...editCollaborator, vat: e.target.value })}
@@ -355,7 +355,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
                 <input type="text" value={editCollaborator.address || ''} onChange={e => setEditCollaborator({ ...editCollaborator, address: e.target.value })}
                   className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Phone</label>
                   <input type="text" value={editCollaborator.phone || ''} onChange={e => setEditCollaborator({ ...editCollaborator, phone: e.target.value })}
@@ -405,7 +405,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
       {/* Rates Modal */}
       {selectedCollaborator && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-2xl shadow-xl max-h-[80vh] flex flex-col">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-2xl shadow-xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <div>
                 <h3 className="text-[15px] font-semibold text-on-surface">Supplier Rates</h3>
@@ -422,7 +422,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 py-3">
+            <div className="flex-1 overflow-y-auto px-5 py-3 min-h-0">
               {loadingRates ? (
                 <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>
               ) : rates.length === 0 ? (
@@ -455,7 +455,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
             {/* Inline rate edit form */}
             {editRate && (
               <div className="px-5 py-3 border-t border-outline-variant bg-surface-dim shrink-0">
-                <div className="grid grid-cols-3 gap-2 text-[11px]">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
                   <div>
                     <label className="text-on-surface-variant uppercase text-[9px]">Service Type</label>
                     <select value={editRate.serviceType || 'Dispo'} onChange={e => setEditRate({ ...editRate, serviceType: e.target.value })}

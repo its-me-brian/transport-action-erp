@@ -74,7 +74,7 @@ export default function DriverRateScreen({ onNavigate }: Props) {
     setEditTarget(r);
   };
 
-  const RateForm = ({ onSubmit, submitLabel }: { onSubmit: () => void; submitLabel: string }) => (
+  const RateForm = ({ onSubmit, submitLabel, hideButtons }: { onSubmit: () => void; submitLabel: string; hideButtons?: boolean }) => (
     <div className="space-y-3">
       <div>
         <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Driver *</label>
@@ -91,22 +91,24 @@ export default function DriverRateScreen({ onNavigate }: Props) {
           {VEHICLE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Transfer (EUR)</label><input type="number" step="0.01" value={form.transferRate} onChange={e => setForm({ ...form, transferRate: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Half Day (EUR)</label><input type="number" step="0.01" value={form.halfDayRate} onChange={e => setForm({ ...form, halfDayRate: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Full Day (EUR)</label><input type="number" step="0.01" value={form.fullDayRate} onChange={e => setForm({ ...form, fullDayRate: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Night Extra (EUR)</label><input type="number" step="0.01" value={form.nightExtra} onChange={e => setForm({ ...form, nightExtra: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Holiday Extra (EUR)</label><input type="number" step="0.01" value={form.holidayExtra} onChange={e => setForm({ ...form, holidayExtra: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
         <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Wait Hour (EUR)</label><input type="number" step="0.01" value={form.waitHourRate} onChange={e => setForm({ ...form, waitHourRate: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
       </div>
+      {!hideButtons && (
       <div className="flex items-center justify-end gap-2 pt-2">
         <button onClick={() => { setShowCreateModal(false); setEditTarget(null); }} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
         <button onClick={onSubmit} disabled={isSaving || !form.driverId} className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
           {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} {submitLabel}
         </button>
       </div>
+      )}
     </div>
   );
 
@@ -159,7 +161,7 @@ export default function DriverRateScreen({ onNavigate }: Props) {
                 <span className="text-[13px] font-semibold text-on-surface">{drivers.find(d => d.id === r.driverId)?.name || r.driverId}</span>
                 <span className="text-[10px] text-on-surface-variant uppercase bg-surface-container px-1.5 py-0.5 rounded">{r.vehicleType}</span>
               </div>
-              <div className="flex items-center gap-4 mt-1 text-[11px] text-on-surface-variant">
+              <div className="flex items-center gap-4 mt-1 text-[11px] text-on-surface-variant flex-wrap">
                 <span>Transfer: {fmt(r.transferRate)}</span>
                 <span>HalfDay: {fmt(r.halfDayRate)}</span>
                 <span>FullDay: {fmt(r.fullDayRate)}</span>
@@ -181,7 +183,13 @@ export default function DriverRateScreen({ onNavigate }: Props) {
               <h3 className="text-[15px] font-semibold text-on-surface">New Driver Rate</h3>
               <button onClick={() => setShowCreateModal(false)} className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
-            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0"><RateForm onSubmit={handleCreate} submitLabel="Save" /></div>
+            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0"><RateForm onSubmit={handleCreate} submitLabel="Save" hideButtons /></div>
+            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">
+              <button onClick={() => setShowCreateModal(false)} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
+              <button onClick={handleCreate} disabled={isSaving || !form.driverId} className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
+                {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Save
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -193,7 +201,13 @@ export default function DriverRateScreen({ onNavigate }: Props) {
               <h3 className="text-[15px] font-semibold text-on-surface">Edit Rate — {drivers.find(d => d.id === editTarget.driverId)?.name}</h3>
               <button onClick={() => setEditTarget(null)} className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
-            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0"><RateForm onSubmit={handleEdit} submitLabel="Update" /></div>
+            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0"><RateForm onSubmit={handleEdit} submitLabel="Update" hideButtons /></div>
+            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">
+              <button onClick={() => setEditTarget(null)} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
+              <button onClick={handleEdit} disabled={isSaving || !form.driverId} className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
+                {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Update
+              </button>
+            </div>
           </div>
         </div>
       )}

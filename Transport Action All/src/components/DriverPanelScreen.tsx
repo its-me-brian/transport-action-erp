@@ -672,7 +672,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                   className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Phone</label>
                   <input
@@ -725,7 +725,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                   <option value="Inactivo">Inactivo</option>
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Type</label>
                   <select
@@ -750,7 +750,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Driver Ownership</label>
                   <select
@@ -773,7 +773,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Email</label>
                   <input
@@ -795,7 +795,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">License Type</label>
                   <input
@@ -819,7 +819,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between px-5 py-3 border-t border-outline-variant">
+            <div className="flex items-center justify-between px-5 py-3 border-t border-outline-variant shrink-0">
               <button
                 onClick={() => { setShowRatesModal(editDriver); loadDriverRates(editDriver.id); }}
                 className="px-4 py-1.5 text-[12px] font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors cursor-pointer"
@@ -965,7 +965,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                 <X className="w-4 h-4 text-on-surface-variant" />
               </button>
             </div>
-            <div className="px-5 py-4 max-h-[60vh] overflow-y-auto flex-1 min-h-0">
+            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0">
               {loadingRates ? (
                 <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
               ) : (
@@ -1003,7 +1003,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                   {editRate ? (
                     <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
                       <h4 className="text-[13px] font-semibold text-on-surface">{isNewRate ? 'New Rate' : 'Edit Rate'}</h4>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                           <label className="text-[10px] text-on-surface-variant uppercase block mb-1">Service Type</label>
                           <select value={editRate.serviceType || 'Dispo'} onChange={e => setEditRate({ ...editRate, serviceType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]">
@@ -1021,18 +1021,18 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                           <input type="text" value={editRate.projectId || ''} onChange={e => setEditRate({ ...editRate, projectId: e.target.value || 'GLOBAL' })} placeholder="GLOBAL" className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" />
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Base Rate (€)</label><input type="number" step="0.01" value={editRate.baseRate || ''} onChange={e => setEditRate({ ...editRate, baseRate: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
                         <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Included Km</label><input type="number" value={editRate.includedKm || ''} onChange={e => setEditRate({ ...editRate, includedKm: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
                         <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Included Hours</label><input type="number" step="0.5" value={editRate.includedHours || ''} onChange={e => setEditRate({ ...editRate, includedHours: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
                       </div>
-                      <div className="grid grid-cols-4 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Extra Km (€)</label><input type="number" step="0.01" value={editRate.extraKmRate || ''} onChange={e => setEditRate({ ...editRate, extraKmRate: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
                         <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Extra Hour (€)</label><input type="number" step="0.01" value={editRate.extraHourRate || ''} onChange={e => setEditRate({ ...editRate, extraHourRate: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
                         <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Night (€)</label><input type="number" step="0.01" value={editRate.nightExtra || ''} onChange={e => setEditRate({ ...editRate, nightExtra: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
                         <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Holiday (€)</label><input type="number" step="0.01" value={editRate.holidayExtra || ''} onChange={e => setEditRate({ ...editRate, holidayExtra: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Diaria Piena (€)</label><input type="number" step="0.01" value={editRate.diariaPiena || ''} onChange={e => setEditRate({ ...editRate, diariaPiena: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
                         <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Diaria Mezza (€)</label><input type="number" step="0.01" value={editRate.diariaMezza || ''} onChange={e => setEditRate({ ...editRate, diariaMezza: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
                       </div>

@@ -255,7 +255,7 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
                 <input type="text" value={editClient.name || ''} onChange={e => setEditClient({ ...editClient, name: e.target.value })}
                   className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Type</label>
                   <select value={editClient.type || 'direct'} onChange={e => setEditClient({ ...editClient, type: e.target.value })}
@@ -276,7 +276,7 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
                 <input type="text" value={editClient.address || ''} onChange={e => setEditClient({ ...editClient, address: e.target.value })}
                   className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Phone</label>
                   <input type="text" value={editClient.phone || ''} onChange={e => setEditClient({ ...editClient, phone: e.target.value })}

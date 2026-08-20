@@ -475,7 +475,7 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Operating Company</label>
                   <input
@@ -498,7 +498,7 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Start Date</label>
                   <input

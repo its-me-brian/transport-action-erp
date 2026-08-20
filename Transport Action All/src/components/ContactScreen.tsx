@@ -73,7 +73,7 @@ export default function ContactScreen({ onNavigate }: Props) {
           {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Name *</label>
           <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
@@ -85,7 +85,7 @@ export default function ContactScreen({ onNavigate }: Props) {
             className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="e.g. Production Manager" />
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <div>
           <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Phone</label>
           <input type="text" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
@@ -177,7 +177,7 @@ export default function ContactScreen({ onNavigate }: Props) {
                 <span className="text-[13px] font-semibold text-on-surface">{c.name}</span>
                 {c.role && <span className="text-[10px] text-on-surface-variant uppercase bg-surface-container px-1.5 py-0.5 rounded">{c.role}</span>}
               </div>
-              <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
+              <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant flex-wrap">
                 {c.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{c.phone}</span>}
                 {c.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{c.email}</span>}
                 {c.whatsapp && <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" />{c.whatsapp}</span>}
