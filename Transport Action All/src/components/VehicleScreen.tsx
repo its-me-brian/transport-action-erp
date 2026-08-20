@@ -21,7 +21,7 @@ export default function VehicleScreen({ onNavigate }: Props) {
   const [statusFilter, setStatusFilter] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editTarget, setEditTarget] = useState<VehicleDTO | null>(null);
-  const [form, setForm] = useState({ plate: '', brand: '', model: '', type: 'Van', ownership: 'tercero', capacity: '', insuranceExpiry: '', inspectionExpiry: '', operatingCompany: '', notes: '' });
+  const [form, setForm] = useState({ plate: '', brand: '', model: '', type: 'Van', ownership: 'tercero', capacity: '', status: 'Disponible', driverDefault: '', insuranceExpiry: '', inspectionExpiry: '', operatingCompany: '', notes: '' });
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => { loadData(); }, []);
@@ -63,6 +63,8 @@ export default function VehicleScreen({ onNavigate }: Props) {
       if (form.type !== editTarget.type) changes.Type = form.type;
       if (form.ownership !== editTarget.ownership) changes.Ownership = form.ownership;
       if (parseInt(form.capacity) !== editTarget.capacity) changes.Capacity = parseInt(form.capacity) || 0;
+      if (form.status !== editTarget.status) changes.Status = form.status;
+      if (form.driverDefault !== (editTarget.driverDefault || '')) changes.DriverDefault = form.driverDefault;
       if (form.insuranceExpiry !== editTarget.insuranceExpiry) changes.InsuranceExpiry = form.insuranceExpiry;
       if (form.inspectionExpiry !== editTarget.inspectionExpiry) changes.InspectionExpiry = form.inspectionExpiry;
       if (form.operatingCompany !== editTarget.operatingCompany) changes.OperatingCompany = form.operatingCompany;
@@ -74,7 +76,7 @@ export default function VehicleScreen({ onNavigate }: Props) {
   };
 
   const openEdit = (v: VehicleDTO) => {
-    setForm({ plate: v.plate, brand: v.brand, model: v.model, type: v.type, ownership: v.ownership, capacity: String(v.capacity), insuranceExpiry: v.insuranceExpiry, inspectionExpiry: v.inspectionExpiry, operatingCompany: v.operatingCompany, notes: v.notes });
+    setForm({ plate: v.plate, brand: v.brand, model: v.model, type: v.type, ownership: v.ownership, capacity: String(v.capacity), status: v.status || 'Disponible', driverDefault: v.driverDefault || '', insuranceExpiry: v.insuranceExpiry, inspectionExpiry: v.inspectionExpiry, operatingCompany: v.operatingCompany, notes: v.notes });
     setEditTarget(v);
   };
 
@@ -127,6 +129,20 @@ export default function VehicleScreen({ onNavigate }: Props) {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
+          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Status</label>
+          <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">
+            {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Default Driver</label>
+          <input type="text" value={form.driverDefault} onChange={e => setForm({ ...form, driverDefault: e.target.value })}
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="Driver name or ID" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
           <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Insurance Expiry</label>
           <input type="date" value={form.insuranceExpiry} onChange={e => setForm({ ...form, insuranceExpiry: e.target.value })}
             className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
@@ -159,7 +175,7 @@ export default function VehicleScreen({ onNavigate }: Props) {
           <h2 className="font-headline-lg-mobile md:font-headline-lg text-on-surface">Vehicles</h2>
           <p className="text-[12px] text-on-surface-variant mt-0.5">{filtered.length} vehicle{filtered.length !== 1 ? 's' : ''}</p>
         </div>
-        <button onClick={() => { setForm({ plate: '', brand: '', model: '', type: 'Van', ownership: 'tercero', capacity: '', insuranceExpiry: '', inspectionExpiry: '', operatingCompany: '', notes: '' }); setShowCreateModal(true); }}
+        <button         onClick={() => { setForm({ plate: '', brand: '', model: '', type: 'Van', ownership: 'tercero', capacity: '', status: 'Disponible', driverDefault: '', insuranceExpiry: '', inspectionExpiry: '', operatingCompany: '', notes: '' }); setShowCreateModal(true); }}
           className="flex items-center gap-2 bg-primary text-on-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-primary-hover transition-colors cursor-pointer">
           <Plus className="w-3.5 h-3.5" /><span className="hidden sm:inline">Add Vehicle</span>
         </button>

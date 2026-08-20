@@ -353,7 +353,11 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
       EstimatedRevenue: '',
       EstimatedCost: '',
       OperatingCompany: operatingCompany || '',
-      Normalized: false
+      Normalized: false,
+      ServiceType: svc.serviceType || 'disposal',
+      VehicleType: svc.vehicle || '',
+      ProviderType: '',
+      ProviderID: ''
     });
     
     created++;

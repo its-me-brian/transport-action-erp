@@ -297,6 +297,18 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       hasThenPickup: false
     };
     
+    // Extract Google Maps URLs from ALL columns (including unmapped H, I, etc.)
+    const mapsUrlRegex = /https?:\/\/(maps\.app\.goo\.gl|goo\.gl|google\.com\/maps)[^\s]*/i;
+    const mappedIndices = new Set([colMap.vehicle, colMap.driver, colMap.time, colMap.passengers, colMap.from, colMap.to, colMap.servicio, colMap.flightInfo, colMap.section].filter(v => v !== undefined));
+    for (let c = 0; c < row.length; c++) {
+      if (mappedIndices.has(c)) continue;
+      const cellStr = String(row[c] || '').trim();
+      const urlMatch = cellStr.match(mapsUrlRegex);
+      if (urlMatch) {
+        servicio.notes = servicio.notes ? servicio.notes + ' | maps:' + urlMatch[0] : 'maps:' + urlMatch[0];
+      }
+    }
+    
     // Procesar pasajero principal
     if (passengerCell) {
       const parsed = _parsePassengerLine(passengerCell);
@@ -562,7 +574,7 @@ function _saveDriverToSheet(name, phone, source) {
       phoneFormatted = "'" + phoneFormatted;
     }
     // ERD columns: ID, Name, Type, CollaboratorID, Phone, WhatsApp, Email, IBAN, VehiclePreferred, LicenseType, LicenseExpiry, Status, OperatingCompany, Notes, Source, LastUsed, TotalRides, CreatedAt, UpdatedAt
-    sh.appendRow([id, cleanName, 'Propio', '', phoneFormatted, phoneFormatted, '', '', '', '', '', 'Disponible', '', '', source || 'import', '', 0, isoNow, isoNow]);
+    sh.appendRow([id, cleanName, 'interno', '', phoneFormatted, phoneFormatted, '', '', '', '', '', 'Disponible', '', '', source || 'import', '', 0, isoNow, isoNow]);
   } catch (e) {
     Logger.log('Error saving driver: ' + e.message);
   }
@@ -600,12 +612,15 @@ function _buildServiceRecord(serv, production, dateStr, fileName, idx, importSeq
   const datePart = Utilities.formatDate(actualDate, Session.getScriptTimeZone(), 'yyyyMMdd');
   const id = 'TL-' + datePart + '-' + String(importSeq).padStart(2, '0') + String(idx + 1).padStart(3, '0');
   
-  // Extract Google Maps URL from 'to' field
+  // Extract Google Maps URL from 'to' and 'from' fields
   const toRaw = String(serv.to || '');
-  const mapsUrlMatch = toRaw.match(/https?:\/\/(maps\.app\.goo\.gl|goo\.gl|google\.com\/maps)[^\s]*/i);
+  const fromRaw = String(serv.from || '');
+  const mapsUrlMatch = toRaw.match(/https?:\/\/(maps\.app\.goo\.gl|goo\.gl|google\.com\/maps)[^\s]*/i)
+    || fromRaw.match(/https?:\/\/(maps\.app\.goo\.gl|goo\.gl|google\.com\/maps)[^\s]*/i);
   const mapsUrl = mapsUrlMatch ? mapsUrlMatch[0] : '';
   // Clean destination: remove URL part
   const toClean = toRaw.replace(/https?:\/\/[^\s]*/g, '').trim();
+  const fromClean = fromRaw.replace(/https?:\/\/[^\s]*/g, '').trim();
   
   // Build notes with maps URL if present
   let notes = serv.notes || '';

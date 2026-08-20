@@ -135,6 +135,50 @@ function apiDeleteDriver(id) {
 }
 
 /**
+ * Crea un conductor al vuelo desde el formulario de servicios.
+ * Verifica duplicados por teléfono antes de crear.
+ * Usa executeWithLock para concurrencia segura.
+ *
+ * @param {Object} data - { Name, Phone, OperatingCompany? }
+ * @returns {Object} { success, driverId, name }
+ */
+function apiCreateDriverOnTheFly(data) {
+  if (!data.Name) throw new ValidationError('Name is required');
+  if (!data.Phone) throw new ValidationError('Phone is required');
+
+  return executeWithLock(() => {
+    // Verificar duplicados por teléfono
+    const existingByPhone = DriverRepository.getByPhone(data.Phone);
+    if (existingByPhone) {
+      throw new ValidationError(
+        'DRIVER_EXISTS: Ya existe un conductor con el teléfono ' + data.Phone +
+        ' (' + existingByPhone.Name + '). ID: ' + existingByPhone.ID
+      );
+    }
+
+    // Crear conductor
+    const entity = DriverRepository.create({
+      Name: data.Name,
+      Phone: data.Phone,
+      WhatsApp: data.Phone,
+      OperatingCompany: data.OperatingCompany || '',
+      Source: 'service_form',
+      Notes: 'Creado desde formulario de servicios'
+    });
+
+    _dispatchEvent({
+      type: 'driver.created',
+      entity: 'Driver',
+      entityId: entity.ID,
+      payload: { source: 'on_the_fly', name: data.Name }
+    });
+
+    Logger.log('[DRIVER] Conductor al vuelo creado: ' + entity.ID + ' (' + data.Name + ')');
+    return DriverRepository.toDTO(entity);
+  }, 'Crear conductor al vuelo: ' + data.Name);
+}
+
+/**
  * Cleanup drivers with invalid names (non-driver entries)
  * @returns {Object} { removed: number }
  */

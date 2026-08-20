@@ -706,7 +706,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
   };
 
   // Fields that can be persisted via updateServiceField (whitelisted in backend)
-  const PERSISTABLE_FIELDS = ['time', 'pickupLines', 'dropoffLines', 'flightInfo', 'notes'];
+  const PERSISTABLE_FIELDS = ['time', 'pickupLines', 'dropoffLines', 'flightInfo', 'notes', 'vehicle', 'driverPhone'];
 
   const saveEdit = async () => {
     if (!editingCell) return;

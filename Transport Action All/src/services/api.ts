@@ -332,11 +332,12 @@ export async function gasPostWithRetry(action: string, data: Record<string, any>
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
 
-      // Don't retry on client errors (4xx) — only retry on network/5xx
+      // Don't retry on client errors (4xx) — only retry on network/5xx/timeout
       const isRetryable =
-        !lastError.message.includes('HTTP 4') ||
         lastError.message.includes('Failed to fetch') ||
-        lastError.message.includes('NetworkError');
+        lastError.message.includes('NetworkError') ||
+        lastError.message.includes('HTTP 5') ||
+        lastError.message.includes('timeout');
 
       if (!isRetryable || attempt === MAX_RETRIES) {
         throw lastError;
@@ -707,7 +708,19 @@ export async function createDriver(name: string, phone: string, notes?: string):
   return gasPostWithRetry('createDriver', { name, phone, notes });
 }
 
-export async function updateDriver(id: string, fields: { name?: string; phone?: string; whatsapp?: string; vehiclePreferred?: string; notes?: string; status?: string }): Promise<{ success: boolean; error?: string }> {
+/**
+ * Crea un conductor al vuelo desde el formulario de servicios.
+ * Verifica duplicados por teléfono.
+ */
+export async function createDriverOnTheFly(data: {
+  name: string;
+  phone: string;
+  operatingCompany?: string;
+}): Promise<{ success?: boolean; id?: string; name?: string; error?: string }> {
+  return gasPostWithRetry('createDriverOnTheFly', data);
+}
+
+export async function updateDriver(id: string, fields: { name?: string; phone?: string; whatsapp?: string; vehiclePreferred?: string; notes?: string; status?: string; type?: string; collaboratorId?: string; email?: string; iban?: string; licenseType?: string; licenseExpiry?: string; operatingCompany?: string }): Promise<{ success: boolean; error?: string }> {
   return gasPostWithRetry('updateDriver', { id, fields });
 }
 
@@ -1047,6 +1060,7 @@ export async function createCollaborator(data: {
   email?: string;
   paymentTerms?: number;
   notes?: string;
+  active?: boolean;
   operatingCompany?: string;
 }): Promise<{ success?: boolean; id?: string; error?: string }> {
   return gasPostWithRetry('createCollaborator', data);

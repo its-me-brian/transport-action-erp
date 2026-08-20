@@ -33,6 +33,7 @@ vi.stubGlobal('localStorage', localStorageMock);
 describe('Driver Links API', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFetch.mockReset();
     localStorageMock.clear();
   });
 
@@ -92,15 +93,16 @@ describe('Driver Links API', () => {
 
     it('should handle network errors', async () => {
       // gasPostWithRetry retries 3 times on network errors, then throws
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+      // Delays: 1s + 2s + 4s = 7s total, so we need a longer timeout
+      mockFetch.mockRejectedValueOnce(new Error('Failed to fetch'));
+      mockFetch.mockRejectedValueOnce(new Error('Failed to fetch'));
+      mockFetch.mockRejectedValueOnce(new Error('Failed to fetch'));
+      mockFetch.mockRejectedValueOnce(new Error('Failed to fetch'));
 
       await expect(
         generateDriverLink('DRV-001', 'PRJ-001', '2026-07-22', '2026-07-28')
-      ).rejects.toThrow('Network error');
-    });
+      ).rejects.toThrow('Failed to fetch');
+    }, 15_000);
   });
 
   describe('getDriverLinks', () => {

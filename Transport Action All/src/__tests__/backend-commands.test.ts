@@ -1289,21 +1289,23 @@ describe('Lock / Concurrency Handling', () => {
 
   it('API throws on HTTP 503 (service unavailable)', async () => {
     // gasPostWithRetry retries 3 times on 5xx, then throws
+    // Delays: 1s + 2s + 4s = 7s total
     mockGasError(503, 'Service Unavailable');
     mockGasError(503, 'Service Unavailable');
     mockGasError(503, 'Service Unavailable');
     mockGasError(503, 'Service Unavailable');
     await expect(api.confirmService('svc-1')).rejects.toThrow();
-  });
+  }, 15_000);
 
   it('API functions handle network timeout', async () => {
     // gasPostWithRetry retries 3 times on network errors, then throws
+    // Delays: 1s + 2s + 4s = 7s total
     mockFetch.mockRejectedValueOnce(new Error('Network timeout'));
     mockFetch.mockRejectedValueOnce(new Error('Network timeout'));
     mockFetch.mockRejectedValueOnce(new Error('Network timeout'));
     mockFetch.mockRejectedValueOnce(new Error('Network timeout'));
     await expect(api.confirmService('svc-1')).rejects.toThrow('Network timeout');
-  });
+  }, 15_000);
 
   it('All command functions return error objects on backend failure', async () => {
     const commands = [

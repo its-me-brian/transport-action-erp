@@ -473,6 +473,10 @@ function _handleRoute(params, data) {
         _checkPermission(data, 'driver.create');
         result = apiCreateDriver(_normalizeToPascal(data, FIELD_MAPS.driver));
         break;
+      case 'createDriverOnTheFly':
+        _checkPermission(data, 'driver.create');
+        result = apiCreateDriverOnTheFly(_normalizeToPascal(data, FIELD_MAPS.driver));
+        break;
       case 'updateDriver':
         _checkPermission(data, 'driver.update');
         // Frontend sends {id, fields} — normalize both field names AND values

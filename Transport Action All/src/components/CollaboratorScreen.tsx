@@ -113,6 +113,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
           email: editCollaborator.email || '',
           paymentTerms: editCollaborator.paymentTerms || 30,
           notes: editCollaborator.notes || '',
+          active: editCollaborator.active !== false,
           operatingCompany: editCollaborator.operatingCompany || ''
         });
         if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
@@ -209,7 +210,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
           </p>
         </div>
         <button
-          onClick={() => { setEditCollaborator({ name: '', vat: '', address: '', phone: '', email: '', paymentTerms: 30, notes: '', operatingCompany: '' }); setIsNew(true); }}
+          onClick={() => { setEditCollaborator({ name: '', vat: '', address: '', phone: '', email: '', paymentTerms: 30, notes: '', operatingCompany: '', active: true }); setIsNew(true); }}
           className="flex items-center gap-2 bg-primary text-on-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-primary-hover transition-colors cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
@@ -367,6 +368,17 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
                 <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Notes</label>
                 <textarea value={editCollaborator.notes || ''} onChange={e => setEditCollaborator({ ...editCollaborator, notes: e.target.value })}
                   className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary resize-none" rows={2} />
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide">Status</label>
+                <button
+                  type="button"
+                  onClick={() => setEditCollaborator({ ...editCollaborator, active: !editCollaborator.active })}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${editCollaborator.active ? 'bg-primary' : 'bg-outline-variant'}`}
+                >
+                  <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${editCollaborator.active ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+                </button>
+                <span className="text-[12px] text-on-surface">{editCollaborator.active ? 'Active' : 'Inactive'}</span>
               </div>
             </div>
 

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, 
   MapPin, 
@@ -11,10 +11,11 @@ import {
   User, 
   ChevronDown,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Plus
 } from 'lucide-react';
 import { Service, ScreenId } from '../types';
-import { getProjects, getDrivers, createService } from '../services/api';
+import { getProjects, getDrivers, createService, createDriverOnTheFly } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 
 interface NewServiceScreenProps {
@@ -30,7 +31,6 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
   const [project, setProject] = useState('');
   const [serviceDate, setServiceDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [callTime, setCallTime] = useState('08:00');
-  const [driverName, setDriverName] = useState('');
   const [pickupLocation, setPickupLocation] = useState('');
   const [dropoffLocation, setDropoffLocation] = useState('');
 
@@ -42,12 +42,73 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
 
   // Dynamic data from API
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
-  const [drivers, setDrivers] = useState<{ id: string; name: string }[]>([]);
+  const [drivers, setDrivers] = useState<{ id: string; name: string; phone?: string }[]>([]);
+
+  // Driver autocomplete state
+  const [driverSearch, setDriverSearch] = useState('');
+  const [selectedDriverId, setSelectedDriverId] = useState('');
+  const [showDriverDropdown, setShowDriverDropdown] = useState(false);
+  const driverRef = useRef<HTMLDivElement>(null);
+
+  // Create driver on-the-fly modal state
+  const [showCreateDriverModal, setShowCreateDriverModal] = useState(false);
+  const [newDriverPhone, setNewDriverPhone] = useState('');
+  const [isCreatingDriver, setIsCreatingDriver] = useState(false);
 
   useEffect(() => {
     getProjects().then(p => { if (Array.isArray(p)) setProjects(p.map((x: any) => ({ id: x.id, name: x.name }))); }).catch(e => console.error('Failed to load projects:', e));
-    getDrivers().then(d => { if (Array.isArray(d)) setDrivers(d.map((x: any) => ({ id: x.id || x.name, name: x.name }))); }).catch(e => console.error('Failed to load drivers:', e));
+    getDrivers().then(d => { if (Array.isArray(d)) setDrivers(d.map((x: any) => ({ id: x.id || x.name, name: x.name, phone: x.phone }))); }).catch(e => console.error('Failed to load drivers:', e));
   }, []);
+
+  // Close driver dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (driverRef.current && !driverRef.current.contains(e.target as Node)) {
+        setShowDriverDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter drivers by search
+  const filteredDrivers = driverSearch.trim()
+    ? drivers.filter(d => d.name.toLowerCase().includes(driverSearch.toLowerCase()))
+    : drivers;
+
+  const exactMatch = drivers.find(d => d.name.toLowerCase() === driverSearch.toLowerCase());
+
+  // Handle driver creation on-the-fly
+  const handleCreateDriverOnTheFly = async () => {
+    if (!driverSearch.trim()) return;
+    if (!newDriverPhone.trim()) {
+      showToast('Phone number is required', 'error');
+      return;
+    }
+
+    setIsCreatingDriver(true);
+    const result = await createDriverOnTheFly({
+      name: driverSearch.trim(),
+      phone: newDriverPhone.trim(),
+      operatingCompany: company,
+    });
+    setIsCreatingDriver(false);
+
+    if (result.error) {
+      showToast(result.error, 'error');
+      return;
+    }
+
+    if (result.id) {
+      // Add the new driver to the local list
+      setDrivers(prev => [...prev, { id: result.id!, name: result.name || driverSearch.trim(), phone: newDriverPhone.trim() }]);
+      setSelectedDriverId(result.id!);
+      setDriverSearch(result.name || driverSearch.trim());
+      setShowCreateDriverModal(false);
+      setNewDriverPhone('');
+      showToast('Driver created successfully', 'success');
+    }
+  };
 
   // onBlur validation
   const validateField = (name: string, value: string) => {
@@ -98,6 +159,7 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
       Date: serviceDate,
       Time: `${callTime} - 16:00`,
       OperatingCompany: company,
+      DriverID: selectedDriverId || undefined,
       PassengerName: '',
       PickupLines: [pickupLocation],
       DropoffLines: [dropoffLocation],
@@ -129,7 +191,7 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
       company,
       project: project || '',
       location: pickupLocation,
-      driverName: driverName || 'Driver Unassigned',
+              driverName: driverSearch || 'Driver Unassigned',
       date: displayDate,
       startTime: callTime || '',
       endTime: '16:00',
@@ -286,15 +348,57 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
               <label className="block text-[11px] text-on-surface-variant uppercase tracking-wide font-medium mb-1">
                 Assigned Driver
               </label>
-              <div className="relative">
+              <div className="relative" ref={driverRef}>
                 <input 
                   type="text"
                   placeholder="Search drivers..."
-                  value={driverName}
-                  onChange={(e) => setDriverName(e.target.value)}
+                  value={driverSearch}
+                  onChange={(e) => {
+                    setDriverSearch(e.target.value);
+                    setSelectedDriverId('');
+                    setShowDriverDropdown(true);
+                  }}
+                  onFocus={() => setShowDriverDropdown(true)}
                   className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg pl-9 pr-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary transition-colors"
                 />
                 <User className="w-4 h-4 text-on-surface-variant absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                
+                {/* Dropdown */}
+                {showDriverDropdown && driverSearch.trim() && (
+                  <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {filteredDrivers.length > 0 && filteredDrivers.map(d => (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onClick={() => {
+                          setDriverSearch(d.name);
+                          setSelectedDriverId(d.id);
+                          setShowDriverDropdown(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-[13px] hover:bg-surface-container transition-colors flex items-center gap-2"
+                      >
+                        <User className="w-3.5 h-3.5 text-on-surface-variant" />
+                        <span>{d.name}</span>
+                        {d.phone && <span className="text-[11px] text-on-surface-variant ml-auto">{d.phone}</span>}
+                      </button>
+                    ))}
+                    
+                    {/* Create new driver option */}
+                    {!exactMatch && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowDriverDropdown(false);
+                          setShowCreateDriverModal(true);
+                        }}
+                        className="w-full text-left px-3 py-2 text-[13px] hover:bg-primary-container transition-colors flex items-center gap-2 border-t border-outline-variant/50 text-primary"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Create new driver: <strong>{driverSearch}</strong></span>
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>
@@ -389,6 +493,85 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
 
         </form>
       </main>
+
+      {/* Create Driver On-The-Fly Modal */}
+      <AnimatePresence>
+        {showCreateDriverModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+            onClick={() => { setShowCreateDriverModal(false); setNewDriverPhone(''); }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl w-full max-w-sm mx-4 p-5 space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-[14px] font-semibold text-on-surface">Create New Driver</h3>
+                <button
+                  type="button"
+                  onClick={() => { setShowCreateDriverModal(false); setNewDriverPhone(''); }}
+                  className="p-1 rounded hover:bg-surface-container transition-colors"
+                >
+                  <X className="w-4 h-4 text-on-surface-variant" />
+                </button>
+              </div>
+
+              <p className="text-[12px] text-on-surface-variant">
+                Driver: <strong className="text-on-surface">{driverSearch}</strong>
+              </p>
+
+              <div>
+                <label className="block text-[11px] text-on-surface-variant uppercase tracking-wide font-medium mb-1">
+                  Phone Number *
+                </label>
+                <input
+                  type="tel"
+                  placeholder="+34 600 000 000"
+                  value={newDriverPhone}
+                  onChange={(e) => setNewDriverPhone(e.target.value)}
+                  autoFocus
+                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary transition-colors"
+                />
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => { setShowCreateDriverModal(false); setNewDriverPhone(''); }}
+                  className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-on-surface bg-surface-dim hover:bg-surface-container transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateDriverOnTheFly}
+                  disabled={isCreatingDriver || !newDriverPhone.trim()}
+                  className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-on-primary bg-primary hover:bg-primary-hover transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isCreatingDriver ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-3.5 h-3.5" />
+                      Create Driver
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

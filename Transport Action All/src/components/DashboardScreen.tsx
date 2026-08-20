@@ -445,14 +445,14 @@ export default function DashboardScreen({
         passengers: { field: 'PassengerName' },
         notes: { field: 'Notes' },
         flightInfo: { field: 'FlightInfo' },
+        startTime: { field: 'StartTime' },
+        endTime: { field: 'EndTime' },
+        km: { field: 'KmTotal', mapper: (v: string) => parseFloat(v) || 0 },
+        diariaType: { field: 'DiariaType' },
         // NOTE: status/OperationalStatus is NOT editable via updateServiceField.
         // State changes MUST go through Commands (assignDriver, confirmService, etc.)
         // NOTE: DriverID/VehicleID are NOT here — assignment MUST go through assignDriver()
         // which handles ProviderType, ProviderID, Driver.Status side effects.
-        // NOTE: Rapportino fields (StartTime, EndTime, KmTotal, HoursExtra, DiariaType,
-        // IsFestivo, IsNotturno, HasDiaria) belong to DriverReport, not Service.
-        // They CANNOT be saved via updateServiceField. They must be edited through
-        // the DriverReport workflow (createReport/approveReport).
       };
 
       // NOTE: Cost fields (baseCost, overtimeCost, kmCost) are frontend-calculated

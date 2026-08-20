@@ -41,6 +41,13 @@ interface EditModalDriver {
   vehiclePreferred: string;
   notes: string;
   status: 'Disponible' | 'Asignado' | 'Inactivo';
+  type: string;
+  collaboratorId: string;
+  email: string;
+  iban: string;
+  licenseType: string;
+  licenseExpiry: string;
+  operatingCompany: string;
 }
 
 export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: DriverPanelScreenProps) {
@@ -185,6 +192,13 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
         vehiclePreferred: editDriver.vehiclePreferred,
         notes: editDriver.notes,
         status: editDriver.status,
+        type: editDriver.type,
+        collaboratorId: editDriver.collaboratorId,
+        email: editDriver.email,
+        iban: editDriver.iban,
+        licenseType: editDriver.licenseType,
+        licenseExpiry: editDriver.licenseExpiry,
+        operatingCompany: editDriver.operatingCompany,
       });
       if (result.error) {
         showToast('Error: ' + result.error, 'error');
@@ -419,6 +433,13 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                         vehiclePreferred: dbRec?.vehiclePreferred || dr.vehicle,
                         notes: dbRec?.notes || '',
                         status: dr.status || 'Disponible',
+                        type: dbRec?.type || 'interno',
+                        collaboratorId: dbRec?.collaboratorId || '',
+                        email: dbRec?.email || '',
+                        iban: dbRec?.iban || '',
+                        licenseType: dbRec?.licenseType || '',
+                        licenseExpiry: dbRec?.licenseExpiry || '',
+                        operatingCompany: dbRec?.operatingCompany || '',
                       });
                     }}
                     className="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-primary transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
@@ -497,6 +518,13 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                       vehiclePreferred: dbRec?.vehiclePreferred || dr.vehicle,
                       notes: dbRec?.notes || '',
                       status: dr.status || 'Disponible',
+                      type: dbRec?.type || 'interno',
+                      collaboratorId: dbRec?.collaboratorId || '',
+                      email: dbRec?.email || '',
+                      iban: dbRec?.iban || '',
+                      licenseType: dbRec?.licenseType || '',
+                      licenseExpiry: dbRec?.licenseExpiry || '',
+                      operatingCompany: dbRec?.operatingCompany || '',
                     });
                   }}
                   className="flex-1 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary text-[12px] font-medium rounded transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
@@ -612,6 +640,74 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
                   <option value="Asignado">Asignado</option>
                   <option value="Inactivo">Inactivo</option>
                 </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Type</label>
+                  <select
+                    value={editDriver.type}
+                    onChange={(e) => setEditDriver({ ...editDriver, type: e.target.value })}
+                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="interno">Interno (Propio)</option>
+                    <option value="colaborador">Colaborador</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Operating Company</label>
+                  <select
+                    value={editDriver.operatingCompany}
+                    onChange={(e) => setEditDriver({ ...editDriver, operatingCompany: e.target.value })}
+                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="">—</option>
+                    <option value="Transport Action">Transport Action</option>
+                    <option value="Movie Motion">Movie Motion</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={editDriver.email}
+                    onChange={(e) => setEditDriver({ ...editDriver, email: e.target.value })}
+                    placeholder="driver@email.com"
+                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">IBAN</label>
+                  <input
+                    type="text"
+                    value={editDriver.iban}
+                    onChange={(e) => setEditDriver({ ...editDriver, iban: e.target.value })}
+                    placeholder="IT60 X054 2811 1010 0000 0123 456"
+                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">License Type</label>
+                  <input
+                    type="text"
+                    value={editDriver.licenseType}
+                    onChange={(e) => setEditDriver({ ...editDriver, licenseType: e.target.value })}
+                    placeholder="e.g. B, C, D"
+                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">License Expiry</label>
+                  <input
+                    type="date"
+                    value={editDriver.licenseExpiry}
+                    onChange={(e) => setEditDriver({ ...editDriver, licenseExpiry: e.target.value })}
+                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
+                  />
+                </div>
               </div>
             </div>
 

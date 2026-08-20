@@ -391,7 +391,7 @@ export default function ExpenseScreen({ onNavigate }: Props) {
                   );
                 })}
                 {exp.status === 'Draft' && (
-                  <button onClick={() => { setEditTarget(exp); setEditChanges({ description: exp.description, amount: exp.amount, category: exp.category }); }}
+                  <button onClick={() => { setEditTarget(exp); setEditChanges({ description: exp.description, amount: exp.amount, category: exp.category, expenseDate: exp.expenseDate || '', notes: exp.notes || '' }); }}
                     className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer" title="Edit">
                     <Edit3 className="w-3.5 h-3.5" />
                   </button>
@@ -500,6 +500,16 @@ export default function ExpenseScreen({ onNavigate }: Props) {
                     {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
+              </div>
+              <div>
+                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Expense Date</label>
+                <input type="date" value={editChanges.expenseDate || ''} onChange={e => setEditChanges({ ...editChanges, expenseDate: e.target.value })}
+                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
+              </div>
+              <div>
+                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Notes</label>
+                <textarea value={editChanges.notes || ''} onChange={e => setEditChanges({ ...editChanges, notes: e.target.value })}
+                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary resize-none" rows={2} />
               </div>
             </div>
             <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant">
