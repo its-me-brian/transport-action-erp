@@ -25,28 +25,18 @@ function cleanCellText(cellText) {
 }
 
 /**
- * Convert a Google Sheets cell value to a clean string.
- * Handles Date objects (from time/date cells) by formatting them properly
- * instead of letting String() produce "Wed Jul 07 2026 08:15:00...".
- * @param {*} cellValue - Raw cell value from getValues()
- * @returns {string} Clean string representation
+ * Check if a row is truly empty (all columns, not just mapped ones).
+ * Used to detect separator rows between driver blocks that may have data in unmapped columns.
+ * @param {Array} row - Row array from getValues()
+ * @returns {boolean} true if all cells are empty/whitespace
  */
-function _cellToStr(cellValue) {
-  if (cellValue === null || cellValue === undefined) return '';
-  if (cellValue instanceof Date) {
-    // Check if it looks like a time-only value (hours < 24, no year significance)
-    const h = cellValue.getHours();
-    const m = cellValue.getMinutes();
-    // If it's just a time (no significant date component), return HH:mm
-    if (cellValue.getFullYear() === 1899 || (h < 24 && cellValue.getDate() === 1)) {
-      return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
-    }
-    // Otherwise it's a full date — return dd/MM/yyyy
-    const day = String(cellValue.getDate()).padStart(2, '0');
-    const month = String(cellValue.getMonth() + 1).padStart(2, '0');
-    return day + '/' + month + '/' + cellValue.getFullYear();
+function _isRowTrulyEmpty(row) {
+  if (!row || !row.length) return true;
+  for (let c = 0; c < row.length; c++) {
+    const val = _cellToStr(row[c]);
+    if (val && val.trim() !== '') return false;
   }
-  return String(cellValue).trim();
+  return true;
 }
 
 /**
@@ -425,16 +415,6 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       // Inherit vehicle/driver from previous service if this row has no vehicle/driver
       // (same vehicle, different time/passengers — e.g., second dispo of the day)
       if (!vehicleCell && !driverCell && timeCell) {
-        servicio.vehicle = lastVehicle;
-        servicio.vehicleType = lastVehicleType;
-        servicio.driver = lastDriver;
-        servicio.driverPhone = lastDriverPhone;
-        servicio.serviceType = lastServiceType;
-        servicio.notes = 'Same vehicle as previous service';
-      }
-      }
-      
-      if (shouldInherit) {
         servicio.vehicle = lastVehicle;
         servicio.vehicleType = lastVehicleType;
         servicio.driver = lastDriver;
