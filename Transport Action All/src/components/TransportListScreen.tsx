@@ -469,7 +469,8 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Filtered services based on current filters, sorted by time
+  // Filtered services based on current filters
+  // Sort by time only after import (preview preserves Excel order)
   const filteredServices = React.useMemo(() => {
     const filtered = services.filter(s => {
       if (filterDateFrom && s.date && s.date < filterDateFrom) return false;
@@ -481,13 +482,17 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
       if (filterFinancialStatus && s.financialStatus !== filterFinancialStatus) return false;
       return true;
     });
-    // Sort by time (earliest first), services without time go last
-    return filtered.sort((a, b) => {
-      const timeA = a.time || 'zz:zz';
-      const timeB = b.time || 'zz:zz';
-      return timeA.localeCompare(timeB);
-    });
-  }, [services, filterDateFrom, filterDateTo, filterDriver, filterOperatingCompany, filterStatus, filterProject, filterFinancialStatus]);
+    // After import (step === 'syncing' or history), sort by time ascending
+    if (step === 'syncing' || step === 'done' || viewingHistory) {
+      return filtered.sort((a, b) => {
+        const timeA = a.time || 'zz:zz';
+        const timeB = b.time || 'zz:zz';
+        return timeA.localeCompare(timeB);
+      });
+    }
+    // In preview/upload, preserve original Excel order
+    return filtered;
+  }, [services, filterDateFrom, filterDateTo, filterDriver, filterOperatingCompany, filterStatus, filterProject, filterFinancialStatus, step, viewingHistory]);
 
   // Drivers database
   const [dbDrivers, setDbDrivers] = useState<DriverRecord[]>([]);
@@ -731,11 +736,13 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
 
     const { rowId, field } = editingCell;
     
-    // Optimistic update for immediate UI feedback
-    setServices(prev => prev.map(s => {
-      if (s.id !== rowId) return s;
-      return { ...s, [field]: editValue } as TransportService;
-    }));
+    // Optimistic update for immediate UI feedback (only for persistable fields)
+    if (PERSISTABLE_FIELDS.includes(field)) {
+      setServices(prev => prev.map(s => {
+        if (s.id !== rowId) return s;
+        return { ...s, [field]: editValue } as TransportService;
+      }));
+    }
 
     setEditingCell(null);
     setEditValue('');
@@ -1332,6 +1339,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
       <tr 
         key={service.id} 
         className={`transition-colors ${
+          service.isProduction ? 'bg-gray-50 opacity-60' :
           isSelected ? 'bg-primary/5' : 'hover:bg-surface-dim/50'
         }`}
       >
@@ -1349,15 +1357,23 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
         </td>
         <td className="px-2 py-2 hidden lg:table-cell">
           <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded ${
-            service.serviceType === 'transfer' ? 'bg-blue-50 text-blue-700' :
+            service.isProduction ? 'bg-gray-200 text-gray-500 italic' :
+            service.serviceType === 'Transfer Airport' ? 'bg-blue-50 text-blue-700' :
+            service.serviceType === 'Transfer City' ? 'bg-blue-50 text-blue-700' :
             service.serviceType === 'fullDay' ? 'bg-purple-50 text-purple-700' :
             service.serviceType === 'halfDay' ? 'bg-orange-50 text-orange-700' :
+            service.serviceType === 'transfer' ? 'bg-blue-50 text-blue-700' :
+            service.serviceType === 'Dispo' ? 'bg-amber-50 text-amber-700 border border-amber-300' :
             'bg-surface-dim text-on-surface-variant'
           }`}>
-            {service.serviceType === 'fullDay' ? 'Full Day' :
+            {service.isProduction ? 'Production' :
+             service.serviceType === 'fullDay' ? 'Full Day' :
              service.serviceType === 'halfDay' ? 'Half Day' :
-             service.serviceType || 'disposal'}
+             service.serviceType || 'Dispo'}
           </span>
+          {service.serviceType === 'Dispo' && !service.isProduction && (
+            <span className="text-[9px] text-amber-600 ml-1" title="Verify: is this Transfer City, Transfer Airport, or Dispo?">?</span>
+          )}
         </td>
         <td className="px-2 py-2">
           <DriverCell service={service} dbDrivers={dbDrivers} onUpdate={handleDriverUpdate} />
@@ -2289,6 +2305,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                             <div
                               key={service.id}
                               className={`border rounded-lg p-3 transition-colors ${
+                                service.isProduction ? 'border-gray-200 bg-gray-50 opacity-60' :
                                 isSelected ? 'border-primary bg-primary/5' : 'border-outline-variant bg-surface-container-lowest'
                               }`}
                             >
@@ -2313,16 +2330,21 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                                     {service.section}
                                   </span>
                                 )}
-                                {service.serviceType && (
+                                {(service.serviceType || service.isProduction) && (
                                   <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded shrink-0 ${
-                                    service.serviceType === 'transfer' ? 'bg-blue-50 text-blue-700' :
+                                    service.isProduction ? 'bg-gray-200 text-gray-500 italic' :
+                                    service.serviceType === 'Transfer Airport' ? 'bg-blue-50 text-blue-700' :
+                                    service.serviceType === 'Transfer City' ? 'bg-blue-50 text-blue-700' :
                                     service.serviceType === 'fullDay' ? 'bg-purple-50 text-purple-700' :
                                     service.serviceType === 'halfDay' ? 'bg-orange-50 text-orange-700' :
+                                    service.serviceType === 'transfer' ? 'bg-blue-50 text-blue-700' :
+                                    service.serviceType === 'Dispo' ? 'bg-amber-50 text-amber-700' :
                                     'bg-surface-dim text-on-surface-variant'
                                   }`}>
-                                    {service.serviceType === 'fullDay' ? 'Full Day' :
+                                    {service.isProduction ? 'Production' :
+                                     service.serviceType === 'fullDay' ? 'Full Day' :
                                      service.serviceType === 'halfDay' ? 'Half Day' :
-                                     service.serviceType}
+                                     service.serviceType || 'Dispo'}
                                   </span>
                                 )}
                               </div>

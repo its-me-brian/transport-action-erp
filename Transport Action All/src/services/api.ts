@@ -43,6 +43,8 @@ export interface TransportService {
   section?: string;
   servicio?: string;
   serviceType?: string;
+  vehicleType?: string;
+  isProduction?: boolean;
   operatingCompany?: string;
   hasThenPickup?: boolean;
   financialStatus?: string;
@@ -144,6 +146,8 @@ export function normalizeTransportService(raw: Record<string, any>): TransportSe
     section: raw.section,
     servicio: raw.servicio || '',
     serviceType: raw.serviceType || 'disposal',
+    vehicleType: raw.vehicleType || 'Van',
+    isProduction: raw.isProduction || false,
     operatingCompany: raw.operatingCompany || '',
     hasThenPickup: raw.hasThenPickup || false
   };
@@ -159,16 +163,20 @@ export function normalizeTransportServices(rawServices: Record<string, any>[]): 
 /**
  * Display helpers — for views that need string representation
  */
-export function passengerDisplay(passengers: Passenger[]): string {
-  return passengers.map(p => p.name).filter(Boolean).join('; ');
+export function passengerDisplay(passengers: Passenger[] | string | unknown): string {
+  if (typeof passengers === 'string') return passengers;
+  if (!Array.isArray(passengers)) return '';
+  return (passengers as Passenger[]).map(p => p.name).filter(Boolean).join('; ');
 }
 
-export function passengerRolesDisplay(passengers: Passenger[]): string {
-  return passengers.map(p => p.role).filter(Boolean).join('; ');
+export function passengerRolesDisplay(passengers: Passenger[] | string | unknown): string {
+  if (!Array.isArray(passengers)) return '';
+  return (passengers as Passenger[]).map(p => p.role).filter(Boolean).join('; ');
 }
 
-export function hasPassengerRole(passengers: Passenger[]): boolean {
-  return passengers.some(p => p.role && p.role.trim() !== '');
+export function hasPassengerRole(passengers: Passenger[] | string | unknown): boolean {
+  if (!Array.isArray(passengers)) return false;
+  return (passengers as Passenger[]).some(p => p.role && p.role.trim());
 }
 
 export function pickupDisplay(pickupLines: string[]): string {

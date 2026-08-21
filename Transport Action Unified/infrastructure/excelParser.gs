@@ -371,27 +371,18 @@ function _parseTransportListRows(allData, fileName, importSeq) {
     // or from "Servicio" column if present
     let serviceType = 'Dispo'; // default
     let vehicleType = 'Van';   // default
+    let isProduction = false;
 
     // Parse from VEHICLE column: "Disposal Van" → service=Dispo, vehicle=Van
-    //                          "Production Van2" → skip (production)
+    //                          "Production Van2" → service=Production, isProduction=true
     //                          "Transfer Airport Van" → service=Transfer Airport, vehicle=Van
     if (vehicleCell) {
       const lowerVehicle = vehicleCell.toLowerCase();
       
-      // Skip production vehicles — consume ALL sub-rows too (phone, passengers, etc.)
+      // Detect production vehicles — include them but flag as production
       if (lowerVehicle.indexOf('production') > -1 || lowerVehicle.indexOf('prod ') > -1) {
-        parsingLog.push({ row: i, action: 'SKIP_PRODUCTION', vehicle: vehicleCell });
-        // Advance past sub-rows (phone, passengers, empty rows) until next vehicle
-        // Do NOT break on empty rows or time-only rows — they are part of the production block
-        let skipJ = i + 1;
-        while (skipJ < allData.length) {
-          const skipRow = allData[skipJ];
-          const skipA = _cellToStr(skipRow[colMap.vehicle]);
-          if (skipA) break;
-          skipJ++;
-        }
-        i = skipJ;
-        continue;
+        isProduction = true;
+        serviceType = 'Production';
       }
       
       // Extract vehicle type
@@ -442,6 +433,7 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       section: currentSection,
       servicio: servicioCell,
       serviceType: serviceType,
+      isProduction: isProduction,
       hasThenPickup: false
     };
     
@@ -645,8 +637,7 @@ function _parseTransportListRows(allData, fileName, importSeq) {
   for (let d = 0; d < servicios.length; d++) {
     const svc = servicios[d];
     // Skip Production vehicles — don't register their drivers
-    const vehicleUpper = String(svc.vehicle || '').toUpperCase();
-    if (vehicleUpper.indexOf('PRODUCTION') > -1) continue;
+    if (svc.isProduction) continue;
     
     if (svc.driver && !savedDrivers.has(svc.driver)) {
       savedDrivers.add(svc.driver);
@@ -968,6 +959,7 @@ function _buildServiceRecord(serv, production, dateStr, fileName, idx, importSeq
     section: serv.section || '',
     servicio: serv.servicio || '',
     serviceType: serv.serviceType || 'Dispo',
+    isProduction: serv.isProduction || false,
     hasThenPickup: serv.hasThenPickup || false
   };
 }

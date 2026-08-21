@@ -310,7 +310,7 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
     
     // === FILTER: Skip Production vehicles (they belong to the production company, not the agency) ===
     var vehicleUpper = String(svc.vehicle || '').toUpperCase();
-    if (vehicleUpper.indexOf('PRODUCTION') > -1) {
+    if (svc.isProduction || vehicleUpper.indexOf('PRODUCTION') > -1) {
       skippedProduction++;
       continue;
     }
