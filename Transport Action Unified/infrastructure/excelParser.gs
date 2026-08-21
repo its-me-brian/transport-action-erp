@@ -281,6 +281,7 @@ function _parseTransportListRows(allData, fileName, importSeq) {
   let lastDriverPhone = '';
   let lastServiceType = 'Dispo';
   let lastServiceHadVehicle = false;  // true if last saved service had a vehicle
+  const parsingLog = [];  // DEBUG: track every row processed
   
   while (i < allData.length) {
     const row = allData[i];
@@ -293,6 +294,20 @@ function _parseTransportListRows(allData, fileName, importSeq) {
     const servicioCell = colMap.servicio !== undefined ? _cellToStr(row[colMap.servicio]) : '';
     const flightCell = colMap.flightInfo !== undefined ? _cellToStr(row[colMap.flightInfo]) : '';
     const sectionCell = colMap.section !== undefined ? _cellToStr(row[colMap.section]) : '';
+    
+    // DEBUG: log each row processed in main loop
+    parsingLog.push({
+      row: i,
+      vehicle: vehicleCell,
+      driver: driverCell,
+      time: timeCell,
+      passengers: passengerCell,
+      from: fromCell,
+      to: toCell,
+      lastVehicle: lastVehicle,
+      lastDriver: lastDriver,
+      phase: 'main'
+    });
     
     // Si la fila está vacía, saltar
     const allEmpty = !vehicleCell && !driverCell && !timeCell && !passengerCell && !fromCell && !toCell && !servicioCell;
@@ -421,6 +436,9 @@ function _parseTransportListRows(allData, fileName, importSeq) {
         servicio.driverPhone = lastDriverPhone;
         servicio.serviceType = lastServiceType;
         servicio.notes = 'Same vehicle as previous service';
+        parsingLog.push({ row: i, action: 'INHERITED', vehicle: lastVehicle, driver: lastDriver, phone: lastDriverPhone });
+      } else {
+        parsingLog.push({ row: i, action: 'NO_INHERIT', reason: 'vehicle=' + vehicleCell + ' driver=' + driverCell + ' time=' + timeCell });
       }
     
     // Extract Google Maps URLs from ALL columns (including unmapped H, I, etc.)
@@ -504,6 +522,7 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       // (mismo vehículo del servicio anterior, distinto horario/pasajeros/FROM-TO)
       // Matches: time+passengers, time+FROM/TO, or time only — all without vehicle/driver
       if (sub2 && !sub0 && !sub1 && (sub4 || sub5 || sub6)) {
+        parsingLog.push({ row: j, action: 'SUB_BREAK_NEW_SVC', fromRow: i, time: sub2, passengers: sub4 });
         break;
       }
 
@@ -542,11 +561,13 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       // Sub-fila vacía o no reconocida → fin del servicio
       // Use truly empty check (all columns) to catch separator rows with data in unmapped columns
       if (_isRowTrulyEmpty(subRow)) {
+        parsingLog.push({ row: j, action: 'SUB_BREAK_EMPTY', fromRow: i });
         break;
       }
       
       // Si tiene vehículo y conductor, es un nuevo servicio
       if (sub0 && sub1 && sub2) {
+        parsingLog.push({ row: j, action: 'SUB_BREAK_VDT', fromRow: i, vehicle: sub0, driver: sub1 });
         break;
       }
       
@@ -564,6 +585,8 @@ function _parseTransportListRows(allData, fileName, importSeq) {
     if (servicio.driverPhone) lastDriverPhone = servicio.driverPhone;
     if (servicio.serviceType) lastServiceType = servicio.serviceType;
     lastServiceHadVehicle = !!servicio.vehicle;  // Track if this service had a vehicle
+    
+    parsingLog.push({ row: i, action: 'SAVED', vehicle: servicio.vehicle, driver: servicio.driver, phone: servicio.driverPhone, lastVehicle: lastVehicle, lastDriver: lastDriver });
     
     i = j;
   }
@@ -599,7 +622,9 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       dateStr: dateStr,
       row0: allData.length > 0 ? allData[0].map((c,i) => ({ col: i, value: String(c||'').trim() })) : [],
       row1: allData.length > 1 ? allData[1].map((c,i) => ({ col: i, value: String(c||'').trim() })) : [],
-      totalRows: allData.length
+      totalRows: allData.length,
+      colMap: colMap,
+      parsingLog: parsingLog
     }
   };
 }

@@ -389,7 +389,8 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
   const [services, setServices] = useState<TransportService[]>([]);
   const [footerContacts, setFooterContacts] = useState<{name: string; role: string; phone: string; email: string}[]>([]);
   const [fileUrl, setFileUrl] = useState<string>('');
-  
+  const [parsingLog, setParsingLog] = useState<any[]>([]);
+  const [showDebug, setShowDebug] = useState(false);  
   // Edit state
   const [editingCell, setEditingCell] = useState<{ rowId: string; field: string } | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -657,7 +658,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
       }));
       const mappedServices = normalizeTransportServices(rawServices);
       setServices(mappedServices);
-      
+      setParsingLog((result as any)._debug?.parsingLog || []);      
       // Auto-select only services that have meaningful data (not blank rows)
       const validIds = (result.servicios || [])
         .filter(s => s.vehicle || s.driver || s.time || (Array.isArray(s.passengers) ? s.passengers.length > 0 : s.passengers) || s.from || s.to || (Array.isArray(s.pickupLines) && s.pickupLines.length > 0) || (Array.isArray(s.dropoffLines) && s.dropoffLines.length > 0))
@@ -2364,6 +2365,58 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* DEBUG: Parser parsing log */}
+            {parsingLog.length > 0 && (
+              <div className="rounded-lg border border-outline-variant overflow-hidden">
+                <button
+                  onClick={() => setShowDebug(!showDebug)}
+                  className="w-full px-3 py-2 text-[11px] font-medium text-on-surface-variant hover:bg-surface-dim flex items-center justify-between cursor-pointer"
+                >
+                  <span>Debug Parser Log ({parsingLog.length} entries)</span>
+                  {showDebug ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </button>
+                {showDebug && (
+                  <div className="px-3 pb-3 max-h-[400px] overflow-auto">
+                    <table className="w-full text-[10px] border-collapse">
+                      <thead>
+                        <tr className="text-left text-on-surface-variant border-b border-outline-variant">
+                          <th className="px-1 py-0.5">Row</th>
+                          <th className="px-1 py-0.5">Action</th>
+                          <th className="px-1 py-0.5">Vehicle</th>
+                          <th className="px-1 py-0.5">Driver</th>
+                          <th className="px-1 py-0.5">Time</th>
+                          <th className="px-1 py-0.5">Last Vehicle</th>
+                          <th className="px-1 py-0.5">Last Driver</th>
+                          <th className="px-1 py-0.5">Detail</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-outline-variant/30">
+                        {parsingLog.map((entry: any, idx: number) => (
+                          <tr key={idx} className={
+                            entry.action === 'INHERITED' ? 'bg-emerald-50' :
+                            entry.action === 'SAVED' && !entry.vehicle ? 'bg-red-50' :
+                            entry.action === 'SAVED' ? 'bg-surface-dim/30' :
+                            entry.action?.startsWith('SUB_BREAK') ? 'bg-amber-50' :
+                            entry.action === 'NO_INHERIT' ? 'bg-yellow-50' :
+                            ''
+                          }>
+                            <td className="px-1 py-0.5 font-mono">{entry.row}</td>
+                            <td className="px-1 py-0.5 font-medium">{entry.action}</td>
+                            <td className="px-1 py-0.5">{entry.vehicle || '—'}</td>
+                            <td className="px-1 py-0.5">{entry.driver || '—'}</td>
+                            <td className="px-1 py-0.5">{entry.time || '—'}</td>
+                            <td className="px-1 py-0.5">{entry.lastVehicle || '—'}</td>
+                            <td className="px-1 py-0.5">{entry.lastDriver || '—'}</td>
+                            <td className="px-1 py-0.5 max-w-[200px] truncate">{entry.detail || entry.reason || entry.fromRow !== undefined ? `from:${entry.fromRow}` : '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
           </>

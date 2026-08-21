@@ -212,6 +212,8 @@ interface ImportResult {
     transportCompany: string;
     dateStr: string;
     totalRows: number;
+    colMap: Record<string, number>;
+    parsingLog: any[];
   };
 }
 
