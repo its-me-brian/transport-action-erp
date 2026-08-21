@@ -84,7 +84,9 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
   const loadLinkedDrivers = async (collaboratorId: string) => {
     setLoadingDrivers(true);
     try {
+      console.log('[CollaboratorScreen] loadLinkedDrivers called with collaboratorId:', collaboratorId);
       const result = await getDriversByCollaborator(collaboratorId);
+      console.log('[CollaboratorScreen] loadLinkedDrivers result:', result);
       setLinkedDrivers(Array.isArray(result) ? result : []);
     } catch (err) {
       console.error('[CollaboratorScreen] Error loading linked drivers:', err);
@@ -127,12 +129,16 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
   const handleLinkDriver = async (driverId: string) => {
     if (!editCollaborator?.id) return;
     try {
+      console.log('[CollaboratorScreen] handleLinkDriver: driverId=', driverId, 'collaboratorId=', editCollaborator.id);
       const result = await updateDriver(driverId, { collaboratorId: editCollaborator.id });
+      console.log('[CollaboratorScreen] updateDriver result:', result);
       if (result.error) {
         showToast('Error: ' + result.error, 'error');
         return;
       }
       showToast('Conductor asociado', 'success');
+      // Small delay to ensure GAS has time to persist the write before reading
+      await new Promise(resolve => setTimeout(resolve, 500));
       await loadLinkedDrivers(editCollaborator.id);
     } catch (err) {
       console.error('[CollaboratorScreen] Error linking driver:', err);

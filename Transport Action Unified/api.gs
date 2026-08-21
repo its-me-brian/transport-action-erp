@@ -32,9 +32,10 @@ var FIELD_MAPS = {
     name: 'Name', phone: 'Phone', whatsapp: 'WhatsApp',
     vehiclePreferred: 'VehiclePreferred', notes: 'Notes',
     status: 'Status', email: 'Email', type: 'Type',
-    collaboratorId: 'CollaboratorID', iban: 'Iban',
-    licenseType: 'LicenseType', licenseExpiry: 'LicenseExpiry',
-    operatingCompany: 'OperatingCompany', source: 'Source'
+    collaboratorId: 'CollaboratorID', driverOwnership: 'DriverOwnership',
+    iban: 'IBAN', licenseType: 'LicenseType', licenseExpiry: 'LicenseExpiry',
+    operatingCompany: 'OperatingCompany', source: 'Source',
+    lastImportDate: 'LastImportDate'
   },
   vehicle: {
     plate: 'Plate', brand: 'Brand', model: 'Model', type: 'Type',
@@ -73,9 +74,9 @@ var FIELD_MAPS = {
   },
   rateCard: {
     name: 'Name', category: 'Category', vehicleType: 'VehicleType',
-    basePrice: 'BasePrice', extraKmRate: 'ExtraKmRate',
-    extraHourRate: 'ExtraHourRate', waitRate: 'WaitRate',
-    nightFee: 'NightFee', holidayFee: 'HolidayFee',
+    serviceType: 'ServiceType', basePrice: 'BasePrice',
+    extraKmRate: 'ExtraKmRate', extraHourRate: 'ExtraHourRate',
+    waitRate: 'WaitRate', nightFee: 'NightFee', holidayFee: 'HolidayFee',
     halfDayPrice: 'HalfDayPrice', fullDayPrice: 'FullDayPrice',
     airportSurcharge: 'AirportSurcharge', operatingCompany: 'OperatingCompany',
     active: 'Active', notes: 'Notes', clientId: 'ClientID',
@@ -101,15 +102,15 @@ var FIELD_MAPS = {
   },
   document: {
     entityType: 'EntityType', entityId: 'EntityID', fileName: 'Filename',
-    fileUrl: 'FileUrl', mimeType: 'MimeType', uploadedBy: 'UploadedBy'
+    fileUrl: 'URL', mimeType: 'MimeType', uploadedBy: 'UploadedBy'
   },
   invoice: {
     projectId: 'ProjectID', clientId: 'ClientID', dueDate: 'DueDate',
     notes: 'Notes'
   },
   driverAdvance: {
-    driverId: 'DriverID', projectId: 'ProjectID', amount: 'Amount',
-    notes: 'Notes', status: 'Status', deductedIn: 'DeductedIn'
+    driverId: 'DriverID', projectId: 'ProjectID', serviceId: 'ServiceID',
+    amount: 'Amount', notes: 'Notes', status: 'Status', deductedIn: 'DeductedIn'
   }
 };
 

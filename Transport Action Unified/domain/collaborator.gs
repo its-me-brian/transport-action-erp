@@ -72,15 +72,23 @@ const CollaboratorRepository = {
 // ============================================================================
 
 function apiGetCollaborators(filters) {
+  Logger.log('[apiGetCollaborators] filters: ' + JSON.stringify(filters));
   let collaborators = CollaboratorRepository.getAll();
+  Logger.log('[apiGetCollaborators] Total collaborators (before filter): ' + collaborators.length);
   if (filters) {
     if (filters.active !== undefined) {
       // Normalize filters.active: query params arrive as strings ("true"/"false"),
       // but booleans also come through as actual booleans from GAS post body.
       var activeFilter = filters.active === 'true' || filters.active === true;
+      Logger.log('[apiGetCollaborators] activeFilter: ' + activeFilter + ' (raw: ' + filters.active + ', type: ' + typeof filters.active + ')');
       collaborators = collaborators.filter(c => {
         var isActive = c.Active === 'true' || c.Active === true;
         return isActive === activeFilter;
+      });
+      Logger.log('[apiGetCollaborators] After active filter: ' + collaborators.length);
+      // Debug: show all collaborators and their Active values
+      CollaboratorRepository.getAll().forEach(function(c) {
+        Logger.log('[apiGetCollaborators]   ' + c.ID + ' (' + c.Name + ') Active=' + JSON.stringify(c.Active) + ' type=' + typeof c.Active);
       });
     }
     if (filters.operatingCompany) {

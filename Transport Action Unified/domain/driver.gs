@@ -120,7 +120,19 @@ function apiGetDriver(id) {
 
 function apiGetDriversByCollaborator(collaboratorId) {
   if (!collaboratorId) throw new ValidationError('collaboratorId is required');
-  return DriverRepository.getByCollaborator(collaboratorId).map(DriverRepository.toDTO);
+  Logger.log('[getDriversByCollaborator] Querying for collaboratorId: ' + collaboratorId);
+  var results = DriverRepository.getByCollaborator(collaboratorId);
+  Logger.log('[getDriversByCollaborator] Found ' + results.length + ' drivers');
+  if (results.length === 0) {
+    // Debug: show all drivers and their CollaboratorID values
+    var allDrivers = DriverRepository.getAll();
+    Logger.log('[getDriversByCollaborator] Total drivers in DB: ' + allDrivers.length);
+    allDrivers.forEach(function(d) {
+      Logger.log('[getDriversByCollaborator]   Driver ' + d.ID + ' (' + d.Name + ') → CollaboratorID=' + JSON.stringify(d.CollaboratorID) + ' type=' + typeof d.CollaboratorID);
+    });
+    Logger.log('[getDriversByCollaborator] Expected CollaboratorID: ' + collaboratorId + ' type=' + typeof collaboratorId);
+  }
+  return results.map(DriverRepository.toDTO);
 }
 
 function apiCreateDriver(data) {
@@ -132,11 +144,15 @@ function apiCreateDriver(data) {
 }
 
 function apiUpdateDriver(id, changes) {
+  Logger.log('[apiUpdateDriver] id=' + id + ' changes=' + JSON.stringify(changes));
   const entity = DriverRepository.getById(id);
   if (!entity) throw new NotFoundError('Driver', id);
+  Logger.log('[apiUpdateDriver] Current CollaboratorID=' + JSON.stringify(entity.CollaboratorID));
   DriverRepository.update(id, changes);
+  var updated = DriverRepository.getById(id);
+  Logger.log('[apiUpdateDriver] After update CollaboratorID=' + JSON.stringify(updated.CollaboratorID));
   _dispatchEvent({ type: 'driver.updated', entity: 'Driver', entityId: id, payload: changes });
-  return DriverRepository.toDTO(DriverRepository.getById(id));
+  return DriverRepository.toDTO(updated);
 }
 
 function apiDeleteDriver(id) {

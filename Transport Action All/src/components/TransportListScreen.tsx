@@ -1352,8 +1352,8 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
             {hasPassengerRole(service.passengers) ? passengerRolesDisplay(service.passengers) : '-'}
           </td>
         )}
-        <td className="px-2 py-2 max-w-[180px] hidden md:table-cell">
-          <div className="flex items-center gap-1">
+        <td className="px-2 py-2 max-w-[180px] hidden md:table-cell overflow-hidden">
+          <div className="flex items-center gap-1 min-w-0">
             <EditableCell rowId={service.id} field="pickupLines" value={pickupDisplay(service.pickupLines)} />
             {service.pickupMapsUrl && (
               <a href={service.pickupMapsUrl} target="_blank" rel="noopener noreferrer" title="Open pickup in Maps" className="shrink-0 text-primary/60 hover:text-primary transition-colors">
@@ -1362,8 +1362,8 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
             )}
           </div>
         </td>
-        <td className="px-2 py-2 max-w-[180px] hidden md:table-cell">
-          <div className="flex items-center gap-1">
+        <td className="px-2 py-2 max-w-[180px] hidden md:table-cell overflow-hidden">
+          <div className="flex items-center gap-1 min-w-0">
             <EditableCell rowId={service.id} field="dropoffLines" value={dropoffDisplay(service.dropoffLines)} />
             {service.dropoffMapsUrl && (
               <a href={service.dropoffMapsUrl} target="_blank" rel="noopener noreferrer" title="Open dropoff in Maps" className="shrink-0 text-primary/60 hover:text-primary transition-colors">

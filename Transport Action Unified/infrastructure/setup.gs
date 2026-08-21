@@ -125,7 +125,7 @@ function _setupProjects(ss) {
 
 function _setupDrivers(ss) {
   var sh = _safeInsertSheet(ss, 'Drivers', '#4CAF50',
-    ['ID', 'Name', 'Type', 'CollaboratorID', 'Phone', 'WhatsApp', 'Email', 'IBAN', 'VehiclePreferred', 'LicenseType', 'LicenseExpiry', 'Status', 'OperatingCompany', 'Notes', 'Source', 'LastUsed', 'TotalRides', 'CreatedAt', 'UpdatedAt']);
+    ['ID', 'Name', 'Type', 'DriverOwnership', 'CollaboratorID', 'Phone', 'WhatsApp', 'Email', 'IBAN', 'VehiclePreferred', 'LicenseType', 'LicenseExpiry', 'Status', 'OperatingCompany', 'Notes', 'Source', 'LastImportDate', 'LastUsed', 'TotalRides', 'CreatedAt', 'UpdatedAt']);
   sh.getRange('E:E').setNumberFormat('@');
   sh.getRange('F:F').setNumberFormat('@');
 }
@@ -142,7 +142,7 @@ function _setupDriverRates(ss) {
 
 function _setupDriverAdvances(ss) {
   _safeInsertSheet(ss, 'DriverAdvances', '#B71C1C',
-    ['ID', 'DriverID', 'ProjectID', 'Amount', 'RemainingAmount', 'Date', 'Status', 'DeductedIn', 'Notes', 'CreatedAt']);
+    ['ID', 'DriverID', 'ProjectID', 'ServiceID', 'Amount', 'RemainingAmount', 'Date', 'Status', 'DeductedIn', 'Notes', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupCollaborators(ss) {
@@ -162,12 +162,12 @@ function _setupRateCards(ss) {
 
 function _setupTransportLists(ss) {
   _safeInsertSheet(ss, 'TransportLists', '#2196F3',
-    ['ID', 'ProjectID', 'FileName', 'ImportDate', 'Production', 'ProjectName', 'TransportCompany', 'TotalServices', 'ImportedBy', 'Notes', 'CreatedAt']);
+    ['ID', 'ProjectID', 'FileName', 'ImportDate', 'Production', 'ProjectName', 'TransportCompany', 'TotalServices', 'ImportedBy', 'Notes', 'FileURL', 'CreatedAt']);
 }
 
 function _setupServices(ss) {
   _safeInsertSheet(ss, 'Services', '#FF6F00',
-    ['ID', 'ProjectID', 'TransportListID', 'Date', 'Time', 'Production', 'Section', 'PassengerName', 'PassengerRole', 'PassengerPhone', 'PassengerDepartment', 'PickupLines', 'DropoffLines', 'FlightInfo', 'Notes', 'DriverID', 'VehicleID', 'OperationalStatus', 'FinancialStatus', 'EstimatedRevenue', 'EstimatedCost', 'OperatingCompany', 'Normalized', 'CreatedAt', 'UpdatedAt', 'StartTime', 'EndTime', 'KmTotal', 'HasDiaria', 'IsFestivo', 'IsNotturno', 'DiariaType', 'ProviderType', 'ProviderID', 'ServiceType', 'SourceType', 'SourceReference', 'VehicleType', 'PickupMapsUrl', 'DropoffMapsUrl']);
+    ['ID', 'ProjectID', 'TransportListID', 'Date', 'Time', 'Production', 'Section', 'PassengerName', 'PassengerRole', 'PassengerPhone', 'PassengerDepartment', 'PickupLines', 'DropoffLines', 'FlightInfo', 'Notes', 'DriverID', 'VehicleID', 'OperationalStatus', 'FinancialStatus', 'EstimatedRevenue', 'EstimatedCost', 'OperatingCompany', 'Normalized', 'CreatedAt', 'UpdatedAt', 'StartTime', 'EndTime', 'KmTotal', 'HasDiaria', 'IsFestivo', 'IsNotturno', 'DiariaType', 'ProviderType', 'ProviderID', 'ServiceType', 'SourceType', 'SourceReference', 'VehicleType', 'PickupMapsUrl', 'DropoffMapsUrl', 'OriginalTransportDate', 'PassengersList']);
 }
 
 function _setupServiceRevenueBreakdown(ss) {
@@ -187,7 +187,7 @@ function _setupDriverReports(ss) {
 
 function _setupRapportinoClients(ss) {
   _safeInsertSheet(ss, 'RapportinoClients', '#4A148C',
-    ['ID', 'ProjectID', 'ClientID', 'PeriodType', 'PeriodStart', 'PeriodEnd', 'WeekStart', 'WeekEnd', 'Status', 'Notes', 'CreatedBy', 'CreatedAt', 'UpdatedAt', 'SentAt', 'AcceptedAt']);
+    ['ID', 'ProjectID', 'ClientID', 'PeriodType', 'PeriodStart', 'PeriodEnd', 'WeekStart', 'WeekEnd', 'Status', 'Notes', 'CreatedBy', 'CreatedAt', 'UpdatedAt', 'SentAt', 'AcceptedAt', 'RejectedAt', 'RejectedReason']);
 }
 
 function _setupRapportinoItems(ss) {
@@ -197,7 +197,7 @@ function _setupRapportinoItems(ss) {
 
 function _setupRapportinoDrivers(ss) {
   _safeInsertSheet(ss, 'RapportinoDrivers', '#7B1FA2',
-    ['ID', 'ProjectID', 'DriverID', 'PeriodType', 'PeriodStart', 'PeriodEnd', 'WeekStart', 'WeekEnd', 'Status', 'Notes', 'CreatedBy', 'CreatedAt', 'UpdatedAt', 'SentAt', 'PaidAt']);
+    ['ID', 'ProjectID', 'DriverID', 'PeriodType', 'PeriodStart', 'PeriodEnd', 'WeekStart', 'WeekEnd', 'Status', 'Notes', 'CreatedBy', 'CreatedAt', 'UpdatedAt', 'SentAt', 'PaidAt', 'RejectedAt', 'RejectedReason']);
 }
 
 function _setupRapportinoCollaborators(ss) {
@@ -222,12 +222,12 @@ function _setupInvoiceItems(ss) {
 
 function _setupPayments(ss) {
   _safeInsertSheet(ss, 'Payments', '#00695C',
-    ['ID', 'InvoiceID', 'ClientID', 'Amount', 'PaymentMethod', 'PaymentDate', 'Reference', 'Notes', 'Status', 'CreatedBy', 'CreatedAt', 'ConfirmedAt', 'ReconciledAt', 'CashReceivedBy', 'CashDate', 'CashReference']);
+    ['ID', 'InvoiceID', 'ClientID', 'Amount', 'PaymentMethod', 'PaymentDate', 'Reference', 'Notes', 'Status', 'CreatedBy', 'CreatedAt', 'ConfirmedAt', 'ReconciledAt', 'VoidedAt', 'VoidReason', 'CashReceivedBy', 'CashDate', 'CashReference']);
 }
 
 function _setupExpenses(ss) {
   _safeInsertSheet(ss, 'Expenses', '#880E4F',
-    ['ID', 'OwnerType', 'OwnerID', 'Category', 'Description', 'Amount', 'ExpenseDate', 'AccountingDate', 'Status', 'ProjectID', 'OperatingCompany', 'CreatedBy', 'CreatedAt', 'UpdatedAt']);
+    ['ID', 'OwnerType', 'OwnerID', 'Category', 'Description', 'Amount', 'ExpenseDate', 'AccountingDate', 'Status', 'ProjectID', 'OperatingCompany', 'CreatedBy', 'Notes', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupChanges(ss) {

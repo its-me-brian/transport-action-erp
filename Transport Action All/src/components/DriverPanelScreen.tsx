@@ -125,6 +125,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
     getServiceTypes().then(st => setServiceTypes(st)).catch(() => {});
     // Load collaborators for the dropdown
     getCollaborators({ active: true }).then(list => {
+      console.log('[DriverPanel] Collaborators loaded:', list);
       setCollaborators(Array.isArray(list) ? list.map(c => ({ id: c.id, name: c.name })) : []);
     }).catch(err => {
       console.error('[DriverPanel] Failed to load collaborators:', err);

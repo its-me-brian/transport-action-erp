@@ -213,6 +213,8 @@ function _update(sheetName, id, changes) {
             ? JSON.stringify(val)
             : val;
           sheet.getRange(i + 2, colIdx + 1).setValue(value);
+        } else {
+          Logger.log('[_update] WARNING: Column "' + key + '" not found in sheet "' + sheetName + '". Headers: ' + headers.join(', '));
         }
       }
       return true;

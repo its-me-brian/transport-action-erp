@@ -499,9 +499,10 @@ function _parseTransportListRows(allData, fileName, importSeq) {
         continue;
       }
 
-      // Nuevo servicio: tiene hora + pasajeros pero sin vehículo/conductor
-      // (mismo vehículo del servicio anterior, distinto horario/pasajeros)
-      if (sub2 && sub4 && !sub0 && !sub1) {
+      // Nuevo servicio: tiene hora pero sin vehículo/conductor
+      // (mismo vehículo del servicio anterior, distinto horario/pasajeros/FROM-TO)
+      // Matches: time+passengers, time+FROM/TO, or time only — all without vehicle/driver
+      if (sub2 && !sub0 && !sub1 && (sub4 || sub5 || sub6)) {
         break;
       }
 

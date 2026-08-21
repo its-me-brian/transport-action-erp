@@ -36,6 +36,8 @@ function runMigrations() {
     { version: 6, fn: migrate_006_infra_tables },
     { version: 7, fn: migrate_007_invoice_items_serviceid },
     { version: 8, fn: migrate_008_soft_delete_all_entities },
+    { version: 9, fn: migrate_009_soft_delete_remaining_entities },
+    { version: 10, fn: migrate_010_fix_schema_gaps },
   ];
 
   const pending = migrations
@@ -529,5 +531,151 @@ function migrate_008_soft_delete_all_entities() {
     }
     const hm = _headerMap(sh);
     _ensureColumn(sh, hm, 'DeletedAt', config.after, config.color);
+  }
+}
+
+// ============================================================================
+// MIGRATION 009 — Add DeletedAt to remaining entity sheets (soft delete)
+// Migration 008 missed Drivers, Collaborators, Vehicles, Projects, Clients.
+// These entities use _safeDelete -> _softDelete, which needs DeletedAt column.
+// ============================================================================
+
+function migrate_009_soft_delete_remaining_entities() {
+  const ss = SpreadsheetApp.openById(CONFIG.DB_SHEET_ID);
+
+  function _headerMap(sh) {
+    const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+    const map = {};
+    headers.forEach((h, i) => { map[h] = i + 1; });
+    return map;
+  }
+
+  function _ensureColumn(sh, headerMap, colName, after, color) {
+    if (headerMap[colName]) return false;
+    const afterCol = headerMap[after] || sh.getLastColumn();
+    sh.insertColumnAfter(afterCol);
+    sh.getRange(1, afterCol + 1)
+      .setValue(colName)
+      .setFontWeight('bold')
+      .setBackground(color || '#455A64')
+      .setFontColor('#fff');
+    Logger.log('Migration 009: Added ' + colName + ' column to ' + sh.getName());
+    return true;
+  }
+
+  // These 5 entities use _safeDelete -> _softDelete but Migration 008 missed them
+  const sheetsToAddDeletedAt = [
+    { name: 'Drivers', after: 'UpdatedAt', color: '#4CAF50' },
+    { name: 'Collaborators', after: 'UpdatedAt', color: '#4A148C' },
+    { name: 'Vehicles', after: 'UpdatedAt', color: '#006064' },
+    { name: 'Projects', after: 'UpdatedAt', color: '#1B5E20' },
+    { name: 'Clients', after: 'UpdatedAt', color: '#0D47A1' },
+  ];
+
+  for (const config of sheetsToAddDeletedAt) {
+    const sh = ss.getSheetByName(config.name);
+    if (!sh) {
+      Logger.log('Migration 009: ' + config.name + ' sheet not found, skipping');
+      continue;
+    }
+    const hm = _headerMap(sh);
+    _ensureColumn(sh, hm, 'DeletedAt', config.after, config.color);
+  }
+}
+
+// ============================================================================
+// MIGRATION 010 — Fix schema gaps from audit
+// Adds missing columns that backend writes but setup.gs didn't define.
+// ============================================================================
+
+function migrate_010_fix_schema_gaps() {
+  const ss = SpreadsheetApp.openById(CONFIG.DB_SHEET_ID);
+
+  function _headerMap(sh) {
+    const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+    const map = {};
+    headers.forEach((h, i) => { map[h] = i + 1; });
+    return map;
+  }
+
+  function _ensureColumn(sh, headerMap, colName, after, color) {
+    if (headerMap[colName]) return false;
+    const afterCol = headerMap[after] || sh.getLastColumn();
+    sh.insertColumnAfter(afterCol);
+    sh.getRange(1, afterCol + 1)
+      .setValue(colName)
+      .setFontWeight('bold')
+      .setBackground(color || '#455A64')
+      .setFontColor('#fff');
+    Logger.log('Migration 010: Added ' + colName + ' column to ' + sh.getName());
+    return true;
+  }
+
+  // --- Drivers: DriverOwnership (after Type), LastImportDate (after Source) ---
+  var shDrivers = ss.getSheetByName('Drivers');
+  if (shDrivers) {
+    var hm = _headerMap(shDrivers);
+    _ensureColumn(shDrivers, hm, 'DriverOwnership', 'Type', '#4CAF50');
+    hm = _headerMap(shDrivers);
+    _ensureColumn(shDrivers, hm, 'LastImportDate', 'Source', '#4CAF50');
+  }
+
+  // --- DriverAdvances: ServiceID (after ProjectID), UpdatedAt (after CreatedAt) ---
+  var shDA = ss.getSheetByName('DriverAdvances');
+  if (shDA) {
+    var hm = _headerMap(shDA);
+    _ensureColumn(shDA, hm, 'ServiceID', 'ProjectID', '#B71C1C');
+    hm = _headerMap(shDA);
+    _ensureColumn(shDA, hm, 'UpdatedAt', 'CreatedAt', '#B71C1C');
+  }
+
+  // --- TransportLists: FileURL (after Notes) ---
+  var shTL = ss.getSheetByName('TransportLists');
+  if (shTL) {
+    var hm = _headerMap(shTL);
+    _ensureColumn(shTL, hm, 'FileURL', 'Notes', '#2196F3');
+  }
+
+  // --- Services: OriginalTransportDate, PassengersList (after DropoffMapsUrl) ---
+  var shSvc = ss.getSheetByName('Services');
+  if (shSvc) {
+    var hm = _headerMap(shSvc);
+    _ensureColumn(shSvc, hm, 'OriginalTransportDate', 'DropoffMapsUrl', '#FF6F00');
+    hm = _headerMap(shSvc);
+    _ensureColumn(shSvc, hm, 'PassengersList', 'OriginalTransportDate', '#FF6F00');
+  }
+
+  // --- Expenses: Notes (after CreatedBy) ---
+  var shExp = ss.getSheetByName('Expenses');
+  if (shExp) {
+    var hm = _headerMap(shExp);
+    _ensureColumn(shExp, hm, 'Notes', 'CreatedBy', '#880E4F');
+  }
+
+  // --- Payments: VoidedAt, VoidReason (after ReconciledAt) ---
+  var shPay = ss.getSheetByName('Payments');
+  if (shPay) {
+    var hm = _headerMap(shPay);
+    _ensureColumn(shPay, hm, 'VoidedAt', 'ReconciledAt', '#00695C');
+    hm = _headerMap(shPay);
+    _ensureColumn(shPay, hm, 'VoidReason', 'VoidedAt', '#00695C');
+  }
+
+  // --- RapportinoClients: RejectedAt, RejectedReason (after SentAt) ---
+  var shRC = ss.getSheetByName('RapportinoClients');
+  if (shRC) {
+    var hm = _headerMap(shRC);
+    _ensureColumn(shRC, hm, 'RejectedAt', 'SentAt', '#4A148C');
+    hm = _headerMap(shRC);
+    _ensureColumn(shRC, hm, 'RejectedReason', 'RejectedAt', '#4A148C');
+  }
+
+  // --- RapportinoDrivers: RejectedAt, RejectedReason (after PaidAt) ---
+  var shRD = ss.getSheetByName('RapportinoDrivers');
+  if (shRD) {
+    var hm = _headerMap(shRD);
+    _ensureColumn(shRD, hm, 'RejectedAt', 'PaidAt', '#7B1FA2');
+    hm = _headerMap(shRD);
+    _ensureColumn(shRD, hm, 'RejectedReason', 'RejectedAt', '#7B1FA2');
   }
 }
