@@ -469,9 +469,9 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Filtered services based on current filters
+  // Filtered services based on current filters, sorted by time
   const filteredServices = React.useMemo(() => {
-    return services.filter(s => {
+    const filtered = services.filter(s => {
       if (filterDateFrom && s.date && s.date < filterDateFrom) return false;
       if (filterDateTo && s.date && s.date > filterDateTo) return false;
       if (filterDriver && !(s.driver || '').toLowerCase().includes(filterDriver.toLowerCase())) return false;
@@ -480,6 +480,12 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
       if (filterProject && s.project !== filterProject) return false;
       if (filterFinancialStatus && s.financialStatus !== filterFinancialStatus) return false;
       return true;
+    });
+    // Sort by time (earliest first), services without time go last
+    return filtered.sort((a, b) => {
+      const timeA = a.time || 'zz:zz';
+      const timeB = b.time || 'zz:zz';
+      return timeA.localeCompare(timeB);
     });
   }, [services, filterDateFrom, filterDateTo, filterDriver, filterOperatingCompany, filterStatus, filterProject, filterFinancialStatus]);
 
@@ -658,7 +664,15 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
       }));
       const mappedServices = normalizeTransportServices(rawServices);
       setServices(mappedServices);
-      setParsingLog((result as any)._debug?.parsingLog || []);      
+      const _dbg = (result as any)._debug;
+      console.log('[DEBUG] _debug keys:', _dbg ? Object.keys(_dbg) : 'null');
+      console.log('[DEBUG] parsingLog length:', _dbg?.parsingLog?.length ?? 'missing');
+      console.log('[DEBUG] colMap:', JSON.stringify(_dbg?.colMap));
+      if (_dbg?.parsingLog?.length > 0) {
+        console.log('[DEBUG] first 3 parsingLog entries:', JSON.stringify(_dbg.parsingLog.slice(0, 3)));
+        console.log('[DEBUG] last 3 parsingLog entries:', JSON.stringify(_dbg.parsingLog.slice(-3)));
+      }
+      setParsingLog(_dbg?.parsingLog || []);      
       // Auto-select only services that have meaningful data (not blank rows)
       const validIds = (result.servicios || [])
         .filter(s => s.vehicle || s.driver || s.time || (Array.isArray(s.passengers) ? s.passengers.length > 0 : s.passengers) || s.from || s.to || (Array.isArray(s.pickupLines) && s.pickupLines.length > 0) || (Array.isArray(s.dropoffLines) && s.dropoffLines.length > 0))
@@ -1076,6 +1090,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
         projectId: importModalProjectId || undefined,
         operatingCompany: importModalOperatingCompany || 'TA',
         fileUrl: fileUrl || undefined,
+        dateStr: dateStr || '',
       });
 
       if (result.error) {
@@ -1141,6 +1156,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
           projectId: selectedProjectId,
           operatingCompany: importModalOperatingCompany || 'TA',
           fileUrl: fileUrl || undefined,
+          dateStr: dateStr || '',
         });
 
         if (result.error) {
@@ -1157,6 +1173,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
           projectName: projectName || '',
           operatingCompany: importModalOperatingCompany || 'TA',
           fileUrl: fileUrl || undefined,
+          dateStr: dateStr || '',
         });
 
         if (result.error) {
@@ -1225,6 +1242,12 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
       if (s.id !== serviceId) return s;
       return { ...s, driver, driverPhone };
     }));
+
+    // PREVIEW MODE: Only update local state — services don't exist in the Sheet yet
+    // The driver assignment will be applied when the user syncs to the Sheet
+    if (step === 'preview') {
+      return;
+    }
 
     // Find driverId from name OR from normalized phone
     const normalizedPhone = normalizePhone(driverPhone);

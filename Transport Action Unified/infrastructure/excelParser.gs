@@ -358,6 +358,14 @@ function _parseTransportListRows(allData, fileName, importSeq) {
     }
     
     
+    // Guard: if no vehicle AND no time, this is an orphaned sub-row (phone, passenger, etc.)
+    // Not a real service — skip it
+    if (!vehicleCell && !timeCell) {
+      parsingLog.push({ row: i, action: 'SKIP_ORPHAN', vehicle: vehicleCell, driver: driverCell });
+      i++;
+      continue;
+    }
+    
     // Esta fila parece ser el inicio de un servicio
     // Classify service type from VEHICLE column (e.g. "Disposal Van", "Transfer Airport Van")
     // or from "Servicio" column if present
@@ -370,9 +378,19 @@ function _parseTransportListRows(allData, fileName, importSeq) {
     if (vehicleCell) {
       const lowerVehicle = vehicleCell.toLowerCase();
       
-      // Skip production vehicles
+      // Skip production vehicles — consume ALL sub-rows too (phone, passengers, etc.)
       if (lowerVehicle.indexOf('production') > -1 || lowerVehicle.indexOf('prod ') > -1) {
-        i++;
+        parsingLog.push({ row: i, action: 'SKIP_PRODUCTION', vehicle: vehicleCell });
+        // Advance past sub-rows (phone, passengers, empty rows) until next vehicle
+        // Do NOT break on empty rows or time-only rows — they are part of the production block
+        let skipJ = i + 1;
+        while (skipJ < allData.length) {
+          const skipRow = allData[skipJ];
+          const skipA = _cellToStr(skipRow[colMap.vehicle]);
+          if (skipA) break;
+          skipJ++;
+        }
+        i = skipJ;
         continue;
       }
       
@@ -521,7 +539,25 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       // Nuevo servicio: tiene hora pero sin vehículo/conductor
       // (mismo vehículo del servicio anterior, distinto horario/pasajeros/FROM-TO)
       // Matches: time+passengers, time+FROM/TO, or time only — all without vehicle/driver
+      // BUT: if the next non-empty row has the same time with vehicle+driver, this is a sub-row artifact
       if (sub2 && !sub0 && !sub1 && (sub4 || sub5 || sub6)) {
+        let wouldDuplicate = false;
+        for (let k = j + 1; k < allData.length; k++) {
+          const nextRow = allData[k];
+          if (_isRowTrulyEmpty(nextRow)) continue;
+          const nextV = colMap.vehicle !== undefined ? _cellToStr(nextRow[colMap.vehicle]) : '';
+          const nextD = colMap.driver !== undefined ? _cellToStr(nextRow[colMap.driver]) : '';
+          const nextT = colMap.time !== undefined ? _cellToStr(nextRow[colMap.time]) : '';
+          if (nextV && nextD && nextT === sub2) {
+            wouldDuplicate = true;
+          }
+          break;
+        }
+        if (wouldDuplicate) {
+          parsingLog.push({ row: j, action: 'SUB_SKIP_DUPLICATE', fromRow: i, time: sub2 });
+          j++;
+          continue;
+        }
         parsingLog.push({ row: j, action: 'SUB_BREAK_NEW_SVC', fromRow: i, time: sub2, passengers: sub4 });
         break;
       }
@@ -579,12 +615,24 @@ function _parseTransportListRows(allData, fileName, importSeq) {
     servicioIdx++;
     
     // Track vehicle/driver for next service that shares the same vehicle
-    if (servicio.vehicle) lastVehicle = servicio.vehicle;
-    if (servicio.vehicleType) lastVehicleType = servicio.vehicleType;
-    if (servicio.driver) lastDriver = servicio.driver;
-    if (servicio.driverPhone) lastDriverPhone = servicio.driverPhone;
-    if (servicio.serviceType) lastServiceType = servicio.serviceType;
-    lastServiceHadVehicle = !!servicio.vehicle;  // Track if this service had a vehicle
+    // KEY LOGIC:
+    //   - Has vehicle + driver → both update (same driver continues)
+    //   - Has vehicle + NO driver → update vehicle BUT clear driver (new block, needs manual assignment)
+    //   - Has NO vehicle + NO driver + has time → inherit both (same vehicle, different time slot)
+    if (servicio.vehicle) {
+      lastVehicle = servicio.vehicle;
+      lastVehicleType = servicio.vehicleType;
+      lastServiceType = servicio.serviceType;
+      if (servicio.driver) {
+        lastDriver = servicio.driver;
+        lastDriverPhone = servicio.driverPhone;
+      } else {
+        // Vehicle but no driver = new block. Clear so next inheritor doesn't get stale name
+        lastDriver = '';
+        lastDriverPhone = '';
+      }
+    }
+    lastServiceHadVehicle = !!servicio.vehicle;
     
     parsingLog.push({ row: i, action: 'SAVED', vehicle: servicio.vehicle, driver: servicio.driver, phone: servicio.driverPhone, lastVehicle: lastVehicle, lastDriver: lastDriver });
     
@@ -627,6 +675,27 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       parsingLog: parsingLog
     }
   };
+}
+
+/**
+ * Convierte un valor de celda de Google Sheets a string.
+ * Maneja objetos Date de Google Sheets (que aparecen como 'Wed Jul 07...' en vez de '08:15').
+ * @param {*} cellValue - Valor de la celda
+ * @returns {string} String limpio
+ */
+function _cellToStr(cellValue) {
+  if (cellValue === null || cellValue === undefined) return '';
+  if (cellValue instanceof Date) {
+    const h = cellValue.getHours();
+    const m = cellValue.getMinutes();
+    if (cellValue.getFullYear() === 1899 || (h < 24 && cellValue.getDate() === 1)) {
+      return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+    }
+    const day = String(cellValue.getDate()).padStart(2, '0');
+    const month = String(cellValue.getMonth() + 1).padStart(2, '0');
+    return day + '/' + month + '/' + cellValue.getFullYear();
+  }
+  return String(cellValue).trim();
 }
 
 /**

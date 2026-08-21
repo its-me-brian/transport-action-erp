@@ -68,6 +68,11 @@ const TransportListRepository = {
       // Ignore — dateRange is optional
     }
 
+    // Fallback: extract dateStr from Notes field (stored as "dateStr:Tuesday July 07th")
+    if (!dateRange && entity.Notes && entity.Notes.indexOf('dateStr:') === 0) {
+      dateRange = entity.Notes.substring(8); // Remove "dateStr:" prefix
+    }
+
     return {
       id: entity.ID,
       projectId: entity.ProjectID,
@@ -243,39 +248,39 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
         driverMap[norm] = driverId;
       }
       if (driverId && driverPhone) {
-        driverPhoneMap[driverPhone] = { id: driverId, name: driverName };
+        // Normalize phone to digits-only for consistent matching
+        var digitsOnly = driverPhone.replace(/\D/g, '').trim();
+        if (digitsOnly) {
+          driverPhoneMap[digitsOnly] = { id: driverId, name: driverName };
+        }
       }
     }
   }
   
-  // Find driver by name (exact or partial match)
+  // Find driver by name (exact match only — partial matching caused wrong driver assignments)
   function findDriverId(name) {
     if (!name || !name.trim()) return '';
     var norm = name.toLowerCase().replace(/\s+/g, ' ').replace(/['']/g, "'").trim();
-    // Exact match
+    // Exact match only
     if (driverMap[norm]) return driverMap[norm];
-    // Partial match (name contains key or key contains name)
-    var keys = Object.keys(driverMap);
-    for (var k = 0; k < keys.length; k++) {
-      if (norm.indexOf(keys[k]) > -1 || keys[k].indexOf(norm) > -1) {
-        return driverMap[keys[k]];
-      }
-    }
     return '';
   }
   
-  // Find driver by phone number
+  // Find driver by phone number (digits-only exact match)
   function findDriverByPhone(phone) {
     if (!phone || !phone.trim()) return null;
-    var cleanPhone = phone.replace(/[\s\-\(\)\+]/g, '').trim();
-    if (!cleanPhone) return null;
-    // Exact match
-    if (driverPhoneMap[cleanPhone]) return driverPhoneMap[cleanPhone];
-    // Partial match (last 8 digits)
-    var last8 = cleanPhone.slice(-8);
-    var keys = Object.keys(driverPhoneMap);
-    for (var k = 0; k < keys.length; k++) {
-      if (keys[k].slice(-8) === last8) return driverPhoneMap[keys[k]];
+    var digitsOnly = phone.replace(/\D/g, '').trim();
+    if (!digitsOnly) return null;
+    // Exact match against normalized digits-only keys
+    if (driverPhoneMap[digitsOnly]) return driverPhoneMap[digitsOnly];
+    // Try with leading country code variations (39 = Italy)
+    if (digitsOnly.startsWith('39') && digitsOnly.length > 10) {
+      var withoutCC = digitsOnly.substring(2);
+      if (driverPhoneMap[withoutCC]) return driverPhoneMap[withoutCC];
+    }
+    if (!digitsOnly.startsWith('39') && digitsOnly.length >= 10) {
+      var withCC = '39' + digitsOnly;
+      if (driverPhoneMap[withCC]) return driverPhoneMap[withCC];
     }
     return null;
   }
@@ -505,7 +510,7 @@ function apiImportTransportListWithProject(data) {
       TransportCompany: '',
       TotalServices: servicesCreated,
       ImportedBy: '',
-      Notes: 'Imported via domain endpoint',
+      Notes: 'dateStr:' + (data.dateStr || ''),
       FileURL: data.fileUrl || ''
     });
     

@@ -234,7 +234,7 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
   };
 
   return (
-    <div id="new-service-screen" className="min-h-screen bg-background text-on-surface font-sans flex flex-col w-full">
+    <div id="new-service-screen" className="h-full overflow-y-auto bg-background text-on-surface font-sans flex flex-col w-full">
       {/* Header */}
       <header id="new-service-header" className="w-full flex items-center justify-between px-4 md:px-6 py-3 sticky top-0 bg-surface/90 backdrop-blur-md z-10 border-b border-outline-variant/50">
         <div 
