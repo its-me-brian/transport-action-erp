@@ -274,12 +274,23 @@ function _parseTransportListRows(allData, fileName, importSeq) {
   // Parsear desde headerRow + 1
   i = headerRow + 1;
   
-  // Track last vehicle/driver for services that share the same vehicle (no vehicle/driver in row)
+  // Helper: check if a row is truly empty (all columns, not just mapped ones)
+  function _isRowTrulyEmpty(row) {
+    if (!row || !row.length) return true;
+    for (let c = 0; c < row.length; c++) {
+      const val = _cellToStr(row[c]);
+      if (val && val.trim() !== '') return false;
+    }
+    return true;
+  }
+
+  // Track vehicle/driver for next service that shares the same vehicle
   let lastVehicle = '';
   let lastVehicleType = '';
   let lastDriver = '';
   let lastDriverPhone = '';
   let lastServiceType = 'Dispo';
+  let lastServiceHadVehicle = false;  // true if last saved service had a vehicle
   
   while (i < allData.length) {
     const row = allData[i];
@@ -411,16 +422,26 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       hasThenPickup: false
     };
     
-    // Inherit vehicle/driver from previous service if this row has no vehicle/driver
-    // (same vehicle, different time/passengers — e.g., second dispo of the day)
-    if (!vehicleCell && !driverCell && timeCell) {
-      servicio.vehicle = lastVehicle;
-      servicio.vehicleType = lastVehicleType;
-      servicio.driver = lastDriver;
-      servicio.driverPhone = lastDriverPhone;
-      servicio.serviceType = lastServiceType;
-      servicio.notes = 'Same vehicle as previous service';
-    }
+      // Inherit vehicle/driver from previous service if this row has no vehicle/driver
+      // (same vehicle, different time/passengers — e.g., second dispo of the day)
+      if (!vehicleCell && !driverCell && timeCell) {
+        servicio.vehicle = lastVehicle;
+        servicio.vehicleType = lastVehicleType;
+        servicio.driver = lastDriver;
+        servicio.driverPhone = lastDriverPhone;
+        servicio.serviceType = lastServiceType;
+        servicio.notes = 'Same vehicle as previous service';
+      }
+      }
+      
+      if (shouldInherit) {
+        servicio.vehicle = lastVehicle;
+        servicio.vehicleType = lastVehicleType;
+        servicio.driver = lastDriver;
+        servicio.driverPhone = lastDriverPhone;
+        servicio.serviceType = lastServiceType;
+        servicio.notes = 'Same vehicle as previous service';
+      }
     
     // Extract Google Maps URLs from ALL columns (including unmapped H, I, etc.)
     const mapsUrlRegex = /https?:\/\/(maps\.app\.goo\.gl|goo\.gl|google\.com\/maps)[^\s]*/i;
@@ -539,7 +560,8 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       }
       
       // Sub-fila vacía o no reconocida → fin del servicio
-      if (!sub0 && !sub1 && !sub2 && !sub4 && !sub5 && !sub6) {
+      // Use truly empty check (all columns) to catch separator rows with data in unmapped columns
+      if (_isRowTrulyEmpty(subRow)) {
         break;
       }
       
@@ -561,6 +583,7 @@ function _parseTransportListRows(allData, fileName, importSeq) {
     if (servicio.driver) lastDriver = servicio.driver;
     if (servicio.driverPhone) lastDriverPhone = servicio.driverPhone;
     if (servicio.serviceType) lastServiceType = servicio.serviceType;
+    lastServiceHadVehicle = !!servicio.vehicle;  // Track if this service had a vehicle
     
     i = j;
   }
