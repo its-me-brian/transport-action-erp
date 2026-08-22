@@ -1026,6 +1026,7 @@ function _buildServiceRecord(serv, production, dateStr, fileName, idx, importSeq
     servicio: serv.servicio || '',
     serviceType: serv.serviceType || 'Dispo',
     isProduction: serv.isProduction || false,
+    selectable: serv.serviceType !== 'Production' && serv.serviceType !== 'Walking',
     hasThenPickup: serv.hasThenPickup || false
   };
 }

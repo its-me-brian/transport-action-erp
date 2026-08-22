@@ -45,6 +45,7 @@ export interface TransportService {
   serviceType?: string;
   vehicleType?: string;
   isProduction?: boolean;
+  selectable?: boolean;
   operatingCompany?: string;
   hasThenPickup?: boolean;
   financialStatus?: string;
@@ -148,6 +149,7 @@ export function normalizeTransportService(raw: Record<string, any>): TransportSe
     serviceType: raw.serviceType || 'disposal',
     vehicleType: raw.vehicleType || 'Van',
     isProduction: raw.isProduction || false,
+    selectable: raw.selectable !== false,
     operatingCompany: raw.operatingCompany || '',
     hasThenPickup: raw.hasThenPickup || false
   };
