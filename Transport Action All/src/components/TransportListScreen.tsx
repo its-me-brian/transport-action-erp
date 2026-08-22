@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+﻿import React, { useState, useCallback, useRef } from 'react';
 import { 
   Upload, 
   CheckCircle, 
@@ -2723,17 +2723,22 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                         )}
                         {group.services.map((service) => {
                           const isSelected = selectedRows.has(service.id);
-                          const isEmpty = (v: string) => !v || v.trim() === '';
+                          const hasDriver = !!(service.driver && service.driver.trim());
+                          const firstMov = service.movements?.[0];
                           return (
                             <div
                               key={service.id}
-                              className={`border rounded-lg p-3 transition-colors ${
-                                isServiceDimmed(service) ? 'border-gray-200 bg-gray-50 opacity-60' :
-                                isSelected ? 'border-primary bg-primary/5' : 'border-outline-variant bg-surface-container-lowest'
+                              className={`rounded-xl overflow-hidden transition-all ${
+                                isServiceDimmed(service) ? 'bg-gray-50 opacity-60 border border-gray-200' :
+                                isSelected ? 'border-2 border-primary shadow-sm' : 'border border-outline-variant'
                               }`}
                             >
-                              {/* Top row: checkbox + time + vehicle */}
-                              <div className="flex items-center gap-2 mb-1.5">
+                              {/* Header: time + vehicle + badges */}
+                              <div className={`flex items-center gap-2 px-3 py-2 ${
+                                service.isProduction ? 'bg-gray-100' :
+                                !service.serviceTypeConfirmed ? 'bg-red-50/80' :
+                                'bg-surface-dim/50'
+                              }`}>
                                 {service.selectable !== false && (
                                   <input
                                     type="checkbox"
@@ -2744,80 +2749,83 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                                     className={`rounded shrink-0 ${isServiceCompleted(service) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                                   />
                                 )}
-                                <div className="flex items-center gap-1 text-[11px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded min-w-[48px]">
-                                  <EditableCell rowId={service.id} field="time" value={service.time} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <EditableCell rowId={service.id} field="vehicle" value={service.vehicle} />
-                                </div>
-                                {service.section && (
-                                  <span className="text-[9px] font-medium text-on-surface-variant bg-surface-dim px-1.5 py-0.5 rounded shrink-0">
-                                    {service.section}
-                                  </span>
-                                )}
-                                {service.vehicleType && (
-                                  <span className="text-[9px] font-medium text-on-surface-variant bg-surface-dim px-1.5 py-0.5 rounded shrink-0">
-                                    {service.vehicleType}
-                                  </span>
-                                )}
-                                {(service.serviceType || service.isProduction) && (
-                                  <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded shrink-0 ${
-                                    service.isProduction ? 'bg-gray-200 text-gray-500 italic' :
-                                    !service.serviceTypeConfirmed ? 'bg-red-50 text-red-700 border border-red-200' :
-                                    service.serviceType === 'Transfer Airport' ? 'bg-blue-50 text-blue-700' :
-                                    service.serviceType === 'Transfer City' ? 'bg-blue-50 text-blue-700' :
-                                    service.serviceType === 'fullDay' ? 'bg-purple-50 text-purple-700' :
-                                    service.serviceType === 'halfDay' ? 'bg-orange-50 text-orange-700' :
-                                    service.serviceType === 'transfer' ? 'bg-blue-50 text-blue-700' :
-                                    service.serviceType === 'Dispo' ? 'bg-amber-50 text-amber-700' :
+                                <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md shrink-0">
+                                  {service.time || '??:??'}
+                                </span>
+                                <span className="text-[12px] font-semibold text-on-surface truncate flex-1">
+                                  {service.vehicle || '(sin vehículo)'}
+                                </span>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {service.section && (
+                                    <span className="text-[8px] font-bold text-on-surface-variant bg-surface-dim px-1.5 py-0.5 rounded uppercase">
+                                      {service.section}
+                                    </span>
+                                  )}
+                                  <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${
+                                    service.vehicleType === 'Walking' ? 'bg-teal-100 text-teal-700' :
                                     'bg-surface-dim text-on-surface-variant'
                                   }`}>
-                                    {service.isProduction ? 'Production' :
-                                     service.serviceType === 'fullDay' ? 'Full Day' :
-                                     service.serviceType === 'halfDay' ? 'Half Day' :
-                                     service.serviceType || 'Dispo'}
-                                    {!service.serviceTypeConfirmed && service.serviceType && ' ⚠'}
+                                    {service.vehicleType || 'Van'}
                                   </span>
-                                )}
-                              </div>
-                              {/* Driver + Phone */}
-                              <div className="flex items-center gap-2 text-[12px]">
-                                <div className="flex-1 min-w-0">
-                                  <DriverCell service={service} dbDrivers={dbDrivers} onUpdate={handleDriverUpdate} />
+                                  <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${
+                                    service.isProduction ? 'bg-gray-200 text-gray-600' :
+                                    !service.serviceTypeConfirmed ? 'bg-red-100 text-red-600' :
+                                    service.serviceType === 'Transfer Airport' ? 'bg-blue-100 text-blue-600' :
+                                    service.serviceType === 'Transfer City' ? 'bg-blue-100 text-blue-600' :
+                                    'bg-amber-100 text-amber-700'
+                                  }`}>
+                                    {service.isProduction ? 'PROD' : service.serviceType?.substring(0, 5)?.toUpperCase() || 'DISP'}
+                                    {!service.serviceTypeConfirmed && ' !'}
+                                  </span>
                                 </div>
-                                {service.driverPhone && (
-                                  <span className="text-on-surface-variant text-[11px] shrink-0">
-                                    {service.driverPhone.replace(/^'/, '')}
-                                  </span>
-                                )}
                               </div>
-                              {/* OperatingCompany */}
-                              <div className="mt-1">
+
+                              {/* Driver section */}
+                              <div className={`px-3 py-2.5 flex items-center gap-2.5 ${
+                                !hasDriver ? 'bg-amber-50/70' : 'bg-white'
+                              }`}>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                                  !hasDriver ? 'bg-amber-200 text-amber-700' :
+                                  'bg-primary/15 text-primary'
+                                }`}>
+                                  {!hasDriver ? '?' : (service.driver || '?').split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase()}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className={`text-[13px] font-semibold leading-tight ${!hasDriver ? 'text-amber-600 italic' : 'text-on-surface'}`}>
+                                    <DriverCell service={service} dbDrivers={dbDrivers} onUpdate={handleDriverUpdate} />
+                                  </div>
+                                  {service.driverPhone && (
+                                    <div className="text-[10px] text-on-surface-variant/70 mt-0.5">
+                                      {service.driverPhone.replace(/^'/, '')}
+                                    </div>
+                                  )}
+                                </div>
                                 <OperatingCompanyCell service={service} onUpdate={handleOperatingCompanyUpdate} />
                               </div>
-                              {/* Passengers — grouped mode: show first movement only */}
-                              {viewMode === 'grouped' && service.movements && service.movements.length > 0 ? (
-                                <>
-                                  {service.movements[0].passengers && service.movements[0].passengers.length > 0 && (
-                                    <div className="text-[11px] text-on-surface-variant mt-1">
-                                      {service.movements[0].passengers.map((p, pi) => (
+
+                              {/* Route section — first movement */}
+                              {viewMode === 'grouped' && firstMov && (firstMov.passengers?.length > 0 || firstMov.pickupLines?.length > 0 || firstMov.dropoffLines?.length > 0) && (
+                                <div className="px-3 py-2 border-t border-outline-variant/30 bg-white">
+                                  {firstMov.passengers && firstMov.passengers.length > 0 && (
+                                    <div className="text-[11px] text-on-surface mb-1">
+                                      {firstMov.passengers.map((p, pi) => (
                                         <span key={p.name}>
                                           {pi > 0 && '; '}
                                           <span className="font-medium">{p.name}</span>
-                                          {p.role && <span className="text-on-surface-variant/60"> ({p.role})</span>}
+                                          {p.role && <span className="text-on-surface-variant/50 text-[10px]"> {p.role}</span>}
                                         </span>
                                       ))}
                                     </div>
                                   )}
-                                  {(service.movements[0].pickupLines?.length > 0 || service.movements[0].dropoffLines?.length > 0) && (
-                                    <div className="text-[10px] text-on-surface-variant/70 mt-0.5">
+                                  {(firstMov.pickupLines?.length > 0 || firstMov.dropoffLines?.length > 0) && (
+                                    <div className="text-[10px] text-on-surface-variant/70 space-y-0.5">
                                       <div className="flex items-start gap-1">
                                         {service.pickupMapsUrl && (
                                           <a href={service.pickupMapsUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-primary/60 hover:text-primary mt-0.5">
                                             <MapPin className="w-3 h-3" />
                                           </a>
                                         )}
-                                        <span className="line-clamp-2">{service.movements[0].pickupLines?.join('; ')}</span>
+                                        <span className="line-clamp-2">{firstMov.pickupLines?.join('; ')}</span>
                                       </div>
                                       <div className="flex items-start gap-1">
                                         {service.dropoffMapsUrl && (
@@ -2825,42 +2833,40 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                                             <MapPin className="w-3 h-3" />
                                           </a>
                                         )}
-                                        <span className="line-clamp-2">→ {service.movements[0].dropoffLines?.join('; ')}</span>
+                                        <span className="line-clamp-2">→ {firstMov.dropoffLines?.join('; ')}</span>
                                       </div>
                                     </div>
                                   )}
-                                </>
-                              ) : (
-                                <>
-                                  {/* Flat mode: show all passengers */}
+                                </div>
+                              )}
+
+                              {/* Flat mode: show all passengers */}
+                              {viewMode !== 'grouped' && (
+                                <div className="px-3 py-2 border-t border-outline-variant/30 bg-white">
                                   {(Array.isArray(service.passengers) ? service.passengers.length > 0 : !!service.passengers) && (
-                                    <div className="text-[11px] text-on-surface-variant mt-1 truncate">
+                                    <div className="text-[11px] text-on-surface mb-1">
                                       {passengerDisplay(service.passengers)}
                                     </div>
                                   )}
                                   {(pickupDisplay(service.pickupLines) || dropoffDisplay(service.dropoffLines)) && (
-                                    <div className="text-[10px] text-on-surface-variant/70 mt-1 truncate flex items-center gap-1">
-                                      {service.pickupMapsUrl ? (
-                                        <a href={service.pickupMapsUrl} target="_blank" rel="noopener noreferrer" title="Open pickup in Maps" className="shrink-0 text-primary/60 hover:text-primary transition-colors">
+                                    <div className="text-[10px] text-on-surface-variant/70 flex items-start gap-1">
+                                      {service.pickupMapsUrl && (
+                                        <a href={service.pickupMapsUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-primary/60 hover:text-primary mt-0.5">
                                           <MapPin className="w-3 h-3" />
                                         </a>
-                                      ) : null}
-                                      {pickupDisplay(service.pickupLines)} → {dropoffDisplay(service.dropoffLines)}
-                                      {service.dropoffMapsUrl ? (
-                                        <a href={service.dropoffMapsUrl} target="_blank" rel="noopener noreferrer" title="Open dropoff in Maps" className="shrink-0 text-primary/60 hover:text-primary transition-colors">
-                                          <MapPin className="w-3 h-3" />
-                                        </a>
-                                      ) : null}
+                                      )}
+                                      <span className="line-clamp-2">{pickupDisplay(service.pickupLines)} → {dropoffDisplay(service.dropoffLines)}</span>
                                     </div>
                                   )}
-                                </>
+                                </div>
                               )}
-                              {/* Grouped: show additional movements */}
+
+                              {/* Grouped: additional movements */}
                               {viewMode === 'grouped' && service.movements && service.movements.length > 1 && (
-                                <div className="mt-2">
+                                <div className="px-3 py-2 border-t border-outline-variant/30 bg-white">
                                   <button
                                     onClick={() => toggleServiceExpand(service.id)}
-                                    className="flex items-center gap-1 text-[10px] font-medium text-primary hover:text-primary-hover cursor-pointer mb-1"
+                                    className="flex items-center gap-1 text-[10px] font-medium text-primary hover:text-primary-hover cursor-pointer"
                                   >
                                     {expandedServices.has(service.id) ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                                     {service.movements.length - 1} movimientos adicionales
@@ -2870,23 +2876,23 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                                     const prevMov = allMovements[mi] || allMovements[0];
                                     const timeChanged = mov.time && mov.time !== (prevMov?.time || '');
                                     return (
-                                    <div key={mi} className={`ml-2 mt-1 pl-2 border-l-2 text-[10px] space-y-0.5 ${timeChanged ? 'border-primary/40 mt-2 pt-1' : 'border-primary/15'}`}>
+                                    <div key={mi} className={`ml-2 mt-1.5 pl-2 border-l-2 text-[10px] space-y-0.5 ${timeChanged ? 'border-primary/40' : 'border-primary/15'}`}>
                                       {timeChanged && (
-                                        <div className="font-medium text-primary text-[11px]">{mov.time}</div>
+                                        <div className="font-bold text-primary text-[11px]">{mov.time}</div>
                                       )}
                                       {mov.passengers && mov.passengers.length > 0 && (
-                                        <div className="text-on-surface-variant">
+                                        <div className="text-on-surface">
                                           {mov.passengers.map((p, pi) => (
                                             <span key={p.name}>
                                               {pi > 0 && '; '}
                                               <span className="font-medium">{p.name}</span>
-                                              {p.role && <span className="text-on-surface-variant/60"> ({p.role})</span>}
+                                              {p.role && <span className="text-on-surface-variant/50 text-[9px]"> {p.role}</span>}
                                             </span>
                                           ))}
                                         </div>
                                       )}
                                       {(mov.pickupLines?.length > 0 || mov.dropoffLines?.length > 0) && (
-                                        <div className="text-on-surface-variant/70">
+                                        <div className="text-on-surface-variant/70 text-[9px]">
                                           {mov.pickupLines?.join('; ')}
                                           {mov.pickupLines?.length > 0 && mov.dropoffLines?.length > 0 && ' → '}
                                           {mov.dropoffLines?.join('; ')}

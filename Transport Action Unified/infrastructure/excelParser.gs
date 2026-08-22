@@ -582,9 +582,9 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       // AFTER THEN: don't break, we're still consuming the second pickup
       // IF current service has a driver and sub-row has no vehicle: it's an additional time slot, not a new service
       if (sub2 && !sub0 && !sub1 && (sub4 || sub5 || sub6) && !afterThen) {
-        // If current service already has a driver, this is an additional time slot for the same service
-        // (e.g., Giuseppe P. with Disposal Van doing 07.10, 10.35, 11.30 trips)
-        if (servicio.driver) {
+        // If current service has a vehicle (with or without driver), this is an additional time slot
+        // Works for assigned drivers (Giuseppe P. 07.10, 10.35, 11.30) AND unassigned vehicles (08.00, 08.10)
+        if (servicio.vehicle) {
           parsingLog.push({ row: j, action: 'SUB_ADDITIONAL_TIME', fromRow: i, time: sub2, passengers: sub4 });
           // Accumulate time slots: "07.10, 10.35, 11.30"
           if (servicio.time && servicio.time !== sub2) {
@@ -718,9 +718,10 @@ function _parseTransportListRows(allData, fileName, importSeq) {
           j++;
           continue;
         }
-        // If current service has a driver, check if next non-empty row is an additional time slot
-        // (same driver, different time — e.g., Giuseppe P. with 07.10, 10.35, 11.30)
-        if (servicio.driver) {
+        // If current service has a driver or vehicle, check if next non-empty row is an additional time slot
+        // (same driver/vehicle, different time — e.g., Giuseppe P. with 07.10, 10.35, 11.30)
+        // Also works for unassigned vehicles: "Disposal Van" with multiple time slots
+        if (servicio.driver || servicio.vehicle) {
           let nextNonEmptyIdx = j + 1;
           while (nextNonEmptyIdx < allData.length && _isRowTrulyEmpty(allData[nextNonEmptyIdx])) {
             nextNonEmptyIdx++;
