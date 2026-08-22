@@ -283,6 +283,26 @@ function _parseTransportListRows(allData, fileName, importSeq) {
   let lastIsProduction = false;
   let lastServiceHadVehicle = false;  // true if last saved service had a vehicle
   const parsingLog = [];  // DEBUG: track every row processed
+
+  // A service block may contain several timed movements. Keep those movements
+  // structured; flat fields remain a backwards-compatible summary.
+  function addMovement(servicio, time, passenger, from, to, flightInfo) {
+    const movement = {
+      time: time || '',
+      passengers: [],
+      pickupLines: from ? [from] : [],
+      dropoffLines: to ? [to] : [],
+      flightInfo: flightInfo || ''
+    };
+    if (passenger) {
+      const parsed = _parsePassengerLine(passenger);
+      if (parsed.name) movement.passengers.push(parsed);
+    }
+    if (movement.time || movement.passengers.length || movement.pickupLines.length || movement.dropoffLines.length) {
+      servicio.movements.push(movement);
+    }
+    return movement;
+  }
   
   while (i < allData.length) {
     const row = allData[i];
@@ -439,7 +459,8 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       servicio: servicioCell,
       serviceType: serviceType,
       isProduction: isProduction,
-      hasThenPickup: false
+      hasThenPickup: false,
+      movements: []
     };
     
       // Inherit vehicle/driver from previous service if this row has no vehicle/driver
@@ -475,6 +496,7 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       servicio.passengers.push(parsed.name);
       servicio.passengerRoles.push(parsed.role);
     }
+    addMovement(servicio, timeCell, passengerCell, fromCell, toCell, flightCell);
     
     // Mirar las sub-filas siguientes
     let j = i + 1;
@@ -516,29 +538,10 @@ function _parseTransportListRows(allData, fileName, importSeq) {
           if (sub6 && sub6.toUpperCase() !== 'THEN') servicio.dropoffLines.push(sub6);
         }
         
+        // THEN starts another movement of the same visual block, never a new
+        // Service entity. The following timed row completes this movement.
         servicio.hasThenPickup = true;
-        
-        servicios.push(_buildServiceRecord(servicio, production, dateStr, fileName, servicioIdx, importSeq));
-        servicioIdx++;
-        
-        servicio = {
-          vehicle: vehicleCell,
-          vehicleType: servicio.vehicleType,
-          driver: driverCell,
-          driverPhone: servicio.driverPhone,
-          time: sub2 || sub0 === 'THEN' ? (colMap.time !== undefined ? _cellToStr(subRow[colMap.time]) : '') : servicio.time,
-          passengers: [],
-          passengerRoles: [],
-          pickupLines: [],
-          dropoffLines: [],
-          flightInfo: servicio.flightInfo,
-          notes: 'Then (same day)',
-          section: currentSection,
-          servicio: servicio.servicio,
-          serviceType: servicio.serviceType,
-          isProduction: servicio.isProduction || false,
-          hasThenPickup: false
-        };
+        parsingLog.push({ row: j, action: 'THEN_SAME_SERVICE', fromRow: i });
         
         // Set flag to skip empty rows after Then (they're separators before second pickup)
         afterThen = true;
@@ -587,6 +590,7 @@ function _parseTransportListRows(allData, fileName, importSeq) {
           }
           if (sub5) servicio.pickupLines.push(sub5);
           if (sub6) servicio.dropoffLines.push(sub6);
+          addMovement(servicio, sub2, sub4, sub5, sub6, '');
           j++;
           continue;
         }
@@ -614,7 +618,8 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       
       // AFTER THEN: consume time slot for the Then service (update time and continue)
       if (afterThen && sub2 && !sub0 && !sub1) {
-        servicio.time = sub2;
+        if (servicio.time && servicio.time !== sub2) servicio.time += ', ' + sub2;
+        else servicio.time = sub2;
         parsingLog.push({ row: j, action: 'SUB_THEN_TIME', fromRow: i, time: sub2 });
         // Consume passenger/FROM/TO in this row
         if (sub4) {
@@ -624,6 +629,7 @@ function _parseTransportListRows(allData, fileName, importSeq) {
         }
         if (sub5) servicio.pickupLines.push(sub5);
         if (sub6) servicio.dropoffLines.push(sub6);
+        addMovement(servicio, sub2, sub4, sub5, sub6, '');
         j++;
         continue;
       }
@@ -1059,6 +1065,7 @@ function _buildServiceRecord(serv, production, dateStr, fileName, idx, importSeq
     dropoffMapsUrl: dropoffMapsUrl,
     flightInfo: serv.flightInfo,
     passengersList: passengersList,
+    movements: serv.movements || [],
     notes: notes,
     production: production,
     date: actualDate,

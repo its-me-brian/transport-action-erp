@@ -73,6 +73,7 @@ const ServiceRepository = {
       DropoffMapsUrl: data.DropoffMapsUrl || '',
       OriginalTransportDate: data.OriginalTransportDate || '',
       PassengersList: data.PassengersList || '',
+      Movements: data.Movements ? JSON.stringify(data.Movements) : '[]',
       Notes: data.Notes || '',
       DriverID: data.DriverID || '',
       VehicleID: data.VehicleID || '',
@@ -147,6 +148,14 @@ const ServiceRepository = {
       }
     }
     
+    let movements = [];
+    try {
+      movements = JSON.parse(entity.Movements || '[]');
+      if (!Array.isArray(movements)) movements = [];
+    } catch (e) {
+      movements = [];
+    }
+
     return {
       id: entity.ID,
       projectId: entity.ProjectID,
@@ -172,6 +181,7 @@ const ServiceRepository = {
       dropoffMapsUrl: entity.DropoffMapsUrl || '',
       originalTransportDate: entity.OriginalTransportDate || '',
       passengersList: entity.PassengersList || '',
+      movements: movements,
       driverId: entity.DriverID,
       driverName: driverName,
       vehicleId: entity.VehicleID,
@@ -282,7 +292,7 @@ function apiUpdateServiceField(serviceId, field, value) {
       'PickupLines', 'DropoffLines',
       'EstimatedRevenue', 'EstimatedCost',
       'VehicleType',
-      'PickupMapsUrl', 'DropoffMapsUrl', 'PassengersList', 'OriginalTransportDate',
+      'PickupMapsUrl', 'DropoffMapsUrl', 'PassengersList', 'OriginalTransportDate', 'Movements',
       // Report/operational fields — used by WhatsApp parser and ReportsScreen
       'StartTime', 'EndTime', 'KmTotal', 'DiariaType', 'HasDiaria'
     ];

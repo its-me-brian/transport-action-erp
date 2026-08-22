@@ -324,7 +324,19 @@ function _serveDriverForm(token) {
       }
       return hours + ':' + mins;
     }
-    var displayTime = _normalizeTime(svc.Time);
+    var movements = [];
+    try { movements = JSON.parse(svc.Movements || '[]'); } catch(e) { movements = []; }
+    if (!Array.isArray(movements) || movements.length === 0) {
+      movements = [{ time: svc.Time || '', passengers: passengerInfo ? [{ name: passengerInfo }] : [], pickupLines: pickupLines, dropoffLines: dropoffLines }];
+    }
+    var displayTime = _normalizeTime(movements[0].time || svc.Time);
+    if (movements.length > 1) displayTime += ' +' + (movements.length - 1);
+    var movementsHtml = movements.map(function(movement) {
+      var names = (movement.passengers || []).map(function(p) { return typeof p === 'object' ? (p.name || '') : String(p || ''); }).filter(Boolean).join(', ');
+      var from = (movement.pickupLines || []).join(', ');
+      var to = (movement.dropoffLines || []).join(', ');
+      return '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb"><b>' + _escapeHtml(_normalizeTime(movement.time)) + '</b>' + (names ? ' · ' + _escapeHtml(names) : '') + (from ? '<div><b>Da:</b> ' + renderAddressWithMaps(cleanAddress(from), '') + '</div>' : '') + (to ? '<div><b>A:</b> ' + renderAddressWithMaps(cleanAddress(to), '') + '</div>' : '') + '</div>';
+    }).join('');
     var isSubmitted = submittedServiceIds[svc.ID] || false;
     var submittedCls = isSubmitted ? ' svc-submitted' : '';
     var submittedBadge = isSubmitted ? '<span class="svc-badge-ok">Inviato</span>' : '';
@@ -344,9 +356,7 @@ function _serveDriverForm(token) {
       '</div>' +
       '<div class="svc-det">' +
       (svc.Section ? '<div><b>Sezione:</b> ' + _escapeHtml(svc.Section) + '</div>' : '') +
-      (passengerInfo ? '<div><b>Passeggero:</b> ' + _escapeHtml(passengerInfo) + '</div>' : '') +
-      (pickupLines.length > 0 ? '<div><b>Da:</b> ' + renderAddressWithMaps(cleanAddress(pickupLines.join(', ')), svc.PickupMapsUrl) + '</div>' : '') +
-      (dropoffLines.length > 0 ? '<div><b>A:</b> ' + renderAddressWithMaps(cleanAddress(dropoffLines.join(', ')), svc.DropoffMapsUrl) + '</div>' : '') +
+      movementsHtml +
       '</div>' +
       '<div class="svc-fields" id="svc-fields-' + index + '" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #e5e7eb">' +
       '<div class="svc-fields-grid">' +

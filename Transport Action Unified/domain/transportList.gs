@@ -231,6 +231,12 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
     Logger.log('Services sheet not found, skipping bridge');
     return 0;
   }
+  // Existing deployments predate the Movements column. Add it lazily so a
+  // deployment cannot silently discard child movements during import.
+  var serviceHeaders = servicesSheet.getRange(1, 1, 1, servicesSheet.getLastColumn()).getValues()[0];
+  if (serviceHeaders.indexOf('Movements') === -1) {
+    servicesSheet.getRange(1, servicesSheet.getLastColumn() + 1).setValue('Movements');
+  }
   
   var driversSheet = ss.getSheetByName('Drivers');
   var driverMap = {}; // name → { id, normalized }
@@ -405,6 +411,7 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
       PassengerDepartment: '',
       PickupLines: pickupArr,
       DropoffLines: dropoffArr,
+      Movements: svc.movements || [],
       FlightInfo: svc.flightInfo || '',
       Notes: svc.notes || '',
       DriverID: driverId,

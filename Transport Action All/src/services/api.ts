@@ -17,6 +17,14 @@ export interface Passenger {
   role: string;
 }
 
+export interface ServiceMovement {
+  time: string;
+  passengers: Passenger[];
+  pickupLines: string[];
+  dropoffLines: string[];
+  flightInfo?: string;
+}
+
 export interface TransportService {
   id: string;
   importId: string;
@@ -30,6 +38,7 @@ export interface TransportService {
   to: string;
   // Rich data — arrays of structured objects
   passengers: Passenger[];
+  movements?: ServiceMovement[];
   pickupLines: string[];
   dropoffLines: string[];
   pickupMapsUrl: string;
@@ -121,6 +130,17 @@ export function normalizeTransportService(raw: Record<string, any>): TransportSe
 
   // Backend DTO nests flightInfo in route; upload preview has it at top level
   const flightInfo = raw.flightInfo || (raw.route && raw.route.flightInfo) || '';
+  const movements: ServiceMovement[] = Array.isArray(raw.movements)
+    ? raw.movements.map((movement: any) => ({
+        time: String(movement?.time || ''),
+        passengers: Array.isArray(movement?.passengers)
+          ? movement.passengers.map((p: any) => ({ name: String(p?.name || p || ''), role: String(p?.role || '') })).filter((p: Passenger) => Boolean(p.name))
+          : [],
+        pickupLines: Array.isArray(movement?.pickupLines) ? movement.pickupLines.filter(Boolean) : [],
+        dropoffLines: Array.isArray(movement?.dropoffLines) ? movement.dropoffLines.filter(Boolean) : [],
+        flightInfo: String(movement?.flightInfo || '')
+      }))
+    : [];
 
   return {
     id: raw.id || '',
@@ -134,6 +154,7 @@ export function normalizeTransportService(raw: Record<string, any>): TransportSe
     from: pickupLines[0] || raw.from || '',
     to: dropoffLines[0] || raw.to || '',
     passengers,
+    movements,
     pickupLines,
     dropoffLines,
     pickupMapsUrl: raw.pickupMapsUrl || '',
