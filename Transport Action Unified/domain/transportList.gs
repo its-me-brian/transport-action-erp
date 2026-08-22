@@ -423,6 +423,8 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
       OperatingCompany: operatingCompany || '',
       Normalized: false,
       ServiceType: svc.serviceType || 'Dispo',
+      ServiceTypeConfirmed: svc.serviceTypeConfirmed || false,
+      IsWalking: svc.isWalking || false,
       VehicleType: svc.vehicleType || 'Van',
       ProviderType: '',
       ProviderID: ''

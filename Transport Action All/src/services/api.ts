@@ -52,8 +52,10 @@ export interface TransportService {
   section?: string;
   servicio?: string;
   serviceType?: string;
+  serviceTypeConfirmed?: boolean;
   vehicleType?: string;
   isProduction?: boolean;
+  isWalking?: boolean;
   selectable?: boolean;
   operatingCompany?: string;
   hasThenPickup?: boolean;
@@ -167,9 +169,11 @@ export function normalizeTransportService(raw: Record<string, any>): TransportSe
     normalized: raw.normalized || '',
     section: raw.section,
     servicio: raw.servicio || '',
-    serviceType: raw.serviceType || 'disposal',
+    serviceType: raw.serviceType || 'Dispo',
+    serviceTypeConfirmed: raw.serviceTypeConfirmed || false,
     vehicleType: raw.vehicleType || 'Van',
     isProduction: raw.isProduction || false,
+    isWalking: raw.isWalking || false,
     selectable: raw.selectable !== false,
     operatingCompany: raw.operatingCompany || '',
     hasThenPickup: raw.hasThenPickup || false
@@ -185,19 +189,11 @@ export function normalizeTransportServices(rawServices: Record<string, any>[]): 
 
 /**
  * Check if a transport service should be dimmed (greyed out) in the UI.
- * Covers: production vehicles + walking distance.
- * More reliable than checking service.isProduction alone, because it
- * derives from vehicleType (runtime) and vehicle name, not just the backend flag.
+ * ALL services are selectable now — walking/production are just unchecked by default.
+ * This function is kept for backwards compatibility but should return false for most cases.
  */
 export function isServiceDimmed(service: TransportService): boolean {
-  // 1) Backend flag (authoritative when present)
-  if (service.isProduction) return true;
-  // 2) Derive from vehicleType string (catches rows where backend flag was missed)
-  const vt = (service.vehicleType || '').toUpperCase();
-  if (vt.indexOf('PRODUCTION') > -1) return true;
-  // 3) Walking distance — not production but should also be dimmed
-  const v = (service.vehicle || '').toLowerCase();
-  if (v.indexOf('walking') > -1) return true;
+  // No services are dimmed anymore — all are selectable
   return false;
 }
 

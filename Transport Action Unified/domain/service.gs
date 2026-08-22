@@ -94,6 +94,8 @@ const ServiceRepository = {
       ProviderType: data.ProviderType || '',
       ProviderID: data.ProviderID || '',
       ServiceType: data.ServiceType || '',
+      ServiceTypeConfirmed: data.ServiceTypeConfirmed ? 'TRUE' : 'FALSE',
+      IsWalking: data.isWalking ? 'TRUE' : 'FALSE',
       SourceType: data.SourceType || 'transport_list',
       SourceReference: data.SourceReference || '',
       VehicleType: data.VehicleType || '',
@@ -198,6 +200,8 @@ const ServiceRepository = {
       providerId: entity.ProviderID || '',
       providerName: providerName,
       serviceType: entity.ServiceType || '',
+      serviceTypeConfirmed: entity.ServiceTypeConfirmed === 'TRUE' || entity.ServiceTypeConfirmed === true,
+      isWalking: entity.IsWalking === 'TRUE' || entity.IsWalking === true,
       sourceType: entity.SourceType || 'transport_list',
       sourceReference: entity.SourceReference || '',
       // Cost fields from DriverReport (populated on report approval)
@@ -291,7 +295,7 @@ function apiUpdateServiceField(serviceId, field, value) {
       'FlightInfo', 'Time', 'Section', 'Production',
       'PickupLines', 'DropoffLines',
       'EstimatedRevenue', 'EstimatedCost',
-      'VehicleType',
+      'VehicleType', 'ServiceType', 'ServiceTypeConfirmed', 'IsWalking',
       'PickupMapsUrl', 'DropoffMapsUrl', 'PassengersList', 'OriginalTransportDate', 'Movements',
       // Report/operational fields — used by WhatsApp parser and ReportsScreen
       'StartTime', 'EndTime', 'KmTotal', 'DiariaType', 'HasDiaria'
@@ -308,6 +312,10 @@ function apiUpdateServiceField(serviceId, field, value) {
       'dropoffMapsUrl': 'DropoffMapsUrl',
       'passengersList': 'PassengersList',
       'originalTransportDate': 'OriginalTransportDate',
+      'serviceType': 'ServiceType',
+      'serviceTypeConfirmed': 'ServiceTypeConfirmed',
+      'vehicleType': 'VehicleType',
+      'isWalking': 'IsWalking',
     };
 
     // Resolve field name: frontend camelCase → backend PascalCase

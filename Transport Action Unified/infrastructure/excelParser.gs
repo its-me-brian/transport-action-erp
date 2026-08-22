@@ -274,15 +274,16 @@ function _parseTransportListRows(allData, fileName, importSeq) {
     return true;
   }
 
-  // Track vehicle/driver for next service that shares the same vehicle
-  let lastVehicle = '';
-  let lastVehicleType = '';
-  let lastDriver = '';
-  let lastDriverPhone = '';
-  let lastServiceType = 'Dispo';
-  let lastIsProduction = false;
-  let lastServiceHadVehicle = false;  // true if last saved service had a vehicle
-  const parsingLog = [];  // DEBUG: track every row processed
+    // Track vehicle/driver for next service that shares the same vehicle
+    let lastVehicle = '';
+    let lastVehicleType = '';
+    let lastDriver = '';
+    let lastDriverPhone = '';
+    let lastServiceType = 'Dispo';
+    let lastIsProduction = false;
+    let lastServiceHadVehicle = false;  // true if last saved service had a vehicle
+    let lastIsWalking = false;
+    const parsingLog = [];  // DEBUG: track every row processed
 
   // A service block may contain several timed movements. Keep those movements
   // structured; flat fields remain a backwards-compatible summary.
@@ -443,6 +444,13 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       }
     }
     
+    // Detect walking distance — separate service, not part of parent block
+    const isWalking = vehicleCell && vehicleCell.toLowerCase().indexOf('walking') > -1;
+    
+    // Service type is "confirmed" only if it was explicitly stated in the Excel
+    // (not intuited from the vehicle name). Dispo is always intuited.
+    const serviceTypeConfirmed = servicioCell ? true : false;
+    
     let servicio = {
       vehicle: vehicleCell,
       vehicleType: vehicleType,
@@ -458,7 +466,9 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       section: currentSection,
       servicio: servicioCell,
       serviceType: serviceType,
+      serviceTypeConfirmed: serviceTypeConfirmed,
       isProduction: isProduction,
+      isWalking: isWalking,
       hasThenPickup: false,
       movements: []
     };
@@ -472,6 +482,7 @@ function _parseTransportListRows(allData, fileName, importSeq) {
         servicio.driverPhone = lastDriverPhone;
         servicio.serviceType = lastServiceType;
         servicio.isProduction = lastIsProduction;
+        servicio.isWalking = lastIsWalking;
         servicio.notes = 'Same vehicle as previous service';
         parsingLog.push({ row: i, action: 'INHERITED', vehicle: lastVehicle, driver: lastDriver, phone: lastDriverPhone });
       } else {
@@ -515,9 +526,8 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       const isNewService = (sub0 && sub1 && sub2 && !sub0.startsWith('+') && 
                            sub0.toUpperCase() !== 'THEN' && sectionNames.every(s => sub0.toUpperCase().indexOf(s) === -1));
       
-      // Case 2: sub-row has a vehicle name DIFFERENT from current service
-      // (e.g., "walking distance" or "Showrunner Van" appearing under a different vehicle)
-      // This catches services that have a vehicle but no time/driver yet
+      // Case 2: sub-row has a vehicle name DIFFERENT from current service AND has time
+      // This is a new service block. If no time, it's a sub-vehicle (absorbed below).
       const isDifferentVehicle = sub0 && !sub0.startsWith('+') && 
                                 sub0.toUpperCase() !== 'THEN' && 
                                 sectionNames.every(s => sub0.toUpperCase().indexOf(s) === -1) &&
@@ -645,11 +655,36 @@ function _parseTransportListRows(allData, fileName, importSeq) {
         continue;
       }
       
-      // NEW: Sub-fila con nombre de vehículo DIFERENTE al actual → es un nuevo servicio
-      // (e.g., walking distance, Showrunner Van, etc. — even without time/driver)
+      // Sub-fila con nombre de vehículo DIFERENTE al actual
+      // Si tiene TIME → es un nuevo servicio (break)
+      // Si NO tiene TIME → es un sub-vehículo del mismo bloque (absorber)
       if (isDifferentVehicle) {
-        parsingLog.push({ row: j, action: 'SUB_BREAK_DIFF_VEHICLE', fromRow: i, vehicle: sub0, driver: sub1 });
-        break;
+        if (sub2) {
+          // Has time → new service block
+          parsingLog.push({ row: j, action: 'SUB_BREAK_DIFF_VEHICLE', fromRow: i, vehicle: sub0, driver: sub1 });
+          break;
+        } else {
+          // No time → sub-vehicle within same service block (e.g., "Showrunner Van" under "Director/")
+          parsingLog.push({ row: j, action: 'SUB_ABSORB_VEHICLE', fromRow: i, vehicle: sub0, driver: sub1 });
+          // Capture phone if present in driver column
+          if (sub1 && sub1.startsWith('+')) {
+            servicio.driverPhone = sub1;
+          }
+          // Capture passengers and routes for this sub-vehicle
+          if (sub4) {
+            const parsed = _parsePassengerLine(sub4);
+            servicio.passengers.push(parsed.name);
+            servicio.passengerRoles.push(parsed.role);
+          }
+          if (sub5) servicio.pickupLines.push(sub5);
+          if (sub6) servicio.dropoffLines.push(sub6);
+          // Add movement for this sub-vehicle's passenger
+          if (sub4 || sub5 || sub6) {
+            addMovement(servicio, servicio.time || timeCell, sub4, sub5, sub6, '');
+          }
+          j++;
+          continue;
+        }
       }
       
       // Sub-fila con FROM/TO adicional
@@ -730,6 +765,7 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       lastVehicleType = servicio.vehicleType;
       lastServiceType = servicio.serviceType;
       lastIsProduction = servicio.isProduction || false;
+      lastIsWalking = servicio.isWalking || false;
       if (servicio.driver) {
         lastDriver = servicio.driver;
         lastDriverPhone = servicio.driverPhone;
@@ -1075,8 +1111,10 @@ function _buildServiceRecord(serv, production, dateStr, fileName, idx, importSeq
     section: serv.section || '',
     servicio: serv.servicio || '',
     serviceType: serv.serviceType || 'Dispo',
+    serviceTypeConfirmed: serv.serviceTypeConfirmed || false,
     isProduction: serv.isProduction || false,
-    selectable: serv.serviceType !== 'Production' && serv.serviceType !== 'Walking',
+    isWalking: serv.isWalking || false,
+    selectable: true,  // ALL services selectable — walking/production unchecked by default
     hasThenPickup: serv.hasThenPickup || false
   };
 }
