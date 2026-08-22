@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   Trash2,
   Plus,
   Eye,
@@ -30,7 +31,10 @@ import {
   Play,
   Pause,
   BadgeCheck,
-  MapPin
+  MapPin,
+  LayoutList,
+  ListTree,
+  ChevronsUpDown
 } from 'lucide-react';
 import { ScreenId, formatTimeDisplay } from '../types';
 import { 
@@ -536,6 +540,10 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
   const [editOriginalValue, setEditOriginalValue] = useState('');
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [showRoles, setShowRoles] = useState(false);
+  const [viewMode, setViewMode] = useState<'flat' | 'grouped'>(() => {
+    try { return (localStorage.getItem('tl_viewMode') as 'flat' | 'grouped') || 'flat'; } catch { return 'flat'; }
+  });
+  const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set());
   
   // Export/Share state
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -999,6 +1007,31 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
   const removeSelectedRows = () => {
     setServices(prev => prev.filter(s => !selectedRows.has(s.id)));
     setSelectedRows(new Set());
+  };
+
+  const toggleViewMode = () => {
+    setViewMode(prev => {
+      const next = prev === 'flat' ? 'grouped' : 'flat';
+      try { localStorage.setItem('tl_viewMode', next); } catch {}
+      return next;
+    });
+  };
+
+  const toggleServiceExpand = (serviceId: string) => {
+    setExpandedServices(prev => {
+      const next = new Set(prev);
+      if (next.has(serviceId)) next.delete(serviceId);
+      else next.add(serviceId);
+      return next;
+    });
+  };
+
+  const expandAllGrouped = () => {
+    setExpandedServices(new Set(filteredServices.map(s => s.id)));
+  };
+
+  const collapseAllGrouped = () => {
+    setExpandedServices(new Set());
   };
 
   // --- Export handlers ---
@@ -1471,7 +1504,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
     }));
     if (step !== 'preview') {
       updateServiceField(serviceId, 'ServiceType', serviceType).then(() => {
-        return updateServiceField(serviceId, 'ServiceTypeConfirmed', 'true');
+        return updateServiceField(serviceId, 'ServiceTypeConfirmed', 'TRUE');
       }).catch(err => {
         console.error('Failed to update ServiceType:', err);
       });
@@ -1507,6 +1540,204 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
         return { ...s, operatingCompany: originalValue } as TransportService;
       }));
     });
+  };
+
+  // --- Render a service block (grouped view with movements as sub-rows) ---
+  const renderServiceBlock = (service: TransportService, isSelected: boolean, _rowIdx: number) => {
+    const isExpanded = expandedServices.has(service.id);
+    const movements = service.movements && service.movements.length > 0 ? service.movements : [];
+    const hasMultipleMovements = movements.length > 1;
+
+    // If no movements or only 1 movement, fall back to flat row
+    if (!hasMultipleMovements) {
+      return renderServiceRow(service, isSelected, _rowIdx);
+    }
+
+    const rows: React.ReactNode[] = [];
+
+    // --- Main row (first movement) ---
+    const firstMovement = movements[0];
+    rows.push(
+      <tr
+        key={service.id}
+        className={`transition-colors border-b-0 ${
+          isServiceDimmed(service) ? 'bg-gray-50 opacity-60' :
+          isSelected ? 'bg-primary/5' : 'hover:bg-surface-dim/50'
+        }`}
+      >
+        <td className="px-2 py-2 w-8 align-top">
+          <div className="flex flex-col items-center gap-1">
+            {service.selectable !== false && (
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => toggleRowSelection(service.id)}
+                disabled={isServiceCompleted(service)}
+                className={`rounded ${isServiceCompleted(service) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+              />
+            )}
+            {hasMultipleMovements && (
+              <button
+                onClick={() => toggleServiceExpand(service.id)}
+                className="text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
+                title={isExpanded ? 'Collapse movements' : 'Expand movements'}
+              >
+                {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+              </button>
+            )}
+          </div>
+        </td>
+        <td className="px-2 py-2 align-top">
+          <EditableCell rowId={service.id} field="vehicle" value={service.vehicle} />
+        </td>
+        <td className="px-2 py-2 hidden lg:table-cell align-top">
+          <VehicleTypeCell service={service} onUpdate={handleVehicleTypeUpdate} />
+        </td>
+        <td className="px-2 py-2 hidden lg:table-cell align-top">
+          <ServiceTypeCell service={service} onUpdate={handleServiceTypeUpdate} />
+        </td>
+        <td className="px-2 py-2 align-top">
+          <DriverCell service={service} dbDrivers={dbDrivers} onUpdate={handleDriverUpdate} />
+        </td>
+        <td className="px-2 py-2 hidden lg:table-cell align-top">
+          <EditableCell rowId={service.id} field="driverPhone" value={service.driverPhone} />
+        </td>
+        <td className="px-2 py-2 w-[60px] align-top">
+          <span className="text-[11px] font-medium text-primary">{firstMovement.time || service.time || ''}</span>
+        </td>
+        <td className="px-2 py-2 max-w-[200px] align-top">
+          <div className="text-[11px]">
+            {firstMovement.passengers && firstMovement.passengers.length > 0
+              ? firstMovement.passengers.map(p => p.name).filter(Boolean).join('; ')
+              : passengerDisplay(service.passengers)}
+          </div>
+        </td>
+        {showRoles && (
+          <td className="px-2 py-2 text-on-surface-variant text-[11px] hidden xl:table-cell align-top">
+            {firstMovement.passengers && firstMovement.passengers.length > 0
+              ? firstMovement.passengers.map(p => p.role).filter(Boolean).join('; ')
+              : hasPassengerRole(service.passengers) ? passengerRolesDisplay(service.passengers) : '-'}
+          </td>
+        )}
+        <td className="px-2 py-2 max-w-[180px] hidden md:table-cell overflow-hidden align-top">
+          <div className="flex items-center gap-1 min-w-0 text-[11px]">
+            <span className="truncate">{firstMovement.pickupLines?.join('; ') || pickupDisplay(service.pickupLines)}</span>
+            {service.pickupMapsUrl && (
+              <a href={service.pickupMapsUrl} target="_blank" rel="noopener noreferrer" title="Open pickup in Maps" className="shrink-0 text-primary/60 hover:text-primary transition-colors">
+                <MapPin className="w-3 h-3" />
+              </a>
+            )}
+          </div>
+        </td>
+        <td className="px-2 py-2 max-w-[180px] hidden md:table-cell overflow-hidden align-top">
+          <div className="flex items-center gap-1 min-w-0 text-[11px]">
+            <span className="truncate">{firstMovement.dropoffLines?.join('; ') || dropoffDisplay(service.dropoffLines)}</span>
+            {service.dropoffMapsUrl && (
+              <a href={service.dropoffMapsUrl} target="_blank" rel="noopener noreferrer" title="Open dropoff in Maps" className="shrink-0 text-primary/60 hover:text-primary transition-colors">
+                <MapPin className="w-3 h-3" />
+              </a>
+            )}
+          </div>
+        </td>
+        <td className="px-2 py-2 align-top">
+          <OperatingCompanyCell service={service} onUpdate={handleOperatingCompanyUpdate} />
+        </td>
+        <td className="px-2 py-2 hidden xl:table-cell align-top">
+          <span className="text-[11px]">{firstMovement.flightInfo || service.flightInfo || ''}</span>
+        </td>
+        <td className="px-2 py-2 hidden xl:table-cell align-top">
+          <EditableCell rowId={service.id} field="notes" value={service.notes} />
+        </td>
+        <td className="px-2 py-2 hidden 2xl:table-cell align-top">
+          <EditableCell rowId={service.id} field="passengersList" value={service.passengersList} />
+        </td>
+        <td className="px-2 py-2 hidden 2xl:table-cell align-top">
+          <EditableCell rowId={service.id} field="originalTransportDate" value={service.originalTransportDate} />
+        </td>
+        <td className="px-2 py-2 w-[120px] align-top">
+          {service.status === 'Importado' && (
+            <span className="text-[10px] text-on-surface-variant italic">Asignar conductor</span>
+          )}
+          {service.status === 'Asignado' && (
+            <button
+              onClick={() => handleLifecycleTransition(service.id, 'confirmService')}
+              disabled={!!lifecycleLoading[service.id]}
+              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {lifecycleLoading[service.id] === 'confirmService' ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+              Confirmar
+            </button>
+          )}
+          {service.status === 'Confirmado' && (
+            <button
+              onClick={() => handleLifecycleTransition(service.id, 'startService')}
+              disabled={!!lifecycleLoading[service.id]}
+              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {lifecycleLoading[service.id] === 'startService' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+              Iniciar
+            </button>
+          )}
+        </td>
+      </tr>
+    );
+
+    // --- Sub-rows (movement 2..N) ---
+    if (isExpanded) {
+      for (let m = 1; m < movements.length; m++) {
+        const mov = movements[m];
+        const prevMov = movements[m - 1];
+        const timeChanged = mov.time && mov.time !== (prevMov?.time || firstMovement.time);
+        rows.push(
+          <tr
+            key={service.id + '-mov-' + m}
+            className={`transition-colors ${timeChanged ? 'border-t border-primary/20' : ''}`}
+          >
+            <td className="px-2 py-1.5 w-8"></td>
+            <td className="px-2 py-1.5" colSpan={5}></td>
+            <td className="px-2 py-1.5 w-[60px] align-top">
+              {timeChanged && (
+                <span className="text-[11px] font-medium text-primary">{mov.time}</span>
+              )}
+            </td>
+            <td className="px-2 py-1.5 max-w-[200px] align-top">
+              <div className="text-[11px]">
+                {mov.passengers && mov.passengers.length > 0
+                  ? mov.passengers.map(p => p.name).filter(Boolean).join('; ')
+                  : ''}
+              </div>
+            </td>
+            {showRoles && (
+              <td className="px-2 py-1.5 text-on-surface-variant text-[11px] hidden xl:table-cell align-top">
+                {mov.passengers && mov.passengers.length > 0
+                  ? mov.passengers.map(p => p.role).filter(Boolean).join('; ')
+                  : ''}
+              </td>
+            )}
+            <td className="px-2 py-1.5 max-w-[180px] hidden md:table-cell overflow-hidden align-top">
+              <div className="flex items-center gap-1 min-w-0 text-[11px]">
+                <span className="truncate">{mov.pickupLines?.join('; ') || ''}</span>
+              </div>
+            </td>
+            <td className="px-2 py-1.5 max-w-[180px] hidden md:table-cell overflow-hidden align-top">
+              <div className="flex items-center gap-1 min-w-0 text-[11px]">
+                <span className="truncate">{mov.dropoffLines?.join('; ') || ''}</span>
+              </div>
+            </td>
+            <td className="px-2 py-1.5 align-top"></td>
+            <td className="px-2 py-1.5 hidden xl:table-cell align-top">
+              <span className="text-[11px]">{mov.flightInfo || ''}</span>
+            </td>
+            <td className="px-2 py-1.5 hidden xl:table-cell align-top"></td>
+            <td className="px-2 py-1.5 hidden 2xl:table-cell align-top"></td>
+            <td className="px-2 py-1.5 hidden 2xl:table-cell align-top"></td>
+            <td className="px-2 py-1.5 w-[120px] align-top"></td>
+          </tr>
+        );
+      }
+    }
+
+    return <React.Fragment key={service.id}>{rows}</React.Fragment>;
   };
 
   // --- Render a single service row ---
@@ -2152,6 +2383,30 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                   Roles
                 </button>
 
+                {/* Grouped view toggle */}
+                <button
+                  onClick={toggleViewMode}
+                  className={`flex items-center gap-1 text-[12px] px-2 py-1 rounded border transition-colors cursor-pointer ${
+                    viewMode === 'grouped'
+                      ? 'bg-primary/10 border-primary text-primary'
+                      : 'border-outline-variant text-on-surface-variant hover:border-primary'
+                  }`}
+                  title={viewMode === 'grouped' ? 'Vista agrupada (movements como sub-filas)' : 'Vista plana (una fila por servicio)'}
+                >
+                  {viewMode === 'grouped' ? <ListTree className="w-3.5 h-3.5" /> : <LayoutList className="w-3.5 h-3.5" />}
+                  {viewMode === 'grouped' ? 'Agrupada' : 'Plana'}
+                </button>
+                {viewMode === 'grouped' && (
+                  <>
+                    <button onClick={expandAllGrouped} className="text-[11px] text-primary hover:text-primary-hover font-medium cursor-pointer" title="Expand all">
+                      Expand
+                    </button>
+                    <button onClick={collapseAllGrouped} className="text-[11px] text-primary hover:text-primary-hover font-medium cursor-pointer" title="Collapse all">
+                      Collapse
+                    </button>
+                  </>
+                )}
+
                 {/* Generate PDF */}
                 <button
                   onClick={handleExportPdf}
@@ -2430,12 +2685,15 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                             <React.Fragment key={group.section || 'nosection'}>
                               {group.section && (
                                 <tr>
-                                  <td colSpan={showRoles ? 16 : 15} className={`px-3 py-1 text-center text-[11px] font-bold ${getSectionStyle(group.section)}`} style={{ border: '1px solid #000' }}>
+                                  <td colSpan={showRoles ? 17 : 16} className={`px-3 py-1 text-center text-[11px] font-bold ${getSectionStyle(group.section)}`} style={{ border: '1px solid #000' }}>
                                     {group.section}
                                   </td>
                                 </tr>
                               )}
-                              {group.services.map((service, idx) => renderServiceRow(service, selectedRows.has(service.id), idx))}
+                              {group.services.map((service, idx) => viewMode === 'grouped'
+                                ? renderServiceBlock(service, selectedRows.has(service.id), idx)
+                                : renderServiceRow(service, selectedRows.has(service.id), idx)
+                              )}
                             </React.Fragment>
                           ))}
                         </tbody>
@@ -2537,26 +2795,106 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                               <div className="mt-1">
                                 <OperatingCompanyCell service={service} onUpdate={handleOperatingCompanyUpdate} />
                               </div>
-                              {/* Passengers */}
-                              {(Array.isArray(service.passengers) ? service.passengers.length > 0 : !!service.passengers) && (
-                                <div className="text-[11px] text-on-surface-variant mt-1 truncate">
-                                  {passengerDisplay(service.passengers)}
-                                </div>
+                              {/* Passengers — grouped mode: show first movement only */}
+                              {viewMode === 'grouped' && service.movements && service.movements.length > 0 ? (
+                                <>
+                                  {service.movements[0].passengers && service.movements[0].passengers.length > 0 && (
+                                    <div className="text-[11px] text-on-surface-variant mt-1">
+                                      {service.movements[0].passengers.map((p, pi) => (
+                                        <span key={p.name}>
+                                          {pi > 0 && '; '}
+                                          <span className="font-medium">{p.name}</span>
+                                          {p.role && <span className="text-on-surface-variant/60"> ({p.role})</span>}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {(service.movements[0].pickupLines?.length > 0 || service.movements[0].dropoffLines?.length > 0) && (
+                                    <div className="text-[10px] text-on-surface-variant/70 mt-0.5">
+                                      <div className="flex items-start gap-1">
+                                        {service.pickupMapsUrl && (
+                                          <a href={service.pickupMapsUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-primary/60 hover:text-primary mt-0.5">
+                                            <MapPin className="w-3 h-3" />
+                                          </a>
+                                        )}
+                                        <span className="line-clamp-2">{service.movements[0].pickupLines?.join('; ')}</span>
+                                      </div>
+                                      <div className="flex items-start gap-1">
+                                        {service.dropoffMapsUrl && (
+                                          <a href={service.dropoffMapsUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-primary/60 hover:text-primary mt-0.5">
+                                            <MapPin className="w-3 h-3" />
+                                          </a>
+                                        )}
+                                        <span className="line-clamp-2">→ {service.movements[0].dropoffLines?.join('; ')}</span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  {/* Flat mode: show all passengers */}
+                                  {(Array.isArray(service.passengers) ? service.passengers.length > 0 : !!service.passengers) && (
+                                    <div className="text-[11px] text-on-surface-variant mt-1 truncate">
+                                      {passengerDisplay(service.passengers)}
+                                    </div>
+                                  )}
+                                  {(pickupDisplay(service.pickupLines) || dropoffDisplay(service.dropoffLines)) && (
+                                    <div className="text-[10px] text-on-surface-variant/70 mt-1 truncate flex items-center gap-1">
+                                      {service.pickupMapsUrl ? (
+                                        <a href={service.pickupMapsUrl} target="_blank" rel="noopener noreferrer" title="Open pickup in Maps" className="shrink-0 text-primary/60 hover:text-primary transition-colors">
+                                          <MapPin className="w-3 h-3" />
+                                        </a>
+                                      ) : null}
+                                      {pickupDisplay(service.pickupLines)} → {dropoffDisplay(service.dropoffLines)}
+                                      {service.dropoffMapsUrl ? (
+                                        <a href={service.dropoffMapsUrl} target="_blank" rel="noopener noreferrer" title="Open dropoff in Maps" className="shrink-0 text-primary/60 hover:text-primary transition-colors">
+                                          <MapPin className="w-3 h-3" />
+                                        </a>
+                                      ) : null}
+                                    </div>
+                                  )}
+                                </>
                               )}
-                              {/* From → To */}
-                              {(pickupDisplay(service.pickupLines) || dropoffDisplay(service.dropoffLines)) && (
-                                <div className="text-[10px] text-on-surface-variant/70 mt-1 truncate flex items-center gap-1">
-                                  {service.pickupMapsUrl ? (
-                                    <a href={service.pickupMapsUrl} target="_blank" rel="noopener noreferrer" title="Open pickup in Maps" className="shrink-0 text-primary/60 hover:text-primary transition-colors">
-                                      <MapPin className="w-3 h-3" />
-                                    </a>
-                                  ) : null}
-                                  {pickupDisplay(service.pickupLines)} → {dropoffDisplay(service.dropoffLines)}
-                                  {service.dropoffMapsUrl ? (
-                                    <a href={service.dropoffMapsUrl} target="_blank" rel="noopener noreferrer" title="Open dropoff in Maps" className="shrink-0 text-primary/60 hover:text-primary transition-colors">
-                                      <MapPin className="w-3 h-3" />
-                                    </a>
-                                  ) : null}
+                              {/* Grouped: show additional movements */}
+                              {viewMode === 'grouped' && service.movements && service.movements.length > 1 && (
+                                <div className="mt-2">
+                                  <button
+                                    onClick={() => toggleServiceExpand(service.id)}
+                                    className="flex items-center gap-1 text-[10px] font-medium text-primary hover:text-primary-hover cursor-pointer mb-1"
+                                  >
+                                    {expandedServices.has(service.id) ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                                    {service.movements.length - 1} movimientos adicionales
+                                  </button>
+                                  {expandedServices.has(service.id) && service.movements.slice(1).map((mov, mi) => {
+                                    const allMovements = service.movements || [];
+                                    const prevMov = allMovements[mi] || allMovements[0];
+                                    const timeChanged = mov.time && mov.time !== (prevMov?.time || '');
+                                    return (
+                                    <div key={mi} className={`ml-2 mt-1 pl-2 border-l-2 text-[10px] space-y-0.5 ${timeChanged ? 'border-primary/40 mt-2 pt-1' : 'border-primary/15'}`}>
+                                      {timeChanged && (
+                                        <div className="font-medium text-primary text-[11px]">{mov.time}</div>
+                                      )}
+                                      {mov.passengers && mov.passengers.length > 0 && (
+                                        <div className="text-on-surface-variant">
+                                          {mov.passengers.map((p, pi) => (
+                                            <span key={p.name}>
+                                              {pi > 0 && '; '}
+                                              <span className="font-medium">{p.name}</span>
+                                              {p.role && <span className="text-on-surface-variant/60"> ({p.role})</span>}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+                                      {(mov.pickupLines?.length > 0 || mov.dropoffLines?.length > 0) && (
+                                        <div className="text-on-surface-variant/70">
+                                          {mov.pickupLines?.join('; ')}
+                                          {mov.pickupLines?.length > 0 && mov.dropoffLines?.length > 0 && ' → '}
+                                          {mov.dropoffLines?.join('; ')}
+                                        </div>
+                                      )}
+                                    </div>
+                                    );
+                                  })}
                                 </div>
                               )}
                             </div>
