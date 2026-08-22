@@ -64,6 +64,7 @@ import {
   validateService,
   createDriver,
   updateDriver,
+  isServiceDimmed,
   DriverRecord,
   Agency,
   getProjects,
@@ -372,6 +373,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<{ created?: number; skipped?: number } | null>(null);
 
   // Helper: extract error message from string or object
   const toErrorMessage = (err: unknown): string => {
@@ -719,6 +721,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
     setProjectName('');
     setTransportCompany('');
     setFooterContacts([]);
+    setImportResult(null);
   };
 
   // --- Editing ---
@@ -1113,6 +1116,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
         setSelectedProjectId(result.projectId);
       }
 
+      setImportResult({ created: result.servicesCreated, skipped: result.servicesSkipped });
       setStep('done');
       if (onImportComplete) onImportComplete();
       getTransportLists().then(lists => {
@@ -1339,7 +1343,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
       <tr 
         key={service.id} 
         className={`transition-colors ${
-          service.isProduction ? 'bg-gray-50 opacity-60' :
+          isServiceDimmed(service) ? 'bg-gray-50 opacity-60' :
           isSelected ? 'bg-primary/5' : 'hover:bg-surface-dim/50'
         }`}
       >
@@ -2305,7 +2309,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                             <div
                               key={service.id}
                               className={`border rounded-lg p-3 transition-colors ${
-                                service.isProduction ? 'border-gray-200 bg-gray-50 opacity-60' :
+                                isServiceDimmed(service) ? 'border-gray-200 bg-gray-50 opacity-60' :
                                 isSelected ? 'border-primary bg-primary/5' : 'border-outline-variant bg-surface-container-lowest'
                               }`}
                             >
@@ -2475,7 +2479,8 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
             </div>
             <h3 className="text-[16px] font-semibold text-on-surface mb-2">Import Complete</h3>
             <p className="text-on-surface-variant text-[13px] max-w-md">
-              {services.filter(s => selectedRows.has(s.id)).length} servicios sincronizados con el Sheet.
+              {importResult?.created || services.filter(s => selectedRows.has(s.id)).length} servicios sincronizados con el Sheet
+              {importResult?.skipped ? ` · ${importResult.skipped} duplicados omitidos` : ''}.
             </p>
             <div className="flex items-center gap-3 mt-6">
               <button

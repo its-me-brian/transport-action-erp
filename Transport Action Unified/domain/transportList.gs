@@ -217,7 +217,7 @@ function uploadTransportListFile(fileData, fileName) {
  * @param {string} operatingCompany - OperatingCompany ID (optional)
  * @returns {number} Count of services created
  */
-function _createServicesFromImport(ss, services, importId, projectId, operatingCompany) {
+function _createServicesFromImport(ss, services, importId, projectId, operatingCompany, existingKeys) {
   // EDGE005: No se pueden crear servicios en proyecto archivado
   if (projectId) {
     var project = ProjectRepository.getById(projectId);
@@ -301,6 +301,7 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
   var now = new Date().toISOString();
   var created = 0;
   var skippedProduction = 0;
+  var skippedDuplicate = 0;
   
   for (var i = 0; i < services.length; i++) {
     var svc = services[i];
@@ -376,6 +377,19 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
     // Generate Service ID
     var svcId = 'SVC-' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd') + '-' + String(i + 1).padStart(3, '0');
     
+    // === DELTA IMPORT: skip if this service already exists ===
+    if (existingKeys && existingKeys.size > 0) {
+      var dateKey = serviceDate ? serviceDate.substring(0, 10) : '';
+      var timeKey = String(timeStr || '').trim();
+      var driverKey = String(driverId || '').trim();
+      var passengerKey = passengerName.trim().toLowerCase();
+      var svcKey = dateKey + '|' + timeKey + '|' + driverKey + '|' + passengerKey;
+      if (existingKeys.has(svcKey)) {
+        skippedDuplicate++;
+        continue;
+      }
+    }
+    
     // Create Service entity — pass arrays, NOT JSON strings
     ServiceRepository.create({
       ID: svcId,
@@ -410,8 +424,8 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
     created++;
   }
   
-  Logger.log('Bridge: Created ' + created + ' Service entities, skipped ' + skippedProduction + ' Production vehicles from import ' + importId);
-  return created;
+  Logger.log('Bridge: Created ' + created + ' Service entities, skipped ' + skippedProduction + ' Production, ' + skippedDuplicate + ' Duplicates from import ' + importId);
+  return { created: created, skipped: skippedDuplicate, skippedProduction: skippedProduction };
 }
 
 // ============================================================================
@@ -439,14 +453,22 @@ function apiImportTransportListWithProject(data) {
     }
 
     // === DUPLICATE IMPORT CHECK ===
-    // Prevent importing the same file twice (would create duplicate services)
+    // Delta re-import: compare by key fields, only add new services
+    var existingServices = [];
+    var existingKeys = new Set();
     if (data.importId) {
-      var existingServices = ServiceRepository.getByTransportList(data.importId);
+      existingServices = ServiceRepository.getByTransportList(data.importId);
       if (existingServices && existingServices.length > 0) {
-        return {
-          error: 'Duplicate import: ' + data.importId + ' already has ' +
-                 existingServices.length + ' services. Cannot import the same file twice.'
-        };
+        // Build set of existing service keys for dedup
+        for (var e = 0; e < existingServices.length; e++) {
+          var ex = existingServices[e];
+          var exDate = String(ex.Date || '').substring(0, 10); // YYYY-MM-DD
+          var exTime = String(ex.Time || '').trim();
+          var exDriver = String(ex.DriverID || '').trim();
+          var exPassenger = String(ex.PassengerName || '').trim().toLowerCase();
+          existingKeys.add(exDate + '|' + exTime + '|' + exDriver + '|' + exPassenger);
+        }
+        Logger.log('Delta re-import: found ' + existingServices.length + ' existing services, ' + existingKeys.size + ' unique keys');
       }
     }
 
@@ -498,7 +520,7 @@ function apiImportTransportListWithProject(data) {
     }
     
     // === CREATE SERVICE ENTITIES DIRECTLY (no legacy sheets) ===
-    var servicesCreated = _createServicesFromImport(ss, data.services, data.importId, projectId, data.operatingCompany);
+    var importResult = _createServicesFromImport(ss, data.services, data.importId, projectId, data.operatingCompany, existingKeys);
     
     // === CREATE TRANSPORT LIST ENTITY (ERD-aligned) ===
     TransportListRepository.create({
@@ -508,7 +530,7 @@ function apiImportTransportListWithProject(data) {
       Production: data.production || '',
       ProjectName: projectName,
       TransportCompany: '',
-      TotalServices: servicesCreated,
+      TotalServices: importResult.created,
       ImportedBy: '',
       Notes: 'dateStr:' + (data.dateStr || ''),
       FileURL: data.fileUrl || ''
@@ -518,12 +540,13 @@ function apiImportTransportListWithProject(data) {
       type: 'transport_list.imported',
       entity: 'TransportList',
       entityId: data.importId,
-      payload: { count: servicesCreated, clientId: clientId, projectId: projectId }
+      payload: { count: importResult.created, clientId: clientId, projectId: projectId }
     });
     
     return {
       success: true,
-      servicesCreated: servicesCreated,
+      servicesCreated: importResult.created,
+      servicesSkipped: importResult.skipped,
       clientId: clientId,
       projectId: projectId,
       importId: data.importId

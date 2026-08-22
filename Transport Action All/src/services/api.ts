@@ -161,6 +161,24 @@ export function normalizeTransportServices(rawServices: Record<string, any>[]): 
 }
 
 /**
+ * Check if a transport service should be dimmed (greyed out) in the UI.
+ * Covers: production vehicles + walking distance.
+ * More reliable than checking service.isProduction alone, because it
+ * derives from vehicleType (runtime) and vehicle name, not just the backend flag.
+ */
+export function isServiceDimmed(service: TransportService): boolean {
+  // 1) Backend flag (authoritative when present)
+  if (service.isProduction) return true;
+  // 2) Derive from vehicleType string (catches rows where backend flag was missed)
+  const vt = (service.vehicleType || '').toUpperCase();
+  if (vt.indexOf('PRODUCTION') > -1) return true;
+  // 3) Walking distance — not production but should also be dimmed
+  const v = (service.vehicle || '').toLowerCase();
+  if (v.indexOf('walking') > -1) return true;
+  return false;
+}
+
+/**
  * Display helpers — for views that need string representation
  */
 export function passengerDisplay(passengers: Passenger[] | string | unknown): string {

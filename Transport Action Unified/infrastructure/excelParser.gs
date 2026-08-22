@@ -280,6 +280,7 @@ function _parseTransportListRows(allData, fileName, importSeq) {
   let lastDriver = '';
   let lastDriverPhone = '';
   let lastServiceType = 'Dispo';
+  let lastIsProduction = false;
   let lastServiceHadVehicle = false;  // true if last saved service had a vehicle
   const parsingLog = [];  // DEBUG: track every row processed
   
@@ -390,10 +391,14 @@ function _parseTransportListRows(allData, fileName, importSeq) {
         vehicleType = 'Van';
       } else if (lowerVehicle.indexOf('car') > -1 || lowerVehicle.indexOf('sedan') > -1) {
         vehicleType = 'Car';
+      } else if (lowerVehicle.indexOf('walking') > -1) {
+        vehicleType = 'Walking';
       }
       
       // Extract service type from vehicle cell
-      if (lowerVehicle.indexOf('transfer airport') > -1) {
+      if (lowerVehicle.indexOf('walking') > -1) {
+        serviceType = 'Walking';
+      } else if (lowerVehicle.indexOf('transfer airport') > -1) {
         serviceType = 'Transfer Airport';
       } else if (lowerVehicle.indexOf('transfer city') > -1) {
         serviceType = 'Transfer City';
@@ -445,6 +450,7 @@ function _parseTransportListRows(allData, fileName, importSeq) {
         servicio.driver = lastDriver;
         servicio.driverPhone = lastDriverPhone;
         servicio.serviceType = lastServiceType;
+        servicio.isProduction = lastIsProduction;
         servicio.notes = 'Same vehicle as previous service';
         parsingLog.push({ row: i, action: 'INHERITED', vehicle: lastVehicle, driver: lastDriver, phone: lastDriverPhone });
       } else {
@@ -482,11 +488,21 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       const sub6 = colMap.to !== undefined ? _cellToStr(subRow[colMap.to]) : '';
       
       // Detectar si es inicio de nuevo servicio
+      // Case 1: full row (vehicle + driver + time)
       const isNewService = (sub0 && sub1 && sub2 && !sub0.startsWith('+') && 
                            sub0.toUpperCase() !== 'THEN' && sectionNames.every(s => sub0.toUpperCase().indexOf(s) === -1));
       
-      // Detectar "Then" (segundo pickup del mismo vehículo)
-      if (sub0.toUpperCase() === 'THEN' || sub2.toUpperCase() === 'THEN') {
+      // Case 2: sub-row has a vehicle name DIFFERENT from current service
+      // (e.g., "walking distance" or "Showrunner Van" appearing under a different vehicle)
+      // This catches services that have a vehicle but no time/driver yet
+      const isDifferentVehicle = sub0 && !sub0.startsWith('+') && 
+                                sub0.toUpperCase() !== 'THEN' && 
+                                sectionNames.every(s => sub0.toUpperCase().indexOf(s) === -1) &&
+                                sub0.toUpperCase() !== servicio.vehicle.toUpperCase();
+      
+      // Detectar "Then" (segundo pickup del mismo vehículo) — check vehicle, time, AND from/to columns
+      if (sub0.toUpperCase() === 'THEN' || sub2.toUpperCase() === 'THEN' ||
+          sub5.toUpperCase() === 'THEN' || sub6.toUpperCase() === 'THEN') {
         servicio.hasThenPickup = true;
         
         servicios.push(_buildServiceRecord(servicio, production, dateStr, fileName, servicioIdx, importSeq));
@@ -507,14 +523,16 @@ function _parseTransportListRows(allData, fileName, importSeq) {
           section: currentSection,
           servicio: servicio.servicio,
           serviceType: servicio.serviceType,
+          isProduction: servicio.isProduction || false,
           hasThenPickup: false
         };
         j++;
         continue;
       }
       
-      // Detectar teléfono
-      if (sub1.startsWith('+') || sub0.startsWith('+')) {
+      // Detectar teléfono — only when sub0 is empty (no vehicle in sub-row)
+      // If sub0 has a vehicle name, it's a new service, not a phone sub-row
+      if (!sub0 && sub1.startsWith('+')) {
         servicio.driverPhone = sub1.startsWith('+') ? sub1 : sub0;
         // Si en la misma fila hay datos de pasajero
         if (sub4) {
@@ -563,6 +581,13 @@ function _parseTransportListRows(allData, fileName, importSeq) {
         if (sub6) servicio.dropoffLines.push(sub6);
         j++;
         continue;
+      }
+      
+      // NEW: Sub-fila con nombre de vehículo DIFERENTE al actual → es un nuevo servicio
+      // (e.g., walking distance, Showrunner Van, etc. — even without time/driver)
+      if (isDifferentVehicle) {
+        parsingLog.push({ row: j, action: 'SUB_BREAK_DIFF_VEHICLE', fromRow: i, vehicle: sub0, driver: sub1 });
+        break;
       }
       
       // Sub-fila con FROM/TO adicional
@@ -615,6 +640,7 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       lastVehicle = servicio.vehicle;
       lastVehicleType = servicio.vehicleType;
       lastServiceType = servicio.serviceType;
+      lastIsProduction = servicio.isProduction || false;
       if (servicio.driver) {
         lastDriver = servicio.driver;
         lastDriverPhone = servicio.driverPhone;
