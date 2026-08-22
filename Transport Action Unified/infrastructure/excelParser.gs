@@ -478,6 +478,7 @@ function _parseTransportListRows(allData, fileName, importSeq) {
     
     // Mirar las sub-filas siguientes
     let j = i + 1;
+    let afterThen = false; // Flag to skip empty rows after Then marker
     while (j < allData.length) {
       const subRow = allData[j];
       const sub0 = colMap.vehicle !== undefined ? _cellToStr(subRow[colMap.vehicle]) : '';
@@ -503,6 +504,18 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       // Detectar "Then" (segundo pickup del mismo vehículo) — check vehicle, time, AND from/to columns
       if (sub0.toUpperCase() === 'THEN' || sub2.toUpperCase() === 'THEN' ||
           sub5.toUpperCase() === 'THEN' || sub6.toUpperCase() === 'THEN') {
+        
+        // IMPORTANT: If passenger is in same row as Then marker, absorb into CURRENT service first
+        // (e.g., Leon Ferreira in Isidoro Dragone row with "Then" in TO column)
+        if (sub4 && sub4.toUpperCase() !== 'THEN') {
+          const parsed = _parsePassengerLine(sub4);
+          servicio.passengers.push(parsed.name);
+          servicio.passengerRoles.push(parsed.role);
+          // Use the non-Then FROM/TO columns for this passenger
+          if (sub5 && sub5.toUpperCase() !== 'THEN') servicio.pickupLines.push(sub5);
+          if (sub6 && sub6.toUpperCase() !== 'THEN') servicio.dropoffLines.push(sub6);
+        }
+        
         servicio.hasThenPickup = true;
         
         servicios.push(_buildServiceRecord(servicio, production, dateStr, fileName, servicioIdx, importSeq));
@@ -526,6 +539,9 @@ function _parseTransportListRows(allData, fileName, importSeq) {
           isProduction: servicio.isProduction || false,
           hasThenPickup: false
         };
+        
+        // Set flag to skip empty rows after Then (they're separators before second pickup)
+        afterThen = true;
         j++;
         continue;
       }
@@ -550,7 +566,8 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       // (mismo vehículo del servicio anterior, distinto horario/pasajeros/FROM-TO)
       // Matches: time+passengers, time+FROM/TO, or time only — all without vehicle/driver
       // BUT: if the next non-empty row has the same time with vehicle+driver, this is a sub-row artifact
-      if (sub2 && !sub0 && !sub1 && (sub4 || sub5 || sub6)) {
+      // AFTER THEN: don't break, we're still consuming the second pickup
+      if (sub2 && !sub0 && !sub1 && (sub4 || sub5 || sub6) && !afterThen) {
         let wouldDuplicate = false;
         for (let k = j + 1; k < allData.length; k++) {
           const nextRow = allData[k];
@@ -570,6 +587,22 @@ function _parseTransportListRows(allData, fileName, importSeq) {
         }
         parsingLog.push({ row: j, action: 'SUB_BREAK_NEW_SVC', fromRow: i, time: sub2, passengers: sub4 });
         break;
+      }
+      
+      // AFTER THEN: consume time slot for the Then service (update time and continue)
+      if (afterThen && sub2 && !sub0 && !sub1) {
+        servicio.time = sub2;
+        parsingLog.push({ row: j, action: 'SUB_THEN_TIME', fromRow: i, time: sub2 });
+        // Consume passenger/FROM/TO in this row
+        if (sub4) {
+          const parsed = _parsePassengerLine(sub4);
+          servicio.passengers.push(parsed.name);
+          servicio.passengerRoles.push(parsed.role);
+        }
+        if (sub5) servicio.pickupLines.push(sub5);
+        if (sub6) servicio.dropoffLines.push(sub6);
+        j++;
+        continue;
       }
 
       // Sub-fila con pasajero adicional (sin hora, sin vehículo)
@@ -614,6 +647,13 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       // Sub-fila vacía o no reconocida → fin del servicio
       // Use truly empty check (all columns) to catch separator rows with data in unmapped columns
       if (_isRowTrulyEmpty(subRow)) {
+        // After Then marker, skip empty rows (they're separators before second pickup)
+        if (afterThen) {
+          parsingLog.push({ row: j, action: 'SUB_SKIP_EMPTY_AFTER_THEN', fromRow: i });
+          afterThen = false; // Reset flag after skipping
+          j++;
+          continue;
+        }
         parsingLog.push({ row: j, action: 'SUB_BREAK_EMPTY', fromRow: i });
         break;
       }
