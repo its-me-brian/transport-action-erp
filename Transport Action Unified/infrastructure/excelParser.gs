@@ -567,7 +567,30 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       // Matches: time+passengers, time+FROM/TO, or time only — all without vehicle/driver
       // BUT: if the next non-empty row has the same time with vehicle+driver, this is a sub-row artifact
       // AFTER THEN: don't break, we're still consuming the second pickup
+      // IF current service has a driver and sub-row has no vehicle: it's an additional time slot, not a new service
       if (sub2 && !sub0 && !sub1 && (sub4 || sub5 || sub6) && !afterThen) {
+        // If current service already has a driver, this is an additional time slot for the same service
+        // (e.g., Giuseppe P. with Disposal Van doing 07.10, 10.35, 11.30 trips)
+        if (servicio.driver) {
+          parsingLog.push({ row: j, action: 'SUB_ADDITIONAL_TIME', fromRow: i, time: sub2, passengers: sub4 });
+          // Accumulate time slots: "07.10, 10.35, 11.30"
+          if (servicio.time && servicio.time !== sub2) {
+            servicio.time = servicio.time + ', ' + sub2;
+          } else {
+            servicio.time = sub2;
+          }
+          // Consume passenger/FROM/TO for this time slot
+          if (sub4) {
+            const parsed = _parsePassengerLine(sub4);
+            servicio.passengers.push(parsed.name);
+            servicio.passengerRoles.push(parsed.role);
+          }
+          if (sub5) servicio.pickupLines.push(sub5);
+          if (sub6) servicio.dropoffLines.push(sub6);
+          j++;
+          continue;
+        }
+        
         let wouldDuplicate = false;
         for (let k = j + 1; k < allData.length; k++) {
           const nextRow = allData[k];
@@ -653,6 +676,26 @@ function _parseTransportListRows(allData, fileName, importSeq) {
           afterThen = false; // Reset flag after skipping
           j++;
           continue;
+        }
+        // If current service has a driver, check if next non-empty row is an additional time slot
+        // (same driver, different time — e.g., Giuseppe P. with 07.10, 10.35, 11.30)
+        if (servicio.driver) {
+          let nextNonEmptyIdx = j + 1;
+          while (nextNonEmptyIdx < allData.length && _isRowTrulyEmpty(allData[nextNonEmptyIdx])) {
+            nextNonEmptyIdx++;
+          }
+          if (nextNonEmptyIdx < allData.length) {
+            const nextRow = allData[nextNonEmptyIdx];
+            const nextV = colMap.vehicle !== undefined ? _cellToStr(nextRow[colMap.vehicle]) : '';
+            const nextD = colMap.driver !== undefined ? _cellToStr(nextRow[colMap.driver]) : '';
+            const nextT = colMap.time !== undefined ? _cellToStr(nextRow[colMap.time]) : '';
+            // Next row has time but no vehicle/driver → it's an additional time slot for this service
+            if (nextT && !nextV && !nextD) {
+              parsingLog.push({ row: j, action: 'SUB_SKIP_EMPTY_MULTI_TIME', fromRow: i, nextRow: nextNonEmptyIdx });
+              j++;
+              continue;
+            }
+          }
         }
         parsingLog.push({ row: j, action: 'SUB_BREAK_EMPTY', fromRow: i });
         break;
