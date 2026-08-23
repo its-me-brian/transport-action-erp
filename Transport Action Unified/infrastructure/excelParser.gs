@@ -533,9 +533,9 @@ function _parseTransportListRows(allData, fileName, importSeq) {
                                 sectionNames.every(s => sub0.toUpperCase().indexOf(s) === -1) &&
                                 sub0.toUpperCase() !== servicio.vehicle.toUpperCase();
       
-      // Detectar "Then" (segundo pickup del mismo vehículo) — check vehicle, time, AND from/to columns
+      // Detectar "Then" (segundo pickup del mismo vehículo) — check all columns
       if (sub0.toUpperCase() === 'THEN' || sub2.toUpperCase() === 'THEN' ||
-          sub5.toUpperCase() === 'THEN' || sub6.toUpperCase() === 'THEN') {
+          sub4.toUpperCase() === 'THEN' || sub5.toUpperCase() === 'THEN' || sub6.toUpperCase() === 'THEN') {
         
         // IMPORTANT: If passenger is in same row as Then marker, absorb into CURRENT service first
         // (e.g., Leon Ferreira in Isidoro Dragone row with "Then" in TO column)
@@ -820,7 +820,7 @@ function _parseTransportListRows(allData, fileName, importSeq) {
           driver: s.driver || '',
           driverPhone: s.driverPhone || '',
           time: s.time || '',
-          passengers: (s.passengers || []).join('; '),
+          passengers: (s.passengers || []).map(function(p) { return typeof p === 'object' && p !== null ? (p.name || '') : String(p || ''); }).filter(Boolean).join('; '),
           section: s.section || ''
         };
       }),
