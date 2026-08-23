@@ -533,6 +533,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
   const [footerContacts, setFooterContacts] = useState<{name: string; role: string; phone: string; email: string}[]>([]);
   const [fileUrl, setFileUrl] = useState<string>('');
   const [parsingLog, setParsingLog] = useState<any[]>([]);
+  const [serviceSummary, setServiceSummary] = useState<any[]>([]);
   const [showDebug, setShowDebug] = useState(false);  
   // Edit state
   const [editingCell, setEditingCell] = useState<{ rowId: string; field: string } | null>(null);
@@ -824,7 +825,8 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
         console.log('[DEBUG] first 3 parsingLog entries:', JSON.stringify(_dbg.parsingLog.slice(0, 3)));
         console.log('[DEBUG] last 3 parsingLog entries:', JSON.stringify(_dbg.parsingLog.slice(-3)));
       }
-      setParsingLog(_dbg?.parsingLog || []);      
+      setParsingLog(_dbg?.parsingLog || []);
+      setServiceSummary(_dbg?.serviceSummary || []);
       // Auto-select only non-walking, non-production services by default
       const validIds = (result.servicios || [])
         .filter(s => {
@@ -2988,6 +2990,38 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                         ))}
                       </tbody>
                     </table>
+                    {/* Service Summary — shows final parsed state for each service */}
+                    {serviceSummary.length > 0 && (
+                      <div className="mt-3">
+                        <div className="text-[11px] font-semibold text-on-surface mb-1">Service Summary (final parser output):</div>
+                        <table className="w-full text-[10px] border-collapse">
+                          <thead>
+                            <tr className="text-left text-on-surface-variant border-b border-outline-variant">
+                              <th className="px-1 py-0.5">#</th>
+                              <th className="px-1 py-0.5">Vehicle</th>
+                              <th className="px-1 py-0.5">Driver</th>
+                              <th className="px-1 py-0.5">Phone</th>
+                              <th className="px-1 py-0.5">Time</th>
+                              <th className="px-1 py-0.5">Passengers</th>
+                              <th className="px-1 py-0.5">Section</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-outline-variant/30">
+                            {serviceSummary.map((s: any) => (
+                              <tr key={s.idx} className={!s.driver && s.vehicle ? 'bg-amber-50' : ''}>
+                                <td className="px-1 py-0.5 font-mono">{s.idx + 1}</td>
+                                <td className="px-1 py-0.5">{s.vehicle || '—'}</td>
+                                <td className="px-1 py-0.5 font-medium">{s.driver || '(empty)'}</td>
+                                <td className="px-1 py-0.5">{s.driverPhone || '—'}</td>
+                                <td className="px-1 py-0.5">{s.time || '—'}</td>
+                                <td className="px-1 py-0.5 max-w-[200px] truncate">{s.passengers || '—'}</td>
+                                <td className="px-1 py-0.5">{s.section || '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

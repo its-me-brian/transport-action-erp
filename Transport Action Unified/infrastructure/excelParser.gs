@@ -813,6 +813,17 @@ function _parseTransportListRows(allData, fileName, importSeq) {
       dateStr: dateStr,
       row0: allData.length > 0 ? allData[0].map((c,i) => ({ col: i, value: String(c||'').trim() })) : [],
       row1: allData.length > 1 ? allData[1].map((c,i) => ({ col: i, value: String(c||'').trim() })) : [],
+      serviceSummary: servicios.map(function(s, idx) {
+        return {
+          idx: idx,
+          vehicle: s.vehicle || '',
+          driver: s.driver || '',
+          driverPhone: s.driverPhone || '',
+          time: s.time || '',
+          passengers: (s.passengers || []).join('; '),
+          section: s.section || ''
+        };
+      }),
       totalRows: allData.length,
       colMap: colMap,
       parsingLog: parsingLog
