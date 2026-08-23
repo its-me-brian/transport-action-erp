@@ -49,6 +49,8 @@ const PaymentRepository = {
       CreatedAt: now,
       ConfirmedAt: '',
       ReconciledAt: '',
+      VoidedAt: '',
+      VoidReason: '',
       // Cash tracking fields
       CashReceivedBy: data.CashReceivedBy || '',
       CashDate: data.CashDate || '',

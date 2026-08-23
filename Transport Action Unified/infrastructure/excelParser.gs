@@ -849,7 +849,8 @@ function _cellToStr(cellValue) {
     const month = String(cellValue.getMonth() + 1).padStart(2, '0');
     return day + '/' + month + '/' + cellValue.getFullYear();
   }
-  return String(cellValue).trim();
+  // Strip Unicode control chars (bidi embed/pop like U+202A/U+202C, zero-width joiners, etc.)
+  return String(cellValue).replace(/[\u200B-\u200F\u2028-\u202F\u2060-\u2069\uFEFF]/g, '').trim();
 }
 
 /**
