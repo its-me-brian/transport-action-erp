@@ -213,18 +213,18 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
       // Service not found — show form without reference
     }
 
-    // For WhatsApp captures: search for matching services by driver+date
-    if (item.Source === 'whatsapp' && item.DriverID && item.ServiceDate) {
+    // For WhatsApp captures: search for matching services by driver
+    if (item.Source === 'whatsapp' && item.DriverID) {
       setIsSearchingServices(true);
       try {
         const services = await getServices({ driverId: item.DriverID });
-        // Filter by same date
-        const targetDate = new Date(item.ServiceDate).toDateString();
-        const matched = (services || []).filter((s: any) => {
-          if (!s.date) return false;
-          const sd = new Date(s.date);
-          return sd.toDateString() === targetDate;
-        });
+        // Show all services for this driver, sorted by date (newest first)
+        const matched = (services || [])
+          .sort((a: any, b: any) => {
+            const da = new Date(a.date || 0).getTime();
+            const db = new Date(b.date || 0).getTime();
+            return db - da;
+          });
         setMatchingServices(matched);
       } catch (err) {
         console.error('Failed to search matching services:', err);
@@ -623,14 +623,17 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
                       className="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white"
                     >
                       <option value="">— Select a service —</option>
-                      {matchingServices.map((s: any) => (
-                        <option key={s.id} value={s.id}>
-                          {s.time || '—'} | {s.production || 'No production'} | {s.passengerName || 'No passenger'} | {s.status}
-                        </option>
-                      ))}
+                      {matchingServices.map((s: any) => {
+                        const dateLabel = s.date ? new Date(s.date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '?';
+                        return (
+                          <option key={s.id} value={s.id}>
+                            {dateLabel} | {s.time || '—'} | {s.production || 'No production'} | {s.passengerName || 'No passenger'} | {s.status}
+                          </option>
+                        );
+                      })}
                     </select>
                   ) : (
-                    <p className="text-xs text-amber-600">No matching services found for this driver on this date.</p>
+                    <p className="text-xs text-amber-600">No services found for this driver.</p>
                   )}
                 </div>
               )}
