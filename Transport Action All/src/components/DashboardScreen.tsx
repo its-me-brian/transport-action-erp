@@ -326,6 +326,11 @@ export default function DashboardScreen({
       }
       if (successCount > 0) {
         showToast(`${successCount} service(s) ${config.label.toLowerCase()}d`, 'success');
+        results.forEach((r) => {
+          if (r?.id && r?.operationalStatus) {
+            onServiceUpdate?.(r.id, r);
+          }
+        });
       }
       if (skippedCount > 0) {
         showToast(`${skippedCount} skipped (wrong status)`, 'warning');
@@ -357,12 +362,18 @@ export default function DashboardScreen({
       const successCount = selectedServiceIds.size - failures.length;
       
       if (failures.length > 0) showToast(`${failures.length} failed`, 'error');
-      if (successCount > 0) showToast(`${successCount} driver(s) assigned to ${driver.name}`, 'success');
+      if (successCount > 0) {
+        showToast(`${successCount} driver(s) assigned to ${driver.name}`, 'success');
+        results.forEach((r: any) => {
+          if (r?.id && r?.operationalStatus) {
+            onServiceUpdate?.(r.id, r);
+          }
+        });
+      }
       
       setSelectedServiceIds(new Set());
       setShowBulkDriverPicker(false);
       setBulkAssignDriverId('');
-      onServiceUpdate?.('', {});
     } catch (error) {
       showToast('Failed: ' + (error as Error).message, 'error');
     } finally {
@@ -419,7 +430,9 @@ export default function DashboardScreen({
         showToast(`Error: ${result.error}`, 'error');
       } else {
         showToast(`Service advanced to next status`, 'success');
-        onServiceUpdate?.(service.id, {});
+        if (result?.operationalStatus) {
+          onServiceUpdate?.(service.id, result);
+        }
       }
     } catch (err) {
       showToast(`Failed: ${(err as Error).message}`, 'error');
@@ -810,6 +823,24 @@ export default function DashboardScreen({
   // --- Data computations ---
   const columns = useMemo(() => getWeekColumns(baseDate), [baseDate]);
   const isTodayVisible = useMemo(() => columns.some(c => c.isToday), [columns]);
+
+  // Compute which dates have ALL services completed/validated/cancelled (no pending work)
+  const completedDates = useMemo(() => {
+    const terminal = new Set(['Realizado', 'Reportado', 'Revision', 'Validado', 'Cancelado']);
+    const dateMap = new Map<string, { total: number; done: number }>();
+    for (const s of filteredServices) {
+      if (!s.date) continue;
+      const prev = dateMap.get(s.date) || { total: 0, done: 0 };
+      prev.total++;
+      if (terminal.has(s.operationalStatus || '')) prev.done++;
+      dateMap.set(s.date, prev);
+    }
+    const result = new Set<string>();
+    for (const [date, { total, done }] of dateMap) {
+      if (total > 0 && total === done) result.add(date);
+    }
+    return result;
+  }, [filteredServices]);
 
   const dateRangeLabel = useMemo(() => {
     if (viewMode === 'month') {
@@ -1324,6 +1355,7 @@ export default function DashboardScreen({
                 }}
                 className={`flex flex-col items-center p-1.5 min-h-[56px] transition-colors cursor-pointer border-none ${
                   !isCurrentMonth ? 'bg-surface-dim/30 opacity-30' :
+                  completedDates.has(dateKey) ? 'bg-emerald-50/60' :
                   isToday ? 'bg-primary/[0.04]' : 'bg-surface-container-lowest hover:bg-surface-dim/30'
                 }`}
               >
@@ -1598,7 +1630,10 @@ export default function DashboardScreen({
         return (
           <div 
             key={col.key}
-            className={`flex flex-col min-w-0 bg-surface-container-lowest ${col.isToday ? 'bg-primary/[0.02]' : ''}`}
+            className={`flex flex-col min-w-0 ${
+              completedDates.has(col.date) ? (col.isToday ? 'bg-emerald-50/50' : 'bg-emerald-50/40') :
+              col.isToday ? 'bg-primary/[0.02]' : 'bg-surface-container-lowest'
+            }`}
           >
             {/* Column header */}
             <div className={`px-2.5 py-2 flex items-center justify-between border-b border-outline-variant/20 ${col.isToday ? '' : ''}`}>
