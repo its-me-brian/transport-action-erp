@@ -295,7 +295,7 @@ export default function DashboardScreen({
       complete: { validStatuses: ['EnRuta'], fn: completeService, label: 'Complete' },
       report:   { validStatuses: ['Realizado'], fn: reportService, label: 'Report' },
       review:   { validStatuses: ['Reportado'], fn: moveToRevision, label: 'Send to Review' },
-      validate: { validStatuses: ['Reportado', 'Revision'], fn: validateService, label: 'Validate' },
+      validate: { validStatuses: ['Revision'], fn: validateService, label: 'Validate' },
     };
     
     const config = actionConfig[action];
@@ -2538,7 +2538,7 @@ export default function DashboardScreen({
                   { action: 'complete', label: 'Complete', color: 'bg-green-600 hover:bg-green-700', icon: <CheckCircle className="w-3.5 h-3.5" />, count: selected.filter(s => s.operationalStatus === 'EnRuta').length },
                   { action: 'report', label: 'Report', color: 'bg-amber-500 hover:bg-amber-600', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>, count: selected.filter(s => s.operationalStatus === 'Realizado').length },
                   { action: 'review', label: 'Review', color: 'bg-amber-600 hover:bg-amber-700', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>, count: selected.filter(s => s.operationalStatus === 'Reportado').length },
-                  { action: 'validate', label: 'Validate', color: 'bg-green-700 hover:bg-green-800', icon: <CheckCircle className="w-3.5 h-3.5" />, count: selected.filter(s => ['Reportado', 'Revision'].includes(s.operationalStatus)).length },
+                  { action: 'validate', label: 'Validate', color: 'bg-green-700 hover:bg-green-800', icon: <CheckCircle className="w-3.5 h-3.5" />, count: selected.filter(s => s.operationalStatus === 'Revision').length },
                 ];
 
                 return stages.filter(s => s.count > 0).map(stage => (
