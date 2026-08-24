@@ -665,6 +665,10 @@ function _handleRoute(params, data) {
         }
         result = apiCompleteService(data.serviceId);
         break;
+      case 'reportService':
+        _checkPermission(data, 'service.complete');
+        result = apiReportService(data.serviceId);
+        break;
       case 'validateService':
         _checkPermission(data, 'service.validate');
         result = apiValidateService(data.serviceId);

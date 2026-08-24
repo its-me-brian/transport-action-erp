@@ -167,6 +167,31 @@ const ServiceCommands = {
   },
 
   /**
+   * S005a: Reportar servicio (conductor reporta que terminó)
+   * OperationalStatus: Realizado → Reportado
+   */
+  reportService(serviceId) {
+    return _withLock(() => {
+      const service = ServiceRepository.getById(serviceId);
+      if (!service) throw new NotFoundError('Service', serviceId);
+      this._assertNotInvoiced(serviceId);
+      _assertValidTransition('ServiceOperational', service.OperationalStatus, 'Reportado');
+
+      ServiceRepository.update(serviceId, {
+        OperationalStatus: 'Reportado'
+      });
+
+      _dispatchEvent({
+        type: 'service.reported',
+        entity: 'Service',
+        entityId: serviceId
+      });
+
+      return ServiceRepository.toDTO(ServiceRepository.getById(serviceId));
+    });
+  },
+
+  /**
    * S008: Cancelar servicio
    * OperationalStatus: Importado/Asignado/Confirmado/EnRuta → Cancelado
    * Solo permitido antes de que el servicio sea Realizado
@@ -664,6 +689,10 @@ function apiStartService(serviceId) {
 
 function apiCompleteService(serviceId) {
   return ServiceCommands.completeService(serviceId);
+}
+
+function apiReportService(serviceId) {
+  return ServiceCommands.reportService(serviceId);
 }
 
 function apiValidateService(serviceId) {

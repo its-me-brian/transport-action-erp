@@ -13,7 +13,7 @@ import {
   getDriverAvatar, isProductionVehicle, getServiceStatusColor, getStatusDotColor, StatusColor
 } from '../types';
 import WhatsAppParser from './WhatsAppParser';
-import { getDrivers, DriverRecord, getSettings, updateServiceField, cerrarComercialmente, facturarService, cobrarService, closeService, deleteService, cancelService, adjustRevenue, adjustCost, completeService, assignDriver, approveFinancial, markFacturable, getOperatingCompanies, OperatingCompany, getVehicleTypes, confirmService, startService, validateService, moveToRevision } from '../services/api';
+import { getDrivers, DriverRecord, getSettings, updateServiceField, cerrarComercialmente, facturarService, cobrarService, closeService, deleteService, cancelService, adjustRevenue, adjustCost, completeService, reportService, assignDriver, approveFinancial, markFacturable, getOperatingCompanies, OperatingCompany, getVehicleTypes, confirmService, startService, validateService, moveToRevision } from '../services/api';
 
 interface DashboardScreenProps {
   services: Service[];
@@ -293,7 +293,8 @@ export default function DashboardScreen({
       confirm:  { validStatuses: ['Asignado'], fn: confirmService, label: 'Confirm' },
       start:    { validStatuses: ['Confirmado'], fn: startService, label: 'Start Route' },
       complete: { validStatuses: ['EnRuta'], fn: completeService, label: 'Complete' },
-      review:   { validStatuses: ['Realizado'], fn: moveToRevision, label: 'Send to Review' },
+      report:   { validStatuses: ['Realizado'], fn: reportService, label: 'Report' },
+      review:   { validStatuses: ['Reportado'], fn: moveToRevision, label: 'Send to Review' },
       validate: { validStatuses: ['Reportado', 'Revision'], fn: validateService, label: 'Validate' },
     };
     
@@ -419,6 +420,7 @@ export default function DashboardScreen({
       confirm: () => confirmService(service.id),
       start: () => startService(service.id),
       complete: () => completeService(service.id),
+      report: () => reportService(service.id),
       review: () => moveToRevision(service.id),
       validate: () => validateService(service.id),
     };
@@ -962,6 +964,7 @@ export default function DashboardScreen({
     const isProduction = isProductionVehicle(service);
     const movements = service.movements || [];
     const hasMultiple = movements.length > 1;
+    const isTerminal = service.operationalStatus === 'Validado' || service.operationalStatus === 'Cancelado';
     const lastTapRef = React.useRef<number>(0);
 
     const firstTime = movements[0]?.time || service.time;
@@ -1005,12 +1008,14 @@ export default function DashboardScreen({
             </span>
           )}
           {badge}
+          {!isTerminal && (
           <button onClick={(e) => { e.stopPropagation(); onSelect?.(service.id); }}
             className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 transition-colors opacity-0 group-hover:opacity-100 ${
               isSelected ? 'bg-primary border-primary text-white opacity-100' : 'border-outline-variant hover:border-primary'
             }`}>
             {isSelected && <Check className="w-2 h-2" />}
           </button>
+          )}
         </div>
       );
     }
@@ -1040,12 +1045,14 @@ export default function DashboardScreen({
             </span>
           )}
           {badge}
+          {!isTerminal && (
           <button onClick={(e) => { e.stopPropagation(); onSelect?.(service.id); }}
             className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 transition-colors opacity-0 group-hover:opacity-100 ${
               isSelected ? 'bg-primary border-primary text-white opacity-100' : 'border-outline-variant hover:border-primary'
             }`}>
             {isSelected && <Check className="w-2 h-2" />}
           </button>
+          )}
         </div>
         {hasMultiple ? (
           <div className="px-2 pb-1">
@@ -1211,8 +1218,8 @@ export default function DashboardScreen({
               Asignado:   [{ label: 'Confirm Service', icon: <Check className="w-3.5 h-3.5" />, action: 'confirm', color: 'bg-green-500 hover:bg-green-600' }],
               Confirmado: [{ label: 'Start Route', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>, action: 'start', color: 'bg-blue-600 hover:bg-blue-700' }],
               EnRuta:     [{ label: 'Complete', icon: <CheckCircle className="w-3.5 h-3.5" />, action: 'complete', color: 'bg-green-600 hover:bg-green-700' }],
-              Realizado:  [{ label: 'Send to Review', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>, action: 'review', color: 'bg-amber-500 hover:bg-amber-600' }],
-              Reportado:  [{ label: 'Validate', icon: <CheckCircle className="w-3.5 h-3.5" />, action: 'validate', color: 'bg-green-700 hover:bg-green-800' }],
+              Realizado:  [{ label: 'Send Report', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>, action: 'report', color: 'bg-amber-500 hover:bg-amber-600' }],
+              Reportado:  [{ label: 'Send to Review', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>, action: 'review', color: 'bg-amber-500 hover:bg-amber-600' }, { label: 'Validate', icon: <CheckCircle className="w-3.5 h-3.5" />, action: 'validate', color: 'bg-green-700 hover:bg-green-800' }],
               Revision:   [{ label: 'Validate', icon: <CheckCircle className="w-3.5 h-3.5" />, action: 'validate', color: 'bg-green-700 hover:bg-green-800' }],
             };
             const buttons = service.operationalStatus === 'Importado' && service.driverId
@@ -1493,6 +1500,7 @@ export default function DashboardScreen({
                     }}
                   >
                     {/* Checkbox for bulk selection - bottom right */}
+                    {(service.operationalStatus !== 'Validado' && service.operationalStatus !== 'Cancelado') && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1506,6 +1514,7 @@ export default function DashboardScreen({
                     >
                       {isSelected && <Check className="w-3 h-3" />}
                     </button>
+                    )}
                     
                     <div className="flex flex-col gap-0 h-full overflow-hidden">
                       <div className="flex items-center gap-1">
@@ -2525,7 +2534,8 @@ export default function DashboardScreen({
                   { action: 'confirm', label: 'Confirm', color: 'bg-green-500 hover:bg-green-600', icon: <Check className="w-3.5 h-3.5" />, count: selected.filter(s => s.operationalStatus === 'Asignado').length },
                   { action: 'start', label: 'Start Route', color: 'bg-blue-600 hover:bg-blue-700', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>, count: selected.filter(s => s.operationalStatus === 'Confirmado').length },
                   { action: 'complete', label: 'Complete', color: 'bg-green-600 hover:bg-green-700', icon: <CheckCircle className="w-3.5 h-3.5" />, count: selected.filter(s => s.operationalStatus === 'EnRuta').length },
-                  { action: 'review', label: 'Review', color: 'bg-amber-500 hover:bg-amber-600', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>, count: selected.filter(s => s.operationalStatus === 'Realizado').length },
+                  { action: 'report', label: 'Report', color: 'bg-amber-500 hover:bg-amber-600', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>, count: selected.filter(s => s.operationalStatus === 'Realizado').length },
+                  { action: 'review', label: 'Review', color: 'bg-amber-600 hover:bg-amber-700', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>, count: selected.filter(s => s.operationalStatus === 'Reportado').length },
                   { action: 'validate', label: 'Validate', color: 'bg-green-700 hover:bg-green-800', icon: <CheckCircle className="w-3.5 h-3.5" />, count: selected.filter(s => ['Reportado', 'Revision'].includes(s.operationalStatus)).length },
                 ];
 
