@@ -154,6 +154,27 @@ function acceptReport(inboxId, reviewedBy) {
       // Choose the right create function based on service status
       var service = ServiceRepository.getById(serviceId);
       var serviceStatus = service ? service.OperationalStatus : '';
+
+      // Auto-advance service through workflow if needed
+      // Driver sent WhatsApp = service completed. Advance: Asignado→Confirmado→EnRuta→Realizado
+      if (service && ['Asignado', 'Confirmado', 'EnRuta'].indexOf(serviceStatus) !== -1) {
+        try {
+          if (serviceStatus === 'Asignado') {
+            ServiceCommands.confirmService(serviceId);
+            ServiceCommands.startService(serviceId);
+            ServiceCommands.completeService(serviceId);
+          } else if (serviceStatus === 'Confirmado') {
+            ServiceCommands.startService(serviceId);
+            ServiceCommands.completeService(serviceId);
+          } else if (serviceStatus === 'EnRuta') {
+            ServiceCommands.completeService(serviceId);
+          }
+          serviceStatus = 'Realizado';
+        } catch (advanceErr) {
+          Logger.log('[acceptReport] Auto-advance failed: ' + advanceErr.message);
+        }
+      }
+
       var reportData = {
         startTime: dataSource.startTime || '',
         endTime: dataSource.endTime || '',

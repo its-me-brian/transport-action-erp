@@ -442,30 +442,41 @@ function parseWhatsAppForCapture(text) {
         }
         if (match) r.matchedDriverId = match.id;
 
-        // Search for matching services by driver+date
-        if (match && r.dateParsed) {
+        // Search for matching services by driver
+        if (match) {
           try {
             var allServices = ServiceRepository.getAll();
             var driverServices = allServices.filter(function(s) {
               return s.DriverID === match.id;
             });
-            // Filter by date (same day)
-            var serviceDate = new Date(r.dateParsed);
-            r.serviceCandidates = driverServices.filter(function(s) {
-              if (!s.Date) return false;
-              var sd = new Date(s.Date);
-              return sd.toDateString() === serviceDate.toDateString();
-            }).map(function(s) {
-              return {
-                id: s.ID,
-                time: s.Time || '',
-                production: s.Production || '',
-                section: s.Section || '',
-                passengerName: s.PassengerName || '',
-                status: s.OperationalStatus || '',
-                route: s.Route || ''
-              };
-            });
+            // Filter by date if available
+            if (r.dateParsed) {
+              var serviceDate = new Date(r.dateParsed);
+              driverServices = driverServices.filter(function(s) {
+                if (!s.Date) return false;
+                var sd = new Date(s.Date);
+                return sd.toDateString() === serviceDate.toDateString();
+              });
+            }
+            // Filter to reportable statuses
+            var REPORTABLE = ['Importado', 'Asignado', 'Confirmado', 'EnRuta', 'Realizado', 'Reportado', 'Revision'];
+            r.serviceCandidates = driverServices
+              .filter(function(s) { return REPORTABLE.indexOf(s.OperationalStatus) !== -1; })
+              .map(function(s) {
+                return {
+                  id: s.ID,
+                  time: s.Time || '',
+                  production: s.Production || '',
+                  section: s.Section || '',
+                  passengerName: s.PassengerName || '',
+                  status: s.OperationalStatus || '',
+                  route: s.Route || ''
+                };
+              });
+            // Auto-select if exactly 1 candidate
+            if (r.serviceCandidates.length === 1) {
+              r.selectedServiceId = r.serviceCandidates[0].id;
+            }
           } catch (e) {}
         }
       }
