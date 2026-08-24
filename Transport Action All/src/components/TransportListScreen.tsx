@@ -818,13 +818,6 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
       const mappedServices = normalizeTransportServices(rawServices);
       setServices(mappedServices);
       const _dbg = (result as any)._debug;
-      console.log('[DEBUG] _debug keys:', _dbg ? Object.keys(_dbg) : 'null');
-      console.log('[DEBUG] parsingLog length:', _dbg?.parsingLog?.length ?? 'missing');
-      console.log('[DEBUG] colMap:', JSON.stringify(_dbg?.colMap));
-      if (_dbg?.parsingLog?.length > 0) {
-        console.log('[DEBUG] first 3 parsingLog entries:', JSON.stringify(_dbg.parsingLog.slice(0, 3)));
-        console.log('[DEBUG] last 3 parsingLog entries:', JSON.stringify(_dbg.parsingLog.slice(-3)));
-      }
       setParsingLog(_dbg?.parsingLog || []);
       setServiceSummary(_dbg?.serviceSummary || []);
       // Auto-select only non-walking, non-production services by default
@@ -1297,7 +1290,24 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
 
       setImportResult({ created: result.servicesCreated, skipped: result.servicesSkipped });
       setStep('done');
+      // Show import logs in browser console
+      if (result.importLogs && result.importLogs.length > 0) {
+        console.log('=== IMPORT LOGS ===');
+        for (const log of result.importLogs) {
+          console.log(log);
+        }
+        console.log('=== END IMPORT LOGS ===');
+      }
       if (onImportComplete) onImportComplete();
+      // Refresh services from backend to get canonical data (fixes driver corruption)
+      try {
+        const refreshedServices = await getServices({});
+        if (refreshedServices && Array.isArray(refreshedServices) && refreshedServices.length > 0) {
+          setServices(normalizeTransportServices(refreshedServices));
+        }
+      } catch (e) {
+        console.error('Failed to refresh services after import:', e);
+      }
       getTransportLists().then(lists => {
         setHistory(Array.isArray(lists) ? lists : []);
       }).catch(e => console.error('Failed to refresh history:', e));
@@ -1354,6 +1364,14 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
           setStep('preview');
           return;
         }
+        // Show import logs in browser console
+        if (result.importLogs && result.importLogs.length > 0) {
+          console.log('=== IMPORT LOGS (with project) ===');
+          for (const log of result.importLogs) {
+            console.log(log);
+          }
+          console.log('=== END IMPORT LOGS ===');
+        }
       } else {
         // Fallback: save without project linking
         const result = await importTransportListWithProject({
@@ -1371,12 +1389,29 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
           setStep('preview');
           return;
         }
+        // Show import logs in browser console
+        if (result.importLogs && result.importLogs.length > 0) {
+          console.log('=== IMPORT LOGS (no project) ===');
+          for (const log of result.importLogs) {
+            console.log(log);
+          }
+          console.log('=== END IMPORT LOGS ===');
+        }
       }
 
       setStep('done');
       // Refresh services in the parent App
       if (onImportComplete) {
         onImportComplete();
+      }
+      // Refresh services from backend to get canonical data (fixes driver corruption)
+      try {
+        const refreshedServices = await getServices({});
+        if (refreshedServices && Array.isArray(refreshedServices) && refreshedServices.length > 0) {
+          setServices(normalizeTransportServices(refreshedServices));
+        }
+      } catch (e) {
+        console.error('Failed to refresh services after sync:', e);
       }
       // Refresh history
       getTransportLists().then(lists => {

@@ -530,6 +530,10 @@ export async function createService(data: {
   return gasPostWithRetry('createService', data);
 }
 
+export async function migrateImportedServicesWithDriver(): Promise<{ migrated: number; skipped: number }> {
+  return gasPostWithRetry('migrateImportedServicesWithDriver', {});
+}
+
 export async function updateServiceField(serviceId: string, field: string, value: any): Promise<{ success: boolean; error?: string }> {
   return gasPostWithRetry('updateServiceField', { serviceId, field, value });
 }

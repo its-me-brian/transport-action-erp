@@ -317,6 +317,14 @@ function _parseTransportListRows(allData, fileName, importSeq) {
     const flightCell = colMap.flightInfo !== undefined ? _cellToStr(row[colMap.flightInfo]) : '';
     const sectionCell = colMap.section !== undefined ? _cellToStr(row[colMap.section]) : '';
     
+    // DEBUG: log raw cell values for driver column investigation
+    // Shows the actual value returned by getValues() vs what _cellToStr produces
+    if (colMap.driver !== undefined && vehicleCell) {
+      const rawDriver = row[colMap.driver];
+      const rawType = rawDriver === null ? 'null' : rawDriver === undefined ? 'undef' : typeof rawDriver;
+      parsingLog.push({ row: i, action: 'CELL_DBG', col: colMap.driver, rawType: rawType, rawVal: String(rawDriver || '').substring(0, 40), processed: driverCell, rowLen: row.length });
+    }
+    
     // DEBUG: log each row processed in main loop
     parsingLog.push({
       row: i,
@@ -972,7 +980,7 @@ function _saveDriverToSheet(name, phone, source) {
     
     // New driver — build row using header-based mapping
     const now = new Date();
-    const id = 'DRV-' + Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyyMMddHHmmss');
+    const id = _generateId('DRV', 'TA');
     const isoNow = now.toISOString();
     let phoneFormatted = cleanPhone || '';
     if (phoneFormatted.startsWith('+')) {

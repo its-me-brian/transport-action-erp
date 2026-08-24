@@ -120,6 +120,14 @@ export interface Service {
   // Dashboard-specific fields
   po?: string;
   cancelReason?: string;
+  // Structured movements (per-route data: time, passengers, pickup/dropoff)
+  movements?: Array<{
+    time: string;
+    passengers: Array<{ name: string; role: string }>;
+    pickupLines: string[];
+    dropoffLines: string[];
+    flightInfo?: string;
+  }>;
   // Internal edit form metadata (not persisted)
   _costsFromParametros?: Record<string, number>;
 }
@@ -292,6 +300,7 @@ export function mapServiceDTOToService(dto: Record<string, any>): Service {
     notes: dto.notes || (mapsUrl ? `maps:${mapsUrl}` : ''),
     passengers: passengerName,
     vehicleType: dto.vehicleType || '',
+    serviceType: dto.serviceType || '',
     vehiclePlate: '',
     // Client info resolved from Project → Client
     clientId: dto.clientId || '',
@@ -323,6 +332,17 @@ export function mapServiceDTOToService(dto: Record<string, any>): Service {
     overtimeAfter: dto.overtimeAfter != null ? parseInt(dto.overtimeAfter) : undefined,
     overtimeHours: dto.overtimeHours != null ? parseFloat(dto.overtimeHours) : undefined,
     routeDescription: dto.routeDescription || undefined,
+    // Structured movements (per-route data)
+    movements: Array.isArray(dto.movements) ? dto.movements.map((m: any) => ({
+      time: String(m?.time || ''),
+      passengers: Array.isArray(m?.passengers) ? m.passengers.map((p: any) => ({
+        name: String(p?.name || p || ''),
+        role: String(p?.role || ''),
+      })).filter((p: { name: string }) => Boolean(p.name)) : [],
+      pickupLines: Array.isArray(m?.pickupLines) ? m.pickupLines.filter(Boolean) : [],
+      dropoffLines: Array.isArray(m?.dropoffLines) ? m.dropoffLines.filter(Boolean) : [],
+      flightInfo: String(m?.flightInfo || ''),
+    })) : [],
   };
 }
 
@@ -842,4 +862,52 @@ function timeToMinutes(time: string): number {
 export function getDriverAvatar(name: string): string {
   const encoded = encodeURIComponent(name || 'Driver');
   return `https://ui-avatars.com/api/?name=${encoded}&background=1a1a2e&color=fff&size=128&bold=true`;
+}
+
+/**
+ * Status color mapping for left border indicators.
+ * Returns border color class (Tailwind) and hex value for inline styles.
+ */
+export type StatusColor = {
+  border: string;    // Tailwind border-l class
+  bg: string;        // Tailwind bg class (subtle background)
+  hex: string;       // Raw hex for inline styles
+  label: string;     // Human-readable status label
+};
+
+export function getServiceStatusColor(service: Service): StatusColor {
+  let status = service.operationalStatus || 'Importado';
+  if (status === 'Importado' && service.driverId) status = 'Asignado';
+
+  const map: Record<string, StatusColor> = {
+    Importado:   { border: 'border-l-gray-400',   bg: 'bg-gray-50',   hex: '#9CA3AF', label: 'Imported' },
+    Asignado:    { border: 'border-l-green-500',   bg: 'bg-green-50',  hex: '#22C55E', label: 'Assigned' },
+    Confirmado:  { border: 'border-l-green-600',   bg: 'bg-green-50',  hex: '#16A34A', label: 'Confirmed' },
+    EnRuta:      { border: 'border-l-blue-500',    bg: 'bg-blue-50',   hex: '#3B82F6', label: 'In Route' },
+    Realizado:   { border: 'border-l-slate-500',   bg: 'bg-slate-50',  hex: '#64748B', label: 'Completed' },
+    Reportado:   { border: 'border-l-slate-600',   bg: 'bg-slate-50',  hex: '#475569', label: 'Reported' },
+    Revision:    { border: 'border-l-orange-500',   bg: 'bg-orange-50', hex: '#F97316', label: 'Review' },
+    Validado:    { border: 'border-l-slate-700',   bg: 'bg-slate-100', hex: '#334155', label: 'Validated' },
+    Cancelado:   { border: 'border-l-red-500',     bg: 'bg-red-50',    hex: '#EF4444', label: 'Cancelled' },
+  };
+
+  return map[status] || map.Importado;
+}
+
+/**
+ * Returns a compact status dot color for calendar cells and indicators.
+ */
+export function getStatusDotColor(status: string): string {
+  const map: Record<string, string> = {
+    Importado:   'bg-gray-400',
+    Asignado:    'bg-green-500',
+    Confirmado:  'bg-green-600',
+    EnRuta:      'bg-blue-500',
+    Realizado:   'bg-slate-500',
+    Reportado:   'bg-slate-600',
+    Revision:    'bg-orange-500',
+    Validado:    'bg-slate-700',
+    Cancelado:   'bg-red-500',
+  };
+  return map[status] || 'bg-gray-400';
 }

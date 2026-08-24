@@ -77,7 +77,7 @@ const ServiceRepository = {
       Notes: data.Notes || '',
       DriverID: data.DriverID || '',
       VehicleID: data.VehicleID || '',
-      OperationalStatus: 'Importado',
+      OperationalStatus: data.OperationalStatus || (data.DriverID ? 'Asignado' : 'Importado'),
       FinancialStatus: 'Pendiente',
       EstimatedRevenue: data.EstimatedRevenue || '',
       EstimatedCost: data.EstimatedCost || '',
@@ -378,4 +378,26 @@ function apiDeleteService(serviceId, reason) {
   } catch (e) {
     return { success: false, error: e.message };
   }
+}
+
+/**
+ * ONE-TIME MIGRATION: Fix services stuck in 'Importado' that already have a DriverID.
+ * These should be 'Asignado'. Run from Apps Script editor or via API.
+ * @returns {Object} { migrated: number, skipped: number }
+ */
+function migrateImportedServicesWithDriver() {
+  var all = ServiceRepository.getAll();
+  var migrated = 0;
+  var skipped = 0;
+  for (var i = 0; i < all.length; i++) {
+    var svc = all[i];
+    if (svc.OperationalStatus === 'Importado' && svc.DriverID) {
+      ServiceRepository.update(svc.ID, { OperationalStatus: 'Asignado' });
+      migrated++;
+    } else {
+      skipped++;
+    }
+  }
+  Logger.log('Migration complete: ' + migrated + ' services migrated, ' + skipped + ' skipped');
+  return { migrated: migrated, skipped: skipped };
 }

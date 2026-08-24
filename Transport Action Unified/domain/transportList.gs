@@ -65,7 +65,7 @@ const TransportListRepository = {
         }
       }
     } catch (e) {
-      // Ignore — dateRange is optional
+      // Ignore — use fallback
     }
 
     // Fallback: extract dateStr from Notes field (stored as "dateStr:Tuesday July 07th")
@@ -217,7 +217,66 @@ function uploadTransportListFile(fileData, fileName) {
  * @param {string} operatingCompany - OperatingCompany ID (optional)
  * @returns {number} Count of services created
  */
+// Normalize any time value to 'HH:mm' string for consistent dedup keys
+function _normalizeTime(t) {
+  if (!t) return '';
+  if (t instanceof Date) {
+    return Utilities.formatDate(t, Session.getScriptTimeZone(), 'HH:mm');
+  }
+  var s = String(t).trim();
+
+  // Handle multi-time strings (e.g., "08.10, 15.30" → "08:10, 15:30")
+  if (s.indexOf(',') !== -1) {
+    return s.split(',').map(function(part) {
+      return _normalizeTime(part.trim());
+    }).join(', ');
+  }
+
+  // Handle bare numbers (e.g., "8" → "08:00", "9" → "09:00")
+  if (/^\d{1,2}$/.test(s)) {
+    return (s.length === 1 ? '0' : '') + s + ':00';
+  }
+
+  // Handle 'H.mm' or 'HH.mm' format (Google Sheets stores 07.30 as 7.3)
+  var mDot = s.match(/^(\d{1,2})\.(\d{1,2})$/);
+  if (mDot) {
+    var h = mDot[1].length === 1 ? '0' + mDot[1] : mDot[1];
+    var min = mDot[2].length === 1 ? mDot[2] + '0' : mDot[2];
+    return h + ':' + min;
+  }
+
+  // Handle 'H:mm' or 'HH:mm' format (pad leading zero)
+  var mColon = s.match(/^(\d{1,2}):(\d{2})$/);
+  if (mColon) {
+    return (mColon[1].length === 1 ? '0' : '') + mColon[1] + ':' + mColon[2];
+  }
+
+  return s;
+}
+
+// Normalize any date value to 'yyyy-MM-dd' string for consistent dedup keys
+function _normalizeDate(d) {
+  if (!d) return '';
+  var dateObj;
+  if (d instanceof Date) {
+    dateObj = d;
+  } else {
+    var s = String(d).trim();
+    // Handle 'dd/MM/yyyy' format
+    var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) {
+      dateObj = new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
+    } else {
+      dateObj = new Date(s);
+    }
+  }
+  if (isNaN(dateObj.getTime())) return '';
+  return Utilities.formatDate(dateObj, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+}
+
 function _createServicesFromImport(ss, services, importId, projectId, operatingCompany, existingKeys) {
+  var importLogs = []; // Collect logs to return to frontend
+
   // EDGE005: No se pueden crear servicios en proyecto archivado
   if (projectId) {
     var project = ProjectRepository.getById(projectId);
@@ -243,6 +302,7 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
   var driverPhoneMap = {}; // phone → { id, name }
   
   // Build driver lookup map from Drivers sheet (name + phone)
+  importLogs.push('driversSheet exists: ' + !!driversSheet + ', rows: ' + (driversSheet ? driversSheet.getLastRow() : 'N/A'));
   if (driversSheet && driversSheet.getLastRow() > 1) {
     var driverData = driversSheet.getRange(2, 1, driversSheet.getLastRow() - 1, 5).getValues();
     for (var d = 0; d < driverData.length; d++) {
@@ -251,6 +311,9 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
       var driverPhone = String(driverData[d][4] || '').trim(); // column E = Phone (D = CollaboratorID)
       if (driverId && driverName) {
         var norm = driverName.toLowerCase().replace(/\s+/g, ' ').replace(/['']/g, "'").trim();
+        if (driverMap[norm] && driverMap[norm] !== driverId) {
+          importLogs.push('DRIVER MAP CONFLICT: "' + norm + '" maps to ' + driverMap[norm] + ' but also ' + driverId);
+        }
         driverMap[norm] = driverId;
       }
       if (driverId && driverPhone) {
@@ -261,6 +324,27 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
         }
       }
     }
+    importLogs.push('Driver map: ' + Object.keys(driverMap).length + ' drivers, ' + Object.keys(driverPhoneMap).length + ' phones');
+    // Show ALL name→id entries
+    var mapKeys = Object.keys(driverMap);
+    for (var mk = 0; mk < mapKeys.length; mk++) {
+      importLogs.push('  driver["' + mapKeys[mk] + '"] = ' + driverMap[mapKeys[mk]]);
+    }
+    // Detect duplicate IDs (same id mapped from different names)
+    var idToNames = {};
+    for (var mk2 = 0; mk2 < mapKeys.length; mk2++) {
+      var id = driverMap[mapKeys[mk2]];
+      if (!idToNames[id]) idToNames[id] = [];
+      idToNames[id].push(mapKeys[mk2]);
+    }
+    var idKeys = Object.keys(idToNames);
+    for (var ik = 0; ik < idKeys.length; ik++) {
+      if (idToNames[idKeys[ik]].length > 1) {
+        importLogs.push('DUPLICATE ID: ' + idKeys[ik] + ' → [' + idToNames[idKeys[ik]].join(', ') + ']');
+      }
+    }
+  } else {
+    importLogs.push('WARNING: Drivers sheet not found or empty. driverMap will be empty.');
   }
   
   // Find driver by name (exact match only — partial matching caused wrong driver assignments)
@@ -324,25 +408,31 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
     
     // === DRIVER RESOLUTION: match by name → phone → create new ===
     var driverId = findDriverId(svc.driver);
+    var driverMatchType = driverId ? 'name' : '';
     if (!driverId && svc.driverPhone) {
       // Try phone match
       var phoneMatch = findDriverByPhone(svc.driverPhone);
       if (phoneMatch) {
         driverId = phoneMatch.id;
+        driverMatchType = 'phone→' + phoneMatch.name;
       }
     }
     if (!driverId && svc.driver && svc.driver.trim()) {
       // Not found by name or phone → create new driver
       driverId = createNewDriver(svc.driver, svc.driverPhone || '');
+      driverMatchType = 'created';
     }
+    var driverLogMsg = 'Service[' + i + '] "' + (svc.driver || '') + '" → driverId="' + driverId + '" (' + driverMatchType + ') | phone="' + (svc.driverPhone || '') + '"';
+    importLogs.push(driverLogMsg);
+    Logger.log(driverLogMsg);
     var operationalStatus = driverId ? 'Asignado' : 'Importado';
     
-    // Parse date for Service entity
+    // Parse date for Service entity (yyyy-MM-dd format for consistent dedup)
     var serviceDate = '';
     if (svc.date) {
       var d = new Date(svc.date);
       if (!isNaN(d.getTime())) {
-        serviceDate = Utilities.formatDate(d, Session.getScriptTimeZone(), 'dd/MM/yyyy');
+        serviceDate = Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
       }
     }
     if (!serviceDate && svc.dateStr) {
@@ -350,7 +440,7 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
       cleaned = cleaned.replace(/(\d+)(st|nd|rd|th)/i, '$1').trim();
       var d2 = new Date(cleaned + ' ' + new Date().getFullYear());
       if (!isNaN(d2.getTime())) {
-        serviceDate = Utilities.formatDate(d2, Session.getScriptTimeZone(), 'dd/MM/yyyy');
+        serviceDate = Utilities.formatDate(d2, Session.getScriptTimeZone(), 'yyyy-MM-dd');
       }
     }
     
@@ -383,14 +473,19 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
     // Generate Service ID
     var svcId = 'SVC-' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd') + '-' + String(i + 1).padStart(3, '0');
     
-    // === DELTA IMPORT: skip if this service already exists ===
+    // === CROSS-IMPORT DEDUP: skip if this service already exists ===
+    // Key: date + time + passengerName (without driverId to catch re-imports)
     if (existingKeys && existingKeys.size > 0) {
-      var dateKey = serviceDate ? serviceDate.substring(0, 10) : '';
-      var timeKey = String(timeStr || '').trim();
-      var driverKey = String(driverId || '').trim();
+      var dateKey = _normalizeDate(serviceDate);
+      var timeKey = _normalizeTime(timeStr);
       var passengerKey = passengerName.trim().toLowerCase();
-      var svcKey = dateKey + '|' + timeKey + '|' + driverKey + '|' + passengerKey;
-      if (existingKeys.has(svcKey)) {
+      var svcKey = dateKey + '|' + timeKey + '|' + passengerKey;
+      // Debug: show every key being checked
+      importLogs.push('Check[' + i + ']: ' + svcKey + ' | exists=' + existingKeys.has(svcKey));
+      if (dateKey && timeKey && existingKeys.has(svcKey)) {
+        var dedupSkipMsg = 'Dedup skip: ' + dateKey + ' ' + timeKey + ' ' + passengerKey;
+        importLogs.push(dedupSkipMsg);
+        Logger.log(dedupSkipMsg);
         skippedDuplicate++;
         continue;
       }
@@ -433,8 +528,10 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
     created++;
   }
   
-  Logger.log('Bridge: Created ' + created + ' Service entities, skipped ' + skippedProduction + ' Production, ' + skippedDuplicate + ' Duplicates from import ' + importId);
-  return { created: created, skipped: skippedDuplicate, skippedProduction: skippedProduction };
+  var finalMsg = 'Bridge: Created ' + created + ' Service entities, skipped ' + skippedProduction + ' Production, ' + skippedDuplicate + ' Duplicates from import ' + importId + ' (projectId=' + projectId + ')';
+  importLogs.push(finalMsg);
+  Logger.log(finalMsg);
+  return { created: created, skipped: skippedDuplicate, skippedProduction: skippedProduction, importLogs: importLogs };
 }
 
 // ============================================================================
@@ -456,6 +553,7 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
  * @returns {Object} { success, servicesCreated, clientId, projectId }
  */
 function apiImportTransportListWithProject(data) {
+  var importLogs = []; // Collect logs to return to frontend
   try {
     if (!data.services || data.services.length === 0) {
       return { error: 'No services to import' };
@@ -471,11 +569,12 @@ function apiImportTransportListWithProject(data) {
         // Build set of existing service keys for dedup
         for (var e = 0; e < existingServices.length; e++) {
           var ex = existingServices[e];
-          var exDate = String(ex.Date || '').substring(0, 10); // YYYY-MM-DD
-          var exTime = String(ex.Time || '').trim();
-          var exDriver = String(ex.DriverID || '').trim();
+          var exDate = _normalizeDate(ex.Date);
+          var exTime = _normalizeTime(ex.Time);
           var exPassenger = String(ex.PassengerName || '').trim().toLowerCase();
-          existingKeys.add(exDate + '|' + exTime + '|' + exDriver + '|' + exPassenger);
+          if (exDate && exTime) {
+            existingKeys.add(exDate + '|' + exTime + '|' + exPassenger);
+          }
         }
         Logger.log('Delta re-import: found ' + existingServices.length + ' existing services, ' + existingKeys.size + ' unique keys');
       }
@@ -529,6 +628,30 @@ function apiImportTransportListWithProject(data) {
     }
     
     // === CREATE SERVICE ENTITIES DIRECTLY (no legacy sheets) ===
+    // Re-build dedup keys by projectId if the importId-based dedup found nothing
+    // This handles re-imports where projectId exists but importId differs
+    if (existingKeys.size === 0 && projectId) {
+      var allExisting = ServiceRepository.getAllByProject(projectId);
+      if (allExisting && allExisting.length > 0) {
+        for (var e2 = 0; e2 < allExisting.length; e2++) {
+          var ex2 = allExisting[e2];
+          var ex2Date = _normalizeDate(ex2.Date);
+          var ex2Time = _normalizeTime(ex2.Time);
+          var ex2Passenger = String(ex2.PassengerName || '').trim().toLowerCase();
+          if (ex2Date && ex2Time) {
+            existingKeys.add(ex2Date + '|' + ex2Time + '|' + ex2Passenger);
+          }
+        }
+        Logger.log('Cross-import dedup: built ' + existingKeys.size + ' keys from ' + allExisting.length + ' existing services in project ' + projectId);
+      }
+    }
+    Logger.log('Dedup keys total: ' + existingKeys.size + ' (projectId=' + projectId + ')');
+    // Debug: show first 5 existing keys
+    var keyArr = Array.from(existingKeys);
+    for (var dk = 0; dk < Math.min(5, keyArr.length); dk++) {
+      importLogs.push('Existing key[' + dk + ']: ' + keyArr[dk]);
+    }
+    importLogs.push('Dedup: ' + existingKeys.size + ' existing keys in project ' + (projectId || 'none'));
     var importResult = _createServicesFromImport(ss, data.services, data.importId, projectId, data.operatingCompany, existingKeys);
     
     // === CREATE TRANSPORT LIST ENTITY (ERD-aligned) ===
@@ -558,7 +681,8 @@ function apiImportTransportListWithProject(data) {
       servicesSkipped: importResult.skipped,
       clientId: clientId,
       projectId: projectId,
-      importId: data.importId
+      importId: data.importId,
+      importLogs: importLogs.concat(importResult.importLogs || [])
     };
     
   } catch (e) {
@@ -743,4 +867,117 @@ function cleanupOldTempFiles(folder) {
   } catch (e) {
     Logger.log('Error cleaning temp files: ' + e.message);
   }
+}
+
+// ============================================================================
+// DUPLICATE CLEANUP — Run from Apps Script editor
+// ============================================================================
+
+/**
+ * Find and remove duplicate services within a project.
+ * Keeps the OLDEST service (first import), removes newer duplicates.
+ * Key: date + time + passengerName
+ * 
+ * @param {string} projectId - Project ID to clean (or '' for all projects)
+ * @returns {Object} { removed: number, details: [] }
+ */
+function cleanupDuplicateServices(projectId) {
+  var removed = 0;
+  var details = [];
+  
+  try {
+    // Get all services (optionally filtered by project)
+    var allServices = projectId 
+      ? ServiceRepository.getAllByProject(projectId)
+      : ServiceRepository.getAll();
+    
+    if (!allServices || allServices.length === 0) {
+      return { removed: 0, details: ['No services found'] };
+    }
+    
+    // Group by dedup key (date + time + passengerName)
+    var groups = {};
+    allServices.forEach(function(svc) {
+      var dateKey = _normalizeDate(svc.Date);
+      var timeKey = _normalizeTime(svc.Time);
+      var passengerKey = String(svc.PassengerName || '').trim().toLowerCase();
+      var key = dateKey + '|' + timeKey + '|' + passengerKey;
+      
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(svc);
+    });
+    
+    // Find groups with duplicates
+    Object.keys(groups).forEach(function(key) {
+      var group = groups[key];
+      if (group.length <= 1) return;
+      
+      // Sort by CreatedAt ascending (keep oldest)
+      group.sort(function(a, b) {
+        return new Date(a.CreatedAt || 0) - new Date(b.CreatedAt || 0);
+      });
+      
+      // Remove all but the first (oldest)
+      for (var i = 1; i < group.length; i++) {
+        var svc = group[i];
+        try {
+          _delete(SHEETS.Services, svc.ID);
+          removed++;
+          details.push('Removed: ' + svc.ID + ' (' + key + ')');
+          Logger.log('Cleanup: Removed duplicate ' + svc.ID + ' for key: ' + key);
+        } catch (e) {
+          details.push('Error removing ' + svc.ID + ': ' + e.message);
+          Logger.log('Cleanup error: ' + e.message);
+        }
+      }
+    });
+    
+    Logger.log('Cleanup complete: removed ' + removed + ' duplicate services');
+    return { removed: removed, details: details };
+    
+  } catch (e) {
+    Logger.log('Cleanup error: ' + e.message);
+    return { removed: removed, details: details.concat(['Error: ' + e.message]) };
+  }
+}
+
+/**
+ * Preview duplicates without removing them.
+ * Safe to run — does NOT delete anything.
+ */
+function previewDuplicateServices(projectId) {
+  var allServices = projectId 
+    ? ServiceRepository.getAllByProject(projectId)
+    : ServiceRepository.getAll();
+  
+  var groups = {};
+  allServices.forEach(function(svc) {
+    var dateKey = _normalizeDate(svc.Date);
+    var timeKey = _normalizeTime(svc.Time);
+    var passengerKey = String(svc.PassengerName || '').trim().toLowerCase();
+    var key = dateKey + '|' + timeKey + '|' + passengerKey;
+    
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(svc);
+  });
+  
+  var duplicates = [];
+  Object.keys(groups).forEach(function(key) {
+    if (groups[key].length > 1) {
+      duplicates.push({
+        key: key,
+        count: groups[key].length,
+        ids: groups[key].map(function(s) { return s.ID; }),
+        drivers: groups[key].map(function(s) { return s.DriverID || '(none)'; }),
+        passengers: groups[key].map(function(s) { return s.PassengerName || ''; })
+      });
+    }
+  });
+  
+  Logger.log('Found ' + duplicates.length + ' duplicate groups');
+  duplicates.forEach(function(d) {
+    Logger.log('  ' + d.key + ': ' + d.count + ' copies — IDs: ' + d.ids.join(', '));
+  });
+  
+  return duplicates;
 }

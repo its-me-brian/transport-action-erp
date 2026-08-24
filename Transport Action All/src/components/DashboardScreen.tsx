@@ -2,18 +2,18 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useToast } from '../contexts/ToastContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Calendar as CalendarIcon, Plus, AlertCircle, AlertTriangle, Car, ArrowRight, 
-  ChevronLeft, ChevronRight, Grid3X3, Rows3, Clock, X, Save, Trash2, MessageSquare,
+  Calendar, Plus, AlertCircle, AlertTriangle, ArrowRight, 
+  ChevronLeft, ChevronRight, Clock, X, Save, Trash2, MessageSquare,
   ChevronDown, ChevronUp, Fuel, MapPin, DollarSign, Flag, Check, CheckCircle, Upload
 } from 'lucide-react';
 import { 
   Service, ScreenId, ViewMode, 
   getWeekColumns, getMonthWeeks, getMonthName, formatDateKey,
   getHourSlots, parseTimeToHour, parseDateKeyToDate, formatTimeDisplay,
-  getDriverAvatar, isProductionVehicle
+  getDriverAvatar, isProductionVehicle, getServiceStatusColor, getStatusDotColor, StatusColor
 } from '../types';
 import WhatsAppParser from './WhatsAppParser';
-import { getDrivers, DriverRecord, getSettings, updateServiceField, cerrarComercialmente, facturarService, cobrarService, closeService, deleteService, cancelService, adjustRevenue, adjustCost, completeService, assignDriver, approveFinancial, markFacturable, getOperatingCompanies, OperatingCompany, getVehicleTypes } from '../services/api';
+import { getDrivers, DriverRecord, getSettings, updateServiceField, cerrarComercialmente, facturarService, cobrarService, closeService, deleteService, cancelService, adjustRevenue, adjustCost, completeService, assignDriver, approveFinancial, markFacturable, getOperatingCompanies, OperatingCompany, getVehicleTypes, confirmService, startService, validateService, moveToRevision } from '../services/api';
 
 interface DashboardScreenProps {
   services: Service[];
@@ -33,6 +33,7 @@ export default function DashboardScreen({
   const [activeEntity, setActiveEntity] = useState<string>('All');
   const [companies, setCompanies] = useState<OperatingCompany[]>([]);
   const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { showToast } = useToast();
 
@@ -75,6 +76,10 @@ export default function DashboardScreen({
   const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(new Set());
   const lastTapMapRef = React.useRef<Map<string, number>>(new Map());
   const [isBulkCompleting, setIsBulkCompleting] = useState(false);
+
+  // Side panel state
+  const [sidePanelService, setSidePanelService] = useState<Service | null>(null);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
   // Drivers database
   const [dbDrivers, setDbDrivers] = useState<DriverRecord[]>([]);
@@ -151,12 +156,7 @@ export default function DashboardScreen({
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [driverFilter, setDriverFilter] = useState<string>('All');
   const [clientFilter, setClientFilter] = useState<string>('All');
-  const [vehicleTypeFilter, setVehicleTypeFilter] = useState<string>('All');
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [driverSearch, setDriverSearch] = useState('');
-  const [clientSearch, setClientSearch] = useState('');
-  const [showDriverDropdown, setShowDriverDropdown] = useState(false);
-  const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('All');
 
   // Derive project options from actual data
   const projectOptions = useMemo(() => {
@@ -175,36 +175,10 @@ export default function DashboardScreen({
     return clients.sort();
   }, [services]);
 
-  const vehicleTypeOptions = useMemo(() => {
-    const types = [...new Set(services.map(s => s.vehicleType).filter(Boolean))];
-    return types.sort();
+  const statusOptions = useMemo(() => {
+    const statuses = [...new Set(services.map(s => s.operationalStatus).filter(Boolean))];
+    return statuses.sort();
   }, [services]);
-
-  // Filtered options for search inputs
-  const filteredDriverOptions = useMemo(() => {
-    if (!driverSearch) return driverOptions;
-    const search = driverSearch.toLowerCase();
-    return driverOptions.filter(d => d.toLowerCase().includes(search));
-  }, [driverOptions, driverSearch]);
-
-  const filteredClientOptions = useMemo(() => {
-    if (!clientSearch) return clientOptions;
-    const search = clientSearch.toLowerCase();
-    return clientOptions.filter(c => c.toLowerCase().includes(search));
-  }, [clientOptions, clientSearch]);
-
-  // Close dropdowns when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('[data-filter-dropdown]')) {
-        setShowDriverDropdown(false);
-        setShowClientDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // Sync selectedProjects when projectOptions change
   React.useEffect(() => {
@@ -228,9 +202,21 @@ export default function DashboardScreen({
     if (selectedProjects.length > 0 && !selectedProjects.includes(service.project)) return false;
     if (driverFilter !== 'All' && service.driverName !== driverFilter) return false;
     if (clientFilter !== 'All' && service.clientName !== clientFilter) return false;
-    if (vehicleTypeFilter !== 'All' && service.vehicleType !== vehicleTypeFilter) return false;
-    // Hide Production vehicle services from calendar (they belong to production, not the agency)
+    if (statusFilter !== 'All') {
+      const effectiveStatus = service.operationalStatus === 'Importado' && service.driverId ? 'Asignado' : service.operationalStatus;
+      if (effectiveStatus !== statusFilter) return false;
+    }
     if (isProductionVehicle(service)) return false;
+    // Search filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const searchable = [
+        service.driverName, service.passengers, service.vehicleType,
+        service.project, service.clientName, service.from, service.to,
+        service.title
+      ].filter(Boolean).join(' ').toLowerCase();
+      if (!searchable.includes(q)) return false;
+    }
     return true;
   });
 
@@ -259,10 +245,25 @@ export default function DashboardScreen({
   const markSelectedAsCompleted = useCallback(async () => {
     if (selectedServiceIds.size === 0) return;
     
+    const allServices = [...services];
+    const completableIds = Array.from(selectedServiceIds).filter(id => {
+      const svc = allServices.find(s => s.id === id);
+      return svc?.operationalStatus === 'EnRuta';
+    });
+    const skippedCount = selectedServiceIds.size - completableIds.length;
+    
+    if (completableIds.length === 0) {
+      showToast('No services in "En Route" status. Services must be in EnRuta to be completed.', 'warning');
+      return;
+    }
+    
+    if (skippedCount > 0) {
+      showToast(`Skipping ${skippedCount} service(s) not in "En Route" status`, 'warning');
+    }
+    
     setIsBulkCompleting(true);
     try {
-      // Use proper state machine command — completeService transitions EnRuta → Realizado
-      const promises = Array.from(selectedServiceIds).map((serviceId: string) => 
+      const promises = completableIds.map((serviceId: string) => 
         completeService(serviceId)
       );
       
@@ -270,10 +271,11 @@ export default function DashboardScreen({
       const failures = results.filter(r => r?.error);
       
       if (failures.length > 0) {
-        showToast(`${failures.length} of ${selectedServiceIds.size} services could not be completed: ${failures.map(f => f?.error).join(', ')}`, 'error');
+        showToast(`${failures.length} of ${completableIds.length} services could not be completed: ${failures.map(f => f?.error).join(', ')}`, 'error');
+      } else {
+        showToast(`${completableIds.length} service(s) completed successfully`, 'success');
       }
       
-      // Clear selection
       setSelectedServiceIds(new Set());
     } catch (error) {
       console.error('Failed to mark services as completed:', error);
@@ -281,13 +283,148 @@ export default function DashboardScreen({
     } finally {
       setIsBulkCompleting(false);
     }
-  }, [selectedServiceIds]);
+  }, [selectedServiceIds, services]);
+
+  // Bulk workflow action — advance all eligible selected services through a stage
+  const handleBulkWorkflow = useCallback(async (action: string) => {
+    if (selectedServiceIds.size === 0) return;
+    
+    const actionConfig: Record<string, { validStatuses: string[]; fn: (id: string) => Promise<any>; label: string }> = {
+      confirm:  { validStatuses: ['Asignado'], fn: confirmService, label: 'Confirm' },
+      start:    { validStatuses: ['Confirmado'], fn: startService, label: 'Start Route' },
+      complete: { validStatuses: ['EnRuta'], fn: completeService, label: 'Complete' },
+      review:   { validStatuses: ['Realizado'], fn: moveToRevision, label: 'Send to Review' },
+      validate: { validStatuses: ['Reportado', 'Revision'], fn: validateService, label: 'Validate' },
+    };
+    
+    const config = actionConfig[action];
+    if (!config) return;
+    
+    const allSvcs = [...services];
+    const eligibleIds = Array.from(selectedServiceIds).filter(id => {
+      const svc = allSvcs.find(s => s.id === id);
+      if (!svc) return false;
+      if (config.validStatuses.includes(svc.operationalStatus)) return true;
+      if (action === 'confirm' && svc.operationalStatus === 'Importado' && svc.driverId) return true;
+      return false;
+    });
+    const skippedCount = selectedServiceIds.size - eligibleIds.length;
+    
+    if (eligibleIds.length === 0) {
+      showToast(`No services eligible for "${config.label}"`, 'warning');
+      return;
+    }
+    
+    setIsBulkCompleting(true);
+    try {
+      const results = await Promise.all(eligibleIds.map(id => config.fn(id)));
+      const failures = results.filter(r => r?.error);
+      const successCount = eligibleIds.length - failures.length;
+      
+      if (failures.length > 0) {
+        showToast(`${failures.length} failed: ${failures.map(f => f?.error).join('; ')}`, 'error');
+      }
+      if (successCount > 0) {
+        showToast(`${successCount} service(s) ${config.label.toLowerCase()}d`, 'success');
+      }
+      if (skippedCount > 0) {
+        showToast(`${skippedCount} skipped (wrong status)`, 'warning');
+      }
+      
+      setSelectedServiceIds(new Set());
+      onServiceUpdate?.('', {});
+    } catch (error) {
+      showToast('Failed: ' + (error as Error).message, 'error');
+    } finally {
+      setIsBulkCompleting(false);
+    }
+  }, [selectedServiceIds, services, onServiceUpdate, showToast]);
+
+  // Bulk assign driver to selected services without one
+  const [showBulkDriverPicker, setShowBulkDriverPicker] = useState(false);
+  const [bulkAssignDriverId, setBulkAssignDriverId] = useState('');
+  const handleBulkAssignDriver = useCallback(async () => {
+    if (!bulkAssignDriverId || selectedServiceIds.size === 0) return;
+    const driver = dbDrivers.find(d => d.id === bulkAssignDriverId);
+    if (!driver) return;
+    
+    setIsBulkCompleting(true);
+    try {
+      const results = await Promise.all(
+        Array.from(selectedServiceIds).map(id => assignDriver(id, driver.id, driver.vehiclePreferred || ''))
+      );
+      const failures = results.filter(r => r?.error);
+      const successCount = selectedServiceIds.size - failures.length;
+      
+      if (failures.length > 0) showToast(`${failures.length} failed`, 'error');
+      if (successCount > 0) showToast(`${successCount} driver(s) assigned to ${driver.name}`, 'success');
+      
+      setSelectedServiceIds(new Set());
+      setShowBulkDriverPicker(false);
+      setBulkAssignDriverId('');
+      onServiceUpdate?.('', {});
+    } catch (error) {
+      showToast('Failed: ' + (error as Error).message, 'error');
+    } finally {
+      setIsBulkCompleting(false);
+    }
+  }, [bulkAssignDriverId, selectedServiceIds, dbDrivers, onServiceUpdate, showToast]);
 
   // Select all services for a specific day
   const selectAllServicesForDay = useCallback((dateKey: string) => {
     const dayServices = filteredServices.filter(s => s.date === dateKey);
     setSelectedServiceIds(new Set(dayServices.map(s => s.id)));
   }, [filteredServices]);
+
+  // Workflow action handler — advances service through operational status machine
+  const handleWorkflowAction = useCallback(async (service: Service, action: string) => {
+    if (action === 'assign') {
+      // Open Edit modal for driver assignment — populate form first
+      setEditForm({
+        title: service.title,
+        time: service.time,
+        status: service.status,
+        driverName: service.driverName,
+        driverPhone: service.driverPhone || '',
+        passengers: service.passengers || '',
+        project: service.project,
+        company: service.company,
+        clientName: service.clientName || '',
+        vehicleType: service.vehicleType || '',
+        vehiclePlate: service.vehiclePlate || '',
+        location: service.location,
+        from: service.from || '',
+        to: service.to || '',
+        flightInfo: service.flightInfo || '',
+        notes: service.notes || '',
+        movements: service.movements || [],
+        serviceType: service.serviceType || '',
+      });
+      setEditingService(service);
+      setSidePanelService(null);
+      return;
+    }
+    const apiMap: Record<string, () => Promise<any>> = {
+      confirm: () => confirmService(service.id),
+      start: () => startService(service.id),
+      complete: () => completeService(service.id),
+      review: () => moveToRevision(service.id),
+      validate: () => validateService(service.id),
+    };
+    const fn = apiMap[action];
+    if (!fn) return;
+    try {
+      const result = await fn();
+      if (result?.error) {
+        showToast(`Error: ${result.error}`, 'error');
+      } else {
+        showToast(`Service advanced to next status`, 'success');
+        onServiceUpdate?.(service.id, {});
+      }
+    } catch (err) {
+      showToast(`Failed: ${(err as Error).message}`, 'error');
+    }
+  }, [onServiceUpdate, showToast]);
 
   // Select all services for the current month
   const selectAllServicesForMonth = useCallback(() => {
@@ -426,6 +563,8 @@ export default function DashboardScreen({
       // Notes
       notes: service.notes || '',
       cancelReason: service.cancelReason || '',
+      // Structured movements (per-route data)
+      movements: service.movements || [],
       // Track which costs came from parametros
       _costsFromParametros: {
         baseCost: service.baseCost == null && preFilledCosts.baseCost != null,
@@ -453,6 +592,7 @@ export default function DashboardScreen({
         km: { field: 'KmTotal', mapper: (v: string) => parseFloat(v) || 0 },
         diariaType: { field: 'DiariaType' },
         vehicleType: { field: 'VehicleType' },
+        movements: { field: 'Movements', mapper: (v: any[]) => JSON.stringify(v || []) },
         // NOTE: status/OperationalStatus is NOT editable via updateServiceField.
         // State changes MUST go through Commands (assignDriver, confirmService, etc.)
         // NOTE: DriverID/VehicleID are NOT here — assignment MUST go through assignDriver()
@@ -706,15 +846,25 @@ export default function DashboardScreen({
     
     // Parse each service into time blocks
     const blocks = dayServices.map(service => {
+      // Use movements for multi-route positioning if available
+      const movements = service.movements || [];
       let startHour = parseTimeToHour(service.time);
-      // If time is invalid, default to 6am (so it still shows)
       if (startHour < 0) startHour = 6;
       
-      const timeStr = service.time instanceof Date 
-        ? `${String(service.time.getHours()).padStart(2, '0')}:${String(service.time.getMinutes()).padStart(2, '0')}`
-        : String(service.time || '');
-      const timeMatch = timeStr.match(/(\d{1,2})[:.]\d{2}\s*[-–]\s*(\d{1,2})[:.]\d{2}/);
-      const endHour = timeMatch ? parseInt(timeMatch[2]) : startHour + 1;
+      // Calculate end hour from last movement or default to start+1
+      let endHour = startHour + 1;
+      if (movements.length > 1) {
+        const lastMovementTime = movements[movements.length - 1].time;
+        const lastHour = parseTimeToHour(lastMovementTime);
+        if (lastHour > startHour) endHour = lastHour + 1;
+      } else {
+        const timeStr = service.time instanceof Date 
+          ? `${String(service.time.getHours()).padStart(2, '0')}:${String(service.time.getMinutes()).padStart(2, '0')}`
+          : String(service.time || '');
+        const timeMatch = timeStr.match(/(\d{1,2})[:.]\d{2}\s*[-–]\s*(\d{1,2})[:.]\d{2}/);
+        if (timeMatch) endHour = parseInt(timeMatch[2]);
+      }
+      
       return {
         service,
         start: Math.max(6, startHour),
@@ -757,257 +907,346 @@ export default function DashboardScreen({
     setSelectedServiceIds(new Set(weekServices.map(s => s.id)));
   }, [filteredServices, columns]);
 
-  // --- Service Card Component ---
+  // Toggle card expand/collapse
+  const toggleExpandedCard = useCallback((serviceId: string) => {
+    setExpandedCards(prev => {
+      const next = new Set(prev);
+      if (next.has(serviceId)) next.delete(serviceId);
+      else next.add(serviceId);
+      return next;
+    });
+  }, []);
+
+  // --- Service Card Component (Ultra-compact, mockup style) ---
   const ServiceCard: React.FC<{ 
     service: Service; 
     onDoubleClick?: (s: Service) => void;
     isSelected?: boolean;
     onSelect?: (id: string) => void;
-  }> = ({ service, onDoubleClick, isSelected = false, onSelect }) => {
-    const isAction = service.company === 'Transport Action';
+    onClickSidePanel?: (s: Service) => void;
+    compact?: boolean;
+  }> = ({ service, onDoubleClick, isSelected = false, onSelect, onClickSidePanel, compact = false }) => {
+    const statusColor = getServiceStatusColor(service);
     const isUnassigned = !service.driverName || service.driverName === 'Unassigned';
-    const isCompleted = service.status === 'Completed';
     const isProduction = isProductionVehicle(service);
+    const movements = service.movements || [];
+    const hasMultiple = movements.length > 1;
     const lastTapRef = React.useRef<number>(0);
-    
+
+    const firstTime = movements[0]?.time || service.time;
+    const lastTime = movements.length > 1 ? movements[movements.length - 1].time : null;
+
     const handleTouchEnd = React.useCallback(() => {
       const now = Date.now();
-      if (now - lastTapRef.current < 300) {
-        onDoubleClick?.(service);
-      }
+      if (now - lastTapRef.current < 300) { onDoubleClick?.(service); }
       lastTapRef.current = now;
     }, [onDoubleClick, service]);
-    
-    return (
-      <div
-        className={`bg-surface-container-lowest border rounded-lg px-2.5 py-2 flex flex-col gap-1 hover:bg-surface-container-low transition-colors relative group cursor-pointer border-l-[3px] ${
-          isSelected
-            ? 'ring-2 ring-primary ring-offset-1'
-            : isCompleted
-              ? 'opacity-60 bg-gray-50 border-gray-200 border-l-gray-400'
-              : isProduction
-                ? 'border-outline-variant border-l-gray-300 opacity-70'
-                : isUnassigned
-                  ? 'border-amber-300 bg-amber-50/50 hover:bg-amber-50'
-                  : isAction 
-                    ? 'border-outline-variant border-l-primary' 
-                    : 'border-outline-variant border-l-secondary'
-        }`}
-        style={{ touchAction: 'manipulation' }}
-        onDoubleClick={() => onDoubleClick?.(service)}
-        onTouchEnd={handleTouchEnd}
-      >
-        {/* Checkbox */}
-        <div className="absolute bottom-1.5 right-1.5 z-10">
-          <button
-            onClick={(e) => { e.stopPropagation(); onSelect?.(service.id); }}
-            className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-              isSelected
-                ? 'bg-primary border-primary text-white'
-                : 'bg-white border-outline-variant hover:border-primary'
-            }`}
-          >
-            {isSelected && <Check className="w-2.5 h-2.5" />}
-          </button>
-        </div>
-        
-        {/* Row 1: Driver name (PRIMARY) + time */}
-        <div className="flex items-center justify-between gap-1.5 min-w-0">
-          <div className="flex items-center gap-1.5 min-w-0">
-            {isUnassigned ? (
-              <span className="text-[13px] font-bold text-amber-600 truncate">⚠ Unassigned</span>
-            ) : (
-              <span className="text-[13px] font-bold text-on-surface truncate leading-tight">
-                {service.driverName}
-              </span>
-            )}
-          </div>
-          <span className="text-[11px] font-semibold text-primary shrink-0 tabular-nums">
-            {formatTimeDisplay(service.time)}
+
+    const badge = service.vehicleType ? (
+      <span className={`text-[9px] font-semibold px-1 py-px rounded shrink-0 ${
+        isProduction ? 'bg-gray-100 text-gray-500' : 'bg-primary/8 text-primary/70'
+      }`}>
+        {service.serviceType ? `${service.serviceType.replace('Transfer ', 'T.').substring(0, 7)} · ` : ''}{service.vehicleType.replace('Disposal ', '').replace('Production ', '').substring(0, 6)}
+      </span>
+    ) : null;
+
+    // Week view: ultra-compact single line
+    if (compact) {
+      return (
+        <div
+          className={`relative flex items-center gap-1.5 px-2 py-[5px] rounded cursor-pointer transition-all border-l-[3px] group ${
+            isSelected ? 'ring-1.5 ring-primary/40' : 'hover:bg-surface-dim/50'
+          }`}
+          style={{ borderLeftColor: statusColor.hex, backgroundColor: isSelected ? `${statusColor.hex}08` : undefined }}
+          onClick={() => onClickSidePanel?.(service)}
+          onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(service); }}
+          onTouchEnd={handleTouchEnd}
+        >
+          <span className="text-[11px] font-semibold text-on-surface/70 tabular-nums shrink-0 w-[38px]">
+            {formatTimeDisplay(firstTime)}
           </span>
-        </div>
-        
-        {/* Row 2: Service type + passengers */}
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded shrink-0 ${
-            isProduction ? 'bg-gray-100 text-gray-600' : 'bg-primary/10 text-primary'
-          }`}>
-            {service.vehicleType || 'Service'}
+          <span className={`text-[12px] font-medium truncate flex-1 min-w-0 ${isUnassigned ? 'text-amber-600' : 'text-on-surface'}`}>
+            {isUnassigned ? '⚠ Unassigned' : service.driverName}
           </span>
-          {service.passengers && (
-            <span className="text-[11px] text-on-surface-variant truncate">
-              — {service.passengers}
+          {hasMultiple && (
+            <span className="text-[9px] font-medium px-1 py-px rounded bg-surface-container text-on-surface-variant shrink-0">
+              {movements.length}
             </span>
           )}
-        </div>
-        
-        {/* Row 3: Project (only if relevant) */}
-        {service.project && service.project !== 'Unknown' && (
-          <span className="text-[10px] text-on-surface-variant/70 truncate">
-            {service.project}
-          </span>
-        )}
-
-        {/* Row 4: Financial Status badge */}
-        {service.financialStatus && service.financialStatus !== 'Pendiente' && (
-          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-            <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${
-              service.financialStatus === 'Cerrado' ? 'bg-orange-100 text-orange-700' :
-              service.financialStatus === 'CerradoComercial' ? 'bg-green-100 text-green-700' :
-              service.financialStatus === 'Facturado' ? 'bg-blue-100 text-blue-700' :
-              service.financialStatus === 'Cobrado' ? 'bg-emerald-100 text-emerald-700' :
-              'bg-gray-100 text-gray-600'
+          {badge}
+          <button onClick={(e) => { e.stopPropagation(); onSelect?.(service.id); }}
+            className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 transition-colors opacity-0 group-hover:opacity-100 ${
+              isSelected ? 'bg-primary border-primary text-white opacity-100' : 'border-outline-variant hover:border-primary'
             }`}>
-              {service.financialStatus}
+            {isSelected && <Check className="w-2 h-2" />}
+          </button>
+        </div>
+      );
+    }
+
+    // Day view: compact card with time + destination
+    const timeDisplay = lastTime
+      ? `${formatTimeDisplay(firstTime)}–${formatTimeDisplay(lastTime)}`
+      : formatTimeDisplay(firstTime);
+
+    return (
+      <div
+        className={`relative flex flex-col rounded cursor-pointer transition-all border-l-[3px] group ${
+          isSelected ? 'ring-1.5 ring-primary/40' : 'hover:bg-surface-dim/30'
+        }`}
+        style={{ borderLeftColor: statusColor.hex, backgroundColor: isSelected ? `${statusColor.hex}06` : undefined }}
+        onClick={() => onClickSidePanel?.(service)}
+        onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(service); }}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div className="px-2 py-1 flex items-center gap-1.5 min-w-0">
+          <span className={`text-[12px] font-semibold truncate flex-1 min-w-0 ${isUnassigned ? 'text-amber-600' : 'text-on-surface'}`}>
+            {isUnassigned ? '⚠ Unassigned' : service.driverName}
+          </span>
+          {hasMultiple && (
+            <span className="text-[9px] font-medium px-1.5 py-px rounded-full bg-surface-container text-on-surface-variant shrink-0">
+              {movements.length} schedules
             </span>
-            {/* Financial transition buttons */}
-            {(service.financialStatus === 'Calculado' || service.financialStatus === 'Confrontacion') && (
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  if (!confirm('Aprobar este servicio?')) return;
-                  try {
-                    const result = await approveFinancial(service.id);
-                    if (result.error) {
-                      showToast('Error: ' + result.error, 'error');
-                    }
-                  } catch (err) {
-                    showToast('Error: ' + err.message, 'error');
-                  }
-                }}
-                className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-green-50 text-green-600 hover:bg-green-100 cursor-pointer"
-                title="Aprobar servicio"
-              >
-                Aprobar
-              </button>
-            )}
-            {service.financialStatus === 'Aprobado' && (
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  if (!confirm('Marcar como facturable?')) return;
-                  try {
-                    const result = await markFacturable(service.id);
-                    if (result.error) {
-                      showToast('Error: ' + result.error, 'error');
-                    }
-                  } catch (err) {
-                    showToast('Error: ' + err.message, 'error');
-                  }
-                }}
-                className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 hover:bg-purple-100 cursor-pointer"
-                title="Marcar como facturable"
-              >
-                Facturable
-              </button>
-            )}
-            {service.financialStatus === 'Facturable' && (
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  if (!confirm('Facturar este servicio?')) return;
-                  try {
-                    const result = await facturarService(service.id);
-                    if (result.error) {
-                      showToast('Error: ' + result.error, 'error');
-                    }
-                  } catch (err) {
-                    showToast('Error: ' + err.message, 'error');
-                  }
-                }}
-                className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 cursor-pointer"
-                title="Facturar servicio"
-              >
-                Facturar
-              </button>
-            )}
-            {service.financialStatus === 'Facturado' && (
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  if (!confirm('Cobrar este servicio?')) return;
-                  try {
-                    const result = await cobrarService(service.id);
-                    if (result.error) {
-                      showToast('Error: ' + result.error, 'error');
-                    }
-                  } catch (err) {
-                    showToast('Error: ' + err.message, 'error');
-                  }
-                }}
-                className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 cursor-pointer"
-                title="Cobrar servicio"
-              >
-                Cobrar
-              </button>
-            )}
-            {service.financialStatus === 'Cobrado' && (
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  if (!confirm('Cerrar este servicio?')) return;
-                  try {
-                    const result = await closeService(service.id);
-                    if (result.error) {
-                      showToast('Error: ' + result.error, 'error');
-                    }
-                  } catch (err) {
-                    showToast('Error: ' + err.message, 'error');
-                  }
-                }}
-                className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-orange-50 text-orange-600 hover:bg-orange-100 cursor-pointer"
-                title="Cerrar servicio"
-              >
-                Cerrar
-              </button>
-            )}
-            {service.financialStatus === 'Cerrado' && (
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  if (!confirm('Cerrar comercialmente este servicio?')) return;
-                  try {
-                    const result = await cerrarComercialmente(service.id);
-                    if (result.error) {
-                      showToast('Error: ' + result.error, 'error');
-                    }
-                  } catch (err) {
-                    showToast('Error: ' + err.message, 'error');
-                  }
-                }}
-                className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-green-50 text-green-600 hover:bg-green-100 cursor-pointer"
-                title="Cerrar comercialmente"
-              >
-                Cerrar Com.
-              </button>
-            )}
-            {/* Adjustment buttons — only when service is validated */}
-            {service.operationalStatus === 'Validado' && (
-              <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleOpenAdjustment(service, 'revenue');
-                  }}
-                  className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 hover:bg-indigo-100 cursor-pointer"
-                  title="Adjust revenue"
-                >
-                  + Revenue
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleOpenAdjustment(service, 'cost');
-                  }}
-                  className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 hover:bg-rose-100 cursor-pointer"
-                  title="Adjust cost"
-                >
-                  + Cost
-                </button>
-              </>
-            )}
+          )}
+          {badge}
+          <button onClick={(e) => { e.stopPropagation(); onSelect?.(service.id); }}
+            className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 transition-colors opacity-0 group-hover:opacity-100 ${
+              isSelected ? 'bg-primary border-primary text-white opacity-100' : 'border-outline-variant hover:border-primary'
+            }`}>
+            {isSelected && <Check className="w-2 h-2" />}
+          </button>
+        </div>
+        {hasMultiple ? (
+          <div className="px-2 pb-1">
+            <span className="text-[10px] text-on-surface-variant tabular-nums">{timeDisplay}</span>
+          </div>
+        ) : (
+          <div className="px-2 pb-1 flex items-center gap-1 min-w-0">
+            <span className="text-[10px] text-on-surface-variant tabular-nums">{timeDisplay}</span>
+            {service.from && <span className="text-[10px] text-on-surface-variant/50 truncate">→ {service.from}</span>}
           </div>
         )}
+      </div>
+    );
+  };
+
+  // --- Side Panel / Drawer (mockup style) ---
+  const SidePanel = () => {
+    const service = sidePanelService;
+    if (!service) return null;
+
+    const statusColor = getServiceStatusColor(service);
+    const movements = service.movements || [];
+    const isProduction = isProductionVehicle(service);
+
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const dateObj = parseDateKeyToDate(service.date);
+    const displayDate = dateObj ? `${dayNames[dateObj.getDay()]}, ${monthNames[dateObj.getMonth()]} ${dateObj.getDate()}` : service.date;
+
+    return (
+      <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setSidePanelService(null)}>
+        <div className="absolute inset-0 bg-black/20" />
+        <div
+          className="relative bg-surface-container-lowest w-full sm:w-[360px] h-full shadow-[-4px_0_24px_rgba(0,0,0,0.08)] flex flex-col animate-slide-in-right border-l border-outline-variant/30"
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="px-5 pt-5 pb-4 shrink-0">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Service Details</span>
+              <button onClick={() => setSidePanelService(null)} className="p-1 rounded-md hover:bg-surface-dim">
+                <X className="w-4 h-4 text-on-surface-variant" />
+              </button>
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-[13px] font-bold text-primary shrink-0">
+                {service.driverName?.charAt(0) || '?'}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[15px] font-semibold text-on-surface truncate">{service.driverName || 'Unassigned'}</div>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="text-[11px] text-on-surface-variant">
+                    {service.serviceType ? `${service.serviceType.replace('Transfer ', 'T.').replace('Disposizione', 'Dispo')} · ` : ''}{service.vehicleType || '—'}
+                  </span>
+                  <span className="text-on-surface-variant/30">·</span>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-px rounded-full" style={{ backgroundColor: `${statusColor.hex}15`, color: statusColor.hex }}>
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: statusColor.hex }} />
+                    {statusColor.label}
+                  </span>
+                </div>
+              </div>
+            </div>
+            {service.project && service.project !== 'Unknown' && (
+              <div className="mt-2 text-[11px] text-on-surface-variant truncate">{service.project}</div>
+            )}
+          </div>
+
+          <div className="h-px bg-outline-variant/40 mx-5" />
+
+          {/* Service Information */}
+          <div className="px-5 py-4 shrink-0">
+            <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Service Information</span>
+            <div className="mt-2.5 flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-on-surface-variant">Date</span>
+                <span className="text-[12px] text-on-surface font-medium">{displayDate}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-on-surface-variant">Driver</span>
+                <span className="text-[12px] text-on-surface font-medium">{service.driverName || '—'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-on-surface-variant">Vehicle</span>
+                <span className="text-[12px] text-on-surface font-medium">{service.vehicleType || '—'}</span>
+              </div>
+              {service.serviceType && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-on-surface-variant">Service Type</span>
+                  <span className="text-[12px] text-on-surface font-medium">{service.serviceType}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-on-surface-variant">Company</span>
+                <span className="text-[12px] text-on-surface font-medium truncate max-w-[200px] text-right">{service.company || '—'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-px bg-outline-variant/40 mx-5" />
+
+          {/* Schedules */}
+          <div className="flex-1 overflow-y-auto px-5 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">
+                Schedules {movements.length > 0 && `(${movements.length})`}
+              </span>
+              <button className="text-[11px] text-primary font-medium hover:underline cursor-pointer">+ Add schedule</button>
+            </div>
+
+            {movements.length > 0 ? (
+              <div className="relative">
+                {/* Timeline line */}
+                {movements.length > 1 && (
+                  <div className="absolute left-[5px] top-[7px] bottom-[7px] w-px bg-outline-variant/50" />
+                )}
+                {movements.map((m, idx) => {
+                  const pax = m.passengers?.map(p => p.name).join(', ') || '';
+                  const from = m.pickupLines?.[0] || '';
+                  const to = m.dropoffLines?.[0] || '';
+                  const isLast = idx === movements.length - 1;
+                  return (
+                    <div key={idx} className={`flex gap-3 items-start ${!isLast ? 'pb-4' : ''}`}>
+                      {/* Timeline dot */}
+                      <div className="relative z-10 shrink-0 mt-[5px]">
+                        <div className="w-[11px] h-[11px] rounded-full border-2 border-surface-container-lowest" style={{ backgroundColor: statusColor.hex }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[13px] font-semibold text-on-surface tabular-nums">{formatTimeDisplay(m.time)}</span>
+                          {from && <span className="text-[10px] font-medium text-primary/70 bg-primary/5 px-1.5 py-px rounded">Pickup</span>}
+                          {to && !from && <span className="text-[10px] font-medium text-on-surface-variant/60 bg-surface-container px-1.5 py-px rounded">Drop-off</span>}
+                        </div>
+                        {(from || to) && (
+                          <div className="text-[12px] text-on-surface mt-0.5 truncate">{from || to}</div>
+                        )}
+                        {from && to && (
+                          <div className="text-[11px] text-on-surface-variant/60 mt-0.5">↓</div>
+                        )}
+                        {from && to && (
+                          <>
+                            <div className="text-[12px] text-on-surface mt-0.5 truncate">{to}</div>
+                            <span className="text-[10px] font-medium text-on-surface-variant/60 bg-surface-container px-1.5 py-px rounded inline-block mt-0.5">Drop-off</span>
+                          </>
+                        )}
+                        {pax && <div className="text-[11px] text-on-surface-variant mt-1 truncate">{pax}</div>}
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-on-surface-variant/30 shrink-0 mt-[5px]" />
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-[12px] text-on-surface-variant/50 py-4 text-center">No schedule data</div>
+            )}
+          </div>
+
+          <div className="h-px bg-outline-variant/40 mx-5" />
+
+          {/* Workflow Actions */}
+          {(() => {
+            const workflowButtons: Record<string, { label: string; icon: React.ReactNode; action: string; color: string }[]> = {
+              Importado:  [{ label: 'Assign Driver', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>, action: 'assign', color: 'bg-blue-500 hover:bg-blue-600' }],
+              Asignado:   [{ label: 'Confirm Service', icon: <Check className="w-3.5 h-3.5" />, action: 'confirm', color: 'bg-green-500 hover:bg-green-600' }],
+              Confirmado: [{ label: 'Start Route', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>, action: 'start', color: 'bg-blue-600 hover:bg-blue-700' }],
+              EnRuta:     [{ label: 'Complete', icon: <CheckCircle className="w-3.5 h-3.5" />, action: 'complete', color: 'bg-green-600 hover:bg-green-700' }],
+              Realizado:  [{ label: 'Send to Review', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>, action: 'review', color: 'bg-amber-500 hover:bg-amber-600' }],
+              Reportado:  [{ label: 'Validate', icon: <CheckCircle className="w-3.5 h-3.5" />, action: 'validate', color: 'bg-green-700 hover:bg-green-800' }],
+              Revision:   [{ label: 'Validate', icon: <CheckCircle className="w-3.5 h-3.5" />, action: 'validate', color: 'bg-green-700 hover:bg-green-800' }],
+            };
+            const buttons = service.operationalStatus === 'Importado' && service.driverId
+              ? workflowButtons['Asignado'] || []
+              : workflowButtons[service.operationalStatus] || [];
+            if (buttons.length === 0) return null;
+            return (
+              <div className="px-5 py-3 shrink-0">
+                <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Workflow</span>
+                <div className="flex gap-2 mt-2">
+                  {buttons.map((btn) => (
+                    <button key={btn.action}
+                      onClick={() => { handleWorkflowAction(service, btn.action); setSidePanelService(null); }}
+                      className={`flex items-center gap-1.5 px-3 py-2 text-on-primary text-[12px] font-medium rounded-lg transition-colors cursor-pointer ${btn.color}`}>
+                      {btn.icon}
+                      {btn.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="h-px bg-outline-variant/40 mx-5" />
+
+          {/* Actions */}
+          <div className="px-5 py-4 shrink-0 flex gap-2">
+            <button onClick={() => {
+              setEditingService(service);
+              setEditForm({
+                title: service.title,
+                time: service.time,
+                status: service.status,
+                driverName: service.driverName,
+                driverPhone: service.driverPhone || '',
+                passengers: service.passengers || '',
+                project: service.project,
+                company: service.company,
+                clientName: service.clientName || '',
+                vehicleType: service.vehicleType || '',
+                vehiclePlate: service.vehiclePlate || '',
+                location: service.location,
+                from: service.from || '',
+                to: service.to || '',
+                flightInfo: service.flightInfo || '',
+                routeDescription: service.routeDescription || '',
+                startTime: service.startTime || '',
+                endTime: service.endTime || '',
+                km: service.km,
+                notes: service.notes || '',
+                movements: service.movements || [],
+                serviceType: service.serviceType || '',
+              });
+              setSidePanelService(null);
+            }}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover transition-colors cursor-pointer">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Edit Service
+            </button>
+            <button onClick={() => { handleOpenCancel(service); setSidePanelService(null); }}
+              className="px-3 py-2 border border-outline-variant text-on-surface-variant text-[12px] font-medium rounded-lg hover:bg-surface-dim transition-colors cursor-pointer">
+              Cancel
+            </button>
+          </div>
+        </div>
       </div>
     );
   };
@@ -1045,79 +1284,12 @@ export default function DashboardScreen({
   // RENDER: Month View
   // ============================================
   const renderMonthView = () => (
-    <div className="flex flex-col gap-3 pb-4">
-      {/* Month header with Select All */}
-      <div className="flex items-center justify-between">
-        <span className="text-[14px] font-semibold text-on-surface">
-          {getMonthName(baseDate.getMonth())} {baseDate.getFullYear()}
-        </span>
-        {filteredServices.filter(s => {
-          const d = s.date;
-          const parts = d.split(' ');
-          if (parts.length === 2) {
-            const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            return monthNames.indexOf(parts[0]) === baseDate.getMonth();
-          }
-          return false;
-        }).length > 0 && (
-          <button
-            onClick={selectAllServicesForMonth}
-            className="text-[11px] text-primary font-medium hover:underline"
-          >
-            Select All Month
-          </button>
-        )}
-      </div>
-      
-      {/* Month week selector */}
-      <div className="flex flex-wrap gap-2 items-center">
-        {monthWeeks.map((week, i) => {
-          const weekStart = formatDateKey(week.weekStart);
-          const weekEnd = new Date(week.weekStart);
-          weekEnd.setDate(weekEnd.getDate() + 6);
-          const weekServices = filteredServices.filter(s => {
-            const d = s.date;
-            return d >= weekStart && d <= formatDateKey(weekEnd);
-          });
-          // Check if this week contains today
-          const today = new Date();
-          const todayKey = formatDateKey(today);
-          const isCurrentWeek = todayKey >= weekStart && todayKey <= formatDateKey(weekEnd);
-          
-          return (
-            <button
-              key={i}
-              onClick={() => {
-                // Align to Monday of this week
-                const monday = new Date(week.weekStart);
-                const dow = monday.getDay();
-                const mondayOffset = dow === 0 ? -6 : 1 - dow;
-                monday.setDate(monday.getDate() + mondayOffset);
-                onBaseDateChange(monday);
-                onViewModeChange('week');
-                setSelectedDay(null);
-              }}
-              className={`flex flex-col items-start px-3 py-2 rounded-lg border text-left transition-colors cursor-pointer ${
-                isCurrentWeek 
-                  ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/30' 
-                  : 'border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low text-on-surface'
-              }`}
-            >
-              <span className="text-[12px] font-medium">{week.label}</span>
-              <span className="text-[11px] text-on-surface-variant">{weekStart} — {formatDateKey(weekEnd)}</span>
-              <span className={`text-[11px] mt-0.5 ${weekServices.length > 0 ? 'text-primary font-medium' : 'text-on-surface-variant'}`}>
-                {weekServices.length} services
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
+    <div className="flex flex-col gap-4 p-5">
       {/* Month grid: 7 columns, rows = weeks */}
-      <div className="grid grid-cols-7 gap-1 text-center">
+      <div className="grid grid-cols-7 gap-px bg-outline-variant/15 rounded-lg overflow-hidden">
         {/* Day headers */}
         {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => (
-          <div key={d} className="text-[11px] font-medium text-on-surface-variant py-1">{d}</div>
+          <div key={d} className="text-[10px] font-medium text-on-surface-variant/50 py-2 text-center bg-surface-container-lowest uppercase tracking-wider">{d}</div>
         ))}
         
         {/* Calendar cells */}
@@ -1125,7 +1297,7 @@ export default function DashboardScreen({
           const year = baseDate.getFullYear();
           const month = baseDate.getMonth();
           const firstDay = new Date(year, month, 1);
-          const lastDay = new Date(year, month + 1, 0);
+          const lastDay = new Date(year + 1, 0, 0);
           const firstDow = firstDay.getDay();
           const mondayOffset = firstDow === 0 ? -6 : 1 - firstDow;
           
@@ -1133,44 +1305,15 @@ export default function DashboardScreen({
           const startDate = new Date(year, month, 1 + mondayOffset);
           const today = new Date();
           const todayKey = formatDateKey(today);
-          const tomorrow = new Date(today);
-          tomorrow.setDate(today.getDate() + 1);
-          const tomorrowKey = formatDateKey(tomorrow);
-          const dayAfter = new Date(today);
-          dayAfter.setDate(today.getDate() + 2);
-          const dayAfterKey = formatDateKey(dayAfter);
           
-          for (let i = 0; i < 42; i++) { // 6 weeks × 7 days
+          for (let i = 0; i < 42; i++) {
             const cellDate = new Date(startDate);
             cellDate.setDate(startDate.getDate() + i);
             
             const dateKey = formatDateKey(cellDate);
             const isCurrentMonth = cellDate.getMonth() === month;
             const isToday = dateKey === todayKey;
-            const isTomorrow = dateKey === tomorrowKey;
-            const isDayAfter = dateKey === dayAfterKey;
             const dayServices = filteredServices.filter(s => s.date === dateKey);
-            
-            let cellBorder = 'border-outline-variant/50';
-            let cellBg = '';
-            let dayText = 'text-on-surface';
-            
-            if (!isCurrentMonth) {
-              cellBorder = 'border-transparent';
-              cellBg = 'opacity-30';
-            } else if (isToday) {
-              cellBorder = 'border-primary';
-              cellBg = 'bg-primary/8';
-              dayText = 'text-primary font-bold';
-            } else if (isTomorrow) {
-              cellBorder = 'border-amber-400';
-              cellBg = 'bg-amber-50';
-              dayText = 'text-amber-700 font-semibold';
-            } else if (isDayAfter) {
-              cellBorder = 'border-emerald-400';
-              cellBg = 'bg-emerald-50';
-              dayText = 'text-emerald-700 font-semibold';
-            }
             
             cells.push(
               <button
@@ -1179,38 +1322,31 @@ export default function DashboardScreen({
                   onBaseDateChange(new Date(cellDate));
                   onViewModeChange('day');
                 }}
-                className={`flex flex-col items-center p-1.5 rounded-lg border min-h-[60px] transition-colors cursor-pointer ${cellBorder} ${cellBg} hover:shadow-sm`}
+                className={`flex flex-col items-center p-1.5 min-h-[56px] transition-colors cursor-pointer border-none ${
+                  !isCurrentMonth ? 'bg-surface-dim/30 opacity-30' :
+                  isToday ? 'bg-primary/[0.04]' : 'bg-surface-container-lowest hover:bg-surface-dim/30'
+                }`}
               >
-                <span className={`text-[12px] font-medium ${dayText}`}>
+                <span className={`text-[11px] ${
+                  isToday ? 'w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center font-semibold' :
+                  'text-on-surface font-medium'
+                }`}>
                   {cellDate.getDate()}
                 </span>
                 {dayServices.length > 0 && (
-                  <div className="flex flex-wrap gap-0.5 mt-1 justify-center">
-                    {dayServices.slice(0, 3).map((s, j) => {
-                      // Color based on operational status
-                      let dotColor = 'bg-gray-400'; // Default
-                      switch (s.operationalStatus) {
-                        case 'Importado': dotColor = 'bg-gray-400'; break;
-                        case 'Asignado': dotColor = 'bg-blue-500'; break;
-                        case 'Confirmado': dotColor = 'bg-green-500'; break;
-                        case 'EnRuta': dotColor = 'bg-yellow-500'; break;
-                        case 'Realizado': dotColor = 'bg-orange-500'; break;
-                        case 'Reportado': dotColor = 'bg-purple-500'; break;
-                        case 'Revision': dotColor = 'bg-indigo-500'; break;
-                        case 'Validado': dotColor = 'bg-gray-600'; break;
-                        case 'Cancelado': dotColor = 'bg-red-400'; break;
-                      }
-                      return <div key={j} className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />;
-                    })}
-                    {dayServices.length > 3 && (
-                      <span className="text-[9px] text-on-surface-variant">+{dayServices.length - 3}</span>
+                  <div className="flex flex-wrap gap-px mt-1 justify-center">
+                    {dayServices.slice(0, 4).map((s, j) => (
+                      <div key={j} className="w-1 h-1 rounded-full" style={{ backgroundColor: getServiceStatusColor(s).hex }} />
+                    ))}
+                    {dayServices.length > 4 && (
+                      <span className="text-[8px] text-on-surface-variant/40">+{dayServices.length - 4}</span>
                     )}
                   </div>
                 )}
               </button>
             );
             
-            if (i >= 34 && cellDate.getMonth() !== month) break; // Stop after last week of month
+            if (i >= 34 && cellDate.getMonth() !== month) break;
           }
           return cells;
         })()}
@@ -1263,22 +1399,22 @@ export default function DashboardScreen({
         </div>
 
         {/* Hour grid */}
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-lg overflow-hidden mx-5">
           <div className="flex">
             {/* Time column */}
-            <div className="w-14 shrink-0 border-r border-outline-variant">
+            <div className="w-12 shrink-0 border-r border-outline-variant/20">
               {hourSlots.map(slot => (
-                <div key={slot.hour} className="h-[72px] flex items-start justify-end pr-2 pt-0.5 border-b border-outline-variant/30">
-                  <span className="text-[10px] text-on-surface-variant font-medium">{slot.label}</span>
+                <div key={slot.hour} className="h-[72px] flex items-start justify-end pr-2 pt-0.5">
+                  <span className="text-[10px] text-on-surface-variant/40 font-medium tabular-nums">{slot.label}</span>
                 </div>
               ))}
             </div>
             
             {/* Services column */}
             <div className="flex-1 relative">
-              {/* Hour lines */}
+              {/* Hour lines - ultra subtle */}
               {hourSlots.map(slot => (
-                <div key={slot.hour} className="h-[72px] border-b border-outline-variant/30" />
+                <div key={slot.hour} className="h-[72px] border-b border-outline-variant/15" />
               ))}
               
               {/* Service blocks with collision handling */}
@@ -1289,10 +1425,11 @@ export default function DashboardScreen({
                 const height = (end - start) * HOUR_HEIGHT - 3; // 3px gap between blocks
                 const width = 100 / totalCols;
                 const left = col * width;
-                const isAction = service.company === 'Transport Action';
                 const isUnassigned = !service.driverName || service.driverName === 'Unassigned';
                 const isSelected = selectedServiceIds.has(service.id);
                 const isCompleted = service.status === 'Completed';
+                const isProduction = isProductionVehicle(service);
+                const statusColor = getServiceStatusColor(service);
                 
                 return (
                   <motion.div
@@ -1301,16 +1438,8 @@ export default function DashboardScreen({
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.25, delay: idx * 0.04 }}
-                    className={`absolute rounded-md px-2 py-1.5 cursor-pointer transition-all hover:shadow-md border-l-[3px] overflow-hidden ${
-                      isSelected
-                        ? 'ring-2 ring-primary ring-offset-1'
-                        : isCompleted
-                          ? 'opacity-60 bg-gray-50 border-l-gray-400'
-                          : isUnassigned
-                            ? 'bg-amber-50 border-l-amber-400 hover:bg-amber-100 ring-1 ring-amber-200'
-                            : isAction 
-                              ? 'bg-primary/10 border-l-primary hover:bg-primary/15' 
-                              : 'bg-secondary/10 border-l-secondary hover:bg-secondary/15'
+                    className={`absolute rounded-md px-2 py-1.5 cursor-pointer transition-all hover:shadow-md overflow-hidden ${
+                      isSelected ? 'ring-2 ring-primary ring-offset-1' : ''
                     }`}
                     style={{ 
                       top: `${topOffset}px`, 
@@ -1319,14 +1448,15 @@ export default function DashboardScreen({
                       width: `calc(${width}% - 4px)`,
                       minHeight: '24px',
                       touchAction: 'manipulation',
+                      borderLeft: `4px solid ${getServiceStatusColor(service).hex}`,
+                      backgroundColor: isCompleted ? '#f9fafb' : service.operationalStatus === 'Cancelado' ? '#fef2f2' : getServiceStatusColor(service).hex + '12',
                     }}
+                    onClick={() => setSidePanelService(service)}
                     onDoubleClick={() => handleDoubleClick(service)}
                     onTouchEnd={() => {
                       const now = Date.now();
                       const last = lastTapMapRef.current.get(service.id) || 0;
-                      if (now - last < 300) {
-                        handleDoubleClick(service);
-                      }
+                      if (now - last < 300) { handleDoubleClick(service); }
                       lastTapMapRef.current.set(service.id, now);
                     }}
                   >
@@ -1350,16 +1480,93 @@ export default function DashboardScreen({
                         {isUnassigned && (
                           <span className="text-[10px] text-amber-600 font-bold shrink-0">⚠</span>
                         )}
-                        <span className={`text-[12px] font-bold truncate leading-tight ${isUnassigned ? 'text-amber-700' : isAction ? 'text-primary' : 'text-secondary'}`}>
+                        <span className={`text-[12px] font-bold truncate leading-tight ${isUnassigned ? 'text-amber-700' : 'text-on-surface'}`}>
                           {service.driverName || 'Unassigned'}
                         </span>
+                        {service.vehicleType && (
+                          <span className={`text-[8px] px-1 py-0 rounded font-medium shrink-0 ${
+                            isProduction ? 'bg-gray-100 text-gray-600' : 'bg-primary/15 text-primary'
+                          }`}>
+                            {service.serviceType ? `${service.serviceType.replace('Transfer ', 'T.').replace('Disposizione', 'Dispo').substring(0, 7)} · ` : ''}{service.vehicleType.replace('Disposal ', 'D-').replace('Production ', 'P-').substring(0, 6)}
+                          </span>
+                        )}
                       </div>
-                      <span className="text-[10px] text-on-surface-variant font-medium truncate leading-tight">
-                        {formatTimeDisplay(service.time)}
-                      </span>
-                      <span className="text-[10px] text-on-surface-variant truncate leading-tight opacity-70">
-                        {service.title}
-                      </span>
+                      {/* Render movements as sub-routes */}
+                      {(() => {
+                        const movements = service.movements || [];
+                        if (movements.length > 1) {
+                          const totalHours = end - start;
+                          const CARD_HEIGHT = totalHours * HOUR_HEIGHT - 3;
+                          const HEADER_HEIGHT = 22;
+                          const availableHeight = CARD_HEIGHT - HEADER_HEIGHT;
+                          
+                          return (
+                            <div className="relative" style={{ minHeight: `${availableHeight}px` }}>
+                              {/* Vertical connecting line */}
+                              <div className="absolute left-[4px] top-[6px] bottom-[6px] w-px bg-outline-variant/30" />
+                              {movements.map((m, mi) => {
+                                const from = m.pickupLines?.[0] || '';
+                                const to = m.dropoffLines?.[0] || '';
+                                const pax = m.passengers?.map(p => p.name).join(', ') || '';
+                                const movementHour = parseTimeToHour(m.time);
+                                
+                                // Calculate spacer height from previous movement (or card start for first)
+                                let spacerHeight = 0;
+                                if (mi === 0) {
+                                  // First movement: offset from card start
+                                  const offsetHours = movementHour - start;
+                                  spacerHeight = Math.max(0, (offsetHours / totalHours) * availableHeight);
+                                } else {
+                                  const prevHour = parseTimeToHour(movements[mi - 1].time);
+                                  const gapHours = movementHour - prevHour;
+                                  spacerHeight = Math.max(0, (gapHours / totalHours) * availableHeight - 14);
+                                }
+                                
+                                return (
+                                  <div key={mi}>
+                                    {spacerHeight > 0 && <div style={{ height: `${spacerHeight}px` }} />}
+                                    <div className="flex gap-2 items-start">
+                                      {/* Timeline dot */}
+                                      <div className="relative z-10 shrink-0 mt-[3px]">
+                                        <div className="w-[9px] h-[9px] rounded-full border-[1.5px] border-white" style={{ backgroundColor: statusColor.hex }} />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-[9px] font-semibold text-on-surface tabular-nums leading-tight">
+                                            {formatTimeDisplay(m.time)}
+                                          </span>
+                                          {pax && (
+                                            <span className="text-[8px] text-on-surface-variant truncate leading-tight">
+                                              {pax}
+                                            </span>
+                                          )}
+                                        </div>
+                                        {from && (
+                                          <div className="text-[8px] text-on-surface-variant/70 truncate leading-tight">↗ {from}</div>
+                                        )}
+                                        {to && (
+                                          <div className="text-[8px] text-primary/70 truncate leading-tight">↘ {to}</div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        }
+                        // Single route — show time + title compact
+                        return (
+                          <>
+                            <span className="text-[10px] text-on-surface-variant font-medium truncate leading-tight">
+                              {formatTimeDisplay(service.time)}
+                            </span>
+                            <span className="text-[10px] text-on-surface-variant truncate leading-tight opacity-70">
+                              {service.title}
+                            </span>
+                          </>
+                        );
+                      })()}
                     </div>
                   </motion.div>
                 );
@@ -1382,67 +1589,53 @@ export default function DashboardScreen({
   // RENDER: Week View (default)
   // ============================================
   const renderWeekView = () => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 gap-2 h-full">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 gap-px bg-outline-variant/20 h-full">
       {columns.map((col, colIndex) => {
         const colServices = filteredServices
           .filter(s => s.date === col.date)
           .sort((a, b) => parseTimeToHour(a.time) - parseTimeToHour(b.time));
         
         return (
-          <motion.div 
+          <div 
             key={col.key}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: colIndex * 0.04 }}
-            className={`flex flex-col min-w-0 rounded-xl border cursor-pointer transition-colors hover:shadow-md overflow-hidden ${col.colorClass}`}
-            onClick={() => {
-              onBaseDateChange(parseDateKeyToDate(col.date) || new Date());
-              onViewModeChange('day');
-            }}
+            className={`flex flex-col min-w-0 bg-surface-container-lowest ${col.isToday ? 'bg-primary/[0.02]' : ''}`}
           >
-            {/* Column Title — fixed */}
-            <div className={`flex items-center justify-between px-1.5 pt-1.5 pb-1.5 shrink-0 ${col.borderClass}`}>
-              <span className={`font-headline-md text-[13px] truncate ${col.isToday ? 'font-bold' : ''} ${col.headerText}`}>
+            {/* Column header */}
+            <div className={`px-2.5 py-2 flex items-center justify-between border-b border-outline-variant/20 ${col.isToday ? '' : ''}`}>
+              <span className={`text-[11px] font-medium ${col.isToday ? 'text-primary font-semibold' : 'text-on-surface-variant'}`}>
                 {col.label}
               </span>
-              <span className={`text-[10px] font-medium shrink-0 ml-1 ${col.headerText}`}>
+              <span className={`text-[10px] ${col.isToday ? 'text-primary/70' : 'text-on-surface-variant/50'}`}>
                 {col.date}
               </span>
             </div>
 
-            {/* Services — scrollable */}
-            <div className="flex-1 flex flex-col gap-1 px-1.5 overflow-y-auto min-h-0 hide-scrollbar">
-              <AnimatePresence mode="popLayout">
-                {colServices.length > 0 ? (
-                  colServices.map((service, svcIndex) => (
-                    <motion.div
-                      key={service.id}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.2, delay: svcIndex * 0.03 }}
-                    >
-                      <ServiceCard 
-                        service={service} 
-                        onDoubleClick={handleDoubleClick}
-                        isSelected={selectedServiceIds.has(service.id)}
-                        onSelect={toggleServiceSelection}
-                      />
-                    </motion.div>
-                  ))
-                ) : (
-                  <EmptyDay onClick={() => onNavigate('new_service', 'slide_up')} />
-                )}
-              </AnimatePresence>
+            {/* Services */}
+            <div className="flex-1 flex flex-col gap-px px-1 py-1 overflow-y-auto min-h-0">
+              {colServices.length > 0 ? (
+                colServices.map((service) => (
+                  <ServiceCard 
+                    key={service.id}
+                    service={service} 
+                    compact
+                    onDoubleClick={handleDoubleClick}
+                    isSelected={selectedServiceIds.has(service.id)}
+                    onSelect={toggleServiceSelection}
+                    onClickSidePanel={setSidePanelService}
+                  />
+                ))
+              ) : (
+                <div className="flex-1" />
+              )}
             </div>
 
-            {/* Service count — pinned to bottom */}
+            {/* Service count */}
             {colServices.length > 0 && (
-              <div className={`shrink-0 text-[10px] font-medium text-center py-1 border-t ${col.borderClass} ${col.headerBg} ${col.headerText}`}>
-                {colServices.length} services
+              <div className={`text-[10px] text-center py-1 border-t border-outline-variant/15 ${col.isToday ? 'text-primary/50' : 'text-on-surface-variant/30'}`}>
+                {colServices.length}
               </div>
             )}
-          </motion.div>
+          </div>
         );
       })}
     </div>
@@ -1452,301 +1645,118 @@ export default function DashboardScreen({
   // MAIN RENDER
   // ============================================
   return (
-    <div id="master-calendar-screen" className="flex flex-col gap-4 w-full max-w-[1400px] mx-auto p-4 md:p-6 h-full overflow-y-auto">
-      {/* Header Area */}
-      <div id="calendar-header-area" className="flex flex-col md:flex-row md:items-end justify-between gap-3 shrink-0">
-        <div className="flex flex-col gap-1 min-w-0">
-          <h1 className="font-headline-lg-mobile md:font-headline-lg text-on-surface">Master Calendar</h1>
-          <p className="text-[13px] text-on-surface-variant">
-            {viewMode === 'month' 
-              ? `${getMonthName(baseDate.getMonth())} ${baseDate.getFullYear()} — click a week to zoom in`
-              : viewMode === 'day'
-                ? `Viewing ${formatDateKey(baseDate)} — day detail view`
-                : selectedDay 
-                  ? `Viewing ${selectedDay} — click Back to return to week`
-                  : 'Manage scheduling across all active transport projects.'
-            }
-          </p>
+    <div className="flex flex-col h-full bg-surface overflow-hidden">
+      {/* ─── Header Row 1: Title + Actions ─── */}
+        <div className="flex items-center justify-between px-5 py-3 shrink-0">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="flex flex-col min-w-0">
+              <h1 className="text-[18px] font-semibold text-on-surface leading-tight">Master Calendar</h1>
+              <p className="text-[12px] text-on-surface-variant mt-0.5">
+                {viewMode === 'month'
+                  ? `${getMonthName(baseDate.getMonth())} ${baseDate.getFullYear()}`
+                  : viewMode === 'day'
+                    ? `${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][parseDateKeyToDate(formatDateKey(baseDate))?.getDay() ?? 0]}, ${formatDateKey(baseDate)}`
+                    : `${columns[0]?.date} — ${columns[columns.length - 1]?.date}`
+                }
+              </p>
+            </div>
+            <button onClick={goToToday}
+              className="px-3 py-1.5 text-[12px] font-medium text-on-surface border border-outline-variant rounded-lg hover:bg-surface-dim transition-colors cursor-pointer shrink-0">
+              Today
+            </button>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => onNavigate('new_service', 'slide_up')}
+              className="flex items-center gap-1.5 bg-primary text-on-primary text-[12px] font-medium px-3 py-2 rounded-lg hover:bg-primary-hover transition-colors cursor-pointer">
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Add Service</span>
+            </button>
+            <button onClick={() => onNavigate('transport_list', 'none')}
+              className="flex items-center gap-1.5 bg-surface-container-lowest border border-outline-variant text-on-surface-variant text-[12px] font-medium px-3 py-2 rounded-lg hover:bg-surface-dim transition-colors cursor-pointer">
+              <Upload className="w-4 h-4" />
+              <span className="hidden sm:inline">Import Excel</span>
+            </button>
+            <button className="p-2 rounded-lg hover:bg-surface-dim text-on-surface-variant transition-colors cursor-pointer relative">
+              <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+            </button>
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-bold text-primary cursor-pointer">AD</div>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+
+        {/* ─── Header Row 2: Navigation + View Toggle + Filters + Search ─── */}
+        <div className="flex items-center gap-2 px-5 py-2 shrink-0">
+          {/* Date navigation */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={goToPrev} className="p-1 rounded hover:bg-surface-dim transition-colors text-on-surface-variant hover:text-on-surface">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button onClick={goToNext} className="p-1 rounded hover:bg-surface-dim transition-colors text-on-surface-variant hover:text-on-surface">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+          <span className="text-[12px] text-on-surface font-medium shrink-0">{dateRangeLabel}</span>
+
           {/* View mode toggle */}
-          <div className="flex bg-surface-container rounded-lg overflow-hidden border border-outline-variant">
-            <button
-              onClick={() => { onViewModeChange('day'); setSelectedDay(null); }}
-              className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-[11px] sm:text-[12px] font-medium transition-colors cursor-pointer ${
-                viewMode === 'day' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:bg-surface-dim'
-              }`}
-            >
-              <Clock className="w-3.5 h-3.5" />
-              <span className="hidden xs:inline">Day</span>
-            </button>
-            <button
-              onClick={() => { onViewModeChange('week'); setSelectedDay(null); }}
-              className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-[11px] sm:text-[12px] font-medium transition-colors cursor-pointer ${
-                viewMode === 'week' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:bg-surface-dim'
-              }`}
-            >
-              <Rows3 className="w-3.5 h-3.5" />
-              <span className="hidden xs:inline">Week</span>
-            </button>
-            <button
-              onClick={() => { onViewModeChange('month'); setSelectedDay(null); }}
-              className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-[11px] sm:text-[12px] font-medium transition-colors cursor-pointer ${
-                viewMode === 'month' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:bg-surface-dim'
-              }`}
-            >
-              <Grid3X3 className="w-3.5 h-3.5" />
-              <span className="hidden xs:inline">Month</span>
-            </button>
-          </div>
-
-          <button 
-            onClick={goToPrev}
-            className="flex items-center justify-center w-8 h-8 bg-surface-container-lowest border border-outline-variant text-on-surface-variant rounded-lg hover:bg-surface-container-low hover:text-on-surface transition-colors shrink-0"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <button
-            onClick={goToToday}
-            className={`flex items-center gap-1.5 sm:gap-2 bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] sm:text-[13px] px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg hover:bg-surface-container-low transition-colors shrink-0 max-w-[160px] sm:max-w-none ${isTodayVisible ? 'border-primary text-primary' : ''}`}
-          >
-            <CalendarIcon className="w-4 h-4 shrink-0" />
-            <span className="truncate">{dateRangeLabel}</span>
-          </button>
-          <button 
-            onClick={goToNext}
-            className="flex items-center justify-center w-8 h-8 bg-surface-container-lowest border border-outline-variant text-on-surface-variant rounded-lg hover:bg-surface-container-low hover:text-on-surface transition-colors shrink-0"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-          
-          <button 
-            id="add-service-cta-btn"
-            onClick={() => onNavigate('new_service', 'slide_up')}
-            className="flex items-center gap-1.5 sm:gap-2 bg-primary text-on-primary text-[12px] font-medium px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg hover:bg-primary-hover transition-colors cursor-pointer shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Add Service</span>
-          </button>
-
-          <button 
-            onClick={() => onNavigate('transport_list', 'none')}
-            className="flex items-center gap-1.5 sm:gap-2 bg-surface-container-lowest border border-outline-variant text-on-surface-variant text-[12px] font-medium px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg hover:bg-surface-container-low hover:text-on-surface transition-colors cursor-pointer shrink-0"
-          >
-            <Upload className="w-4 h-4" />
-            <span className="hidden sm:inline">Import Excel</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div id="calendar-filter-bento" className="flex flex-col gap-3 px-3 py-2 bg-surface-dim border border-outline-variant rounded-lg shrink-0">
-        <div className="flex flex-col lg:flex-row justify-between gap-3 items-start lg:items-center">
-          <div id="company-entity-selector" className="flex bg-surface-container rounded-md overflow-x-auto max-w-full">
-            {['All', ...companies.map(c => c.name)].map(entity => (
-              <button 
-                key={entity}
-                onClick={() => setActiveEntity(entity)}
-                className={`px-3 py-1.5 rounded text-[12px] font-sans font-medium whitespace-nowrap transition-colors cursor-pointer ${
-                  activeEntity === entity ? 'bg-surface-container-lowest text-primary' : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                {entity === 'All' ? 'All' : entity}
+          <div className="flex bg-surface-container rounded-lg overflow-hidden border border-outline-variant/40 shrink-0 ml-2">
+            {(['day','week','month'] as ViewMode[]).map(mode => (
+              <button key={mode} onClick={() => { onViewModeChange(mode); setSelectedDay(null); }}
+                className={`px-3 py-1.5 text-[11px] font-medium transition-colors cursor-pointer capitalize ${
+                  viewMode === mode ? 'bg-on-surface text-surface-container-lowest' : 'text-on-surface-variant hover:text-on-surface'
+                }`}>
+                {mode}
               </button>
             ))}
           </div>
 
-          <div id="project-filter-pills" className="flex flex-wrap gap-1.5 items-center">
-            {projectOptions.map(proj => (
-              <button
-                key={proj}
-                onClick={() => toggleProject(proj)}
-                className={`px-2.5 py-1 rounded-full border text-[12px] font-medium transition-colors cursor-pointer ${
-                  selectedProjects.includes(proj)
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low'
-                }`}
-              >
-                {proj}
-              </button>
-            ))}
-            {selectedProjects.length > 0 && (
-              <button
-                onClick={() => setSelectedProjects([])}
-                className="text-primary text-[11px] font-medium underline hover:text-primary-hover ml-1"
-              >
-                Clear
-              </button>
-            )}
-            
-            {/* Select All Week button (only in week view) */}
-            {viewMode === 'week' && !selectedDay && filteredServices.length > 0 && (
-              <button
-                onClick={selectAllServicesForWeek}
-                className="ml-2 px-2.5 py-1 rounded-full border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low text-[11px] font-medium transition-colors"
-              >
-                Select All Week
-              </button>
-            )}
+          <div className="flex-1" />
 
-            {/* Advanced Filters Toggle */}
-            <button
-              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className={`flex items-center gap-1.5 ml-2 px-2.5 py-1 rounded-full border text-[11px] font-medium transition-colors cursor-pointer ${
-                showAdvancedFilters || driverFilter !== 'All' || clientFilter !== 'All' || vehicleTypeFilter !== 'All'
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low'
-              }`}
-            >
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-              </svg>
-              Filters
-              {(driverFilter !== 'All' || clientFilter !== 'All' || vehicleTypeFilter !== 'All') && (
-                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-              )}
-            </button>
+          {/* Dropdown filters */}
+          <select value={activeEntity} onChange={e => setActiveEntity(e.target.value)}
+            className="text-[11px] text-on-surface-variant bg-transparent border-none cursor-pointer hover:text-on-surface focus:outline-none shrink-0 appearance-none pr-4"
+            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right center' }}>
+            <option value="All">All Companies</option>
+            {companies.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+          </select>
+          <select value={driverFilter} onChange={e => setDriverFilter(e.target.value)}
+            className="text-[11px] text-on-surface-variant bg-transparent border-none cursor-pointer hover:text-on-surface focus:outline-none shrink-0 appearance-none pr-4"
+            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right center' }}>
+            <option value="All">All Drivers</option>
+            {driverOptions.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+            className="text-[11px] text-on-surface-variant bg-transparent border-none cursor-pointer hover:text-on-surface focus:outline-none shrink-0 appearance-none pr-4"
+            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right center' }}>
+            <option value="All">Status</option>
+            {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+
+          <div className="w-px h-4 bg-outline-variant/40 shrink-0" />
+
+          {/* Search */}
+          <div className="relative flex-1 min-w-0 max-w-[200px]">
+            <svg className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-on-surface-variant/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search services..."
+              className="w-full bg-transparent border-none pl-7 pr-2 py-1 text-[11px] text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none" />
           </div>
+
+          <div className="w-px h-4 bg-outline-variant/40 shrink-0" />
         </div>
 
-        {/* Advanced Filters Panel */}
-        {showAdvancedFilters && (
-          <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-outline-variant/50">
-            {/* Driver Filter - Searchable */}
-            <div className="flex flex-col gap-1 flex-1 min-w-0 relative" data-filter-dropdown>
-              <label className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">Driver</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  autoComplete="new-password"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  data-driver-search="true"
-                  value={showDriverDropdown ? driverSearch : (driverFilter === 'All' ? '' : driverFilter)}
-                  onChange={e => {
-                    setDriverSearch(e.target.value);
-                    setShowDriverDropdown(true);
-                    if (e.target.value === '') setDriverFilter('All');
-                  }}
-                  onInput={e => {
-                    const val = (e.target as HTMLInputElement).value;
-                    setDriverSearch(val);
-                    setShowDriverDropdown(true);
-                    if (val === '') setDriverFilter('All');
-                  }}
-                  onFocus={() => { setShowDriverDropdown(true); setDriverSearch(''); }}
-                  placeholder="Search driver..."
-                  className="bg-surface-container-lowest border border-outline-variant rounded-lg px-2.5 py-1.5 text-[12px] text-on-surface focus:outline-none focus:border-primary w-full"
-                />
-                {showDriverDropdown && (
-                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg max-h-[200px] overflow-y-auto">
-                    <button
-                      onClick={() => { setDriverFilter('All'); setDriverSearch(''); setShowDriverDropdown(false); }}
-                      className={`w-full text-left px-2.5 py-1.5 text-[12px] hover:bg-surface-dim ${driverFilter === 'All' ? 'text-primary font-medium bg-primary/5' : 'text-on-surface'}`}
-                    >
-                      All Drivers
-                    </button>
-                    {filteredDriverOptions.map(d => (
-                      <button
-                        key={d}
-                        onClick={() => { setDriverFilter(d); setDriverSearch(d); setShowDriverDropdown(false); }}
-                        className={`w-full text-left px-2.5 py-1.5 text-[12px] hover:bg-surface-dim ${driverFilter === d ? 'text-primary font-medium bg-primary/5' : 'text-on-surface'}`}
-                      >
-                        {d}
-                      </button>
-                    ))}
-                    {filteredDriverOptions.length === 0 && driverSearch && (
-                      <div className="px-2.5 py-1.5 text-[11px] text-on-surface-variant italic">No drivers found</div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+        {/* ─── Calendar Content ─── */}
+        <div className="flex-1 overflow-y-auto">
+          {isLoading ? <LoadingSkeleton /> : (
+            <>
+              {viewMode === 'month' && renderMonthView()}
+              {viewMode === 'week' && selectedDay && renderDayDetail()}
+              {viewMode === 'week' && !selectedDay && renderWeekView()}
+              {viewMode === 'day' && renderDayDetail()}
+            </>
+          )}
+        </div>
 
-            {/* Client Filter - Searchable */}
-            <div className="flex flex-col gap-1 flex-1 min-w-0 relative" data-filter-dropdown>
-              <label className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">Client</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={showClientDropdown ? clientSearch : (clientFilter === 'All' ? '' : clientFilter)}
-                  onChange={e => {
-                    setClientSearch(e.target.value);
-                    setShowClientDropdown(true);
-                    if (e.target.value === '') setClientFilter('All');
-                  }}
-                  onFocus={() => { setShowClientDropdown(true); setClientSearch(''); }}
-                  placeholder="Search client..."
-                  className="bg-surface-container-lowest border border-outline-variant rounded-lg px-2.5 py-1.5 text-[12px] text-on-surface focus:outline-none focus:border-primary w-full"
-                />
-                {showClientDropdown && (
-                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg max-h-[200px] overflow-y-auto">
-                    <button
-                      onClick={() => { setClientFilter('All'); setClientSearch(''); setShowClientDropdown(false); }}
-                      className={`w-full text-left px-2.5 py-1.5 text-[12px] hover:bg-surface-dim ${clientFilter === 'All' ? 'text-primary font-medium bg-primary/5' : 'text-on-surface'}`}
-                    >
-                      All Clients
-                    </button>
-                    {filteredClientOptions.map(c => (
-                      <button
-                        key={c}
-                        onClick={() => { setClientFilter(c); setClientSearch(c); setShowClientDropdown(false); }}
-                        className={`w-full text-left px-2.5 py-1.5 text-[12px] hover:bg-surface-dim ${clientFilter === c ? 'text-primary font-medium bg-primary/5' : 'text-on-surface'}`}
-                      >
-                        {c}
-                      </button>
-                    ))}
-                    {filteredClientOptions.length === 0 && clientSearch && (
-                      <div className="px-2.5 py-1.5 text-[11px] text-on-surface-variant italic">No clients found</div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Vehicle Type Filter */}
-            <div className="flex flex-col gap-1 flex-1 min-w-0">
-              <label className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">Service Type</label>
-              <select
-                value={vehicleTypeFilter}
-                onChange={e => setVehicleTypeFilter(e.target.value)}
-                className="bg-surface-container-lowest border border-outline-variant rounded-lg px-2.5 py-1.5 text-[12px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
-              >
-                <option value="All">All Types</option>
-                {vehicleTypeOptions.map(v => (
-                  <option key={v} value={v}>{v}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Clear Advanced Filters */}
-            {(driverFilter !== 'All' || clientFilter !== 'All' || vehicleTypeFilter !== 'All') && (
-              <div className="flex items-end">
-                <button
-                  onClick={() => { setDriverFilter('All'); setClientFilter('All'); setVehicleTypeFilter('All'); }}
-                  className="px-2.5 py-1.5 text-[11px] text-primary font-medium hover:underline cursor-pointer"
-                >
-                  Clear Filters
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Calendar Content */}
-      <div id="calendar-grid-container" className="flex-1 overflow-y-auto pb-4">
-        {isLoading ? (
-          <LoadingSkeleton />
-        ) : (
-          <>
-            {viewMode === 'month' && renderMonthView()}
-            {viewMode === 'week' && selectedDay && renderDayDetail()}
-            {viewMode === 'week' && !selectedDay && renderWeekView()}
-            {viewMode === 'day' && renderDayDetail()}
-          </>
-        )}
-      </div>
+      {/* Side Panel */}
+      {sidePanelService && <SidePanel />}
 
       {/* Edit Service Modal */}
       {editingService && (
@@ -1813,17 +1823,19 @@ export default function DashboardScreen({
                     <input type="text" value={formatTimeDisplay(editForm.time || '')} onChange={e => setEditForm(prev => ({ ...prev, time: e.target.value }))}
                       className="bg-surface-dim border border-outline-variant rounded-lg px-3 py-2 text-[14px] text-on-surface focus:outline-none focus:border-primary" placeholder="08:00 or 08:00 - 17:00" />
                   </div>
-                  {/* Status */}
+                  {/* Status — read-only, workflow transitions via Commands */}
                   <div className="flex flex-col gap-1">
                     <label className="text-[11px] font-medium text-on-surface-variant uppercase">Status</label>
-                    <select value={editForm.status || 'Scheduled'} onChange={e => setEditForm(prev => ({ ...prev, status: e.target.value as Service['status'] }))}
-                      className="bg-surface-dim border border-outline-variant rounded-lg px-3 py-2 text-[14px] text-on-surface focus:outline-none focus:border-primary">
-                      <option value="Scheduled">Scheduled</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="In Transit">In Transit</option>
-                      <option value="Completed">Completed</option>
-                      <option value="Cancelled">Cancelled</option>
-                    </select>
+                    {(() => {
+                      const statusColor = getServiceStatusColor(editingService);
+                      return (
+                        <div className="flex items-center gap-2 bg-surface-dim border border-outline-variant rounded-lg px-3 py-2">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: statusColor.hex }} />
+                          <span className="text-[14px] text-on-surface font-medium">{statusColor.label}</span>
+                          <span className="text-[11px] text-on-surface-variant ml-auto">via workflow commands</span>
+                        </div>
+                      );
+                    })()}
                   </div>
                   {/* Driver */}
                   <div className="flex flex-col gap-1">
@@ -1885,39 +1897,107 @@ export default function DashboardScreen({
 
               {/* === SECTION: Route === */}
               <button onClick={() => toggleSection('route')} className="flex items-center justify-between py-2 text-[13px] font-semibold text-on-surface uppercase tracking-wide">
-                <span className="flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" /> Route</span>
+                <span className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-primary" /> 
+                  Route {editForm.movements && editForm.movements.length > 1 && (
+                    <span className="text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full font-medium">
+                      {editForm.movements.length} routes
+                    </span>
+                  )}
+                </span>
                 {collapsedSections.route ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
               </button>
               {!collapsedSections.route && (
                 <div className="flex flex-col gap-3 pb-3 border-b border-outline-variant/30">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-medium text-on-surface-variant uppercase">From (Pickup)</label>
-                    <input type="text" value={editForm.from || ''} onChange={e => setEditForm(prev => ({ ...prev, from: e.target.value }))}
-                      className="bg-surface-dim border border-outline-variant rounded-lg px-3 py-2 text-[14px] text-on-surface focus:outline-none focus:border-primary" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-medium text-on-surface-variant uppercase">To (Destination)</label>
-                    <div className="flex gap-2">
-                      <input type="text" value={editForm.to || ''} onChange={e => setEditForm(prev => ({ ...prev, to: e.target.value }))}
-                        className="flex-1 bg-surface-dim border border-outline-variant rounded-lg px-3 py-2 text-[14px] text-on-surface focus:outline-none focus:border-primary" />
-                      {editForm.notes?.startsWith('maps:') && (
-                        <a href={editForm.notes.replace('maps:', '')} target="_blank" rel="noopener noreferrer"
-                          className="flex items-center justify-center px-3 py-2 rounded-lg bg-primary/10 text-primary text-[12px] font-medium hover:bg-primary/20 transition-colors shrink-0">
-                          Maps
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-medium text-on-surface-variant uppercase">Route Description</label>
-                    <input type="text" value={editForm.routeDescription || ''} onChange={e => setEditForm(prev => ({ ...prev, routeDescription: e.target.value }))}
-                      className="bg-surface-dim border border-outline-variant rounded-lg px-3 py-2 text-[14px] text-on-surface focus:outline-none focus:border-primary" placeholder="DA HOTEL NH..." />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-medium text-on-surface-variant uppercase">Flight Info</label>
-                    <input type="text" value={editForm.flightInfo || ''} onChange={e => setEditForm(prev => ({ ...prev, flightInfo: e.target.value }))}
-                      className="bg-surface-dim border border-outline-variant rounded-lg px-3 py-2 text-[14px] text-on-surface focus:outline-none focus:border-primary" placeholder="Flight n. BA538" />
-                  </div>
+                  {/* Multi-route: show movements as editable cards */}
+                  {editForm.movements && editForm.movements.length > 1 ? (
+                    editForm.movements.map((m, idx) => (
+                      <div key={idx} className={`flex flex-col gap-2 p-3 rounded-lg border border-outline-variant/40 bg-surface-dim/50 ${idx > 0 ? 'mt-1' : ''}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-primary uppercase tracking-wide">
+                            Route {idx + 1}
+                          </span>
+                          <span className="text-[11px] font-medium text-on-surface-variant">
+                            {formatTimeDisplay(m.time)}
+                          </span>
+                        </div>
+                        {/* Time */}
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-medium text-on-surface-variant uppercase">Time</label>
+                          <input type="text" value={m.time || ''} onChange={e => {
+                            const newMovements = [...editForm.movements!];
+                            newMovements[idx] = { ...newMovements[idx], time: e.target.value };
+                            setEditForm(prev => ({ ...prev, movements: newMovements }));
+                          }}
+                            className="bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-1.5 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="08:00" />
+                        </div>
+                        {/* Passengers */}
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-medium text-on-surface-variant uppercase">Passengers</label>
+                          <input type="text" value={m.passengers?.map(p => p.name).join('; ') || ''} onChange={e => {
+                            const names = e.target.value.split(';').map(n => n.trim()).filter(Boolean);
+                            const newPassengers = names.map(name => ({ name, role: '' }));
+                            const newMovements = [...editForm.movements!];
+                            newMovements[idx] = { ...newMovements[idx], passengers: newPassengers };
+                            setEditForm(prev => ({ ...prev, movements: newMovements }));
+                          }}
+                            className="bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-1.5 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="Name1; Name2" />
+                        </div>
+                        {/* From */}
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-medium text-on-surface-variant uppercase">From (Pickup)</label>
+                          <input type="text" value={m.pickupLines?.[0] || ''} onChange={e => {
+                            const newMovements = [...editForm.movements!];
+                            newMovements[idx] = { ...newMovements[idx], pickupLines: [e.target.value] };
+                            setEditForm(prev => ({ ...prev, movements: newMovements }));
+                          }}
+                            className="bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-1.5 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
+                        </div>
+                        {/* To */}
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-medium text-on-surface-variant uppercase">To (Destination)</label>
+                          <input type="text" value={m.dropoffLines?.[0] || ''} onChange={e => {
+                            const newMovements = [...editForm.movements!];
+                            newMovements[idx] = { ...newMovements[idx], dropoffLines: [e.target.value] };
+                            setEditForm(prev => ({ ...prev, movements: newMovements }));
+                          }}
+                            className="bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-1.5 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    /* Single route: show traditional from/to fields */
+                    <>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[11px] font-medium text-on-surface-variant uppercase">From (Pickup)</label>
+                        <input type="text" value={editForm.from || ''} onChange={e => setEditForm(prev => ({ ...prev, from: e.target.value }))}
+                          className="bg-surface-dim border border-outline-variant rounded-lg px-3 py-2 text-[14px] text-on-surface focus:outline-none focus:border-primary" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[11px] font-medium text-on-surface-variant uppercase">To (Destination)</label>
+                        <div className="flex gap-2">
+                          <input type="text" value={editForm.to || ''} onChange={e => setEditForm(prev => ({ ...prev, to: e.target.value }))}
+                            className="flex-1 bg-surface-dim border border-outline-variant rounded-lg px-3 py-2 text-[14px] text-on-surface focus:outline-none focus:border-primary" />
+                          {editForm.notes?.startsWith('maps:') && (
+                            <a href={editForm.notes.replace('maps:', '')} target="_blank" rel="noopener noreferrer"
+                              className="flex items-center justify-center px-3 py-2 rounded-lg bg-primary/10 text-primary text-[12px] font-medium hover:bg-primary/20 transition-colors shrink-0">
+                              Maps
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[11px] font-medium text-on-surface-variant uppercase">Route Description</label>
+                        <input type="text" value={editForm.routeDescription || ''} onChange={e => setEditForm(prev => ({ ...prev, routeDescription: e.target.value }))}
+                          className="bg-surface-dim border border-outline-variant rounded-lg px-3 py-2 text-[14px] text-on-surface focus:outline-none focus:border-primary" placeholder="DA HOTEL NH..." />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[11px] font-medium text-on-surface-variant uppercase">Flight Info</label>
+                        <input type="text" value={editForm.flightInfo || ''} onChange={e => setEditForm(prev => ({ ...prev, flightInfo: e.target.value }))}
+                          className="bg-surface-dim border border-outline-variant rounded-lg px-3 py-2 text-[14px] text-on-surface focus:outline-none focus:border-primary" placeholder="Flight n. BA538" />
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -2374,7 +2454,7 @@ export default function DashboardScreen({
         </div>
       )}
 
-      {/* Bulk Actions Floating Button */}
+      {/* Bulk Actions Floating Toolbar */}
       <AnimatePresence>
         {selectedServiceIds.size > 0 && (
           <motion.div
@@ -2383,46 +2463,86 @@ export default function DashboardScreen({
             exit={{ opacity: 0, y: 20 }}
             className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40"
           >
-            <div className="flex items-center gap-3 bg-surface-container-lowest border border-outline-variant rounded-full px-4 py-2 shadow-lg">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-2.5 shadow-lg max-w-[90vw] overflow-x-auto">
+              <div className="flex items-center gap-2 shrink-0">
                 <CheckCircle className="w-4 h-4 text-primary" />
-                <span className="text-[13px] font-medium text-on-surface">
+                <span className="text-[13px] font-medium text-on-surface whitespace-nowrap">
                   {selectedServiceIds.size} selected
                 </span>
               </div>
               
-              <div className="w-px h-6 bg-outline-variant" />
+              <div className="w-px h-6 bg-outline-variant shrink-0" />
               
-              <button
-                onClick={clearSelection}
-                className="text-[12px] text-on-surface-variant font-medium hover:underline"
-              >
+              <button onClick={clearSelection}
+                className="text-[11px] text-on-surface-variant font-medium hover:underline shrink-0">
                 Clear
               </button>
               
-              <div className="w-px h-6 bg-outline-variant" />
-              
-              <button
-                onClick={markSelectedAsCompleted}
-                disabled={isBulkCompleting}
-                className="flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded-full text-[12px] font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
-              >
-                {isBulkCompleting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Completing...
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4" />
-                    Mark as Completed
-                  </>
-                )}
-              </button>
+              <div className="w-px h-6 bg-outline-variant shrink-0" />
+
+              {/* Dynamic workflow buttons based on selected services' statuses */}
+              {(() => {
+                const allSvcs = [...services];
+                const selected = Array.from(selectedServiceIds).map(id => allSvcs.find(s => s.id === id)).filter(Boolean) as Service[];
+                
+                const stages = [
+                  { action: 'assign', label: 'Assign Driver', color: 'bg-blue-500 hover:bg-blue-600', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>, count: selected.filter(s => s.operationalStatus === 'Importado' && !s.driverId).length },
+                  { action: 'confirm', label: 'Confirm', color: 'bg-green-500 hover:bg-green-600', icon: <Check className="w-3.5 h-3.5" />, count: selected.filter(s => s.operationalStatus === 'Asignado').length },
+                  { action: 'start', label: 'Start Route', color: 'bg-blue-600 hover:bg-blue-700', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>, count: selected.filter(s => s.operationalStatus === 'Confirmado').length },
+                  { action: 'complete', label: 'Complete', color: 'bg-green-600 hover:bg-green-700', icon: <CheckCircle className="w-3.5 h-3.5" />, count: selected.filter(s => s.operationalStatus === 'EnRuta').length },
+                  { action: 'review', label: 'Review', color: 'bg-amber-500 hover:bg-amber-600', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>, count: selected.filter(s => s.operationalStatus === 'Realizado').length },
+                  { action: 'validate', label: 'Validate', color: 'bg-green-700 hover:bg-green-800', icon: <CheckCircle className="w-3.5 h-3.5" />, count: selected.filter(s => ['Reportado', 'Revision'].includes(s.operationalStatus)).length },
+                ];
+
+                return stages.filter(s => s.count > 0).map(stage => (
+                  <button key={stage.action}
+                    onClick={() => {
+                      if (stage.action === 'assign') { setShowBulkDriverPicker(true); return; }
+                      handleBulkWorkflow(stage.action);
+                    }}
+                    disabled={isBulkCompleting}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-on-primary text-[11px] font-medium rounded-lg transition-colors disabled:opacity-50 shrink-0 ${stage.color}`}>
+                    {stage.icon}
+                    {stage.label}
+                    <span className="bg-white/20 px-1.5 py-0.5 rounded text-[10px]">{stage.count}</span>
+                  </button>
+                ));
+              })()}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Bulk Assign Driver Modal */}
+      {showBulkDriverPicker && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 sm:p-4 p-0" onClick={() => setShowBulkDriverPicker(false)}>
+          <div className="bg-surface-container-lowest rounded-t-2xl sm:rounded-2xl shadow-xl border border-outline-variant w-full max-w-md flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="px-5 pt-5 pb-3">
+              <h3 className="text-[16px] font-semibold text-on-surface">Assign Driver to {selectedServiceIds.size} Service(s)</h3>
+              <p className="text-[12px] text-on-surface-variant mt-1">Select a driver to assign to all selected services</p>
+            </div>
+            <div className="px-5 pb-4">
+              <select value={bulkAssignDriverId} onChange={e => setBulkAssignDriverId(e.target.value)}
+                className="w-full bg-surface-dim border border-outline-variant rounded-lg px-3 py-2.5 text-[14px] text-on-surface focus:outline-none focus:border-primary">
+                <option value="">— Select Driver —</option>
+                {dbDrivers.map(d => (
+                  <option key={d.id} value={d.id}>{d.name}{d.phone ? ` (${d.phone})` : ''}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2 px-5 py-4 border-t border-outline-variant">
+              <button onClick={() => setShowBulkDriverPicker(false)}
+                className="flex-1 px-4 py-2.5 rounded-lg text-[13px] font-medium text-on-surface-variant hover:bg-surface-dim transition-colors">
+                Cancel
+              </button>
+              <button onClick={handleBulkAssignDriver} disabled={!bulkAssignDriverId || isBulkCompleting}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-on-primary text-[13px] font-medium hover:bg-primary-hover transition-colors disabled:opacity-50">
+                {isBulkCompleting ? 'Assigning...' : 'Assign Driver'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

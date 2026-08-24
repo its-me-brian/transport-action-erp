@@ -633,6 +633,10 @@ function _handleRoute(params, data) {
         _checkPermission(data, 'service.import');
         result = apiCreateService(data);
         break;
+      case 'migrateImportedServicesWithDriver':
+        _checkPermission(data, 'service.import');
+        result = migrateImportedServicesWithDriver();
+        break;
       case 'assignDriver':
         _checkPermission(data, 'service.assign');
         result = apiAssignDriver(data.serviceId, data.driverId, data.vehicleId);
