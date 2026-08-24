@@ -808,9 +808,13 @@ function _handleRoute(params, data) {
         _checkPermission(data, 'driverReport.approve');
         result = apiApproveDriverReport(data.reportId);
         break;
-case 'rejectDriverReport':
+      case 'rejectDriverReport':
         _checkPermission(data, 'driverReport.reject');
         result = apiRejectDriverReport(data.reportId, data.reason);
+        break;
+      case 'linkReportToService':
+        _checkPermission(data, 'driverReport.approve');
+        result = apiLinkReportToService(data.reportId, data.serviceId);
         break;
 
       // =====================================================================

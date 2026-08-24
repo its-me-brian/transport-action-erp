@@ -316,4 +316,19 @@ function apiRejectDriverReport(reportId, reason) {
   return DriverReportCommands.rejectReport(reportId, reason);
 }
 
+/**
+ * Link an orphaned DriverReport to a service.
+ * Used when a report was created without a serviceId (e.g., old WhatsApp captures).
+ */
+function apiLinkReportToService(reportId, serviceId) {
+  return _withLock(() => {
+    var report = DriverReportRepository.getById(reportId);
+    if (!report) return { success: false, error: 'Report not found' };
+    var service = ServiceRepository.getById(serviceId);
+    if (!service) return { success: false, error: 'Service not found' };
+    DriverReportRepository.update(reportId, { ServiceID: serviceId });
+    return { success: true, reportId: reportId, serviceId: serviceId };
+  });
+}
+
 // NOTE: apiGetDriverReports is defined in driverReport.gs (canonical definition)

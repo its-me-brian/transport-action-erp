@@ -2343,6 +2343,10 @@ export async function rejectDriverReport(reportId: string, reason: string): Prom
   return gasPostWithRetry('apiRejectDriverReport', { reportId, reason });
 }
 
+export async function linkReportToService(reportId: string, serviceId: string): Promise<{ success?: boolean; error?: string }> {
+  return gasPostWithRetry('linkReportToService', { reportId, serviceId });
+}
+
 // ============================================================================
 // AUDIT LOG
 // ============================================================================

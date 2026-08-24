@@ -177,6 +177,14 @@ function acceptReport(inboxId, reviewedBy) {
       } else {
         // Service already in Reportado/Revision: link report without changing service status
         created = DriverReportCommands.createReportForReportedService(serviceId, item.DriverID, reportData);
+        // Auto-approve the report so service can be validated
+        if (created && created.ID) {
+          try {
+            DriverReportCommands.approveReport(created.ID);
+          } catch (approveErr) {
+            Logger.log('[acceptReport] Auto-approve failed for report ' + created.ID + ': ' + approveErr.message);
+          }
+        }
       }
       var reportId = created ? created.ID : null;
 
