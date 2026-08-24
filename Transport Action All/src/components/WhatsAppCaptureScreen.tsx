@@ -3,7 +3,7 @@ import { MessageSquare, Send, Check, AlertTriangle, Loader2, User, Edit3 } from 
 import { useToast } from '../contexts/ToastContext';
 import {
   parseWhatsApp, captureWhatsAppReports,
-  WhatsAppParsedReport, getProjects, getDrivers
+  WhatsAppParsedReport, getProjects, getDrivers, getServices
 } from '../services/api';
 
 interface Props {
@@ -23,6 +23,9 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
   const [reports, setReports] = useState<WhatsAppParsedReport[]>([]);
   const [availableDrivers, setAvailableDrivers] = useState<{ id: string; name: string }[]>([]);
   const [selectedProject, setSelectedProject] = useState('');
+  // Services per report (keyed by index)
+  const [reportServices, setReportServices] = useState<Record<number, any[]>>({});
+  const [loadingServices, setLoadingServices] = useState<Record<number, boolean>>({});
 
   // Projects list
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
@@ -65,6 +68,12 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
         if (result.drivers) setAvailableDrivers(result.drivers);
         setStep('review');
         showToast(`${result.reportCount} report(s) parsed successfully`, 'success');
+        // Search services for auto-matched drivers
+        result.reports.forEach((r: WhatsAppParsedReport, idx: number) => {
+          if (r.matchedDriverId) {
+            searchServices(idx, r.matchedDriverId);
+          }
+        });
       } else {
         showToast(result.error || 'Could not parse any reports', 'error');
       }
@@ -79,12 +88,45 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
   // Step 2: Update a single report field
   const updateReport = (index: number, field: keyof WhatsAppParsedReport, value: any) => {
     setReports(prev => prev.map((r, i) => i === index ? { ...r, [field]: value } : r));
+    // When driver changes, search for their services
+    if (field === 'matchedDriverId' && value) {
+      searchServices(index, value);
+    }
+  };
+
+  // Search services for a driver
+  const searchServices = async (reportIndex: number, driverId: string) => {
+    setLoadingServices(prev => ({ ...prev, [reportIndex]: true }));
+    try {
+      const services = await getServices({ driverId });
+      const REPORTABLE = ['Importado', 'Asignado', 'Confirmado', 'EnRuta', 'Realizado', 'Reportado', 'Revision'];
+      const filtered = (services || []).filter((s: any) => {
+        const st = s.operationalStatus || s.status || '';
+        return REPORTABLE.includes(st);
+      });
+      setReportServices(prev => ({ ...prev, [reportIndex]: filtered }));
+    } catch (err) {
+      console.error('Failed to search services:', err);
+    } finally {
+      setLoadingServices(prev => ({ ...prev, [reportIndex]: false }));
+    }
   };
 
   // Step 3: Capture all reports into inbox
   const handleCapture = async () => {
     if (!selectedProject) {
       showToast('Select a project first', 'error');
+      return;
+    }
+    // Validate all reports have a driver and service selected
+    const missingDriver = reports.find(r => !r.matchedDriverId);
+    if (missingDriver) {
+      showToast(`Missing driver for "${missingDriver.driverName || 'unknown'}" — select from dropdown`, 'error');
+      return;
+    }
+    const missingService = reports.find(r => !(r as any).selectedServiceId);
+    if (missingService) {
+      showToast(`Missing service for "${missingService.driverName || 'unknown'}" — select the service this report belongs to`, 'error');
       return;
     }
     setIsCapturing(true);
@@ -250,6 +292,34 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
                             <option key={d.id} value={d.id}>{d.name}</option>
                           ))}
                         </select>
+                      </div>
+                      {/* Service select */}
+                      <div>
+                        <label className="block text-[11px] text-on-surface-variant mb-1">
+                          Service {loadingServices[idx] && <span className="text-primary">(searching...)</span>}
+                        </label>
+                        {(reportServices[idx] || []).length > 0 ? (
+                          <select
+                            value={(report as any).selectedServiceId || ''}
+                            onChange={e => updateReport(idx, 'selectedServiceId' as any, e.target.value)}
+                            className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm"
+                          >
+                            <option value="">— Select service —</option>
+                            {(reportServices[idx] || []).map((s: any) => {
+                              const dateLabel = s.date ? new Date(s.date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '?';
+                              const st = s.operationalStatus || s.status || '';
+                              return (
+                                <option key={s.id} value={s.id}>
+                                  {dateLabel} | {s.time || '—'} | {st} | {s.production || ''}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        ) : (
+                          <div className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm text-on-surface-variant bg-surface-container">
+                            {report.matchedDriverId ? 'No services found' : 'Select driver first'}
+                          </div>
+                        )}
                       </div>
                       {/* Date */}
                       <div>

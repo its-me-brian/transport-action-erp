@@ -428,18 +428,45 @@ function parseWhatsAppForCapture(text) {
       r.matchedDriverId = '';
       r.serviceCandidates = [];
       if (r.driverName && drivers.length > 0) {
-        var lowerName = r.driverName.toLowerCase().trim();
+        var lowerName = r.driverName.toLowerCase().trim().replace(/\s+/g, ' ');
+        
+        // Helper: normalize name for comparison
+        var normalize = function(s) {
+          return (s || '').toLowerCase().trim().replace(/\s+/g, ' ');
+        };
+        
+        // Helper: check if two names match (handles order, partial, initials)
+        var namesMatch = function(a, b) {
+          var na = normalize(a);
+          var nb = normalize(b);
+          if (!na || !nb) return false;
+          // Exact
+          if (na === nb) return true;
+          // One contains the other
+          if (na.indexOf(nb) !== -1 || nb.indexOf(na) !== -1) return true;
+          // Same parts in different order (surname/first name swap)
+          var partsA = na.split(' ').filter(function(w) { return w.length > 1; });
+          var partsB = nb.split(' ').filter(function(w) { return w.length > 1; });
+          if (partsA.length >= 2 && partsB.length >= 2) {
+            var allPartsBExistInA = partsB.every(function(p) { return na.indexOf(p) !== -1; });
+            var allPartsAExistInB = partsA.every(function(p) { return nb.indexOf(p) !== -1; });
+            if (allPartsBExistInA && allPartsAExistInB) return true;
+          }
+          return false;
+        };
+        
+        // Pass 1: exact match
         var match = drivers.find(function(d) {
-          return (d.name || '').toLowerCase().trim() === lowerName ||
-                 (d.id || '').toLowerCase().trim() === lowerName;
+          return namesMatch(d.name, lowerName) || normalize(d.id) === normalize(lowerName);
         });
-        // Fuzzy: check if driver name contains the parsed name
+        
+        // Pass 2: check driver ID directly
         if (!match) {
           match = drivers.find(function(d) {
-            var dn = (d.name || '').toLowerCase();
-            return dn.indexOf(lowerName) !== -1 || lowerName.indexOf(dn) !== -1;
+            return normalize(d.id) === normalize(lowerName);
           });
         }
+        
         if (match) r.matchedDriverId = match.id;
 
         // Search for matching services by driver
