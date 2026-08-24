@@ -260,9 +260,7 @@ const ServiceCommands = {
       if (!service.DriverID) {
         throw new BusinessRuleError('Service must have a Driver assigned', 'S006');
       }
-      if (!service.VehicleID) {
-        throw new BusinessRuleError('Service must have a Vehicle assigned', 'S006');
-      }
+      // §37: VehicleID is NOT required — services can be created without one
 
       // Validar breakdowns
       const revenueItems = ServiceRevenueBreakdownRepository.getUnlockedByService(serviceId);

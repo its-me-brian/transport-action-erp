@@ -360,12 +360,28 @@ function _serveDriverForm(token) {
       '</div>' +
       '<div class="svc-fields" id="svc-fields-' + index + '" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #e5e7eb">' +
       '<div class="svc-fields-grid">' +
-      '<div class="fg"><label>Ora Inizio *</label><input type="time" id="f-orarioInizio-' + index + '"' + disabledAttr + ' required></div>' +
-      '<div class="fg"><label>Ora Fine *</label><input type="time" id="f-orarioFine-' + index + '"' + disabledAttr + ' required></div>' +
-      '<div class="fg"><label>KM Totali *</label><input type="number" id="f-kmTotali-' + index + '" min="0"' + disabledAttr + ' required></div>' +
-      '<div class="fg"><label>Targa</label><input type="text" id="f-targa-' + index + '" placeholder="es. AB 123 CD"' + disabledAttr + '></div>' +
-      '<div class="fg"><label>Diaria</label><select id="f-diaria-' + index + '"' + disabledAttr + '><option value="nessuna">Nessuna</option><option value="piena">Piena</option><option value="mezza">Mezza</option></select></div>' +
-      '<div class="fg svc-notes"><label>Note</label><textarea id="f-note-' + index + '" placeholder="Note aggiuntive..."' + disabledAttr + '></textarea></div>' +
+      fieldsSchema.map(function(field) {
+        var reqAttr = field.required ? ' required' : '';
+        var disabledAttr2 = isSubmitted ? ' disabled' : '';
+        if (field.type === 'time') {
+          return '<div class="fg"><label>' + _escapeHtml(field.label) + (field.required ? ' *' : '') + '</label><input type="time" id="f-' + field.key + '-' + index + '"' + reqAttr + disabledAttr2 + '></div>';
+        } else if (field.type === 'number') {
+          var minAttr = field.min !== undefined ? ' min="' + field.min + '"' : '';
+          return '<div class="fg"><label>' + _escapeHtml(field.label) + (field.required ? ' *' : '') + '</label><input type="number" id="f-' + field.key + '-' + index + '"' + minAttr + reqAttr + disabledAttr2 + '></div>';
+        } else if (field.type === 'select' && field.options) {
+          var opts = field.options.map(function(opt) {
+            var val = typeof opt === 'object' ? opt.value : opt;
+            var lbl = typeof opt === 'object' ? opt.label : opt;
+            var sel = (val === field.defaultVal) ? ' selected' : '';
+            return '<option value="' + _escapeHtml(val) + '"' + sel + '>' + _escapeHtml(lbl) + '</option>';
+          }).join('');
+          return '<div class="fg"><label>' + _escapeHtml(field.label) + '</label><select id="f-' + field.key + '-' + index + '"' + disabledAttr2 + '>' + opts + '</select></div>';
+        } else if (field.type === 'textarea') {
+          return '<div class="fg svc-notes"><label>' + _escapeHtml(field.label) + '</label><textarea id="f-' + field.key + '-' + index + '" placeholder="' + _escapeHtml(field.label || '') + '..."' + disabledAttr2 + '></textarea></div>';
+        } else {
+          return '<div class="fg"><label>' + _escapeHtml(field.label) + '</label><input type="text" id="f-' + field.key + '-' + index + '"' + reqAttr + disabledAttr2 + '></div>';
+        }
+      }).join('') +
       '</div></div>' +
       '<div class="sec-svc-btn">' +
       (isSubmitted
@@ -479,6 +495,7 @@ function _serveDriverForm(token) {
     '<script>' +
     'var TOKEN="' + token + '";' +
     'var SERVICES=' + JSON.stringify(services) + ';' +
+    'var FIELDS_SCHEMA=' + JSON.stringify(fieldsSchema) + ';' +
     'function toggleServiceFields(idx){' +
     '  var box=document.getElementById("svc-fields-"+idx);' +
     '  if(!box)return;' +
@@ -493,18 +510,36 @@ function _serveDriverForm(token) {
     '  var svc=SERVICES[idx];' +
     '  var d={serviceId:svc?svc.ID:"",dataServizio:svc?svc.Date||"":""};' +
     '  var prefix="f-";' +
-    '  ["orarioInizio","orarioFine","kmTotali","targa","diaria","note"].forEach(function(k){' +
-    '    var el=document.getElementById(prefix+k+"-"+idx);' +
+    '  FIELDS_SCHEMA.forEach(function(field){' +
+    '    var el=document.getElementById(prefix+field.key+"-"+idx);' +
     '    if(!el)return;' +
-    '    d[k]=el.type==="number"?parseFloat(el.value)||0:el.value;' +
+    '    d[field.key]=el.type==="number"?parseFloat(el.value)||0:el.value;' +
     '  });' +
     '  var btn=document.querySelector("#svc-"+idx+" .btn-svc");' +
     '  if(btn){btn.disabled=true;btn.textContent="Invio...";}' +
-    '  submitData([d], btn, "Invia Rapportino");' +
+    '  submitData([d], btn, "Invia Rapportino", idx);' +
     '}' +
-    'function submitData(data, btn, resetText){' +
+    'function submitData(data, btn, resetText, idx){' +
     '  google.script.run' +
-    '    .withSuccessHandler(function(){document.getElementById("driverForm").style.display="none";document.getElementById("successMsg").style.display="block"})' +
+    '    .withSuccessHandler(function(){' +
+    '      if(idx!==undefined){' +
+    '        var card=document.getElementById("svc-"+idx);' +
+    '        if(card){' +
+    '          card.classList.add("svc-submitted");' +
+    '          var fields=document.getElementById("svc-fields-"+idx);' +
+    '          if(fields)fields.style.display="none";' +
+    '          var apriBtn=document.getElementById("btn-apri-"+idx);' +
+    '          if(apriBtn){apriBtn.disabled=true;apriBtn.textContent="Inviato";apriBtn.classList.remove("open");}' +
+    '          var submitBtn=card.querySelector(".btn-svc");' +
+    '          if(submitBtn){submitBtn.disabled=true;submitBtn.textContent="Rapportino già inviato";submitBtn.classList.remove("btn-svc");submitBtn.classList.add("svc-submitted-label");}' +
+    '          card.querySelectorAll("input:not([type=hidden]),select,textarea").forEach(function(el){el.disabled=true;});' +
+    '        }' +
+    '        showToast("Rapportino inviato!","success");' +
+    '      }else{' +
+    '        document.getElementById("driverForm").style.display="none";' +
+    '        document.getElementById("successMsg").style.display="block"' +
+    '      }' +
+    '    })' +
     '    .withFailureHandler(function(e){showToast("Errore: "+e.message,"error");if(btn){btn.disabled=false;btn.textContent=resetText;}})' +
     '    .submitDriverLinkResponse(TOKEN,data);' +
     '}' +
@@ -552,6 +587,19 @@ function submitDriverLinkResponse(token, services) {
       var sh = getSheet(SHEETS.DriverLinkResponses);
 
       services.forEach(function(svc) {
+        // §14: Idempotency — skip if same token + serviceId already submitted
+        if (svc.serviceId) {
+          var allResponses = _getAll(SHEETS.DriverLinkResponses);
+          var duplicate = allResponses.find(function(r) {
+            return r.Token === token && r.ServiceID === svc.serviceId;
+          });
+          if (duplicate) {
+            Logger.log('[submitDriverLinkResponse] Duplicate skipped: token=' + token + ' serviceId=' + svc.serviceId);
+            results.push({ serviceId: svc.serviceId, status: 'duplicate' });
+            return; // skip — forEach continues
+          }
+        }
+
         var responseId = _generateId('DLR', 'TA');
         sh.appendRow([
           responseId,                              // ID
@@ -575,27 +623,9 @@ function submitDriverLinkResponse(token, services) {
 
         if (svc.serviceId) {
           try {
+            // §12: Auto-advance lifecycle STOPPED — driver's submission ≠ service completion
+            // Coordinator must manually advance the service lifecycle via Dashboard
             var service = ServiceRepository.getById(svc.serviceId);
-            if (service && service.OperationalStatus !== 'Validado') {
-              // Route through ServiceCommands to respect state machine
-              var status = service.OperationalStatus;
-              if (status === 'EnRuta') {
-                ServiceCommands.completeService(svc.serviceId);
-              } else if (status === 'Confirmado') {
-                ServiceCommands.startService(svc.serviceId);
-                ServiceCommands.completeService(svc.serviceId);
-              } else if (status === 'Asignado') {
-                ServiceCommands.confirmService(svc.serviceId);
-                ServiceCommands.startService(svc.serviceId);
-                ServiceCommands.completeService(svc.serviceId);
-              } else if (status === 'Importado') {
-                // Driver is submitting — assign them and complete the chain
-                ServiceCommands.assignDriver(svc.serviceId, linkData.DriverID, '');
-                ServiceCommands.confirmService(svc.serviceId);
-                ServiceCommands.startService(svc.serviceId);
-                ServiceCommands.completeService(svc.serviceId);
-              }
-            }
 
             // Use service's real data when available (service is the source of truth)
             var effectiveDriverId = (service && service.DriverID) || linkData.DriverID;

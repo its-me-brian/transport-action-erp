@@ -155,25 +155,8 @@ function acceptReport(inboxId, reviewedBy) {
       var service = ServiceRepository.getById(serviceId);
       var serviceStatus = service ? service.OperationalStatus : '';
 
-      // Auto-advance service through workflow if needed
-      // Driver sent WhatsApp = service completed. Advance: Asignado→Confirmado→EnRuta→Realizado
-      if (service && ['Asignado', 'Confirmado', 'EnRuta'].indexOf(serviceStatus) !== -1) {
-        try {
-          if (serviceStatus === 'Asignado') {
-            ServiceCommands.confirmService(serviceId);
-            ServiceCommands.startService(serviceId);
-            ServiceCommands.completeService(serviceId);
-          } else if (serviceStatus === 'Confirmado') {
-            ServiceCommands.startService(serviceId);
-            ServiceCommands.completeService(serviceId);
-          } else if (serviceStatus === 'EnRuta') {
-            ServiceCommands.completeService(serviceId);
-          }
-          serviceStatus = 'Realizado';
-        } catch (advanceErr) {
-          Logger.log('[acceptReport] Auto-advance failed: ' + advanceErr.message);
-        }
-      }
+      // §12: Auto-advance lifecycle STOPPED — driver's report ≠ service completion
+      // Coordinator must manually advance the service lifecycle via Dashboard
 
       var reportData = {
         startTime: dataSource.startTime || '',
@@ -201,26 +184,11 @@ function acceptReport(inboxId, reviewedBy) {
       }
       var reportId = created ? created.ID : null;
 
-      // Auto-approve report + move service to Revision
-      // Both WhatsApp and Driver Link end here: report linked → Revision for coordinator review
+      // §33: Approval is a SEPARATE step — acceptReport only creates DriverReport in Pendiente
+      // Coordinator must manually approve via approveDriverReport()
+      // Coordinator must manually advance service to Revision via Dashboard
       if (reportId) {
-        try {
-          var currentService = ServiceRepository.getById(serviceId);
-          var currentStatus = currentService ? currentService.OperationalStatus : '';
-          Logger.log('[acceptReport] Service ' + serviceId + ' status: ' + currentStatus + ', report status: ' + (created ? created.Status : 'unknown'));
-          // Approve report if still Pendiente
-          if (created && created.Status === 'Pendiente') {
-            var approveResult = DriverReportCommands.approveReport(reportId);
-            Logger.log('[acceptReport] approveReport result: ' + JSON.stringify(approveResult ? { success: true } : { success: false }));
-          }
-          // Move to Revision if in Reportado
-          if (currentStatus === 'Reportado') {
-            ServiceCommands.moveToRevision(serviceId);
-            Logger.log('[acceptReport] Moved service ' + serviceId + ' to Revision');
-          }
-        } catch (finalErr) {
-          Logger.log('[acceptReport] Auto-approve/moveToRevision FAILED: ' + finalErr.message);
-        }
+        Logger.log('[acceptReport] Created report ' + reportId + ' in Pendiente status for service ' + serviceId);
       }
 
       _update(SHEETS.DriverReportInbox, inboxId, {

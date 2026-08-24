@@ -92,11 +92,11 @@ const DriverReportCommands = {
     return _withLock(() => {
       const service = ServiceRepository.getById(serviceId);
       if (!service) throw new NotFoundError('Service', serviceId);
-      // Allow services in Realizado, Reportado, or Revision
-      const ALLOWED = ['Realizado', 'Reportado', 'Revision'];
+      // §33: Only allow Reportado or Revision — Realizado should use createReport()
+      const ALLOWED = ['Reportado', 'Revision'];
       if (!ALLOWED.includes(service.OperationalStatus)) {
         throw new BusinessRuleError(
-          `Service must be in Realizado/Reportado/Revision state. Current: ${service.OperationalStatus}`,
+          `Service must be in Reportado/Revision state. Current: ${service.OperationalStatus}`,
           'DR001'
         );
       }

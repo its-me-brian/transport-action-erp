@@ -436,45 +436,57 @@ function parseWhatsAppForCapture(text) {
         };
         
         // Helper: check if two names match (handles order, partial, initials)
+        // Returns confidence score: 1.0 = exact, 0.8 = parts match, 0.6 = partial
         var namesMatch = function(a, b) {
           var na = normalize(a);
           var nb = normalize(b);
-          if (!na || !nb) return false;
+          if (!na || !nb) return { match: false, confidence: 0 };
           // Exact
-          if (na === nb) return true;
+          if (na === nb) return { match: true, confidence: 1.0 };
           // One contains the other
-          if (na.indexOf(nb) !== -1 || nb.indexOf(na) !== -1) return true;
+          if (na.indexOf(nb) !== -1 || nb.indexOf(na) !== -1) return { match: true, confidence: 0.9 };
           // Same parts in different order (surname/first name swap)
           var partsA = na.split(' ').filter(function(w) { return w.length > 1; });
           var partsB = nb.split(' ').filter(function(w) { return w.length > 1; });
           if (partsA.length >= 2 && partsB.length >= 2) {
             var allPartsBExistInA = partsB.every(function(p) { return na.indexOf(p) !== -1; });
             var allPartsAExistInB = partsA.every(function(p) { return nb.indexOf(p) !== -1; });
-            if (allPartsBExistInA && allPartsAExistInB) return true;
+            if (allPartsBExistInA && allPartsAExistInB) return { match: true, confidence: 0.8 };
           }
-          return false;
+          // Partial: first word matches
+          if (partsA.length > 0 && partsB.length > 0 && partsA[0] === partsB[0]) {
+            return { match: true, confidence: 0.6 };
+          }
+          return { match: false, confidence: 0 };
         };
         
         // Pass 1: exact match
-        var match = drivers.find(function(d) {
-          return namesMatch(d.name, lowerName) || normalize(d.id) === normalize(lowerName);
+        var bestMatch = null;
+        var bestConfidence = 0;
+        drivers.forEach(function(d) {
+          var nameCheck = namesMatch(d.name, lowerName);
+          if (nameCheck.match && nameCheck.confidence > bestConfidence) {
+            bestMatch = d;
+            bestConfidence = nameCheck.confidence;
+          }
+          // Also check ID
+          if (normalize(d.id) === normalize(lowerName) && bestConfidence < 1.0) {
+            bestMatch = d;
+            bestConfidence = 1.0;
+          }
         });
         
-        // Pass 2: check driver ID directly
-        if (!match) {
-          match = drivers.find(function(d) {
-            return normalize(d.id) === normalize(lowerName);
-          });
+        if (bestMatch) {
+          r.matchedDriverId = bestMatch.id;
+          r.matchConfidence = bestConfidence;
         }
-        
-        if (match) r.matchedDriverId = match.id;
 
         // Search for matching services by driver
-        if (match) {
+        if (bestMatch) {
           try {
             var allServices = ServiceRepository.getAll();
             var driverServices = allServices.filter(function(s) {
-              return s.DriverID === match.id;
+              return s.DriverID === bestMatch.id;
             });
             // Filter by date if available
             if (r.dateParsed) {
@@ -490,6 +502,19 @@ function parseWhatsAppForCapture(text) {
             r.serviceCandidates = driverServices
               .filter(function(s) { return REPORTABLE.indexOf(s.OperationalStatus) !== -1; })
               .map(function(s) {
+                // §21: Calculate service match confidence
+                var serviceConfidence = 0.5; // base confidence
+                // Time overlap bonus
+                if (r.startTime && s.Time) {
+                  var timeDiff = Math.abs(parseInt(r.startTime.replace(':', '')) - parseInt(s.Time.replace(':', '')));
+                  if (timeDiff <= 30) serviceConfidence += 0.3;
+                  else if (timeDiff <= 60) serviceConfidence += 0.15;
+                }
+                // Production/section match bonus
+                if (r.production && s.Production && r.production === s.Production) serviceConfidence += 0.1;
+                if (r.section && s.Section && r.section === s.Section) serviceConfidence += 0.1;
+                serviceConfidence = Math.min(serviceConfidence, 1.0);
+
                 return {
                   id: s.ID,
                   time: s.Time || '',
@@ -497,9 +522,12 @@ function parseWhatsAppForCapture(text) {
                   section: s.Section || '',
                   passengerName: s.PassengerName || '',
                   status: s.OperationalStatus || '',
-                  route: s.Route || ''
+                  route: s.Route || '',
+                  confidence: Math.round(serviceConfidence * 100) / 100
                 };
               });
+            // Sort by confidence descending
+            r.serviceCandidates.sort(function(a, b) { return b.confidence - a.confidence; });
           } catch (e) {}
         }
       }

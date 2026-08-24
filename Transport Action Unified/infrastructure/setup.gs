@@ -276,8 +276,9 @@ function _setupDriverLinkEvents(ss) {
 }
 
 function _setupDriverReportInbox(ss) {
+  // Aligned with migration 001: includes ServiceID column
   _safeInsertSheet(ss, 'DriverReportInbox', '#BF360C',
-    ['ID', 'Source', 'Channel', 'DriverID', 'ProjectID', 'ServiceDate', 'RawData', 'NormalizedData', 'Status', 'CorrelationID', 'ReviewedBy', 'ReviewedAt', 'RejectionReason', 'CreatedAt', 'UpdatedAt']);
+    ['ID', 'Source', 'Channel', 'DriverID', 'DriverName', 'ServiceDate', 'StartTime', 'EndTime', 'KmTotal', 'KmExtra', 'HoursExtra', 'Diaria', 'IsFestivo', 'IsNotturno', 'Parking', 'Tolls', 'Fuel', 'Notes', 'Status', 'NormalizedData', 'ServiceID', 'CorrelationID', 'ReviewedBy', 'ReviewedAt', 'RejectionReason', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupPresence(ss) {
