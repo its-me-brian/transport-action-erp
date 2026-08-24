@@ -218,8 +218,13 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
       setIsSearchingServices(true);
       try {
         const services = await getServices({ driverId: item.DriverID });
-        // Show all services for this driver, sorted by date (newest first)
+        // Only show services that can accept a report: Importado, Asignado, Confirmado, EnRuta, Realizado
+        const REPORTABLE = ['Importado', 'Asignado', 'Confirmado', 'EnRuta', 'Realizado'];
         const matched = (services || [])
+          .filter((s: any) => {
+            const st = s.operationalStatus || s.status || '';
+            return REPORTABLE.includes(st);
+          })
           .sort((a: any, b: any) => {
             const da = new Date(a.date || 0).getTime();
             const db = new Date(b.date || 0).getTime();
@@ -625,9 +630,10 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
                       <option value="">— Select a service —</option>
                       {matchingServices.map((s: any) => {
                         const dateLabel = s.date ? new Date(s.date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '?';
+                        const st = s.operationalStatus || s.status || '';
                         return (
                           <option key={s.id} value={s.id}>
-                            {dateLabel} | {s.time || '—'} | {s.production || 'No production'} | {s.passengerName || 'No passenger'} | {s.status}
+                            {dateLabel} | {s.time || '—'} | {st} | {s.production || 'No production'} | {s.passengerName || 'No passenger'}
                           </option>
                         );
                       })}
