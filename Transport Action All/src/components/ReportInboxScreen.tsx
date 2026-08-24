@@ -268,7 +268,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
     }
   };
 
-  // Quick Approve: CAPTURED → NORMALIZED → PENDING_REVIEW → ACCEPTED (one click)
+  // §28: Quick Approve → Normalize + Send to Review (no auto-accept)
   const handleQuickApprove = async (inboxId: string) => {
     // Validate service selection for WhatsApp captures
     if (selectedItem?.Source === 'whatsapp' && !serviceRef && !normForm.serviceId) {
@@ -279,9 +279,8 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
     try {
       await normalizeReport(inboxId, normForm);
       await submitToReview(inboxId);
-      await acceptReport(inboxId);
       setSelectedItem(null);
-      showToast('Reporte aprobado y creado exitosamente', 'success');
+      showToast('Reporte normalizado y enviado a revisión', 'success');
       loadItems();
     } catch (err) {
       console.error('Quick approve failed:', err);
@@ -739,14 +738,14 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
             <div className="px-4 sm:px-6 py-4 border-t border-outline-variant flex flex-col sm:flex-row gap-3 shrink-0">
               {can('inbox.normalize') && (
                 <>
-                  {/* Quick Approve — one click */}
+                  {/* §28: Normalize + Send to Review — one click (no auto-accept) */}
                   <button
                     onClick={() => handleQuickApprove(selectedItem.ID)}
                     disabled={isSaving}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 font-semibold"
                   >
-                    <Zap className="w-4 h-4" />
-                    {isSaving ? 'Processing...' : 'Quick Approve'}
+                    <Send className="w-4 h-4" />
+                    {isSaving ? 'Processing...' : 'Normalize & Send'}
                   </button>
                   {/* Step-by-step normalize */}
                   <button
