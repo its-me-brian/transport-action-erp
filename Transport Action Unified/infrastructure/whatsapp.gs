@@ -473,10 +473,6 @@ function parseWhatsAppForCapture(text) {
                   route: s.Route || ''
                 };
               });
-            // Auto-select if exactly 1 candidate
-            if (r.serviceCandidates.length === 1) {
-              r.selectedServiceId = r.serviceCandidates[0].id;
-            }
           } catch (e) {}
         }
       }

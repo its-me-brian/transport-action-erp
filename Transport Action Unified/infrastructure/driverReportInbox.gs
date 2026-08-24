@@ -198,16 +198,27 @@ function acceptReport(inboxId, reviewedBy) {
       } else {
         // Service already in Reportado/Revision: link report without changing service status
         created = DriverReportCommands.createReportForReportedService(serviceId, item.DriverID, reportData);
-        // Auto-approve the report so service can be validated
-        if (created && created.ID) {
-          try {
-            DriverReportCommands.approveReport(created.ID);
-          } catch (approveErr) {
-            Logger.log('[acceptReport] Auto-approve failed for report ' + created.ID + ': ' + approveErr.message);
-          }
-        }
       }
       var reportId = created ? created.ID : null;
+
+      // Auto-approve report + move service to Revision
+      // Both WhatsApp and Driver Link end here: report linked → Revision for coordinator review
+      if (reportId) {
+        try {
+          var currentService = ServiceRepository.getById(serviceId);
+          var currentStatus = currentService ? currentService.OperationalStatus : '';
+          // Approve report if still Pendiente
+          if (created.Status === 'Pendiente') {
+            DriverReportCommands.approveReport(reportId);
+          }
+          // Move to Revision if in Reportado
+          if (currentStatus === 'Reportado') {
+            ServiceCommands.moveToRevision(serviceId);
+          }
+        } catch (finalErr) {
+          Logger.log('[acceptReport] Auto-approve/moveToRevision failed: ' + finalErr.message);
+        }
+      }
 
       _update(SHEETS.DriverReportInbox, inboxId, {
         Status: 'ACCEPTED',
