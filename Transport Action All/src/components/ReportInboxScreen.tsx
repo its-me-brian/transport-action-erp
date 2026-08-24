@@ -47,16 +47,18 @@ const DEFAULT_NORMALIZED: NormalizedFields = {
   notes: '',
 };
 
-// Service reference data (from transport list)
+// Service reference data (from transport list — matches backend DTO camelCase)
 interface ServiceRef {
-  Time: string;
-  Production: string;
-  Section: string;
-  PassengerName: string;
-  PassengerRole: string;
-  VehicleID: string;
-  OperationalStatus: string;
-  DriverID: string;
+  id: string;
+  time: string;
+  production: string;
+  section: string;
+  passengerName: string;
+  passengerRole: string;
+  vehicleId: string;
+  operationalStatus: string;
+  driverId: string;
+  date: string;
 }
 
 interface ReportInboxScreenProps {
@@ -576,38 +578,38 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
                     Transport List Reference
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    {serviceRef?.Time && (
+                    {serviceRef?.time && (
                       <div>
                         <span className="text-blue-600">Time:</span>{' '}
-                        <strong className="font-mono">{serviceRef.Time}</strong>
+                        <strong className="font-mono">{serviceRef.time}</strong>
                       </div>
                     )}
                     <div>
                       <span className="text-blue-600">Production:</span>{' '}
-                      {serviceRef?.Production || getRawData(selectedItem).production || '—'}
+                      {serviceRef?.production || getRawData(selectedItem).production || '—'}
                     </div>
-                    {(serviceRef?.Section || getRawData(selectedItem).section) && (
+                    {(serviceRef?.section || getRawData(selectedItem).section) && (
                       <div>
                         <span className="text-blue-600">Section:</span>{' '}
-                        {serviceRef?.Section || getRawData(selectedItem).section}
+                        {serviceRef?.section || getRawData(selectedItem).section}
                       </div>
                     )}
-                    {(serviceRef?.PassengerName || getRawData(selectedItem).passengerName) && (
+                    {(serviceRef?.passengerName || getRawData(selectedItem).passengerName) && (
                       <div>
                         <span className="text-blue-600">Passenger:</span>{' '}
-                        {serviceRef?.PassengerName || getRawData(selectedItem).passengerName}
-                        {serviceRef?.PassengerRole && ` (${serviceRef.PassengerRole})`}
+                        {serviceRef?.passengerName || getRawData(selectedItem).passengerName}
+                        {serviceRef?.passengerRole && ` (${serviceRef.passengerRole})`}
                       </div>
                     )}
-                    {serviceRef?.OperationalStatus && (
+                    {serviceRef?.operationalStatus && (
                       <div>
-                        <span className="text-blue-600">Status:</span> {serviceRef.OperationalStatus}
+                        <span className="text-blue-600">Status:</span> {serviceRef.operationalStatus}
                       </div>
                     )}
-                    {(serviceRef?.VehicleID || getRawData(selectedItem).vehicleId) && (
+                    {(serviceRef?.vehicleId || getRawData(selectedItem).vehicleId) && (
                       <div>
                         <span className="text-blue-600">Vehicle:</span>{' '}
-                        {serviceRef?.VehicleID || getRawData(selectedItem).vehicleId}
+                        {serviceRef?.vehicleId || getRawData(selectedItem).vehicleId}
                       </div>
                     )}
                   </div>
@@ -655,7 +657,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
                   <div>
                     <label className="block text-[11px] text-on-surface-variant mb-1">
                       Start Time
-                      {serviceRef?.Time && getFieldDiff(normForm.startTime, serviceRef.Time) && (
+                      {serviceRef?.time && getFieldDiff(normForm.startTime, serviceRef.time) && (
                         <span className="ml-1 text-amber-600"> diff</span>
                       )}
                     </label>

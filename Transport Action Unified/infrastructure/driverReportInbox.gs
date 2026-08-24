@@ -207,16 +207,19 @@ function acceptReport(inboxId, reviewedBy) {
         try {
           var currentService = ServiceRepository.getById(serviceId);
           var currentStatus = currentService ? currentService.OperationalStatus : '';
+          Logger.log('[acceptReport] Service ' + serviceId + ' status: ' + currentStatus + ', report status: ' + (created ? created.Status : 'unknown'));
           // Approve report if still Pendiente
-          if (created.Status === 'Pendiente') {
-            DriverReportCommands.approveReport(reportId);
+          if (created && created.Status === 'Pendiente') {
+            var approveResult = DriverReportCommands.approveReport(reportId);
+            Logger.log('[acceptReport] approveReport result: ' + JSON.stringify(approveResult ? { success: true } : { success: false }));
           }
           // Move to Revision if in Reportado
           if (currentStatus === 'Reportado') {
             ServiceCommands.moveToRevision(serviceId);
+            Logger.log('[acceptReport] Moved service ' + serviceId + ' to Revision');
           }
         } catch (finalErr) {
-          Logger.log('[acceptReport] Auto-approve/moveToRevision failed: ' + finalErr.message);
+          Logger.log('[acceptReport] Auto-approve/moveToRevision FAILED: ' + finalErr.message);
         }
       }
 
