@@ -769,6 +769,13 @@ function getDriverLinks(filters) {
         // Overlap logic: link must overlap with filter period
         if (filters.startDate && row.DateTo < filters.startDate) continue;
         if (filters.endDate && row.DateFrom > filters.endDate) continue;
+        if (filters.serviceId) {
+          var svcId = filters.serviceId;
+          var services = [];
+          try { services = JSON.parse(row.Services || '[]'); } catch(e) {}
+          var hasSvc = services.some(function(s) { return s.serviceId === svcId; });
+          if (!hasSvc) continue;
+        }
       }
 
       results.push(row);

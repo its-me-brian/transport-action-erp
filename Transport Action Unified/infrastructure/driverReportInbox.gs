@@ -302,6 +302,16 @@ function getInboxItems(filters) {
       if (filters.projectId) items = items.filter(function(i) { return i.ProjectID === filters.projectId; });
       if (filters.status) items = items.filter(function(i) { return i.Status === filters.status; });
       if (filters.correlationId) items = items.filter(function(i) { return i.CorrelationID === filters.correlationId; });
+      if (filters.serviceId) {
+        var svcId = filters.serviceId;
+        items = items.filter(function(i) {
+          if (i.ServiceID === svcId) return true;
+          try {
+            var raw = JSON.parse(i.RawData || '{}');
+            return raw.serviceId === svcId;
+          } catch(e) { return false; }
+        });
+      }
     }
 
     // Sort by CreatedAt descending

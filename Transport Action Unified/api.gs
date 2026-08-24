@@ -768,7 +768,7 @@ function _handleRoute(params, data) {
           data.filters = data.filters || {};
           data.filters.driverId = _actorDR.driverId;
         }
-        result = apiGetDriverReports(data.filters);
+        result = apiGetDriverReports(data.filters && data.filters.serviceId ? data.filters.serviceId : undefined);
         break;
       case 'getDriverReport':
         _checkPermission(data, 'driverReport.list');
