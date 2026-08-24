@@ -84,6 +84,80 @@ const DriverReportCommands = {
   },
 
   /**
+   * Crear reporte para servicio que YA fue reportado (Reportado/Revision) pero no tiene DriverReport.
+   * Usado cuando el reporte se recibe por WhatsApp/Backoffice después de que el servicio ya fue avanzado.
+   * No cambia el estado del servicio — ya está en Reportado o Revision.
+   */
+  createReportForReportedService(serviceId, driverId, reportData) {
+    return _withLock(() => {
+      const service = ServiceRepository.getById(serviceId);
+      if (!service) throw new NotFoundError('Service', serviceId);
+      // Allow services in Realizado, Reportado, or Revision
+      const ALLOWED = ['Realizado', 'Reportado', 'Revision'];
+      if (!ALLOWED.includes(service.OperationalStatus)) {
+        throw new BusinessRuleError(
+          `Service must be in Realizado/Reportado/Revision state. Current: ${service.OperationalStatus}`,
+          'DR001'
+        );
+      }
+      if (service.DriverID !== driverId) {
+        throw new BusinessRuleError(
+          'DriverID does not match service assigned driver',
+          'DR001'
+        );
+      }
+
+      // Check no active report exists
+      const existingActive = DriverReportRepository.getActiveByService(serviceId);
+      if (existingActive) {
+        throw new BusinessRuleError(
+          'A report already exists for this service. Submit or reject it first.',
+          'DR001'
+        );
+      }
+
+      const version = DriverReportRepository.getNextVersion(serviceId);
+      const allReports = DriverReportRepository.getAllByVersion(serviceId);
+      const previousReport = allReports.length > 0 ? allReports[allReports.length - 1] : null;
+
+      const report = DriverReportRepository.create({
+        ServiceID: serviceId,
+        DriverID: driverId,
+        Version: version,
+        PreviousReportID: previousReport ? previousReport.ID : '',
+        StartTime: reportData.startTime || '',
+        EndTime: reportData.endTime || '',
+        KmTotal: parseFloat(reportData.kmTotal) || 0,
+        HasDiaria: reportData.hasDiaria || false,
+        IsFestivo: reportData.isFestivo || false,
+        IsNotturno: reportData.isNotturno || false,
+        DiariaType: reportData.diariaType || 'none',
+        Parking: parseFloat(reportData.parking) || 0,
+        Tolls: parseFloat(reportData.tolls) || 0,
+        Fuel: parseFloat(reportData.fuel) || 0,
+        WaitMinutes: parseFloat(reportData.waitMinutes) || 0,
+        Notes: reportData.notes || ''
+      });
+
+      // If service is in Realizado, advance to Reportado
+      if (service.OperationalStatus === 'Realizado') {
+        _assertValidTransition('ServiceOperational', 'Realizado', 'Reportado');
+        ServiceRepository.update(serviceId, { OperationalStatus: 'Reportado' });
+      }
+      // If already Reportado or Revision, leave as-is — report is now linked
+
+      _dispatchEvent({
+        type: 'report.submitted',
+        entity: 'DriverReport',
+        entityId: report.ID,
+        payload: { serviceId, driverId, version }
+      });
+
+      return DriverReportRepository.toDTO(report);
+    });
+  },
+
+  /**
    * Aprobar reporte
    * Precondiciones:
    * - ReportStatus = 'Pendiente'

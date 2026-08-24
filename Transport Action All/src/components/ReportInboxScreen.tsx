@@ -218,8 +218,9 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
       setIsSearchingServices(true);
       try {
         const services = await getServices({ driverId: item.DriverID });
-        // Only show services that can accept a report: Importado, Asignado, Confirmado, EnRuta, Realizado
-        const REPORTABLE = ['Importado', 'Asignado', 'Confirmado', 'EnRuta', 'Realizado'];
+        // Only show services that can accept a report
+        // Importado→Realizado: no report yet. Reportado/Revision: report may be missing or need update.
+        const REPORTABLE = ['Importado', 'Asignado', 'Confirmado', 'EnRuta', 'Realizado', 'Reportado', 'Revision'];
         const matched = (services || [])
           .filter((s: any) => {
             const st = s.operationalStatus || s.status || '';

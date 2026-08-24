@@ -151,7 +151,10 @@ function acceptReport(inboxId, reviewedBy) {
         return { success: false, error: 'No DriverID on inbox item. Cannot create DriverReport.' };
       }
 
-      var created = DriverReportCommands.createReport(serviceId, item.DriverID, {
+      // Choose the right create function based on service status
+      var service = ServiceRepository.getById(serviceId);
+      var serviceStatus = service ? service.OperationalStatus : '';
+      var reportData = {
         startTime: dataSource.startTime || '',
         endTime: dataSource.endTime || '',
         kmTotal: dataSource.kmTotal || 0,
@@ -166,7 +169,15 @@ function acceptReport(inboxId, reviewedBy) {
         fuel: dataSource.fuel || 0,
         waitMinutes: dataSource.waitMinutes || 0,
         notes: dataSource.notes || ''
-      });
+      };
+      var created;
+      if (serviceStatus === 'Realizado') {
+        // Normal flow: createReport transitions Realizado → Reportado
+        created = DriverReportCommands.createReport(serviceId, item.DriverID, reportData);
+      } else {
+        // Service already in Reportado/Revision: link report without changing service status
+        created = DriverReportCommands.createReportForReportedService(serviceId, item.DriverID, reportData);
+      }
       var reportId = created ? created.ID : null;
 
       _update(SHEETS.DriverReportInbox, inboxId, {
