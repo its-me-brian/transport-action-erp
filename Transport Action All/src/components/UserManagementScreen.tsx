@@ -170,7 +170,7 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
         <Shield className="w-12 h-12 text-on-surface-variant opacity-30" />
         <p className="text-[14px] text-on-surface-variant">You need admin access to manage users.</p>
         <button
-          onClick={() => onNavigate('dashboard')}
+          onClick={() => onNavigate('transport')}
           className="text-[12px] text-primary hover:underline"
         >
           Go to Dashboard

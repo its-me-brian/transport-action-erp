@@ -1944,7 +1944,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
             </button>
           )}
           <button 
-            onClick={() => onNavigate('dashboard', 'push_back')}
+            onClick={() => onNavigate('transport', 'push_back')}
             className="flex items-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors cursor-pointer text-[12px] font-medium px-2.5 md:px-3 py-1.5 rounded-lg border border-outline-variant hover:border-primary bg-surface-container-lowest"
           >
             <X className="w-3.5 h-3.5" />
@@ -3083,7 +3083,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
                 Import Another
               </button>
               <button
-                onClick={() => onNavigate('dashboard', 'push')}
+                onClick={() => onNavigate('transport', 'push')}
                 className="px-4 py-2 text-[13px] font-medium bg-primary text-on-primary rounded-lg hover:bg-primary-hover transition-colors cursor-pointer"
               >
                 View Calendar

@@ -23,7 +23,6 @@ import TransportListScreen from './components/TransportListScreen';
 import NewServiceScreen from './components/NewServiceScreen';
 import DriverPanelScreen from './components/DriverPanelScreen';
 import ProjectScreen from './components/ProjectScreen';
-import ContactScreen from './components/ContactScreen';
 import ClientScreen from './components/ClientScreen';
 import CollaboratorScreen from './components/CollaboratorScreen';
 import VehicleScreen from './components/VehicleScreen';
@@ -36,11 +35,7 @@ import AuditCenterScreen from './components/AuditCenterScreen';
 import RapportinoScreen from './components/RapportinoScreen';
 import DriverReportsScreen from './components/DriverReportsScreen';
 import ReconciliationScreen from './components/ReconciliationScreen';
-import DriverRateScreen from './components/DriverRateScreen';
 import RateCardScreen from './components/RateCardScreen';
-import DriverAdvanceScreen from './components/DriverAdvanceScreen';
-import ChangesScreen from './components/ChangesScreen';
-import ActivityFeedScreen from './components/ActivityFeedScreen';
 import DocumentScreen from './components/DocumentScreen';
 
 export default function App() {
@@ -315,35 +310,13 @@ export default function App() {
       case 'new_service':
         return <NewServiceScreen onAddService={handleAddService} onNavigate={handleNavigate} />;
 
-      // === BACKWARDS-COMPAT REDIRECTS (old bookmarks / deep links) ===
-      case 'dashboard':
-        return <DashboardScreen services={services} isLoading={isLoadingServices} baseDate={baseDate} onBaseDateChange={setBaseDate} viewMode={viewMode} onViewModeChange={setViewMode} onNavigate={handleNavigate} onServiceUpdate={handleServiceUpdate} />;
-      case 'reports':
-        return <ReportsScreen services={services} drivers={drivers} onNavigate={handleNavigate} onServiceUpdate={handleServiceUpdate} />;
-      case 'changes':
-        return <ChangesScreen onNavigate={handleNavigate} />;
-      case 'activity_feed':
-        return <ActivityFeedScreen onNavigate={handleNavigate} />;
+      // === DEEP LINKS (not in sidebar, accessed from internal navigation) ===
       case 'documents':
         return <DocumentScreen onNavigate={handleNavigate} />;
-      case 'invoices':
-      case 'payments':
-      case 'expenses':
-        // Redirect to Accounting
-        return <AccountingScreen onNavigate={handleNavigate} />;
-      case 'contacts':
-        return <ContactScreen onNavigate={handleNavigate} />;
-      case 'driver_rates':
-        return <DriverRateScreen onNavigate={handleNavigate} />;
+      case 'reports':
+        return <ReportsScreen services={services} drivers={drivers} onNavigate={handleNavigate} onServiceUpdate={handleServiceUpdate} />;
       case 'rate_cards':
         return <RateCardScreen onNavigate={handleNavigate} />;
-      case 'driver_advances':
-        return <DriverAdvanceScreen onNavigate={handleNavigate} />;
-      case 'report_inbox':
-        // Redirect to Driver Reports
-        return <DriverReportsScreen onNavigate={handleNavigate} />;
-      case 'company_settings':
-        return <CompanySettingsScreen onNavigate={handleNavigate} />;
 
       default:
         return (

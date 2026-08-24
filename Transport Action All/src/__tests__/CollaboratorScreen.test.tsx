@@ -24,6 +24,8 @@ const mockUpdateSupplierRate = vi.fn();
 const mockDeleteSupplierRate = vi.fn();
 const mockGetVehicleTypes = vi.fn();
 const mockGetServiceTypes = vi.fn();
+const mockGetDrivers = vi.fn();
+const mockGetDriversByCollaborator = vi.fn();
 
 vi.mock('../services/api', () => ({
   getCollaborators: (...args: any[]) => mockGetCollaborators(...args),
@@ -36,6 +38,8 @@ vi.mock('../services/api', () => ({
   deleteSupplierRate: (...args: any[]) => mockDeleteSupplierRate(...args),
   getVehicleTypes: (...args: any[]) => mockGetVehicleTypes(...args),
   getServiceTypes: (...args: any[]) => mockGetServiceTypes(...args),
+  getDrivers: (...args: any[]) => mockGetDrivers(...args),
+  getDriversByCollaborator: (...args: any[]) => mockGetDriversByCollaborator(...args),
 }));
 
 const mockOnNavigate = vi.fn();
@@ -68,6 +72,8 @@ describe('CollaboratorScreen', () => {
     mockGetSupplierRates.mockResolvedValue(sampleRates);
     mockGetVehicleTypes.mockResolvedValue(['Van', 'Car']);
     mockGetServiceTypes.mockResolvedValue(['Dispo', 'Transfer Airport', 'Transfer City']);
+    mockGetDrivers.mockResolvedValue([]);
+    mockGetDriversByCollaborator.mockResolvedValue([]);
   });
 
   it('renders and loads collaborators', async () => {

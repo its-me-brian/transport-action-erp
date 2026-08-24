@@ -239,7 +239,7 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
       <header id="new-service-header" className="w-full flex items-center justify-between px-4 md:px-6 py-3 sticky top-0 bg-surface/90 backdrop-blur-md z-10 border-b border-outline-variant/50">
         <div 
           id="cancel-entry-div"
-          onClick={() => onNavigate('dashboard', 'push_back')}
+          onClick={() => onNavigate('transport', 'push_back')}
           className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity px-2.5 py-1 rounded-lg border border-outline-variant bg-surface-container-lowest"
         >
           <X className="w-3.5 h-3.5 text-on-surface-variant" />
@@ -593,7 +593,7 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
           <div className="flex flex-col sm:flex-row gap-2 justify-end pt-2">
             <button 
               type="button"
-              onClick={() => onNavigate('dashboard', 'push_back')}
+              onClick={() => onNavigate('transport', 'push_back')}
               className="px-4 py-2 rounded-lg text-[12px] font-medium text-on-surface bg-surface-dim hover:bg-surface-container transition-colors text-center"
             >
               Save Draft

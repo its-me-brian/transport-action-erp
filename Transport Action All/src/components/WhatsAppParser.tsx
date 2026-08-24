@@ -1,39 +1,50 @@
 import React, { useState, useCallback } from 'react';
-import { MessageSquare, Sparkles, X, Check, AlertCircle } from 'lucide-react';
-import { 
-  parseDriverReport, 
-  parseMultipleDriverReports, 
-  DriverReport, 
-  Service,
-  formatTimeDisplay,
-  getDiariaCost,
-  getKmOverCost
-} from '../types';
+import { MessageSquare, Sparkles, X, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { parseWhatsApp, WhatsAppParsedReport } from '../services/api';
+import { Service, getDiariaCost, getKmOverCost } from '../types';
 
 interface WhatsAppParserProps {
   onApply: (data: Partial<Service>) => void;
   onClose: () => void;
+  service?: Partial<Service>;
 }
 
-export default function WhatsAppParser({ onApply, onClose }: WhatsAppParserProps) {
+export default function WhatsAppParser({ onApply, onClose, service }: WhatsAppParserProps) {
   const [text, setText] = useState('');
-  const [reports, setReports] = useState<DriverReport[]>([]);
+  const [reports, setReports] = useState<WhatsAppParsedReport[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<Partial<DriverReport>>({});
+  const [editForm, setEditForm] = useState<Partial<WhatsAppParsedReport>>({});
+  const [isParsing, setIsParsing] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleParse = useCallback(() => {
-    // Try parsing as multiple reports first
-    let parsed = parseMultipleDriverReports(text);
-    
-    // If only one found, try single parse
-    if (parsed.length === 0) {
-      const single = parseDriverReport(text);
-      if (single) parsed = [single];
+  const handleParse = useCallback(async () => {
+    if (!text.trim()) return;
+    setIsParsing(true);
+    setError('');
+    try {
+      const result = await parseWhatsApp(text);
+      if (result.success && result.reports && result.reports.length > 0) {
+        let parsed = result.reports;
+        if (service) {
+          parsed = parsed.map(r => ({
+            ...r,
+            matchedDriverId: r.matchedDriverId || service.driverId || '',
+            serviceId: r.serviceId || service.id || '',
+            dateParsed: r.dateParsed || service.date || '',
+          }));
+        }
+        setReports(parsed);
+        if (parsed.length > 0) setEditingIndex(0);
+      } else {
+        setError(result.error || 'Could not parse any reports');
+      }
+    } catch (err) {
+      console.error('Parse failed:', err);
+      setError('Error parsing message');
+    } finally {
+      setIsParsing(false);
     }
-    
-    setReports(parsed);
-    if (parsed.length > 0) setEditingIndex(0);
-  }, [text]);
+  }, [text, service]);
 
   const handleEdit = (index: number) => {
     setEditingIndex(index);
@@ -50,18 +61,18 @@ export default function WhatsAppParser({ onApply, onClose }: WhatsAppParserProps
     }
   };
 
-  const handleApply = (report: DriverReport) => {
-    // Map DriverReport to Service fields
+  const handleApply = (report: WhatsAppParsedReport) => {
     const serviceData: Partial<Service> = {
       driverName: report.driverName,
-      date: report.dateParsed || '',
-      startTime: report.start,
-      endTime: report.end,
+      driverId: report.matchedDriverId || report.driverId || '',
+      date: report.dateParsed || report.date || '',
+      startTime: report.startTime,
+      endTime: report.endTime,
       km: report.kmTotal,
       kmOver: report.kmOver,
-      diariaType: report.diariaType,
+      diariaType: report.diariaType as any,
       hasDiaria: report.diariaType !== 'none',
-      diariaCost: getDiariaCost(report.diariaType),
+      diariaCost: getDiariaCost(report.diariaType as any),
       kmOverCost: getKmOverCost(report.kmOver),
     };
     onApply(serviceData);
@@ -82,7 +93,6 @@ export default function WhatsAppParser({ onApply, onClose }: WhatsAppParserProps
         className="bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant w-full max-w-2xl flex flex-col max-h-[90vh]"
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-outline-variant shrink-0">
           <div className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-primary" />
@@ -93,10 +103,16 @@ export default function WhatsAppParser({ onApply, onClose }: WhatsAppParserProps
           </button>
         </div>
 
-        {/* Content */}
         <div className="flex flex-col gap-4 px-6 py-4 overflow-y-auto flex-1 min-h-0">
+          {service && (
+            <div className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2 text-[12px] text-on-surface-variant">
+              Parsing for: <span className="font-medium text-on-surface">{service.driverName || 'Unknown'}</span>
+              {service.date && <span className="ml-2">• {service.date}</span>}
+            </div>
+          )}
+
           <p className="text-[13px] text-on-surface-variant">
-            Paste driver WhatsApp reports. Supports single or multiple reports:
+            Paste driver WhatsApp report. The backend parser handles all formats:
           </p>
           
           <textarea
@@ -127,14 +143,22 @@ Diaria piena`}
           
           <button
             onClick={handleParse}
-            disabled={!text.trim()}
+            disabled={!text.trim() || isParsing}
             className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary text-[13px] font-medium hover:bg-primary/20 transition-colors disabled:opacity-50"
           >
-            <Sparkles className="w-4 h-4" />
-            Parse Report{text.includes('\n') && text.split('\n').length > 3 ? 's' : ''}
+            {isParsing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Parsing...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                Parse Report{text.includes('\n') && text.split('\n').length > 3 ? 's' : ''}
+              </>
+            )}
           </button>
 
-          {/* Parsed results */}
           {reports.length > 0 && (
             <div className="flex flex-col gap-3">
               <p className="text-[12px] font-medium text-on-surface-variant uppercase">
@@ -153,7 +177,6 @@ Diaria piena`}
                     }`}
                   >
                     {isEditing ? (
-                      /* Edit mode */
                       <div className="flex flex-col gap-3">
                         <div className="flex justify-between items-center">
                           <span className="text-[13px] font-medium text-on-surface">{report.driverName}</span>
@@ -205,7 +228,7 @@ Diaria piena`}
                             value={editForm.diariaType || 'none'}
                             onChange={e => setEditForm({ 
                               ...editForm, 
-                              diariaType: e.target.value as 'piena' | 'mezza' | 'none' 
+                              diariaType: e.target.value 
                             })}
                             className="w-full bg-surface border border-outline-variant rounded px-2 py-1 text-[13px]"
                           >
@@ -231,7 +254,6 @@ Diaria piena`}
                         </div>
                       </div>
                     ) : (
-                      /* View mode */
                       <div className="flex flex-col gap-2">
                         <div className="flex justify-between items-start">
                           <div>
@@ -249,11 +271,11 @@ Diaria piena`}
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[13px]">
                           <div className="flex justify-between">
                             <span className="text-on-surface-variant">Inizio:</span>
-                            <span className="font-medium">{formatTimeDisplay(report.start)}</span>
+                            <span className="font-medium">{report.startTime}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-on-surface-variant">Fine:</span>
-                            <span className="font-medium">{formatTimeDisplay(report.end)}</span>
+                            <span className="font-medium">{report.endTime}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-on-surface-variant">Km Total:</span>
@@ -292,15 +314,14 @@ Diaria piena`}
             </div>
           )}
 
-          {reports.length === 0 && text && (
+          {error && (
             <div className="flex items-center gap-2 text-[13px] text-amber-600 bg-amber-50 rounded-lg p-3">
               <AlertCircle className="w-4 h-4 shrink-0" />
-              Could not parse driver report. Check format and try again.
+              {error}
             </div>
           )}
         </div>
 
-        {/* Footer */}
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-outline-variant shrink-0">
           <button
             onClick={onClose}

@@ -1,9 +1,9 @@
 /**
- * TESTS — DriverReportsScreen (Tab wrapper for Inbox/Reports/Submissions/WhatsApp)
+ * TESTS — DriverReportsScreen (Tab wrapper for Inbox/History/Import)
  *
  * Covers:
  * - Render with default Inbox tab
- * - Tab switching between all 4 tabs
+ * - Tab switching between all 3 tabs
  * - Active tab styling
  * - onNavigate passed to children
  */
@@ -15,12 +15,8 @@ vi.mock('../components/ReportInboxScreen', () => ({
   default: ({ onNavigate }: any) => <div data-testid="report-inbox">ReportInbox</div>,
 }));
 
-vi.mock('../components/DriverReportScreen', () => ({
-  default: ({ onNavigate }: any) => <div data-testid="driver-reports">DriverReportScreen</div>,
-}));
-
-vi.mock('../components/DriverSubmissionsScreen', () => ({
-  default: ({ onNavigate }: any) => <div data-testid="driver-submissions">DriverSubmissionsScreen</div>,
+vi.mock('../components/HistoryScreen', () => ({
+  default: ({ onNavigate }: any) => <div data-testid="history-screen">HistoryScreen</div>,
 }));
 
 vi.mock('../components/WhatsAppCaptureScreen', () => ({
@@ -34,47 +30,38 @@ describe('DriverReportsScreen', () => {
     vi.clearAllMocks();
   });
 
-  it('renders with header and all 4 tabs', () => {
+  it('renders with header and all 3 tabs', () => {
     render(<DriverReportsScreen onNavigate={mockOnNavigate} />);
     expect(screen.getByText('Driver Reports')).toBeInTheDocument();
     expect(screen.getByText('Inbox')).toBeInTheDocument();
-    expect(screen.getByText('Reports')).toBeInTheDocument();
-    expect(screen.getByText('Submissions')).toBeInTheDocument();
-    expect(screen.getByText('WhatsApp')).toBeInTheDocument();
+    expect(screen.getByText('History')).toBeInTheDocument();
+    expect(screen.getByText('Import')).toBeInTheDocument();
   });
 
   it('shows Inbox tab as default active', () => {
     render(<DriverReportsScreen onNavigate={mockOnNavigate} />);
     expect(screen.getByTestId('report-inbox')).toBeInTheDocument();
-    expect(screen.queryByTestId('driver-reports')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('driver-submissions')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('history-screen')).not.toBeInTheDocument();
     expect(screen.queryByTestId('whatsapp-capture')).not.toBeInTheDocument();
   });
 
-  it('switches to Reports tab', () => {
+  it('switches to History tab', () => {
     render(<DriverReportsScreen onNavigate={mockOnNavigate} />);
-    fireEvent.click(screen.getByText('Reports'));
-    expect(screen.getByTestId('driver-reports')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('History'));
+    expect(screen.getByTestId('history-screen')).toBeInTheDocument();
     expect(screen.queryByTestId('report-inbox')).not.toBeInTheDocument();
   });
 
-  it('switches to Submissions tab', () => {
+  it('switches to Import tab', () => {
     render(<DriverReportsScreen onNavigate={mockOnNavigate} />);
-    fireEvent.click(screen.getByText('Submissions'));
-    expect(screen.getByTestId('driver-submissions')).toBeInTheDocument();
-    expect(screen.queryByTestId('report-inbox')).not.toBeInTheDocument();
-  });
-
-  it('switches to WhatsApp tab', () => {
-    render(<DriverReportsScreen onNavigate={mockOnNavigate} />);
-    fireEvent.click(screen.getByText('WhatsApp'));
+    fireEvent.click(screen.getByText('Import'));
     expect(screen.getByTestId('whatsapp-capture')).toBeInTheDocument();
     expect(screen.queryByTestId('report-inbox')).not.toBeInTheDocument();
   });
 
-  it('switches back to Inbox tab from WhatsApp', () => {
+  it('switches back to Inbox tab from Import', () => {
     render(<DriverReportsScreen onNavigate={mockOnNavigate} />);
-    fireEvent.click(screen.getByText('WhatsApp'));
+    fireEvent.click(screen.getByText('Import'));
     fireEvent.click(screen.getByText('Inbox'));
     expect(screen.getByTestId('report-inbox')).toBeInTheDocument();
     expect(screen.queryByTestId('whatsapp-capture')).not.toBeInTheDocument();

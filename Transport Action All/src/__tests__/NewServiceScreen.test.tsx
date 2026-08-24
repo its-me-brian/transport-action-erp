@@ -218,7 +218,7 @@ describe('NewServiceScreen', () => {
     render(<NewServiceScreen onAddService={vi.fn()} onNavigate={onNavigate} />);
 
     fireEvent.click(screen.getByText('Cancel'));
-    expect(onNavigate).toHaveBeenCalledWith('dashboard', 'push_back');
+    expect(onNavigate).toHaveBeenCalledWith('transport', 'push_back');
   });
 
   it('Save Draft button navigates to dashboard', () => {
@@ -226,7 +226,7 @@ describe('NewServiceScreen', () => {
     render(<NewServiceScreen onAddService={vi.fn()} onNavigate={onNavigate} />);
 
     fireEvent.click(screen.getByText('Save Draft'));
-    expect(onNavigate).toHaveBeenCalledWith('dashboard', 'push_back');
+    expect(onNavigate).toHaveBeenCalledWith('transport', 'push_back');
   });
 
   it('switches company to Movie Motion', async () => {

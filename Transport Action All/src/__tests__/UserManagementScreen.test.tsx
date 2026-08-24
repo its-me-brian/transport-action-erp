@@ -258,7 +258,7 @@ describe('UserManagementScreen', () => {
     mockCan.mockReturnValue(false);
     render(<UserManagementScreen onNavigate={mockOnNavigate} />);
     fireEvent.click(screen.getByText('Go to Dashboard'));
-    expect(mockOnNavigate).toHaveBeenCalledWith('dashboard');
+    expect(mockOnNavigate).toHaveBeenCalledWith('transport');
   });
 
   it('renders table headers when users exist', async () => {

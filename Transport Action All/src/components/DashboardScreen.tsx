@@ -1344,6 +1344,10 @@ export default function DashboardScreen({
                 className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-50 text-amber-700 text-[11px] font-medium rounded-lg hover:bg-amber-100 transition-colors cursor-pointer">
                 Reconcil.
               </button>
+              <button onClick={() => { onNavigate('rapportinos'); setSidePanelService(null); }}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-50 text-purple-700 text-[11px] font-medium rounded-lg hover:bg-purple-100 transition-colors cursor-pointer">
+                Rapportino
+              </button>
             </div>
           </div>
         </div>
@@ -2354,6 +2358,7 @@ export default function DashboardScreen({
         <WhatsAppParser 
           onApply={(data) => setEditForm(prev => ({ ...prev, ...data }))}
           onClose={() => setShowWhatsAppParser(false)}
+          service={editingService}
         />
       )}
 

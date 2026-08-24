@@ -1,34 +1,32 @@
 import React, { useState } from 'react';
-import { ClipboardCheck, Inbox, History, MessageSquare } from 'lucide-react';
+import { History, FileCheck, Send } from 'lucide-react';
 import { ScreenId } from '../types';
-import ReportInboxScreen from './ReportInboxScreen';
-import HistoryScreen from './HistoryScreen';
-import WhatsAppCaptureScreen from './WhatsAppCaptureScreen';
+import DriverReportScreen from './DriverReportScreen';
+import DriverSubmissionsScreen from './DriverSubmissionsScreen';
 
 interface Props {
   onNavigate: (screen: ScreenId) => void;
 }
 
-type ReportsTab = 'inbox' | 'history' | 'import';
+type HistoryTab = 'reports' | 'submissions';
 
-const TABS: { id: ReportsTab; label: string; icon: React.ElementType }[] = [
-  { id: 'inbox',    label: 'Inbox',    icon: Inbox },
-  { id: 'history',  label: 'History',  icon: History },
-  { id: 'import',   label: 'Import',   icon: MessageSquare },
+const SUB_TABS: { id: HistoryTab; label: string; icon: React.ElementType }[] = [
+  { id: 'reports',     label: 'Reports',     icon: FileCheck },
+  { id: 'submissions', label: 'Submissions', icon: Send },
 ];
 
-export default function DriverReportsScreen({ onNavigate }: Props) {
-  const [activeTab, setActiveTab] = useState<ReportsTab>('inbox');
+export default function HistoryScreen({ onNavigate }: Props) {
+  const [activeTab, setActiveTab] = useState<HistoryTab>('reports');
 
   return (
     <div className="flex flex-col h-full">
       <div className="border-b border-outline-variant">
         <div className="flex items-center gap-2 px-4 sm:px-6 pt-4">
-          <ClipboardCheck className="w-5 h-5 text-primary shrink-0" />
-          <h1 className="text-base sm:text-lg font-bold text-on-surface">Driver Reports</h1>
+          <History className="w-5 h-5 text-primary shrink-0" />
+          <h1 className="text-base sm:text-lg font-bold text-on-surface">History</h1>
         </div>
         <div className="flex overflow-x-auto hide-scrollbar px-2 sm:px-4">
-          {TABS.map(tab => {
+          {SUB_TABS.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
@@ -50,9 +48,8 @@ export default function DriverReportsScreen({ onNavigate }: Props) {
       </div>
 
       <div className="flex-1 overflow-auto">
-        {activeTab === 'inbox' && <ReportInboxScreen onNavigate={onNavigate} />}
-        {activeTab === 'history' && <HistoryScreen onNavigate={onNavigate} />}
-        {activeTab === 'import' && <WhatsAppCaptureScreen onNavigate={onNavigate} />}
+        {activeTab === 'reports' && <DriverReportScreen onNavigate={onNavigate} />}
+        {activeTab === 'submissions' && <DriverSubmissionsScreen onNavigate={onNavigate} />}
       </div>
     </div>
   );

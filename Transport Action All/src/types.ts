@@ -166,22 +166,11 @@ export type ScreenId =
   // INTERNAL (hidden from sidebar)
   | 'new_service'
   | 'transport_list'
-  // DEPRECATED (backwards-compat redirects — will be removed)
-  | 'dashboard'
-  | 'company_settings'
-  | 'reports'
   | 'driver_panel'
-  | 'changes'
-  | 'invoices'
-  | 'payments'
-  | 'expenses'
-  | 'contacts'
-  | 'driver_rates'
-  | 'rate_cards'
-  | 'driver_advances'
-  | 'report_inbox'
-  | 'activity_feed'
-  | 'documents';
+  // DEEP LINKS (not in sidebar, accessed from internal navigation)
+  | 'documents'
+  | 'reports'
+  | 'rate_cards';
 
 // --- Helpers for date formatting ---
 const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
