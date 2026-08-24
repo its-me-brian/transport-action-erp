@@ -10,7 +10,7 @@ import {
   Service, ScreenId, ViewMode, 
   getWeekColumns, getMonthWeeks, getMonthName, formatDateKey,
   getHourSlots, parseTimeToHour, parseDateKeyToDate, formatTimeDisplay,
-  getDriverAvatar, isProductionVehicle, getServiceStatusColor, getStatusDotColor, StatusColor
+  getDriverAvatar, isProductionVehicle, getServiceStatusColor, getStatusDotColor, StatusColor, mapServiceDTOToService
 } from '../types';
 import WhatsAppParser from './WhatsAppParser';
 import { getDrivers, DriverRecord, getSettings, updateServiceField, cerrarComercialmente, facturarService, cobrarService, closeService, deleteService, cancelService, adjustRevenue, adjustCost, completeService, reportService, assignDriver, approveFinancial, markFacturable, getOperatingCompanies, OperatingCompany, getVehicleTypes, confirmService, startService, validateService, moveToRevision } from '../services/api';
@@ -327,9 +327,10 @@ export default function DashboardScreen({
       }
       if (successCount > 0) {
         showToast(`${successCount} service(s) ${config.label.toLowerCase()}d`, 'success');
-        results.forEach((r) => {
-          if (r?.id && r?.operationalStatus) {
-            onServiceUpdate?.(r.id, r);
+        results.forEach((r: any) => {
+          if (r?.id) {
+            const updated = mapServiceDTOToService(r);
+            onServiceUpdate?.(updated.id, updated);
           }
         });
       }
@@ -338,7 +339,6 @@ export default function DashboardScreen({
       }
       
       setSelectedServiceIds(new Set());
-      onServiceUpdate?.('', {});
     } catch (error) {
       showToast('Failed: ' + (error as Error).message, 'error');
     } finally {
@@ -366,8 +366,9 @@ export default function DashboardScreen({
       if (successCount > 0) {
         showToast(`${successCount} driver(s) assigned to ${driver.name}`, 'success');
         results.forEach((r: any) => {
-          if (r?.id && r?.operationalStatus) {
-            onServiceUpdate?.(r.id, r);
+          if (r?.id) {
+            const updated = mapServiceDTOToService(r);
+            onServiceUpdate?.(updated.id, updated);
           }
         });
       }
@@ -432,8 +433,9 @@ export default function DashboardScreen({
         showToast(`Error: ${result.error}`, 'error');
       } else {
         showToast(`Service advanced to next status`, 'success');
-        if (result?.operationalStatus) {
-          onServiceUpdate?.(service.id, result);
+        if (result?.id) {
+          const updated = mapServiceDTOToService(result);
+          onServiceUpdate?.(service.id, updated);
         }
       }
     } catch (err) {
