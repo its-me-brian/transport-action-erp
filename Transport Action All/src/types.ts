@@ -881,8 +881,8 @@ export function getServiceStatusColor(service: Service): StatusColor {
 
   const map: Record<string, StatusColor> = {
     Importado:   { border: 'border-l-gray-400',   bg: 'bg-gray-50',   hex: '#9CA3AF', label: 'Imported' },
-    Asignado:    { border: 'border-l-green-500',   bg: 'bg-green-50',  hex: '#22C55E', label: 'Assigned' },
-    Confirmado:  { border: 'border-l-green-600',   bg: 'bg-green-50',  hex: '#16A34A', label: 'Confirmed' },
+    Asignado:    { border: 'border-l-purple-500',  bg: 'bg-purple-50', hex: '#8B5CF6', label: 'Assigned' },
+    Confirmado:  { border: 'border-l-cyan-500',    bg: 'bg-cyan-50',   hex: '#06B6D4', label: 'Confirmed' },
     EnRuta:      { border: 'border-l-blue-500',    bg: 'bg-blue-50',   hex: '#3B82F6', label: 'In Route' },
     Realizado:   { border: 'border-l-slate-500',   bg: 'bg-slate-50',  hex: '#64748B', label: 'Completed' },
     Reportado:   { border: 'border-l-slate-600',   bg: 'bg-slate-50',  hex: '#475569', label: 'Reported' },
