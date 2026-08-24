@@ -2276,9 +2276,9 @@ export interface DriverReportDTO {
 }
 
 export async function getDriverReports(serviceId?: string): Promise<DriverReportDTO[]> {
-  const params: Record<string, string> = {};
-  if (serviceId) params.serviceId = serviceId;
-  const raw: any[] = await gasGetWithRetry('apiGetDriverReports', params);
+  const filters: Record<string, string> = {};
+  if (serviceId) filters.serviceId = serviceId;
+  const raw: any[] = await gasPostWithRetry('getDriverReports', { filters });
   if (!Array.isArray(raw)) return [];
   return raw.map(row => ({
     id: row.ID || row.id || '',
@@ -2424,8 +2424,9 @@ export async function getDriverLinks(filters?: {
   status?: string;
   startDate?: string;
   endDate?: string;
+  serviceId?: string;
 }): Promise<DriverLinkDTO[]> {
-  return gasGetWithRetry('getDriverLinks', filters as any);
+  return gasPostWithRetry('getDriverLinks', { filters });
 }
 
 /**
@@ -2477,6 +2478,7 @@ export async function getInboxItems(filters?: {
   channel?: string;
   driverId?: string;
   status?: string;
+  serviceId?: string;
 }): Promise<InboxItem[]> {
   return gasPost('getInboxItems', { filters });
 }

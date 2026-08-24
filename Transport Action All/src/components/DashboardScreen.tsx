@@ -13,7 +13,8 @@ import {
   getDriverAvatar, isProductionVehicle, getServiceStatusColor, getStatusDotColor, StatusColor, mapServiceDTOToService
 } from '../types';
 import WhatsAppParser from './WhatsAppParser';
-import { getDrivers, DriverRecord, getSettings, updateServiceField, cerrarComercialmente, facturarService, cobrarService, closeService, deleteService, cancelService, adjustRevenue, adjustCost, completeService, reportService, assignDriver, approveFinancial, markFacturable, getOperatingCompanies, OperatingCompany, getVehicleTypes, confirmService, startService, validateService, moveToRevision, getDriverReports, getDriverLinks, getInboxItems, getReconciliations } from '../services/api';
+import ServiceWorkspace from './ServiceWorkspace';
+import { getDrivers, DriverRecord, getSettings, updateServiceField, cerrarComercialmente, facturarService, cobrarService, closeService, deleteService, cancelService, adjustRevenue, adjustCost, completeService, reportService, assignDriver, approveFinancial, markFacturable, getOperatingCompanies, OperatingCompany, getVehicleTypes, confirmService, startService, validateService, moveToRevision } from '../services/api';
 
 interface DashboardScreenProps {
   services: Service[];
@@ -80,15 +81,6 @@ export default function DashboardScreen({
   // Side panel state
   const [sidePanelService, setSidePanelService] = useState<Service | null>(null);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
-
-  // Related data for side panel command center
-  const [sidePanelData, setSidePanelData] = useState<{
-    driverReport: any | null;
-    driverLink: any | null;
-    inboxItem: any | null;
-    reconciliation: any | null;
-    loading: boolean;
-  }>({ driverReport: null, driverLink: null, inboxItem: null, reconciliation: null, loading: false });
 
   // Drivers database
   const [dbDrivers, setDbDrivers] = useState<DriverRecord[]>([]);
@@ -157,45 +149,6 @@ export default function DashboardScreen({
     flags: true,
   });
 
-  // Load related data when side panel opens
-  useEffect(() => {
-    if (!sidePanelService) {
-      setSidePanelData({ driverReport: null, driverLink: null, inboxItem: null, reconciliation: null, loading: false });
-      return;
-    }
-    setSidePanelData(prev => ({ ...prev, loading: true }));
-    const svcId = sidePanelService.id;
-    Promise.allSettled([
-      getDriverReports().then((reports: any[]) => {
-        return reports?.find((r: any) => r.serviceId === svcId || r.ServiceID === svcId) || null;
-      }).catch(() => null),
-      getDriverLinks().then((links: any[]) => {
-        return links?.find((l: any) => {
-          const services = l.services || [];
-          return services.some((s: any) => s.serviceId === svcId);
-        }) || null;
-      }).catch(() => null),
-      getInboxItems().then((items: any[]) => {
-        return items?.find((i: any) => {
-          try {
-            const raw = JSON.parse(i.RawData || '{}');
-            return raw.serviceId === svcId;
-          } catch { return false; }
-        }) || null;
-      }).catch(() => null),
-      getReconciliations({ serviceId: svcId }).then((recs: any[]) => {
-        return recs?.length > 0 ? recs[0] : null;
-      }).catch(() => null),
-    ]).then((results) => {
-      setSidePanelData({
-        driverReport: results[0].status === 'fulfilled' ? results[0].value : null,
-        driverLink: results[1].status === 'fulfilled' ? results[1].value : null,
-        inboxItem: results[2].status === 'fulfilled' ? results[2].value : null,
-        reconciliation: results[3].status === 'fulfilled' ? results[3].value : null,
-        loading: false,
-      });
-    });
-  }, [sidePanelService?.id]);
 
   const toggleSection = (section: string) => {
     setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -1119,242 +1072,6 @@ export default function DashboardScreen({
     );
   };
 
-  // --- Side Panel / Drawer (mockup style) ---
-  const SidePanel = () => {
-    const service = sidePanelService;
-    if (!service) return null;
-
-    const statusColor = getServiceStatusColor(service);
-    const movements = service.movements || [];
-    const isProduction = isProductionVehicle(service);
-
-    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    const dateObj = parseDateKeyToDate(service.date);
-    const displayDate = dateObj ? `${dayNames[dateObj.getDay()]}, ${monthNames[dateObj.getMonth()]} ${dateObj.getDate()}` : service.date;
-
-    // Related entity statuses
-    const hasDriverLink = !!sidePanelData.driverLink;
-    const driverLinkActive = hasDriverLink && sidePanelData.driverLink?.active !== false;
-    const hasDriverReport = !!sidePanelData.driverReport;
-    const driverReportStatus = sidePanelData.driverReport?.status || sidePanelData.driverReport?.Status || null;
-    const hasInboxItem = !!sidePanelData.inboxItem;
-    const inboxStatus = sidePanelData.inboxItem?.Status || null;
-    const hasReconciliation = !!sidePanelData.reconciliation;
-
-    return (
-      <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setSidePanelService(null)}>
-        <div className="absolute inset-0 bg-black/20" />
-        <div
-          className="relative bg-surface-container-lowest w-full sm:w-[400px] h-full shadow-[-4px_0_24px_rgba(0,0,0,0.08)] flex flex-col animate-slide-in-right border-l border-outline-variant/30"
-          onClick={e => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="px-5 pt-5 pb-4 shrink-0">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Service</span>
-                <span className="text-[10px] font-mono text-on-surface-variant/60 bg-surface-container px-1.5 py-0.5 rounded">{service.id}</span>
-              </div>
-              <button onClick={() => setSidePanelService(null)} className="p-1 rounded-md hover:bg-surface-dim">
-                <X className="w-4 h-4 text-on-surface-variant" />
-              </button>
-            </div>
-            <div className="flex items-center gap-2 mt-2">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-[13px] font-bold text-primary shrink-0">
-                {service.driverName?.charAt(0) || '?'}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-[15px] font-semibold text-on-surface truncate">{service.driverName || 'Unassigned'}</div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-[11px] text-on-surface-variant">
-                    {service.serviceType ? `${service.serviceType.replace('Transfer ', 'T.').replace('Disposizione', 'Dispo')} · ` : ''}{service.vehicleType || '—'}
-                  </span>
-                  <span className="text-on-surface-variant/30">·</span>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-px rounded-full" style={{ backgroundColor: `${statusColor.hex}15`, color: statusColor.hex }}>
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: statusColor.hex }} />
-                    {statusColor.label}
-                  </span>
-                </div>
-              </div>
-            </div>
-            {service.project && service.project !== 'Unknown' && (
-              <div className="mt-2 text-[11px] text-on-surface-variant truncate">{service.project}</div>
-            )}
-          </div>
-
-          <div className="h-px bg-outline-variant/40 mx-5" />
-
-          {/* Status Summary — Command Center */}
-          <div className="px-5 py-3 shrink-0">
-            <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Status</span>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              {/* Driver Link */}
-              <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] ${driverLinkActive ? 'bg-green-50 text-green-700' : hasDriverLink ? 'bg-amber-50 text-amber-700' : 'bg-surface-container text-on-surface-variant/50'}`}>
-                <span className={`w-2 h-2 rounded-full ${driverLinkActive ? 'bg-green-500' : hasDriverLink ? 'bg-amber-500' : 'bg-gray-300'}`} />
-                <span className="font-medium">Driver Link</span>
-                <span className="ml-auto text-[10px]">{driverLinkActive ? 'Active' : hasDriverLink ? 'Inactive' : 'None'}</span>
-              </div>
-              {/* Driver Report */}
-              <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] ${driverReportStatus === 'Aceptado' ? 'bg-green-50 text-green-700' : driverReportStatus === 'Pendiente' ? 'bg-amber-50 text-amber-700' : driverReportStatus === 'Rechazado' ? 'bg-red-50 text-red-700' : 'bg-surface-container text-on-surface-variant/50'}`}>
-                <span className={`w-2 h-2 rounded-full ${driverReportStatus === 'Aceptado' ? 'bg-green-500' : driverReportStatus === 'Pendiente' ? 'bg-amber-500' : driverReportStatus === 'Rechazado' ? 'bg-red-500' : 'bg-gray-300'}`} />
-                <span className="font-medium">Report</span>
-                <span className="ml-auto text-[10px]">{driverReportStatus || 'None'}</span>
-              </div>
-              {/* Inbox */}
-              <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] ${inboxStatus === 'ACCEPTED' ? 'bg-green-50 text-green-700' : inboxStatus === 'PENDING_REVIEW' ? 'bg-amber-50 text-amber-700' : hasInboxItem ? 'bg-blue-50 text-blue-700' : 'bg-surface-container text-on-surface-variant/50'}`}>
-                <span className={`w-2 h-2 rounded-full ${inboxStatus === 'ACCEPTED' ? 'bg-green-500' : inboxStatus === 'PENDING_REVIEW' ? 'bg-amber-500' : hasInboxItem ? 'bg-blue-500' : 'bg-gray-300'}`} />
-                <span className="font-medium">Inbox</span>
-                <span className="ml-auto text-[10px]">{inboxStatus || 'None'}</span>
-              </div>
-              {/* Reconciliation */}
-              <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] ${hasReconciliation ? 'bg-green-50 text-green-700' : 'bg-surface-container text-on-surface-variant/50'}`}>
-                <span className={`w-2 h-2 rounded-full ${hasReconciliation ? 'bg-green-500' : 'bg-gray-300'}`} />
-                <span className="font-medium">Reconcil.</span>
-                <span className="ml-auto text-[10px]">{hasReconciliation ? 'Done' : 'None'}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-px bg-outline-variant/40 mx-5" />
-
-          {/* Schedules */}
-          <div className="flex-1 overflow-y-auto px-5 py-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">
-                Schedules {movements.length > 0 && `(${movements.length})`}
-              </span>
-            </div>
-
-            {movements.length > 0 ? (
-              <div className="relative">
-                {movements.length > 1 && (
-                  <div className="absolute left-[5px] top-[7px] bottom-[7px] w-px bg-outline-variant/50" />
-                )}
-                {movements.map((m, idx) => {
-                  const pax = m.passengers?.map((p: any) => p.name).join(', ') || '';
-                  const from = m.pickupLines?.[0] || '';
-                  const to = m.dropoffLines?.[0] || '';
-                  const isLast = idx === movements.length - 1;
-                  return (
-                    <div key={idx} className={`flex gap-3 items-start ${!isLast ? 'pb-4' : ''}`}>
-                      <div className="relative z-10 shrink-0 mt-[5px]">
-                        <div className="w-[11px] h-[11px] rounded-full border-2 border-surface-container-lowest" style={{ backgroundColor: statusColor.hex }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[13px] font-semibold text-on-surface tabular-nums">{formatTimeDisplay(m.time)}</span>
-                          {from && <span className="text-[10px] font-medium text-primary/70 bg-primary/5 px-1.5 py-px rounded">Pickup</span>}
-                          {to && !from && <span className="text-[10px] font-medium text-on-surface-variant/60 bg-surface-container px-1.5 py-px rounded">Drop-off</span>}
-                        </div>
-                        {(from || to) && (
-                          <div className="text-[12px] text-on-surface mt-0.5 truncate">{from || to}</div>
-                        )}
-                        {from && to && (
-                          <div className="text-[11px] text-on-surface-variant/60 mt-0.5">↓</div>
-                        )}
-                        {from && to && (
-                          <>
-                            <div className="text-[12px] text-on-surface mt-0.5 truncate">{to}</div>
-                            <span className="text-[10px] font-medium text-on-surface-variant/60 bg-surface-container px-1.5 py-px rounded inline-block mt-0.5">Drop-off</span>
-                          </>
-                        )}
-                        {pax && <div className="text-[11px] text-on-surface-variant mt-1 truncate">{pax}</div>}
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-on-surface-variant/30 shrink-0 mt-[5px]" />
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-[12px] text-on-surface-variant/50 py-4 text-center">No schedule data</div>
-            )}
-          </div>
-
-          <div className="h-px bg-outline-variant/40 mx-5" />
-
-          {/* Workflow Actions */}
-          {(() => {
-            const workflowButtons: Record<string, { label: string; icon: React.ReactNode; action: string; color: string }[]> = {
-              Importado:  [{ label: 'Assign Driver', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>, action: 'assign', color: 'bg-blue-500 hover:bg-blue-600' }],
-              Asignado:   [{ label: 'Confirm Service', icon: <Check className="w-3.5 h-3.5" />, action: 'confirm', color: 'bg-cyan-500 hover:bg-cyan-600' }],
-              Confirmado: [{ label: 'Start Route', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>, action: 'start', color: 'bg-blue-600 hover:bg-blue-700' }],
-              EnRuta:     [{ label: 'Complete', icon: <CheckCircle className="w-3.5 h-3.5" />, action: 'complete', color: 'bg-green-600 hover:bg-green-700' }],
-              Realizado:  [{ label: 'Send Report', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>, action: 'report', color: 'bg-amber-500 hover:bg-amber-600' }],
-              Reportado:  [{ label: 'Send to Review', icon: <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>, action: 'review', color: 'bg-amber-500 hover:bg-amber-600' }, { label: 'Validate', icon: <CheckCircle className="w-3.5 h-3.5" />, action: 'validate', color: 'bg-green-700 hover:bg-green-800' }],
-              Revision:   [{ label: 'Validate', icon: <CheckCircle className="w-3.5 h-3.5" />, action: 'validate', color: 'bg-green-700 hover:bg-green-800' }],
-            };
-            const buttons = service.operationalStatus === 'Importado' && service.driverId
-              ? workflowButtons['Asignado'] || []
-              : workflowButtons[service.operationalStatus] || [];
-            if (buttons.length === 0) return null;
-            return (
-              <div className="px-5 py-3 shrink-0">
-                <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Workflow</span>
-                <div className="flex gap-2 mt-2">
-                  {buttons.map((btn) => (
-                    <button key={btn.action}
-                      onClick={() => { handleWorkflowAction(service, btn.action); setSidePanelService(null); }}
-                      className={`flex items-center gap-1.5 px-3 py-2 text-on-primary text-[12px] font-medium rounded-lg transition-colors cursor-pointer ${btn.color}`}>
-                      {btn.icon}
-                      {btn.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
-
-          <div className="h-px bg-outline-variant/40 mx-5" />
-
-          {/* Quick Actions — Contextual */}
-          <div className="px-5 py-3 shrink-0">
-            <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Quick Actions</span>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              <button onClick={() => { setEditingService(service); setSidePanelService(null); }}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-primary/10 text-primary text-[11px] font-medium rounded-lg hover:bg-primary/20 transition-colors cursor-pointer">
-                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                Edit
-              </button>
-              <button onClick={() => { handleOpenCancel(service); setSidePanelService(null); }}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-red-50 text-red-600 text-[11px] font-medium rounded-lg hover:bg-red-100 transition-colors cursor-pointer">
-                <Trash2 className="w-3 h-3" />
-                Cancel
-              </button>
-              {service.driverPhone && (
-                <a href={`tel:${service.driverPhone}`}
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-green-50 text-green-700 text-[11px] font-medium rounded-lg hover:bg-green-100 transition-colors cursor-pointer">
-                  Call
-                </a>
-              )}
-              <button onClick={() => { setEditingService(service); setShowWhatsAppParser(true); setSidePanelService(null); }}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 text-emerald-700 text-[11px] font-medium rounded-lg hover:bg-emerald-100 transition-colors cursor-pointer">
-                <MessageSquare className="w-3 h-3" />
-                WhatsApp
-              </button>
-              <button onClick={() => { onNavigate('driver_links'); setSidePanelService(null); }}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 text-blue-700 text-[11px] font-medium rounded-lg hover:bg-blue-100 transition-colors cursor-pointer">
-                Driver Link
-              </button>
-              <button onClick={() => { onNavigate('driver_reports'); setSidePanelService(null); }}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-violet-50 text-violet-700 text-[11px] font-medium rounded-lg hover:bg-violet-100 transition-colors cursor-pointer">
-                Reports
-              </button>
-              <button onClick={() => { onNavigate('reconciliation'); setSidePanelService(null); }}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-50 text-amber-700 text-[11px] font-medium rounded-lg hover:bg-amber-100 transition-colors cursor-pointer">
-                Reconcil.
-              </button>
-              <button onClick={() => { onNavigate('rapportinos'); setSidePanelService(null); }}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-50 text-purple-700 text-[11px] font-medium rounded-lg hover:bg-purple-100 transition-colors cursor-pointer">
-                Rapportino
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   // --- Empty Day Placeholder ---
   const EmptyDay = ({ onClick }: { onClick?: () => void }) => (
     <div className="flex flex-col items-center justify-center p-4 border border-dashed border-outline-variant rounded-lg text-center gap-2 bg-surface-dim/30 min-h-[100px]">
@@ -1865,8 +1582,15 @@ export default function DashboardScreen({
           )}
         </div>
 
-      {/* Side Panel */}
-      {sidePanelService && <SidePanel />}
+      {/* Service Workspace — replaces SidePanel */}
+      {sidePanelService && (
+        <ServiceWorkspace
+          service={sidePanelService}
+          onClose={() => setSidePanelService(null)}
+          onServiceUpdate={onServiceUpdate}
+          onNavigate={onNavigate}
+        />
+      )}
 
       {/* Edit Service Modal */}
       {editingService && (

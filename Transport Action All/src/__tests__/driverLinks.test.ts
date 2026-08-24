@@ -4,7 +4,7 @@
  * Tests: generateDriverLink, getDriverLinks, deactivateDriverLink
  * 
  * These functions communicate with the Google Apps Script backend.
- * gasGet sends params as URL query string, gasPost sends as JSON body.
+ * gasPost sends action in URL and data in JSON body.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
@@ -106,7 +106,7 @@ describe('Driver Links API', () => {
   });
 
   describe('getDriverLinks', () => {
-    it('should fetch all links via GET with action param', async () => {
+    it('should fetch all links via POST with action param', async () => {
       const mockLinks = [
         { Token: 'token-1', DriverID: 'DRV-001', Status: 'active' },
         { Token: 'token-2', DriverID: 'DRV-002', Status: 'inactive' }
@@ -121,24 +121,25 @@ describe('Driver Links API', () => {
 
       expect(mockFetch).toHaveBeenCalledOnce();
       
-      // gasGet sends params as URL query string
+      // gasPost sends action in URL and data in body
       const url = mockFetch.mock.calls[0][0] as string;
       expect(url).toContain('action=getDriverLinks');
       
       expect(result).toHaveLength(2);
     });
 
-    it('should pass filters as URL params', async () => {
+    it('should pass filters as POST body', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({ data: [] })
       });
 
-      await getDriverLinks({ driverId: 'DRV-001', status: 'active' });
+      await getDriverLinks({ driverId: 'DRV-001', status: 'active', serviceId: 'SVC-001' });
 
-      const url = mockFetch.mock.calls[0][0] as string;
-      expect(url).toContain('driverId=DRV-001');
-      expect(url).toContain('status=active');
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.filters.driverId).toBe('DRV-001');
+      expect(body.filters.status).toBe('active');
+      expect(body.filters.serviceId).toBe('SVC-001');
     });
   });
 
