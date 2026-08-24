@@ -136,12 +136,13 @@ function acceptReport(inboxId, reviewedBy) {
 
       // Parse normalized data and create DriverReport (Issue #12)
       // BUG FIX: serviceId comes from RawData (metadata), NOT NormalizedData (user edits)
+      // FIX: Also check NormalizedData.serviceId as fallback (for WhatsApp flow where coordinator selects service)
       // CRITICAL: If createReport fails, abort accept — don't mark ACCEPTED silently
       var rawSource = JSON.parse(item.RawData || '{}');
       var normSource = JSON.parse(item.NormalizedData || '{}');
       // Merge: prefer NormalizedData for user fields, always use RawData for serviceId
       var dataSource = Object.assign({}, rawSource, normSource);
-      var serviceId = rawSource.serviceId || dataSource.serviceId || '';
+      var serviceId = rawSource.serviceId || normSource.serviceId || dataSource.serviceId || '';
 
       if (!serviceId) {
         return { success: false, error: 'No serviceId found in RawData. Cannot create DriverReport.' };

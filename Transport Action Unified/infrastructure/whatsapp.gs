@@ -426,6 +426,7 @@ function parseWhatsAppForCapture(text) {
     // Try auto-match driver by name
     reports.forEach(function(r) {
       r.matchedDriverId = '';
+      r.serviceCandidates = [];
       if (r.driverName && drivers.length > 0) {
         var lowerName = r.driverName.toLowerCase().trim();
         var match = drivers.find(function(d) {
@@ -440,6 +441,33 @@ function parseWhatsAppForCapture(text) {
           });
         }
         if (match) r.matchedDriverId = match.id;
+
+        // Search for matching services by driver+date
+        if (match && r.dateParsed) {
+          try {
+            var allServices = ServiceRepository.getAll();
+            var driverServices = allServices.filter(function(s) {
+              return s.DriverID === match.id;
+            });
+            // Filter by date (same day)
+            var serviceDate = new Date(r.dateParsed);
+            r.serviceCandidates = driverServices.filter(function(s) {
+              if (!s.Date) return false;
+              var sd = new Date(s.Date);
+              return sd.toDateString() === serviceDate.toDateString();
+            }).map(function(s) {
+              return {
+                id: s.ID,
+                time: s.Time || '',
+                production: s.Production || '',
+                section: s.Section || '',
+                passengerName: s.PassengerName || '',
+                status: s.OperationalStatus || '',
+                route: s.Route || ''
+              };
+            });
+          } catch (e) {}
+        }
       }
     });
 
@@ -481,8 +509,9 @@ function captureWhatsAppReports(reports, projectId) {
         var serviceDate = r.dateParsed || r.date || new Date().toISOString().split('T')[0];
 
         // Build rawData matching the DriverLink format for consistency
+        // serviceId can come from parsed report or from coordinator selection
         var rawData = {
-          serviceId: r.serviceId || '',
+          serviceId: r.serviceId || r.selectedServiceId || '',
           startTime: r.startTime || '',
           endTime: r.endTime || '',
           kmTotal: r.kmTotal || 0,

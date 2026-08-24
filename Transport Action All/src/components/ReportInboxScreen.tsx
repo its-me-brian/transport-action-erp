@@ -4,7 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import {
   getInboxItems, normalizeReport, submitToReview, acceptReport,
-  rejectReport, lockReport, getServiceById, getDrivers, getProjects
+  rejectReport, lockReport, getServiceById, getDrivers, getProjects,
+  getServices
 } from '../services/api';
 
 interface InboxItem {
@@ -27,6 +28,7 @@ interface InboxItem {
 
 // Normalized data fields (what the user edits during normalization)
 interface NormalizedFields {
+  serviceId: string;
   startTime: string;
   endTime: string;
   kmTotal: number;
@@ -36,6 +38,7 @@ interface NormalizedFields {
 }
 
 const DEFAULT_NORMALIZED: NormalizedFields = {
+  serviceId: '',
   startTime: '',
   endTime: '',
   kmTotal: 0,
@@ -72,6 +75,10 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
 
   // Normalize form state
   const [normForm, setNormForm] = useState<NormalizedFields>(DEFAULT_NORMALIZED);
+
+  // Service matching for WhatsApp captures
+  const [matchingServices, setMatchingServices] = useState<any[]>([]);
+  const [isSearchingServices, setIsSearchingServices] = useState(false);
 
   // Filters
   const [filterSource, setFilterSource] = useState('');
@@ -182,6 +189,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
     setSelectedItem(item);
     setRejectReason('');
     setServiceRef(null);
+    setMatchingServices([]);
 
     // Pre-fill form from NormalizedData if exists, else from RawData
     if (item.NormalizedData) {
@@ -196,10 +204,33 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
       const serviceId = raw.serviceId || '';
       if (serviceId) {
         const svc = await getServiceById(serviceId);
-        if (svc) setServiceRef(svc);
+        if (svc) {
+          setServiceRef(svc);
+          setNormForm(p => ({ ...p, serviceId }));
+        }
       }
     } catch {
       // Service not found — show form without reference
+    }
+
+    // For WhatsApp captures: search for matching services by driver+date
+    if (item.Source === 'whatsapp' && item.DriverID && item.ServiceDate) {
+      setIsSearchingServices(true);
+      try {
+        const services = await getServices({ driverId: item.DriverID });
+        // Filter by same date
+        const targetDate = new Date(item.ServiceDate).toDateString();
+        const matched = (services || []).filter((s: any) => {
+          if (!s.date) return false;
+          const sd = new Date(s.date);
+          return sd.toDateString() === targetDate;
+        });
+        setMatchingServices(matched);
+      } catch (err) {
+        console.error('Failed to search matching services:', err);
+      } finally {
+        setIsSearchingServices(false);
+      }
     }
   };
 
@@ -211,6 +242,11 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
 
   // Normalize: CAPTURED → NORMALIZED
   const handleNormalize = async (inboxId: string) => {
+    // Validate service selection for WhatsApp captures
+    if (selectedItem?.Source === 'whatsapp' && !serviceRef && !normForm.serviceId) {
+      showToast('Please select a service before normalizing', 'error');
+      return;
+    }
     setIsSaving(true);
     try {
       await normalizeReport(inboxId, normForm);
@@ -226,6 +262,11 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
 
   // Quick Approve: CAPTURED → NORMALIZED → PENDING_REVIEW → ACCEPTED (one click)
   const handleQuickApprove = async (inboxId: string) => {
+    // Validate service selection for WhatsApp captures
+    if (selectedItem?.Source === 'whatsapp' && !serviceRef && !normForm.serviceId) {
+      showToast('Please select a service before approving', 'error');
+      return;
+    }
     setIsSaving(true);
     try {
       await normalizeReport(inboxId, normForm);
@@ -564,6 +605,33 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Service Selector — for WhatsApp captures without a linked service */}
+              {selectedItem.Source === 'whatsapp' && !serviceRef && (
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-2">
+                    Select Service (Required)
+                  </div>
+                  {isSearchingServices ? (
+                    <p className="text-xs text-amber-600">Searching for matching services...</p>
+                  ) : matchingServices.length > 0 ? (
+                    <select
+                      value={normForm.serviceId}
+                      onChange={e => setNormForm(p => ({ ...p, serviceId: e.target.value }))}
+                      className="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white"
+                    >
+                      <option value="">— Select a service —</option>
+                      {matchingServices.map((s: any) => (
+                        <option key={s.id} value={s.id}>
+                          {s.time || '—'} | {s.production || 'No production'} | {s.passengerName || 'No passenger'} | {s.status}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-xs text-amber-600">No matching services found for this driver on this date.</p>
+                  )}
                 </div>
               )}
 
