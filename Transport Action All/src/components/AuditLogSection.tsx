@@ -1,5 +1,5 @@
 import React from 'react';
-import { History, Loader2 } from 'lucide-react';
+import { History } from 'lucide-react';
 import { AuditEntry } from '../services/api';
 
 interface AuditLogSectionProps {
@@ -29,15 +29,38 @@ export default function AuditLogSection({
           value={logFilter}
           onChange={(e) => onLogFilterChange(e.target.value)}
           placeholder="Filter logs..."
+          aria-label="Filter logs"
           className="px-3 py-1.5 rounded-lg border border-outline-variant bg-surface text-on-surface text-[12px] focus:outline-none focus:ring-1 focus:ring-primary w-full sm:w-48"
         />
       </div>
       
       <div className="bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden">
         {isLoadingLogs ? (
-          <div className="flex items-center justify-center p-8 text-on-surface-variant text-[13px]">
-            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            Loading logs...
+          <div className="overflow-hidden">
+            <table className="w-full text-[11px]">
+              <thead className="bg-surface-dim">
+                <tr className="border-b border-outline-variant">
+                  <th className="text-left px-3 py-2 font-medium text-on-surface-variant">Time</th>
+                  <th className="text-left px-3 py-2 font-medium text-on-surface-variant">User</th>
+                  <th className="text-left px-3 py-2 font-medium text-on-surface-variant">Action</th>
+                  <th className="text-left px-3 py-2 font-medium text-on-surface-variant">Entity</th>
+                  <th className="text-left px-3 py-2 font-medium text-on-surface-variant">Details</th>
+                  <th className="text-left px-3 py-2 font-medium text-on-surface-variant">Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[1, 2, 3, 4, 5].map(i => (
+                  <tr key={i} className="border-b border-outline-variant/50 animate-pulse">
+                    <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-16" /></td>
+                    <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-14" /></td>
+                    <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-20" /></td>
+                    <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-16" /></td>
+                    <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-24" /></td>
+                    <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-20" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : filteredLogs.length === 0 ? (
           <div className="p-8 text-center text-on-surface-variant text-[13px]">

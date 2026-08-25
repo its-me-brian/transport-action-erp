@@ -36,7 +36,7 @@ export default function TransportListEmailModal({
             <Mail className="w-4 h-4" />
             Send Transport List by Email
           </h3>
-          <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface cursor-pointer">
+          <button onClick={onClose} aria-label="Close" className="text-on-surface-variant hover:text-on-surface cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>

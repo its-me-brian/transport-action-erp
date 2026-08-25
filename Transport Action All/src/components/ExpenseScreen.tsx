@@ -39,7 +39,7 @@ export default function ExpenseScreen({ onNavigate }: Props) {
   } = useExpenses();
 
   return (
-    <div className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-8">
+    <div className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-24">
       {/* Header */}
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0 sticky top-0 py-2 z-30 bg-background/90 backdrop-blur-md">
         <div>
@@ -68,7 +68,7 @@ export default function ExpenseScreen({ onNavigate }: Props) {
       <div className="flex flex-col sm:flex-row gap-2 px-1">
         <div className="relative flex-1 sm:w-64">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
-          <input type="text" placeholder="Search expenses..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+          <input type="text" placeholder="Search expenses..." aria-label="Search expenses" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
             className="w-full bg-surface-container-lowest border border-outline-variant pl-8 pr-3 py-1.5 text-[12px] rounded-lg focus:outline-none focus:border-primary text-on-surface" />
         </div>
         <div className="flex gap-1">

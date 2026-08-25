@@ -14,7 +14,7 @@ interface EditableCellProps {
   onKeyDown: (e: React.KeyboardEvent) => void;
 }
 
-export default function EditableCell({
+const EditableCell = React.memo(function EditableCell({
   rowId,
   field,
   value,
@@ -52,4 +52,5 @@ export default function EditableCell({
       <Edit3 className="w-3 h-3 opacity-0 group-hover:opacity-50 shrink-0" />
     </div>
   );
-}
+});
+export default EditableCell;

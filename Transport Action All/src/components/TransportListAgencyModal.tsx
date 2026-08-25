@@ -43,7 +43,7 @@ export default function TransportListAgencyModal({
             <Building2 className="w-4 h-4" />
             Send Services to Agency
           </h3>
-          <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface cursor-pointer">
+          <button onClick={onClose} aria-label="Close" className="text-on-surface-variant hover:text-on-surface cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -51,9 +51,10 @@ export default function TransportListAgencyModal({
           <div>
             <label className="block text-[12px] font-medium text-on-surface-variant mb-1">Select Agency</label>
             {loadingAgencies ? (
-              <div className="flex items-center gap-2 text-[12px] text-on-surface-variant py-2">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                Loading agencies...
+              <div className="space-y-2 animate-pulse">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="h-9 bg-surface-container-highest rounded-lg" />
+                ))}
               </div>
             ) : agencies.length === 0 ? (
               <div className="text-[12px] text-amber-600 py-2">

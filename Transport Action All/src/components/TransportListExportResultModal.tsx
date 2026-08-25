@@ -32,7 +32,7 @@ export default function TransportListExportResultModal({
               <><FileSpreadsheet className="w-4 h-4 text-emerald-600" /> Excel Exportado</>
             )}
           </h3>
-          <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface cursor-pointer">
+          <button onClick={onClose} aria-label="Close" className="text-on-surface-variant hover:text-on-surface cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>

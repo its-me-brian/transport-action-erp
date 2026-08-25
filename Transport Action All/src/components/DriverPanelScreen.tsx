@@ -53,7 +53,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
   );
 
   return (
-    <div id="driver-management-screen" className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-8">
+    <div id="driver-management-screen" className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-24">
       
       {/* Top Header/Action Bar */}
       <header id="driver-header-actions" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0 sticky top-0 py-2 z-30 bg-background/90 backdrop-blur-md">
@@ -98,6 +98,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
               autoCapitalize="off"
               data-driver-search="true"
               placeholder="Search drivers, vehicles..." 
+              aria-label="Search drivers, vehicles"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onInput={(e) => setSearchQuery((e.target as HTMLInputElement).value)}

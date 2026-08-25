@@ -168,7 +168,7 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto overflow-x-hidden">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto overflow-x-hidden pb-24">
       <div className="mb-4 sm:mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-on-surface flex items-center gap-2 sm:gap-3">
           <MessageSquare className="w-6 h-6 sm:w-7 sm:h-7 text-green-600" />

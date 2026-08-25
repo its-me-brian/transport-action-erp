@@ -44,7 +44,7 @@ export default function TransportListImportModal({
             <FileSpreadsheet className="w-4 h-4 text-primary" />
             Link Import to Project
           </h3>
-          <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface cursor-pointer">
+          <button onClick={onClose} aria-label="Close" className="text-on-surface-variant hover:text-on-surface cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>

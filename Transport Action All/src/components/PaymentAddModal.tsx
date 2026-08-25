@@ -42,7 +42,7 @@ export default function PaymentAddModal({ onClose, onSave, saving, newPayment, o
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
           <h3 className="text-[15px] font-semibold text-on-surface">Record Payment</h3>
-          <button onClick={onClose} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
+          <button onClick={onClose} aria-label="Close" className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
             <X className="w-4 h-4 text-on-surface-variant" />
           </button>
         </div>

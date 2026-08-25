@@ -279,7 +279,7 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
   };
 
   return (
-    <div id="invoice-screen" className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-8">
+    <div id="invoice-screen" className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-24">
       <header id="invoice-header" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0 sticky top-0 py-2 z-30 bg-background/90 backdrop-blur-md">
         <div>
           <h2 className="font-headline-lg-mobile md:font-headline-lg text-on-surface">Invoices</h2>
@@ -319,6 +319,7 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
             <input
               type="text"
               placeholder="Search invoices..."
+              aria-label="Search invoices"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="w-full bg-surface-container-lowest border border-outline-variant pl-8 pr-3 py-1.5 text-[12px] rounded-lg focus:outline-none focus:border-primary outline-none text-on-surface"

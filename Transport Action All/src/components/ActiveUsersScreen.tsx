@@ -78,7 +78,7 @@ export default function ActiveUsersScreen({ onNavigate }: ActiveUsersScreenProps
   };
 
   return (
-    <div className="flex-1 w-full max-w-[1200px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-8">
+    <div className="flex-1 w-full max-w-[1200px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-24">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
         <div>
           <h1 className="font-headline-lg-mobile md:font-headline-lg text-on-surface">Active Users</h1>

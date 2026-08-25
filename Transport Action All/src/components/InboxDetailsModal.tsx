@@ -52,7 +52,7 @@ export default function InboxDetailsModal({
       <div className="bg-surface rounded-xl w-full max-w-lg shadow-xl max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-outline-variant shrink-0">
           <h2 className="text-base sm:text-lg font-bold">Report Details</h2>
-          <button onClick={onClose} className="p-1 hover:bg-surface-container rounded-lg">
+          <button onClick={onClose} aria-label="Close" className="p-1 hover:bg-surface-container rounded-lg">
             <X className="w-5 h-5" />
           </button>
         </div>

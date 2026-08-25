@@ -42,7 +42,7 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
   } = useProjects();
 
   return (
-    <div id="project-screen" className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-8">
+    <div id="project-screen" className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-24">
       {/* Header */}
       <header id="project-header" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0 sticky top-0 py-2 z-30 bg-background/90 backdrop-blur-md">
         <div>
@@ -96,6 +96,7 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
             <input
               type="text"
               placeholder="Search projects..."
+              aria-label="Search projects"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="w-full bg-surface-container-lowest border border-outline-variant pl-8 pr-3 py-1.5 text-[12px] rounded-lg focus:outline-none focus:border-primary outline-none text-on-surface"

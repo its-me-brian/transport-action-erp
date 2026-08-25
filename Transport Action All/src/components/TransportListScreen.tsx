@@ -34,7 +34,7 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
   const h = useTransportList({ onImportComplete });
 
   return (
-    <div id="transport-list-screen" className="flex-1 w-full flex flex-col h-full overflow-y-auto">
+    <div id="transport-list-screen" className="flex-1 w-full flex flex-col h-full overflow-y-auto pb-24">
       {/* Header */}
       <div className="flex justify-between items-center w-full px-3 md:px-6 py-3 max-w-[1400px] mx-auto border-b border-outline-variant bg-background/90 backdrop-blur-md sticky top-0 z-30">
         <div className="min-w-0 flex-1">

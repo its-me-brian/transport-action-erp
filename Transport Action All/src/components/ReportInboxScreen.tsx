@@ -116,6 +116,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
         <input
           type="text"
           placeholder="Filter by Driver..."
+          aria-label="Filter by Driver"
           value={filterDriver}
           onChange={e => setFilterDriver(e.target.value)}
           className="px-2 py-1.5 border border-outline-variant rounded-lg text-[12px] bg-surface focus:border-primary outline-none shrink-0 w-full sm:w-auto"

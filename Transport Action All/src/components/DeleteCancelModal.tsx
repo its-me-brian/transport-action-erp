@@ -59,7 +59,7 @@ export default function DeleteCancelModal({ service, mode, onClose, onConfirm }:
               {mode === 'cancel' ? 'Cancel Service' : 'Delete Service'}
             </h2>
           </div>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-surface-dim">
+          <button onClick={onClose} aria-label="Close" className="p-1 rounded-full hover:bg-surface-dim">
             <X className="w-5 h-5 text-on-surface-variant" />
           </button>
         </div>

@@ -53,7 +53,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
   } = useCollaborators();
 
   return (
-    <div id="collaborator-screen" className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-8">
+    <div id="collaborator-screen" className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-24">
       {/* Header */}
       <header id="collaborator-header" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0 sticky top-0 py-2 z-30 bg-background/90 backdrop-blur-md">
         <div>
@@ -78,6 +78,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
           <input
             type="text"
             placeholder="Search providers..."
+            aria-label="Search providers"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full bg-surface-container-lowest border border-outline-variant pl-8 pr-3 py-1.5 text-[12px] rounded-lg focus:outline-none focus:border-primary outline-none text-on-surface"

@@ -155,6 +155,7 @@ export default function DashboardHeader({
           <svg className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-on-surface-variant/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input type="text" value={searchQuery} onChange={e => onSearchChange(e.target.value)}
             placeholder="Search..."
+            aria-label="Search"
             className="w-full bg-transparent border-none pl-6 pr-1.5 py-1 text-[10px] text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none" />
         </div>
       </div>

@@ -56,7 +56,7 @@ export default function ReportsScreen({ services, drivers, onNavigate, onService
   } = useReports({ services, drivers, onServiceUpdate });
 
   return (
-    <div id="reports-screen" className="flex-1 w-full max-w-[1200px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-8">
+    <div id="reports-screen" className="flex-1 w-full max-w-[1200px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-24">
       {/* Header */}
       <div id="reports-header" className="flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
         <div>

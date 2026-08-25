@@ -120,6 +120,7 @@ const DriverCell = React.memo(function DriverCell({ service, dbDrivers, onUpdate
               onInput={(e) => setSearch((e.target as HTMLInputElement).value)}
               onKeyDown={handleKeyDown}
               placeholder="Search driver by name..."
+              aria-label="Search driver by name"
               className="w-full px-2 py-1.5 text-[12px] border border-outline-variant rounded bg-white text-on-surface focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant/50"
             />
           </div>

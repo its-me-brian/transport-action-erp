@@ -76,7 +76,7 @@ export default function InboxNormalizeModal({
               Compare driver input with transport list reference
             </p>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-surface-container rounded-lg shrink-0">
+          <button onClick={onClose} aria-label="Close" className="p-1 hover:bg-surface-container rounded-lg shrink-0">
             <X className="w-5 h-5" />
           </button>
         </div>

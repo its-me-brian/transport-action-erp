@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Calendar,
   Users,
@@ -25,11 +25,12 @@ import {
   ArrowLeftRight,
   LayoutDashboard
 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { ScreenId } from '../types';
+import { screenToRoute } from '../routes';
 import { useAuth } from '../contexts/AuthContext';
 
 interface SidebarProps {
-  currentScreen: ScreenId;
   onNavigate: (screen: ScreenId) => void;
   mode: SidebarMode;
   onModeChange: (mode: SidebarMode) => void;
@@ -42,12 +43,18 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   permission: string;
+  route: string;
 }
 
 interface NavSection {
   title: string;
   items: NavItem[];
 }
+
+const routeToScreen: Record<string, ScreenId> = {};
+Object.entries(screenToRoute).forEach(([screen, route]) => {
+  routeToScreen[route] = screen as ScreenId;
+});
 
 // ============================================================================
 // NAVIGATION STRUCTURE — Organized by functional domain
@@ -56,46 +63,52 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: 'OPERATIONS',
     items: [
-      { id: 'executive_dashboard', label: 'Dashboard',     icon: LayoutDashboard, permission: 'report.dashboard' },
-      { id: 'transport',           label: 'Transport',      icon: Calendar,        permission: 'service.list' },
-      { id: 'driver_reports',      label: 'Driver Reports', icon: ClipboardCheck,  permission: 'driverReport.list' },
-      { id: 'driver_links',        label: 'Driver Links',   icon: Link2,           permission: 'driverLink.list' },
+      { id: 'executive_dashboard', label: 'Dashboard',     icon: LayoutDashboard, permission: 'report.dashboard', route: '/dashboard' },
+      { id: 'transport',           label: 'Transport',      icon: Calendar,        permission: 'service.list',     route: '/transport' },
+      { id: 'driver_reports',      label: 'Driver Reports', icon: ClipboardCheck,  permission: 'driverReport.list', route: '/driver-reports' },
+      { id: 'driver_links',        label: 'Driver Links',   icon: Link2,           permission: 'driverLink.list',  route: '/driver-links' },
     ],
   },
   {
     title: 'FINANCE',
     items: [
-      { id: 'rapportinos', label: 'Rapportinos',       icon: FileSpreadsheet, permission: 'rapportinoClient.list' },
-      { id: 'reconciliation', label: 'Reconciliation', icon: ArrowLeftRight,  permission: 'reconciliation.check' },
-      { id: 'accounting',  label: 'Accounting',         icon: DollarSign,      permission: 'invoice.list' },
-      { id: 'financial',   label: 'Financial Reports',  icon: BarChart3,       permission: 'invoice.list' },
+      { id: 'rapportinos', label: 'Rapportinos',       icon: FileSpreadsheet, permission: 'rapportinoClient.list', route: '/rapportinos' },
+      { id: 'reconciliation', label: 'Reconciliation', icon: ArrowLeftRight,  permission: 'reconciliation.check',  route: '/reconciliation' },
+      { id: 'accounting',  label: 'Accounting',         icon: DollarSign,      permission: 'invoice.list',          route: '/accounting' },
+      { id: 'financial',   label: 'Financial Reports',  icon: BarChart3,       permission: 'invoice.list',          route: '/financial' },
     ],
   },
   {
     title: 'MANAGEMENT',
     items: [
-      { id: 'customers', label: 'Customers', icon: Building2,  permission: 'client.list' },
-      { id: 'providers', label: 'Providers', icon: Handshake,  permission: 'collaborator.list' },
-      { id: 'drivers',   label: 'Drivers',   icon: UserRound,  permission: 'driver.list' },
-      { id: 'vehicles',  label: 'Vehicles',  icon: Car,        permission: 'vehicle.list' },
-      { id: 'projects',  label: 'Projects',  icon: FolderOpen, permission: 'project.list' },
+      { id: 'customers', label: 'Customers', icon: Building2,  permission: 'client.list',      route: '/customers' },
+      { id: 'providers', label: 'Providers', icon: Handshake,  permission: 'collaborator.list', route: '/providers' },
+      { id: 'drivers',   label: 'Drivers',   icon: UserRound,  permission: 'driver.list',       route: '/drivers' },
+      { id: 'vehicles',  label: 'Vehicles',  icon: Car,        permission: 'vehicle.list',      route: '/vehicles' },
+      { id: 'projects',  label: 'Projects',  icon: FolderOpen, permission: 'project.list',      route: '/projects' },
     ],
   },
   {
     title: 'SYSTEM',
     items: [
-      { id: 'audit_center',    label: 'Audit Center',    icon: Activity,  permission: 'auditLog.read' },
-      { id: 'active_users',    label: 'Active Users',    icon: Bell,      permission: 'presence.read' },
-      { id: 'user_management', label: 'Users & Roles',   icon: Users,     permission: 'userManagement' },
-      { id: 'settings',        label: 'Settings',        icon: Settings,  permission: 'settings.read' },
-      { id: 'documents',       label: 'Documents',       icon: FileText,  permission: 'document.list' },
+      { id: 'audit_center',    label: 'Audit Center',    icon: Activity,  permission: 'auditLog.read',   route: '/audit-center' },
+      { id: 'active_users',    label: 'Active Users',    icon: Bell,      permission: 'presence.read',   route: '/active-users' },
+      { id: 'user_management', label: 'Users & Roles',   icon: Users,     permission: 'userManagement',  route: '/user-management' },
+      { id: 'settings',        label: 'Settings',        icon: Settings,  permission: 'settings.read',   route: '/settings' },
+      { id: 'documents',       label: 'Documents',       icon: FileText,  permission: 'document.list',   route: '/documents' },
     ],
   },
 ];
 
-export default function Sidebar({ currentScreen, onNavigate, mode, onModeChange }: SidebarProps) {
+export default function Sidebar({ onNavigate, mode, onModeChange }: SidebarProps) {
   const { user, logout, can } = useAuth();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const currentScreen: ScreenId = useMemo(() => {
+    if (location.pathname.startsWith('/service/')) return 'transport';
+    return routeToScreen[location.pathname] || 'executive_dashboard';
+  }, [location.pathname]);
 
   useEffect(() => {
     localStorage.setItem('sidebarMode', mode);
@@ -122,12 +135,14 @@ export default function Sidebar({ currentScreen, onNavigate, mode, onModeChange 
         <button
           onClick={() => onModeChange('full')}
           className="hidden md:flex fixed top-4 left-4 z-50 w-10 h-10 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-md items-center justify-center hover:bg-surface-container-low transition-colors"
+          aria-label="Open sidebar"
         >
           <Menu className="w-5 h-5 text-on-surface" />
         </button>
         <button
           onClick={() => setMobileOpen(true)}
           className="md:hidden fixed top-4 left-4 z-50 w-10 h-10 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-md flex items-center justify-center hover:bg-surface-container-low transition-colors"
+          aria-label="Open navigation menu"
         >
           <Menu className="w-5 h-5 text-on-surface" />
         </button>
@@ -140,6 +155,18 @@ export default function Sidebar({ currentScreen, onNavigate, mode, onModeChange 
 
   return (
     <>
+      {/* Mobile hamburger — visible on md:hidden when sidebar is closed */}
+      {!mobileOpen && (
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="md:hidden fixed top-3 left-3 z-50 w-10 h-10 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-md flex items-center justify-center hover:bg-surface-container-low transition-colors"
+          aria-label="Open navigation menu"
+        >
+          <Menu className="w-5 h-5 text-on-surface" />
+        </button>
+      )}
+
+      {/* Mobile overlay */}
       {mobileOpen && (
         <div
           className="md:hidden fixed inset-0 bg-black/40 z-40"
@@ -147,6 +174,7 @@ export default function Sidebar({ currentScreen, onNavigate, mode, onModeChange 
         />
       )}
 
+      {/* Mobile drawer (full width on mobile, fixed sidebar on desktop) */}
       <aside
         id="sidebar-container"
         className={`fixed left-0 top-0 h-full border-r border-outline-variant z-40 px-3 py-4 transition-all duration-300 bg-surface-dim text-on-surface ${
@@ -172,6 +200,7 @@ export default function Sidebar({ currentScreen, onNavigate, mode, onModeChange 
             onClick={toggleMode}
             className="flex items-center justify-center gap-2 mb-4 mx-2 py-1.5 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors text-[11px]"
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {isCollapsed ? (
               <ChevronRight className="w-4 h-4" />
@@ -218,6 +247,7 @@ export default function Sidebar({ currentScreen, onNavigate, mode, onModeChange 
                             : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
                         }`}
                         title={isCollapsed ? item.label : undefined}
+                        aria-label={item.label}
                       >
                         <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-primary' : 'text-on-surface-variant'}`} />
                         {!isCollapsed && <span className="flex-1">{item.label}</span>}
@@ -240,6 +270,7 @@ export default function Sidebar({ currentScreen, onNavigate, mode, onModeChange 
                   onClick={() => logout()}
                   className="flex items-center justify-center w-8 h-8 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
                   title="Sign Out"
+                  aria-label="Sign Out"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -263,6 +294,7 @@ export default function Sidebar({ currentScreen, onNavigate, mode, onModeChange 
                 <button
                   onClick={() => logout()}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors mx-1"
+                  aria-label="Sign Out"
                 >
                   <LogOut className="w-4 h-4" />
                   Sign Out

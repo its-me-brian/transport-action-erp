@@ -200,6 +200,7 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search by service, project, or ID..."
+              aria-label="Search by service, project, or ID"
               className="w-full pl-9 pr-3 py-2 text-sm bg-surface-container border border-outline-variant rounded-lg focus:outline-none focus:border-primary"
             />
           </div>
@@ -222,7 +223,7 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto px-4 sm:px-6 py-4">
+      <div className="flex-1 overflow-auto px-4 sm:px-6 py-4 pb-24">
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (

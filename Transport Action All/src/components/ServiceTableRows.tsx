@@ -544,7 +544,7 @@ function renderServiceBlock(
   return <React.Fragment key={service.id}>{rows}</React.Fragment>;
 }
 
-export default function ServiceTableRows(props: ServiceTableRowsProps) {
+const ServiceTableRows = React.memo(function ServiceTableRows(props: ServiceTableRowsProps) {
   const { filteredServices, selectedRows, viewMode } = props;
 
   const sectionMap = new Map<string, typeof filteredServices>();
@@ -627,4 +627,5 @@ export default function ServiceTableRows(props: ServiceTableRowsProps) {
       </div>
     </div>
   );
-}
+});
+export default ServiceTableRows;

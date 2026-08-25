@@ -49,7 +49,7 @@ export default function AuditCenterScreen({ onNavigate }: Props) {
       </div>
 
       {/* Tab content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto pb-24">
         {activeTab === 'activity' && <ActivityFeedScreen onNavigate={onNavigate} />}
         {activeTab === 'changes' && <ChangesScreen onNavigate={onNavigate} />}
       </div>

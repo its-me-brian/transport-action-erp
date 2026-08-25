@@ -28,7 +28,7 @@ interface DayDetailViewProps {
   selectAllServicesForDay: (dateKey: string) => void;
   setSelectedDay: (day: string | null) => void;
   handleDoubleClick: (s: Service) => void;
-  setSidePanelService: (s: Service) => void;
+  openService: (s: Service) => void;
   lastTapMapRef: React.MutableRefObject<Map<string, number>>;
 }
 
@@ -42,7 +42,7 @@ export default function DayDetailView({
   selectAllServicesForDay,
   setSelectedDay,
   handleDoubleClick,
-  setSidePanelService,
+  openService,
   lastTapMapRef,
 }: DayDetailViewProps) {
   if (!effectiveDay) return null;
@@ -132,7 +132,7 @@ export default function DayDetailView({
                       borderLeft: `4px solid ${getServiceStatusColor(service).hex}`,
                       backgroundColor: isCompleted ? '#f9fafb' : service.operationalStatus === 'Cancelado' ? '#fef2f2' : getServiceStatusColor(service).hex + '12',
                     }}
-                    onClick={() => setSidePanelService(service)}
+                    onClick={() => openService(service)}
                     onDoubleClick={() => handleDoubleClick(service)}
                     onTouchEnd={() => {
                       const now = Date.now();

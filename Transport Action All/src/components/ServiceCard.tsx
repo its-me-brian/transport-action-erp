@@ -16,7 +16,7 @@ interface ServiceCardProps {
   compact?: boolean;
 }
 
-export default function ServiceCard({
+const ServiceCard = React.memo(function ServiceCard({
   service,
   onDoubleClick,
   isSelected = false,
@@ -131,4 +131,5 @@ export default function ServiceCard({
       )}
     </div>
   );
-}
+});
+export default ServiceCard;

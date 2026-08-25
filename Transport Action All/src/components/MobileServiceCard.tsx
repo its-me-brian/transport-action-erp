@@ -32,7 +32,7 @@ function getSectionStyleMobile(name: string): string {
   return 'bg-[#c6d44e]';
 }
 
-export default function MobileServiceCard({
+const MobileServiceCard = React.memo(function MobileServiceCard({
   service,
   isSelected,
   isExpanded,
@@ -226,4 +226,5 @@ export default function MobileServiceCard({
       )}
     </div>
   );
-}
+});
+export default MobileServiceCard;

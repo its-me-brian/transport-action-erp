@@ -107,67 +107,81 @@ export default function ServiceWorkspace({
 
   const isPage = mode === 'page';
 
-  const content = (
-    <>
-      {/* Header */}
-      <ServiceHeader service={service} onClose={onClose} />
-
-      {/* Status Rail */}
-      <StatusRail service={service} relatedData={relatedData} />
-
-      {/* Tab Bar */}
-      <TabBar
-        tabs={tabs}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-      />
-
-      {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto">
-        {activeTab === 'overview' && (
-          <OverviewTab service={service} />
-        )}
-        {activeTab === 'movements' && (
-          <MovementsTab service={service} />
-        )}
-        {activeTab === 'driver' && (
-          <DriverTab service={service} />
-        )}
-        {activeTab === 'driverLink' && (
-          <DriverLinkTab service={service} driverLink={relatedData.driverLink} onNavigate={onNavigate} />
-        )}
-        {activeTab === 'driverReport' && (
-          <DriverReportTab service={service} driverReport={relatedData.driverReport} onNavigate={onNavigate} />
-        )}
-        {activeTab === 'whatsapp' && (
-          <WhatsAppTab service={service} />
-        )}
-        {activeTab === 'reconciliation' && (
-          <ReconciliationTab service={service} reconciliation={relatedData.reconciliation} onNavigate={onNavigate} />
-        )}
-        {activeTab === 'rapportino' && (
-          <RapportinoTab service={service} onNavigate={onNavigate} />
-        )}
-        {activeTab === 'history' && (
-          <HistoryTab service={service} />
-        )}
-      </div>
-
-      {/* Footer — Workflow Actions */}
-      <WorkflowFooter service={service} onServiceUpdate={onServiceUpdate} onClose={onClose} />
-    </>
-  );
-
-  // Page mode: full-screen routed view (used by ServiceWorkspacePage)
+  // Page mode: full-screen routed view with vertical tabs
   if (isPage) {
     return (
-      <div className="flex-1 flex flex-col h-full bg-surface-container-lowest overflow-hidden">
-        {content}
+      <div className="flex-1 flex h-full bg-surface-container-lowest overflow-hidden">
+        {/* Left: Vertical Tab Nav */}
+        <div className="w-[200px] shrink-0 border-r border-outline-variant/40 bg-surface flex flex-col overflow-y-auto">
+          <div className="px-3 pt-4 pb-2">
+            <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Sections</span>
+          </div>
+          <nav className="flex-1 px-2 space-y-0.5">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] font-medium transition-colors text-left ${
+                  activeTab === tab.id
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-on-surface-variant hover:bg-surface-container'
+                }`}
+              >
+                {tab.icon}
+                <span className="flex-1">{tab.label}</span>
+                {tab.badge && (
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${tab.badgeColor || 'bg-gray-100 text-gray-500'}`}>
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Right: Content */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Compact Header with service info + workflow */}
+          <PageHeader service={service} relatedData={relatedData} onServiceUpdate={onServiceUpdate} onClose={onClose} />
+
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto">
+            {activeTab === 'overview' && <OverviewTab service={service} />}
+            {activeTab === 'movements' && <MovementsTab service={service} />}
+            {activeTab === 'driver' && <DriverTab service={service} />}
+            {activeTab === 'driverLink' && <DriverLinkTab service={service} driverLink={relatedData.driverLink} onNavigate={onNavigate} />}
+            {activeTab === 'driverReport' && <DriverReportTab service={service} driverReport={relatedData.driverReport} onNavigate={onNavigate} />}
+            {activeTab === 'whatsapp' && <WhatsAppTab service={service} />}
+            {activeTab === 'reconciliation' && <ReconciliationTab service={service} reconciliation={relatedData.reconciliation} onNavigate={onNavigate} />}
+            {activeTab === 'rapportino' && <RapportinoTab service={service} onNavigate={onNavigate} />}
+            {activeTab === 'history' && <HistoryTab service={service} />}
+          </div>
+        </div>
       </div>
     );
   }
 
   // Panel mode: slide-in overlay (default, used from Calendar/Dashboard)
+  const content = (
+    <>
+      <ServiceHeader service={service} onClose={onClose} />
+      <StatusRail service={service} relatedData={relatedData} />
+      <TabBar tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} />
+      <div className="flex-1 overflow-y-auto">
+        {activeTab === 'overview' && <OverviewTab service={service} />}
+        {activeTab === 'movements' && <MovementsTab service={service} />}
+        {activeTab === 'driver' && <DriverTab service={service} />}
+        {activeTab === 'driverLink' && <DriverLinkTab service={service} driverLink={relatedData.driverLink} onNavigate={onNavigate} />}
+        {activeTab === 'driverReport' && <DriverReportTab service={service} driverReport={relatedData.driverReport} onNavigate={onNavigate} />}
+        {activeTab === 'whatsapp' && <WhatsAppTab service={service} />}
+        {activeTab === 'reconciliation' && <ReconciliationTab service={service} reconciliation={relatedData.reconciliation} onNavigate={onNavigate} />}
+        {activeTab === 'rapportino' && <RapportinoTab service={service} onNavigate={onNavigate} />}
+        {activeTab === 'history' && <HistoryTab service={service} />}
+      </div>
+      <WorkflowFooter service={service} onServiceUpdate={onServiceUpdate} onClose={onClose} />
+    </>
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
       <div className="absolute inset-0 bg-black/20" />
@@ -182,7 +196,112 @@ export default function ServiceWorkspace({
 }
 
 // ============================================================================
-// HEADER
+// PAGE HEADER — Compact header for full-page mode
+// ============================================================================
+
+function PageHeader({ service, relatedData, onServiceUpdate, onClose }: {
+  service: Service;
+  relatedData: RelatedData;
+  onServiceUpdate?: (serviceId: string, updates: Partial<Service>) => void;
+  onClose: () => void;
+}) {
+  const statusColor = getServiceStatusColor(service);
+  const hasDriverLink = !!relatedData.driverLink;
+  const driverLinkActive = hasDriverLink && relatedData.driverLink?.active !== false;
+  const hasDriverReport = !!relatedData.driverReport;
+  const driverReportStatus = relatedData.driverReport?.status || relatedData.driverReport?.Status || null;
+  const hasInboxItem = !!relatedData.inboxItem;
+  const inboxStatus = relatedData.inboxItem?.Status || null;
+  const hasReconciliation = !!relatedData.reconciliation;
+
+  const workflowButtons: Record<string, { label: string; icon: React.ReactNode; action: string; color: string }[]> = {
+    Importado: [{ label: 'Assign Driver', icon: <User className="w-3.5 h-3.5" />, action: 'assign', color: 'bg-blue-500 hover:bg-blue-600' }],
+    Asignado: [{ label: 'Confirm Service', icon: <CheckCircle className="w-3.5 h-3.5" />, action: 'confirm', color: 'bg-cyan-500 hover:bg-cyan-600' }],
+    Confirmado: [{ label: 'Start Route', icon: <Car className="w-3.5 h-3.5" />, action: 'start', color: 'bg-blue-600 hover:bg-blue-700' }],
+    EnRuta: [{ label: 'Complete', icon: <CheckCircle className="w-3.5 h-3.5" />, action: 'complete', color: 'bg-green-600 hover:bg-green-700' }],
+    Realizado: [{ label: 'Send Report', icon: <FileText className="w-3.5 h-3.5" />, action: 'report', color: 'bg-amber-500 hover:bg-amber-600' }],
+    Reportado: [
+      { label: 'Send to Review', icon: <FileText className="w-3.5 h-3.5" />, action: 'review', color: 'bg-amber-500 hover:bg-amber-600' },
+      { label: 'Validate', icon: <CheckCircle className="w-3.5 h-3.5" />, action: 'validate', color: 'bg-green-700 hover:bg-green-800' }
+    ],
+    Revision: [{ label: 'Validate', icon: <CheckCircle className="w-3.5 h-3.5" />, action: 'validate', color: 'bg-green-700 hover:bg-green-800' }],
+  };
+
+  const buttons = service.operationalStatus === 'Importado' && service.driverId
+    ? workflowButtons['Asignado'] || []
+    : workflowButtons[service.operationalStatus] || [];
+
+  return (
+    <div className="px-5 py-3 shrink-0 border-b border-outline-variant/40 bg-surface">
+      <div className="flex items-center gap-4">
+        {/* Service info */}
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-[14px] font-bold text-primary shrink-0">
+            {service.driverName?.charAt(0) || '?'}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[14px] font-semibold text-on-surface truncate">{service.driverName || 'Unassigned'}</span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-px rounded-full shrink-0" style={{ backgroundColor: `${statusColor.hex}15`, color: statusColor.hex }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: statusColor.hex }} />
+                {statusColor.label}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[11px] text-on-surface-variant">
+                {service.serviceType ? `${service.serviceType.replace('Transfer ', 'T.').replace('Disposizione', 'Dispo')} · ` : ''}{service.vehicleType || '—'}
+              </span>
+              {service.project && service.project !== 'Unknown' && (
+                <>
+                  <span className="text-on-surface-variant/30">·</span>
+                  <span className="text-[11px] text-on-surface-variant truncate">{service.project}</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Status indicators — compact inline */}
+        <div className="hidden md:flex items-center gap-1.5 shrink-0">
+          <StatusDot active={driverLinkActive} has={hasDriverLink} label="Link" />
+          <StatusDot active={driverReportStatus === 'Aceptado'} has={hasDriverReport} pending={driverReportStatus === 'Pendiente'} label="Report" />
+          <StatusDot active={inboxStatus === 'ACCEPTED'} has={hasInboxItem} pending={inboxStatus === 'PENDING_REVIEW'} label="Inbox" />
+          <StatusDot active={hasReconciliation} has={hasReconciliation} label="Reconcil." />
+        </div>
+
+        {/* Workflow actions */}
+        {buttons.length > 0 && (
+          <div className="flex items-center gap-1.5 shrink-0">
+            {buttons.map((btn) => (
+              <button
+                key={btn.action}
+                onClick={() => onClose()}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-on-primary text-[11px] font-medium rounded-lg transition-colors cursor-pointer ${btn.color}`}
+              >
+                {btn.icon}
+                {btn.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatusDot({ active, has, pending, label }: { active: boolean; has: boolean; pending?: boolean; label: string }) {
+  return (
+    <div className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium ${
+      active ? 'bg-green-50 text-green-700' : pending ? 'bg-amber-50 text-amber-700' : has ? 'bg-blue-50 text-blue-700' : 'bg-surface-container text-on-surface-variant/40'
+    }`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-green-500' : pending ? 'bg-amber-500' : has ? 'bg-blue-500' : 'bg-gray-300'}`} />
+      {label}
+    </div>
+  );
+}
+
+// ============================================================================
+// HEADER (Panel mode only)
 // ============================================================================
 
 function ServiceHeader({ service, onClose }: { service: Service; onClose: () => void }) {

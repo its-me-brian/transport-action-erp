@@ -113,8 +113,14 @@ export function CollaboratorFormModal({
             <div className="border-t border-outline-variant pt-3 mt-1">
               <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-2">Conductores del proveedor</label>
               {loadingDrivers ? (
-                <div className="flex items-center gap-2 text-[11px] text-on-surface-variant py-2">
-                  <Loader2 className="w-3 h-3 animate-spin" /> Cargando conductores...
+                <div className="space-y-2 animate-pulse">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="flex items-center gap-2 bg-surface-container rounded-lg px-3 py-1.5">
+                      <div className="w-3 h-3 bg-surface-container-highest rounded" />
+                      <div className="h-3 bg-surface-container-highest rounded w-24" />
+                      <div className="h-2 bg-surface-container-highest rounded w-16 ml-auto" />
+                    </div>
+                  ))}
                 </div>
               ) : linkedDrivers.length === 0 ? (
                 <p className="text-[11px] text-on-surface-variant py-1">No hay conductores asociados a este proveedor</p>

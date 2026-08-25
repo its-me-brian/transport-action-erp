@@ -11,7 +11,7 @@ interface DriverCardProps {
   onWhatsApp: (phone: string) => void;
 }
 
-export default function DriverCard({ driver: dr, dbRec, onEdit, onDelete, onWhatsApp }: DriverCardProps) {
+const DriverCard = React.memo(function DriverCard({ driver: dr, dbRec, onEdit, onDelete, onWhatsApp }: DriverCardProps) {
   const isAvailable = dr.status === 'Disponible';
   const isInTransit = dr.status === 'Asignado';
   const isOffDuty = dr.status === 'Inactivo';
@@ -145,4 +145,5 @@ export default function DriverCard({ driver: dr, dbRec, onEdit, onDelete, onWhat
       </div>
     </div>
   );
-}
+});
+export default DriverCard;

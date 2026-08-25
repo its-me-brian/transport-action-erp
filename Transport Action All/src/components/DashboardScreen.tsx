@@ -1,7 +1,6 @@
 import React from 'react';
 import { Service, ScreenId, ViewMode } from '../types';
 import { useDashboard } from '../hooks/useDashboard';
-import ServiceWorkspace from './ServiceWorkspace';
 import EditServiceModal from './EditServiceModal';
 import DeleteCancelModal from './DeleteCancelModal';
 import AdjustmentModal from './AdjustmentModal';
@@ -39,7 +38,7 @@ export default function DashboardScreen({
     adjustmentType, setAdjustmentType,
     selectedServiceIds,
     isBulkCompleting,
-    sidePanelService, setSidePanelService,
+    openService,
     expandedCards,
     dbDrivers,
     parametros,
@@ -95,7 +94,7 @@ export default function DashboardScreen({
         onSearchChange={setSearchQuery}
       />
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-24">
         {isLoading ? <LoadingSkeleton /> : (
           <>
             {viewMode === 'month' && (
@@ -118,7 +117,7 @@ export default function DashboardScreen({
                 selectAllServicesForDay={selectAllServicesForDay}
                 setSelectedDay={setSelectedDay}
                 handleDoubleClick={handleDoubleClick}
-                setSidePanelService={setSidePanelService}
+                openService={openService}
                 lastTapMapRef={lastTapMapRef}
               />
             )}
@@ -130,7 +129,7 @@ export default function DashboardScreen({
                 selectedServiceIds={selectedServiceIds}
                 handleDoubleClick={handleDoubleClick}
                 toggleServiceSelection={toggleServiceSelection}
-                setSidePanelService={setSidePanelService}
+                openService={openService}
               />
             )}
             {viewMode === 'day' && (
@@ -144,22 +143,13 @@ export default function DashboardScreen({
                 selectAllServicesForDay={selectAllServicesForDay}
                 setSelectedDay={setSelectedDay}
                 handleDoubleClick={handleDoubleClick}
-                setSidePanelService={setSidePanelService}
+                openService={openService}
                 lastTapMapRef={lastTapMapRef}
               />
             )}
           </>
         )}
       </div>
-
-      {sidePanelService && (
-        <ServiceWorkspace
-          service={sidePanelService}
-          onClose={() => setSidePanelService(null)}
-          onServiceUpdate={onServiceUpdate}
-          onNavigate={onNavigate}
-        />
-      )}
 
       <EditServiceModal
         service={editingService}

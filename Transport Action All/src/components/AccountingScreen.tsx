@@ -51,7 +51,7 @@ export default function AccountingScreen({ onNavigate }: Props) {
       </div>
 
       {/* Tab content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto pb-24">
         {activeTab === 'invoices' && <InvoiceScreen onNavigate={onNavigate} />}
         {activeTab === 'payments' && <PaymentsScreen onNavigate={onNavigate} />}
         {activeTab === 'expenses' && <ExpenseScreen onNavigate={onNavigate} />}

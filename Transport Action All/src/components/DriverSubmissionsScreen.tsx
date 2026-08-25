@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Send, Filter, Eye, X, ExternalLink } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { getDriverLinkResponses, getDrivers, getProjects, DriverLinkResponse } from '../services/api';
+import { useOpenService } from '../hooks/useOpenService';
 
 interface Props {
   onNavigate: (screen: string) => void;
@@ -9,6 +10,7 @@ interface Props {
 
 export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Props) {
   const { showToast } = useToast();
+  const openService = useOpenService();
   const [items, setItems] = useState<DriverLinkResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<DriverLinkResponse | null>(null);
@@ -161,11 +163,12 @@ export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Pro
       {isLoading ? (
         <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px]">
+            <table className="w-full min-w-[800px]">
             <thead className="bg-surface-container">
               <tr>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Driver</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Project</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Service</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Service Date</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Start</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">End</th>
@@ -180,6 +183,7 @@ export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Pro
                 <tr key={i} className="animate-pulse">
                   <td className="px-4 py-3"><div className="h-4 w-20 bg-surface-dim rounded" /></td>
                   <td className="px-4 py-3"><div className="h-4 w-16 bg-surface-dim rounded" /></td>
+                  <td className="px-4 py-3"><div className="h-4 w-24 bg-surface-dim rounded" /></td>
                   <td className="px-4 py-3"><div className="h-4 w-24 bg-surface-dim rounded" /></td>
                   <td className="px-4 py-3"><div className="h-4 w-12 bg-surface-dim rounded" /></td>
                   <td className="px-4 py-3"><div className="h-4 w-12 bg-surface-dim rounded" /></td>
@@ -206,6 +210,7 @@ export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Pro
               <tr>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Driver</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Project</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Service</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Service Date</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Start</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">End</th>
@@ -220,6 +225,18 @@ export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Pro
                 <tr key={item.ID} className="hover:bg-surface-container-low transition-colors">
                   <td className="px-4 py-3 text-sm font-medium">{driverName(item.DriverID)}</td>
                   <td className="px-4 py-3 text-sm text-on-surface-variant">{projectName(item.ProjectID)}</td>
+                  <td className="px-4 py-3 text-sm">
+                    {item.ServiceID ? (
+                      <button
+                        onClick={() => openService(item.ServiceID!)}
+                        className="text-primary hover:underline cursor-pointer font-medium font-mono text-xs"
+                      >
+                        {item.ServiceID}
+                      </button>
+                    ) : (
+                      <span className="text-on-surface-variant/50">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-sm">{formatDate(item.DataServizio)}</td>
                   <td className="px-4 py-3 text-sm font-mono">{formatTime(item.OrarioInizio)}</td>
                   <td className="px-4 py-3 text-sm font-mono">{formatTime(item.OrarioFine)}</td>
@@ -273,7 +290,16 @@ export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Pro
               </div>
               <div className="flex justify-between py-2 border-b border-outline-variant">
                 <span className="text-on-surface-variant">Service ID</span>
-                <span className="font-mono text-xs">{selectedItem.ServiceID || '—'}</span>
+                {selectedItem.ServiceID ? (
+                  <button
+                    onClick={() => openService(selectedItem.ServiceID!)}
+                    className="font-mono text-xs text-primary hover:underline cursor-pointer"
+                  >
+                    {selectedItem.ServiceID}
+                  </button>
+                ) : (
+                  <span className="font-mono text-xs">—</span>
+                )}
               </div>
               <div className="flex justify-between py-2 border-b border-outline-variant">
                 <span className="text-on-surface-variant">Type</span>

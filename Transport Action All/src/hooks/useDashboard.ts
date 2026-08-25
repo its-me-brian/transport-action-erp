@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 import {
   Service, ScreenId, ViewMode,
@@ -24,6 +25,7 @@ interface UseDashboardProps {
 export function useDashboard({
   services, isLoading, baseDate, onBaseDateChange, viewMode, onViewModeChange, onNavigate, onServiceUpdate
 }: UseDashboardProps) {
+  const navigate = useNavigate();
   const [activeEntity, setActiveEntity] = useState<string>('All');
   const [companies, setCompanies] = useState<OperatingCompany[]>([]);
   const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
@@ -38,7 +40,6 @@ export function useDashboard({
   const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(new Set());
   const lastTapMapRef = useRef<Map<string, number>>(new Map());
   const [isBulkCompleting, setIsBulkCompleting] = useState(false);
-  const [sidePanelService, setSidePanelService] = useState<Service | null>(null);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [dbDrivers, setDbDrivers] = useState<DriverRecord[]>([]);
   const [parametros, setParametros] = useState<{
@@ -485,7 +486,7 @@ export function useDashboard({
     adjustmentType, setAdjustmentType,
     selectedServiceIds,
     isBulkCompleting,
-    sidePanelService, setSidePanelService,
+    openService: (service: Service) => navigate(`/service/${service.id}`),
     expandedCards,
     dbDrivers,
     parametros,

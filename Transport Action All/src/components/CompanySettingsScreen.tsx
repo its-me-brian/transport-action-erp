@@ -71,7 +71,7 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
   }
 
   return (
-    <div id="company-settings-screen" className={`flex-1 w-full max-w-[1200px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-8 ${!can('settings.write') ? 'opacity-70 pointer-events-none' : ''}`}>
+    <div id="company-settings-screen" className={`flex-1 w-full max-w-[1200px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-24 ${!can('settings.write') ? 'opacity-70 pointer-events-none' : ''}`}>
       {/* Header Area */}
       <div id="settings-title-area" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0 sticky top-0 py-2 z-30 bg-background/90 backdrop-blur-md">
         <div>

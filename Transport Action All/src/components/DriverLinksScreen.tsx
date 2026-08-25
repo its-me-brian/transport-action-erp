@@ -274,6 +274,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
             <input
               type="text"
               placeholder="Search by driver ID..."
+              aria-label="Search by driver ID"
               value={filterDriver}
               onChange={e => setFilterDriver(e.target.value)}
               className="w-full px-3 py-1.5 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors min-w-0"

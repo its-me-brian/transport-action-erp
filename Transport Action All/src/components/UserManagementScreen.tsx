@@ -180,7 +180,7 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
   }
 
   return (
-    <div id="user-management-screen" className="flex-1 w-full max-w-[1200px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-8">
+    <div id="user-management-screen" className="flex-1 w-full max-w-[1200px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-24">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
         <div>
@@ -224,6 +224,7 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search users by name, email, or role..."
+          aria-label="Search users by name, email, or role"
           className="w-full h-10 pl-10 pr-4 rounded-lg border border-outline-variant bg-surface-container-lowest text-[13px] text-on-surface focus:outline-none focus:border-primary"
         />
       </div>

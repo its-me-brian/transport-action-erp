@@ -264,7 +264,7 @@ export default function PaymentsScreen({ onNavigate }: PaymentsScreenProps) {
   const hasActiveFilters = !!(searchQuery || statusFilter !== 'All' || dateFrom || dateTo);
 
   return (
-    <div id="payments-screen" className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-8">
+    <div id="payments-screen" className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-24">
       <PaymentHeader
         filteredCount={filtered.length}
         totalAmount={totalAmount}

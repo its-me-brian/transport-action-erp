@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { 
   BarChart3, TrendingUp, TrendingDown, FileText, AlertCircle,
@@ -10,12 +10,16 @@ import {
   getMainDashboard, DashboardSummary,
   getPendingValidation, getPendingInvoicing, ServiceSummary
 } from '../services/api';
+import { useOpenService } from '../hooks/useOpenService';
+import PullToRefresh from './PullToRefresh';
+import MotionCard from './ui/MotionCard';
 
 interface ExecutiveDashboardScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
 }
 
 export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashboardScreenProps) {
+  const openService = useOpenService();
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardSummary, setDashboardSummary] = useState<DashboardSummary | null>(null);
   const [pendingValidation, setPendingValidation] = useState<ServiceSummary[]>([]);
@@ -26,7 +30,7 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
     loadDashboardData();
   }, []);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     setIsLoading(true);
     try {
       const [summary, validation, invoicing] = await Promise.all([
@@ -42,12 +46,12 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   const fmt = (n: number) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
 
   return (
-    <div className="flex flex-col gap-4 w-full max-w-[1400px] mx-auto p-4 md:p-6 h-full overflow-y-auto">
+    <PullToRefresh onRefresh={loadDashboardData} className="flex flex-col gap-4 w-full max-w-[1400px] mx-auto p-4 md:p-6 h-full pb-24">
       {/* Header */}
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0">
         <div>
@@ -155,8 +159,8 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
 
           {/* Actionable Worklist Counts */}
           <div className="grid grid-cols-2 gap-3 shrink-0">
-            <div 
-              className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 cursor-pointer hover:bg-amber-100 transition-colors"
+            <MotionCard 
+              className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3"
               onClick={() => setShowWorklists(!showWorklists)}
             >
               <div className="flex items-center justify-between">
@@ -167,9 +171,9 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
                 </div>
                 {showWorklists ? <ChevronDown className="w-5 h-5 text-amber-600" /> : <ChevronRight className="w-5 h-5 text-amber-600" />}
               </div>
-            </div>
-            <div 
-              className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 cursor-pointer hover:bg-blue-100 transition-colors"
+            </MotionCard>
+            <MotionCard 
+              className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3"
               onClick={() => setShowWorklists(!showWorklists)}
             >
               <div className="flex items-center justify-between">
@@ -180,7 +184,7 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
                 </div>
                 {showWorklists ? <ChevronDown className="w-5 h-5 text-blue-600" /> : <ChevronRight className="w-5 h-5 text-blue-600" />}
               </div>
-            </div>
+            </MotionCard>
           </div>
 
           {/* Expanded Worklists */}
@@ -192,7 +196,12 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
                   <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
                     {pendingValidation.slice(0, 10).map(s => (
                       <div key={s.serviceId} className="flex items-center justify-between text-[11px] bg-white/60 rounded px-2 py-1.5">
-                        <span className="text-on-surface font-medium truncate">{s.serviceId}</span>
+                        <button
+                          onClick={() => openService(s.serviceId)}
+                          className="text-on-surface font-medium truncate hover:text-primary hover:underline cursor-pointer text-left"
+                        >
+                          {s.serviceId}
+                        </button>
                         <span className="text-amber-700">{s.driver || 'Unassigned'}</span>
                       </div>
                     ))}
@@ -214,7 +223,12 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
                   <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
                     {pendingInvoicing.slice(0, 10).map(s => (
                       <div key={s.serviceId} className="flex items-center justify-between text-[11px] bg-white/60 rounded px-2 py-1.5">
-                        <span className="text-on-surface font-medium truncate">{s.serviceId}</span>
+                        <button
+                          onClick={() => openService(s.serviceId)}
+                          className="text-on-surface font-medium truncate hover:text-primary hover:underline cursor-pointer text-left"
+                        >
+                          {s.serviceId}
+                        </button>
                         <span className="text-blue-700">{fmt(s.revenue)}</span>
                       </div>
                     ))}
@@ -266,6 +280,6 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
           <span className="text-[13px] text-on-surface-variant">No dashboard data available</span>
         </div>
       )}
-    </div>
+    </PullToRefresh>
   );
 }

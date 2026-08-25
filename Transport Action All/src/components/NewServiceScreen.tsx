@@ -303,6 +303,7 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
                 <input 
                   type="text"
                   placeholder="Search drivers..."
+                  aria-label="Search drivers"
                   value={driverSearch}
                   onChange={(e) => {
                     setDriverSearch(e.target.value);

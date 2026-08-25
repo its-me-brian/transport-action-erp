@@ -14,7 +14,7 @@ interface PaymentCardProps {
   onReconcile: (id: string) => void;
 }
 
-export default function PaymentCard({ payment, methodConfig, onEdit, confirmAction, onSetConfirmAction, onConfirm, onReconcile }: PaymentCardProps) {
+const PaymentCard = React.memo(function PaymentCard({ payment, methodConfig, onEdit, confirmAction, onSetConfirmAction, onConfirm, onReconcile }: PaymentCardProps) {
   const p = payment;
   const mc = methodConfig[p.paymentMethod] || methodConfig.transfer;
   const MethodIcon = mc.icon;
@@ -111,4 +111,5 @@ export default function PaymentCard({ payment, methodConfig, onEdit, confirmActi
       </div>
     </div>
   );
-}
+});
+export default PaymentCard;

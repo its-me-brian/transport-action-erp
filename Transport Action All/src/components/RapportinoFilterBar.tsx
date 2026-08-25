@@ -63,6 +63,7 @@ export default function RapportinoFilterBar({
           <input
             type="text"
             placeholder="Buscar rapportinos..."
+            aria-label="Buscar rapportinos"
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
             className="w-full bg-surface-container-lowest border border-outline-variant pl-8 pr-3 py-1.5 text-[12px] rounded-lg focus:outline-none focus:border-primary outline-none text-on-surface"

@@ -16,7 +16,7 @@ interface WeekViewProps {
   selectedServiceIds: Set<string>;
   handleDoubleClick: (s: Service) => void;
   toggleServiceSelection: (id: string) => void;
-  setSidePanelService: (s: Service) => void;
+  openService: (s: Service) => void;
 }
 
 export default function WeekView({
@@ -26,7 +26,7 @@ export default function WeekView({
   selectedServiceIds,
   handleDoubleClick,
   toggleServiceSelection,
-  setSidePanelService,
+  openService,
 }: WeekViewProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 gap-px bg-outline-variant/20 h-full">
@@ -62,7 +62,7 @@ export default function WeekView({
                     onDoubleClick={handleDoubleClick}
                     isSelected={selectedServiceIds.has(service.id)}
                     onSelect={toggleServiceSelection}
-                    onClickSidePanel={setSidePanelService}
+                    onClickSidePanel={openService}
                   />
                 ))
               ) : (

@@ -38,7 +38,7 @@ export function CreateExpenseModal({ isOpen, onClose, onSave, newExp, setNewExp,
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-lg shadow-xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
           <h3 className="text-[15px] font-semibold text-on-surface">New Expense</h3>
-          <button onClick={onClose} className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
+          <button onClick={onClose} aria-label="Close" className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
         </div>
         <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
           <div>
@@ -124,7 +124,7 @@ export function EditExpenseModal({ isOpen, onClose, onSave, editTarget, editChan
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
           <h3 className="text-[15px] font-semibold text-on-surface">Edit Expense — {editTarget.id}</h3>
-          <button onClick={onClose} className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
+          <button onClick={onClose} aria-label="Close" className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
         </div>
         <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
           <div>
@@ -189,7 +189,7 @@ export function ConfirmActionModal({ isOpen, onClose, onConfirm, confirmTarget, 
           <h3 className="text-[15px] font-semibold text-on-surface">
             {confirmTarget.action === 'confirm' ? 'Confirm Expense' : confirmTarget.action === 'correct' ? 'Correct Expense' : 'Cancel Expense'}
           </h3>
-          <button onClick={onClose} className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
+          <button onClick={onClose} aria-label="Close" className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
         </div>
         <div className="px-5 py-4">
           <p className="text-[13px] text-on-surface">

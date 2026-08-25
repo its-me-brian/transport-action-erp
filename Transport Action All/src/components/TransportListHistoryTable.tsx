@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileSpreadsheet, Loader2 } from 'lucide-react';
+import { FileSpreadsheet } from 'lucide-react';
 import { formatTimeDisplay } from '../types';
 
 interface HistoryEntry {
@@ -41,9 +41,33 @@ export default function TransportListHistoryTable({
           Transport History
         </h3>
         {loadingHistory ? (
-          <div className="flex items-center justify-center py-8 text-on-surface-variant text-[12px]">
-            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            Loading history...
+          <div className="border border-outline-variant rounded-lg overflow-hidden">
+            <div className="hidden md:block">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-surface-dim text-on-surface-variant text-[11px] font-medium border-b border-outline-variant">
+                    <th className="px-3 py-2">Date</th>
+                    <th className="px-3 py-2">File</th>
+                    <th className="px-3 py-2">Production</th>
+                    <th className="px-3 py-2">Services</th>
+                    <th className="px-3 py-2">Drivers</th>
+                    <th className="px-3 py-2">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[1, 2, 3].map(i => (
+                    <tr key={i} className="border-b border-outline-variant/50 animate-pulse">
+                      <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-20" /></td>
+                      <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-28" /></td>
+                      <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-24" /></td>
+                      <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-12" /></td>
+                      <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-12" /></td>
+                      <td className="px-3 py-2"><div className="h-5 bg-surface-container-highest rounded-full w-16" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : history.length === 0 ? (
           <div className="text-center py-8 text-on-surface-variant text-[12px] border border-dashed border-outline-variant rounded-lg">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   DollarSign, Wallet, Receipt, 
-  CreditCard, FileText, Loader2,
+  CreditCard, FileText,
   BarChart3, PieChart, TrendingUp, TrendingDown,
   Building2, Users, ArrowRightLeft
 } from 'lucide-react';
@@ -170,7 +170,7 @@ export default function FinancialDashboard({ onNavigate }: Props) {
   ];
 
   return (
-    <div className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-8">
+    <div className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-24">
       {/* Header */}
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0">
         <div>
@@ -293,9 +293,14 @@ export default function FinancialDashboard({ onNavigate }: Props) {
             {!selectedProjectId ? (
               <p className="text-[12px] text-on-surface-variant">Select a project to compare estimated vs actual</p>
             ) : loadingEvA ? (
-              <div className="flex items-center gap-2 py-4">
-                <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                <span className="text-[12px] text-on-surface-variant">Loading...</span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 animate-pulse">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="bg-surface-container rounded-lg p-3 space-y-2">
+                    <div className="h-3 bg-surface-container-highest rounded w-16" />
+                    <div className="h-4 bg-surface-container-highest rounded w-24" />
+                    <div className="h-2 bg-surface-container-highest rounded w-12" />
+                  </div>
+                ))}
               </div>
             ) : estimatedVsActual ? (
               <div className="space-y-3">
@@ -368,9 +373,13 @@ export default function FinancialDashboard({ onNavigate }: Props) {
               <h3 className="text-[13px] font-semibold text-on-surface">Cash Flow</h3>
             </div>
             {loadingCashFlow ? (
-              <div className="flex items-center gap-2 py-4">
-                <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                <span className="text-[12px] text-on-surface-variant">Loading...</span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 animate-pulse">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="bg-surface-container rounded-lg p-3 space-y-2">
+                    <div className="h-3 bg-surface-container-highest rounded w-14" />
+                    <div className="h-4 bg-surface-container-highest rounded w-20" />
+                  </div>
+                ))}
               </div>
             ) : cashFlow ? (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[12px]">

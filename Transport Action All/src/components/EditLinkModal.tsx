@@ -99,7 +99,7 @@ export default function EditLinkModal({ link, driversList, projectsList, onClose
               <p className="text-xs text-on-surface-variant">Token: {link.Token}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-surface-dim rounded-lg">
+          <button onClick={onClose} aria-label="Close" className="p-1 hover:bg-surface-dim rounded-lg">
             <X className="w-5 h-5 text-on-surface-variant" />
           </button>
         </div>

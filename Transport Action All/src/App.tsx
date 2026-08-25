@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
 import {
   ScreenId,
   Service,
@@ -14,7 +13,7 @@ import { useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { screenToRoute } from './routes';
 import ErrorBoundary from './components/ErrorBoundary';
-import Sidebar, { NAV_SECTIONS } from './components/Sidebar';
+import Sidebar from './components/Sidebar';
 import AuthScreen from './components/AuthScreen';
 import DashboardScreen from './components/DashboardScreen';
 import ExecutiveDashboardScreen from './components/ExecutiveDashboardScreen';
@@ -40,11 +39,6 @@ import RateCardScreen from './components/RateCardScreen';
 import DocumentScreen from './components/DocumentScreen';
 import ServiceWorkspacePage from './components/ServiceWorkspacePage';
 
-const routeToScreen: Record<string, ScreenId> = {};
-Object.entries(screenToRoute).forEach(([screen, route]) => {
-  routeToScreen[route] = screen as ScreenId;
-});
-
 type SidebarMode = 'full' | 'icons' | 'hidden';
 
 export default function App() {
@@ -52,19 +46,9 @@ export default function App() {
   const location = useLocation();
   const routerNavigate = useNavigate();
 
-  const currentScreen: ScreenId = useMemo(() => {
-    if (location.pathname.startsWith('/service/')) return 'transport';
-    return routeToScreen[location.pathname] || 'executive_dashboard';
-  }, [location.pathname]);
-
   const [services, setServices] = useState<Service[]>([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
   const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [location.pathname]);
 
   useEffect(() => {
     if (!token) { setDrivers([]); return; }
@@ -173,7 +157,15 @@ export default function App() {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-on-surface-variant text-sm">Loading...</div>
+        <div className="w-full max-w-sm space-y-4 animate-pulse">
+          <div className="h-8 bg-surface-container-highest rounded w-48 mx-auto" />
+          <div className="h-4 bg-surface-container-highest rounded w-32 mx-auto" />
+          <div className="space-y-3 mt-8">
+            <div className="h-10 bg-surface-container-highest rounded-lg" />
+            <div className="h-10 bg-surface-container-highest rounded-lg" />
+            <div className="h-10 bg-surface-container-highest rounded-lg" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -193,7 +185,7 @@ export default function App() {
       <ToastProvider>
         <div id="application-container" className="min-h-screen bg-background text-on-surface font-sans flex">
           {!hideSidebar && (
-            <Sidebar currentScreen={currentScreen} onNavigate={(scr) => handleNavigate(scr)} mode={sidebarMode} onModeChange={setSidebarMode} />
+            <Sidebar onNavigate={(scr) => handleNavigate(scr)} mode={sidebarMode} onModeChange={setSidebarMode} />
           )}
 
           <div
@@ -208,56 +200,6 @@ export default function App() {
                 : ''
             }`}
           >
-            {!hideSidebar && (
-              <header id="mobile-navigation-header" className="md:hidden flex items-center justify-between px-4 py-3 bg-surface border-b border-outline-variant z-40 shrink-0 sticky top-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full overflow-hidden bg-surface-container border border-outline-variant">
-                    <img alt="Transport Action Logo" className="w-full h-full object-contain" src="/logo.jpg" />
-                  </div>
-                  <span className="font-headline-md text-base text-primary font-bold">Transport Movie System</span>
-                </div>
-                <button
-                  id="mobile-hamburger-btn"
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="p-2.5 hover:bg-surface-container rounded-lg text-on-surface transition-colors cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center"
-                >
-                  {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-                </button>
-              </header>
-            )}
-
-            {mobileMenuOpen && !hideSidebar && (
-              <div id="mobile-nav-drawer" className="md:hidden fixed inset-x-0 top-[61px] bottom-0 bg-black/50 z-50 backdrop-blur-xs">
-                <div className="bg-surface border-b border-outline-variant p-4 flex flex-col gap-3 shadow-lg max-h-[80vh] overflow-y-auto">
-                  {NAV_SECTIONS.map(section => (
-                    <div key={section.title}>
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-on-surface-variant/60 px-3 mb-1">
-                        {section.title}
-                      </p>
-                      {section.items.map(item => {
-                        const Icon = item.icon;
-                        const isActive = currentScreen === item.id;
-                        return (
-                          <button
-                            key={item.id}
-                            onClick={() => handleNavigate(item.id)}
-                            className={`w-full flex items-center gap-3 p-3 rounded-lg text-left text-sm font-medium transition-colors ${
-                              isActive
-                                ? 'bg-secondary-container text-on-secondary-container'
-                                : 'text-on-surface-variant hover:bg-surface-container-low'
-                            }`}
-                          >
-                            <Icon className="w-5 h-5 shrink-0" />
-                            <span>{item.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div id="content-viewport" className="flex-1 flex flex-col relative w-full h-full min-h-0">
               <Routes>
                 <Route path="/service/:serviceId/:section?" element={<ServiceWorkspacePage />} />

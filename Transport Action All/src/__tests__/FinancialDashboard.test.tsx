@@ -277,9 +277,9 @@ describe('FinancialDashboard', () => {
     fireEvent.change(selects[0], { target: { value: 'P1' } });
 
     await waitFor(() => {
-      // The loading state in the EvA section shows "Loading..."
-      const loadingElements = screen.getAllByText('Loading...');
-      expect(loadingElements.length).toBeGreaterThanOrEqual(1);
+      // The loading state in the EvA section shows skeleton placeholders
+      const skeletons = document.querySelectorAll('.animate-pulse');
+      expect(skeletons.length).toBeGreaterThanOrEqual(1);
     });
   });
 

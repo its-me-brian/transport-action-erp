@@ -174,6 +174,7 @@ export default function RapportinoGeneratorForm({
                 }}
                 onFocus={() => onShowDriverDropdownChange(true)}
                 placeholder="Search drivers..."
+                aria-label="Search drivers"
                 className="w-full h-9 rounded-lg border border-outline-variant bg-surface-container-lowest focus:border-primary text-[12px] text-on-surface outline-none px-3"
               />
               {showDriverDropdown && (

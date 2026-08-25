@@ -205,7 +205,7 @@ export default function EditServiceModal({
                 <MessageSquare className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">WhatsApp</span>
               </button>
-              <button onClick={onClose} className="p-2 rounded-full hover:bg-surface-dim min-w-[44px] min-h-[44px] flex items-center justify-center">
+              <button onClick={onClose} aria-label="Close" className="p-2 rounded-full hover:bg-surface-dim min-w-[44px] min-h-[44px] flex items-center justify-center">
                 <X className="w-5 h-5 text-on-surface-variant" />
               </button>
             </div>

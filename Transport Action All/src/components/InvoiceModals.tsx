@@ -37,7 +37,7 @@ export function InvoiceDetailModal({ invoice, items, loadingItems, onClose }: De
             <h3 className="text-[15px] font-semibold text-on-surface">Invoice Detail</h3>
             <p className="text-[11px] text-on-surface-variant">{invoice.invoiceNumber || invoice.id}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
+          <button onClick={onClose} aria-label="Close" className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
             <X className="w-4 h-4 text-on-surface-variant" />
           </button>
         </div>
@@ -150,7 +150,7 @@ export function InvoiceCreateModal({ newInvoice, onChange, onClose, onSubmit, is
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
           <h3 className="text-[15px] font-semibold text-on-surface">New Invoice</h3>
-          <button onClick={onClose} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
+          <button onClick={onClose} aria-label="Close" className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
             <X className="w-4 h-4 text-on-surface-variant" />
           </button>
         </div>
@@ -236,7 +236,7 @@ export function InvoiceVoidModal({ invoice, reason, onReasonChange, onClose, onC
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-sm shadow-xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
           <h3 className="text-[15px] font-semibold text-on-surface">Annulla Factura</h3>
-          <button onClick={onClose} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
+          <button onClick={onClose} aria-label="Close" className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
             <X className="w-4 h-4 text-on-surface-variant" />
           </button>
         </div>
@@ -297,7 +297,7 @@ export function InvoiceEditModal({ invoice, editChanges, onChange, onClose, onSu
             <h3 className="text-[15px] font-semibold text-on-surface">Modifica Fattura</h3>
             <p className="text-[11px] text-on-surface-variant">{invoice.invoiceNumber || invoice.id}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
+          <button onClick={onClose} aria-label="Close" className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
             <X className="w-4 h-4 text-on-surface-variant" />
           </button>
         </div>

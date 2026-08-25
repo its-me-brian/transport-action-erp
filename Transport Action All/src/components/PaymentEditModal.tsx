@@ -28,7 +28,7 @@ export default function PaymentEditModal({ target, onClose, onSave, saving, chan
             <h3 className="text-[15px] font-semibold text-on-surface">Modifica Pagamento</h3>
             <p className="text-[11px] text-on-surface-variant font-mono">{target.id}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
+          <button onClick={onClose} aria-label="Close" className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
             <X className="w-4 h-4 text-on-surface-variant" />
           </button>
         </div>

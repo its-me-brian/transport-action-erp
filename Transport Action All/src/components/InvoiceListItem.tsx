@@ -12,7 +12,7 @@ interface InvoiceListItemProps {
   onView: (inv: InvoiceDTO) => void;
 }
 
-export default function InvoiceListItem({ inv, updatingStatus, onStatusUpdate, onEdit, onVoid, onView }: InvoiceListItemProps) {
+const InvoiceListItem = React.memo(function InvoiceListItem({ inv, updatingStatus, onStatusUpdate, onEdit, onVoid, onView }: InvoiceListItemProps) {
   const sc = STATUS_CONFIG[inv.status] || STATUS_CONFIG.Borrador;
   const StatusIcon = sc.icon;
   const next = NEXT_TRANSITIONS[inv.status];
@@ -96,4 +96,5 @@ export default function InvoiceListItem({ inv, updatingStatus, onStatusUpdate, o
       </div>
     </div>
   );
-}
+});
+export default InvoiceListItem;

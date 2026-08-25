@@ -129,7 +129,7 @@ export default function RateCardScreen({ onNavigate }: Props) {
   );
 
   return (
-    <div className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-8">
+    <div className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-24">
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0 sticky top-0 py-2 z-30 bg-background/90 backdrop-blur-md">
         <div>
           <h2 className="font-headline-lg-mobile md:font-headline-lg text-on-surface">Rate Cards</h2>
@@ -143,7 +143,7 @@ export default function RateCardScreen({ onNavigate }: Props) {
 
       <div className="relative w-full sm:w-64 px-1">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
-        <input type="text" placeholder="Search rate cards..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+        <input type="text" placeholder="Search rate cards..." aria-label="Search rate cards" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
           className="w-full bg-surface-container-lowest border border-outline-variant pl-8 pr-3 py-1.5 text-[12px] rounded-lg focus:outline-none focus:border-primary text-on-surface" />
       </div>
 

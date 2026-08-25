@@ -156,6 +156,7 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
           <input
             type="text"
             placeholder="Search clients..."
+            aria-label="Search clients"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full bg-surface-container-lowest border border-outline-variant pl-8 pr-3 py-1.5 text-[12px] rounded-lg focus:outline-none focus:border-primary outline-none text-on-surface"

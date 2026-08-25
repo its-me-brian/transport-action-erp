@@ -64,9 +64,33 @@ export default function UserManagementSection({
         </div>
 
         {isLoadingUsers ? (
-          <div className="flex items-center justify-center p-8 text-on-surface-variant text-[13px]">
-            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            Loading users...
+          <div className="bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-[12px]">
+                <thead className="bg-surface-dim">
+                  <tr className="border-b border-outline-variant">
+                    <th className="text-left px-4 py-2.5 font-medium text-on-surface-variant">Username</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-on-surface-variant">Name</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-on-surface-variant">Email</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-on-surface-variant">Role</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-on-surface-variant">Status</th>
+                    <th className="text-right px-4 py-2.5 font-medium text-on-surface-variant">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <tr key={i} className="border-b border-outline-variant/50 animate-pulse">
+                      <td className="px-4 py-3"><div className="h-3 bg-surface-container-highest rounded w-20" /></td>
+                      <td className="px-4 py-3"><div className="h-3 bg-surface-container-highest rounded w-28" /></td>
+                      <td className="px-4 py-3"><div className="h-3 bg-surface-container-highest rounded w-32" /></td>
+                      <td className="px-4 py-3"><div className="h-5 bg-surface-container-highest rounded-full w-16" /></td>
+                      <td className="px-4 py-3"><div className="h-5 bg-surface-container-highest rounded-full w-14" /></td>
+                      <td className="px-4 py-3"><div className="h-6 bg-surface-container-highest rounded w-12 ml-auto" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : users.length === 0 ? (
           <div className="p-8 text-center text-on-surface-variant text-[13px]">

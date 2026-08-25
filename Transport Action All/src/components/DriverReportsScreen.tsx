@@ -49,7 +49,7 @@ export default function DriverReportsScreen({ onNavigate }: Props) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto pb-24">
         {activeTab === 'inbox' && <ReportInboxScreen onNavigate={onNavigate} />}
         {activeTab === 'history' && <HistoryScreen onNavigate={onNavigate} />}
         {activeTab === 'import' && <WhatsAppCaptureScreen onNavigate={onNavigate} />}

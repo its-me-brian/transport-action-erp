@@ -28,7 +28,7 @@ export default function DriverEditModal({ driver, onClose, onSave, saving, colla
               <p className="text-[11px] text-on-surface-variant">{driver.id}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
+          <button onClick={onClose} aria-label="Close" className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
             <X className="w-4 h-4 text-on-surface-variant" />
           </button>
         </div>
