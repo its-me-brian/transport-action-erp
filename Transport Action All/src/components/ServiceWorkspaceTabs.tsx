@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ChevronRight, Phone, User, Calendar,
   CheckCircle, Clock, AlertCircle, Link2, FileText,
@@ -7,6 +7,7 @@ import {
 import { Service, ScreenId, formatTimeDisplay, parseDateKeyToDate } from '../types';
 import { RelatedData } from '../hooks/useRelatedData';
 import { getServiceStatusColor } from '../utils/statusColors';
+import { getAuditLog, AuditEntry } from '../services/api';
 
 // ============================================================================
 // TAB: OVERVIEW
@@ -411,16 +412,105 @@ export function RapportinoTab({ service, onNavigate }: {
 }
 
 // ============================================================================
-// TAB: HISTORY
+// TAB: HISTORY — Activity timeline from audit log
 // ============================================================================
 
 export function HistoryTab({ service }: { service: Service }) {
-  return (
-    <div className="px-5 py-4 space-y-4">
-      <div className="text-center py-8">
+  const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadHistory = async () => {
+      try {
+        const all = await getAuditLog(200);
+        if (cancelled) return;
+        const serviceEntries = all.filter(e =>
+          e.entity === 'Service' && e.entityId === service.id
+        );
+        setEntries(serviceEntries);
+      } catch {
+        if (!cancelled) setEntries([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadHistory();
+    return () => { cancelled = true; };
+  }, [service.id]);
+
+  if (loading) {
+    return (
+      <div className="px-5 py-4 space-y-3 animate-pulse">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="flex gap-3">
+            <div className="w-2 h-2 rounded-full bg-surface-container-highest mt-2 shrink-0" />
+            <div className="flex-1 space-y-1">
+              <div className="h-3 bg-surface-container-highest rounded w-3/4" />
+              <div className="h-2 bg-surface-container-highest rounded w-1/2" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (entries.length === 0) {
+    return (
+      <div className="px-5 py-4 text-center">
         <Clock className="w-8 h-8 text-on-surface-variant/30 mx-auto mb-2" />
-        <div className="text-[13px] text-on-surface-variant">Service history and audit trail</div>
-        <div className="text-[11px] text-on-surface-variant/60 mt-1">Coming soon</div>
+        <div className="text-[13px] text-on-surface-variant">No activity recorded yet</div>
+        <div className="text-[11px] text-on-surface-variant/60 mt-1">Changes will appear here as they happen</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-5 py-4">
+      <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">
+        Activity ({entries.length})
+      </span>
+      <div className="mt-3 relative">
+        {entries.length > 1 && (
+          <div className="absolute left-[5px] top-[7px] bottom-[7px] w-px bg-outline-variant/50" />
+        )}
+        {entries.map((entry, idx) => {
+          const isLast = idx === entries.length - 1;
+          const ts = entry.timestamp ? new Date(entry.timestamp) : null;
+          const timeStr = ts ? ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+          const dateStr = ts ? ts.toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
+
+          return (
+            <div key={idx} className={`flex gap-3 items-start ${!isLast ? 'pb-4' : ''}`}>
+              <div className="relative z-10 shrink-0 mt-[5px]">
+                <div className="w-[11px] h-[11px] rounded-full border-2 border-surface-container-lowest bg-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[12px] font-semibold text-on-surface">{entry.action}</span>
+                  {entry.field && (
+                    <span className="text-[10px] font-medium text-primary/70 bg-primary/5 px-1.5 py-px rounded">{entry.field}</span>
+                  )}
+                </div>
+                {(entry.oldValue || entry.newValue) && (
+                  <div className="text-[11px] text-on-surface-variant mt-0.5">
+                    {entry.oldValue && <span className="line-through opacity-50">{entry.oldValue}</span>}
+                    {entry.oldValue && entry.newValue && <span className="mx-1">→</span>}
+                    {entry.newValue && <span>{entry.newValue}</span>}
+                  </div>
+                )}
+                <div className="flex items-center gap-2 mt-1">
+                  {entry.user && (
+                    <span className="text-[10px] text-on-surface-variant/60">{entry.user}</span>
+                  )}
+                  {timeStr && (
+                    <span className="text-[10px] text-on-surface-variant/40">{dateStr} {timeStr}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
