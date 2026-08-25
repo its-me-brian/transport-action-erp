@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import React from 'react';
+import { motion } from 'motion/react';
 import { 
   X, 
   MapPin, 
@@ -15,8 +15,9 @@ import {
   Plus
 } from 'lucide-react';
 import { Service, ScreenId } from '../types';
-import { getProjects, getDrivers, createService, createDriverOnTheFly, getVehicleTypes, getServiceTypes } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
+import useNewServiceForm from '../hooks/useNewServiceForm';
+import { CreateDriverModal } from './NewServiceSections';
 
 interface NewServiceScreenProps {
   onAddService: (newService: Service) => void;
@@ -25,208 +26,31 @@ interface NewServiceScreenProps {
 
 export default function NewServiceScreen({ onAddService, onNavigate }: NewServiceScreenProps) {
   const { showToast } = useToast();
-
-  // Form states
-  const [company, setCompany] = useState<'Transport Action' | 'Movie Motion'>('Transport Action');
-  const [project, setProject] = useState('');
-  const [serviceDate, setServiceDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [callTime, setCallTime] = useState('08:00');
-  const [serviceType, setServiceType] = useState('Dispo');
-  const [vehicleType, setVehicleType] = useState('');
-  const [vehiclePlate, setVehiclePlate] = useState('');
-  const [passengers, setPassengers] = useState('');
-  const [section, setSection] = useState('');
-  const [flightInfo, setFlightInfo] = useState('');
-  const [notes, setNotes] = useState('');
-  const [pickupLocation, setPickupLocation] = useState('');
-  const [dropoffLocation, setDropoffLocation] = useState('');
-
-  // Validation errors (onBlur)
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // Save state
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Dynamic data from API
-  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
-  const [drivers, setDrivers] = useState<{ id: string; name: string; phone?: string }[]>([]);
-  const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
-  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
-
-  // Driver autocomplete state
-  const [driverSearch, setDriverSearch] = useState('');
-  const [selectedDriverId, setSelectedDriverId] = useState('');
-  const [showDriverDropdown, setShowDriverDropdown] = useState(false);
-  const driverRef = useRef<HTMLDivElement>(null);
-
-  // Create driver on-the-fly modal state
-  const [showCreateDriverModal, setShowCreateDriverModal] = useState(false);
-  const [newDriverPhone, setNewDriverPhone] = useState('');
-  const [isCreatingDriver, setIsCreatingDriver] = useState(false);
-
-  useEffect(() => {
-    getProjects().then(p => { if (Array.isArray(p)) setProjects(p.map((x: any) => ({ id: x.id, name: x.name }))); }).catch(e => console.error('Failed to load projects:', e));
-    getDrivers().then(d => { if (Array.isArray(d)) setDrivers(d.map((x: any) => ({ id: x.id || x.name, name: x.name, phone: x.phone }))); }).catch(e => console.error('Failed to load drivers:', e));
-    getVehicleTypes().then(vt => setVehicleTypes(vt)).catch(() => {});
-    getServiceTypes().then(st => setServiceTypes(st)).catch(() => {});
-  }, []);
-
-  // Close driver dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (driverRef.current && !driverRef.current.contains(e.target as Node)) {
-        setShowDriverDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Filter drivers by search
-  const filteredDrivers = driverSearch.trim()
-    ? drivers.filter(d => d.name.toLowerCase().includes(driverSearch.toLowerCase()))
-    : drivers;
-
-  const exactMatch = drivers.find(d => d.name.toLowerCase() === driverSearch.toLowerCase());
-
-  // Handle driver creation on-the-fly
-  const handleCreateDriverOnTheFly = async () => {
-    if (!driverSearch.trim()) return;
-    if (!newDriverPhone.trim()) {
-      showToast('Phone number is required', 'error');
-      return;
-    }
-
-    setIsCreatingDriver(true);
-    const result = await createDriverOnTheFly({
-      name: driverSearch.trim(),
-      phone: newDriverPhone.trim(),
-      operatingCompany: company,
-    });
-    setIsCreatingDriver(false);
-
-    if (result.error) {
-      showToast(result.error, 'error');
-      return;
-    }
-
-    if (result.id) {
-      // Add the new driver to the local list
-      setDrivers(prev => [...prev, { id: result.id!, name: result.name || driverSearch.trim(), phone: newDriverPhone.trim() }]);
-      setSelectedDriverId(result.id!);
-      setDriverSearch(result.name || driverSearch.trim());
-      setShowCreateDriverModal(false);
-      setNewDriverPhone('');
-      showToast('Driver created successfully', 'success');
-    }
-  };
-
-  // onBlur validation
-  const validateField = (name: string, value: string) => {
-    if (name === 'project' && !value) {
-      setErrors(prev => ({ ...prev, project: 'Please select a project' }));
-    } else if (name === 'pickupLocation' && !value.trim()) {
-      setErrors(prev => ({ ...prev, pickupLocation: 'Pickup location is required' }));
-    } else if (name === 'dropoffLocation' && !value.trim()) {
-      setErrors(prev => ({ ...prev, dropoffLocation: 'Dropoff location is required' }));
-    } else {
-      setErrors(prev => { const next = { ...prev }; delete next[name]; return next; });
-    }
-  };
-
-  // Save Service handler
-  const handleSaveService = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validate all required fields
-    const newErrors: Record<string, string> = {};
-    if (!project) newErrors.project = 'Please select a project';
-    if (!pickupLocation.trim()) newErrors.pickupLocation = 'Pickup location is required';
-    if (!dropoffLocation.trim()) newErrors.dropoffLocation = 'Dropoff location is required';
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      showToast('Please fill out all required fields', 'error');
-      return;
-    }
-
-    setIsSaving(true);
-
-    // Format date as DD/MM/YYYY for display
-    let displayDate = '';
-    if (serviceDate) {
-      const d = new Date(serviceDate);
-      if (!isNaN(d.getTime())) {
-        const day = String(d.getDate()).padStart(2, '0');
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const year = d.getFullYear();
-        displayDate = `${day}/${month}/${year}`;
-      }
-    }
-
-    // Call backend API to persist the service
-    const result = await createService({
-      ProjectID: project,
-      Date: serviceDate,
-      Time: `${callTime} - 16:00`,
-      OperatingCompany: company,
-      DriverID: selectedDriverId || undefined,
-      PassengerName: passengers,
-      Section: section,
-      FlightInfo: flightInfo,
-      Notes: notes,
-      PickupLines: [pickupLocation],
-      DropoffLines: [dropoffLocation],
-      ServiceType: serviceType,
-      VehicleType: vehicleType,
-      SourceType: 'manual',
-    });
-
-    setIsSaving(false);
-
-    if (result.error) {
-      showToast('Error creating service: ' + result.error, 'error');
-      return;
-    }
-
-    if (!result.id) {
-      showToast('Error: backend did not return an ID', 'error');
-      return;
-    }
-
-    // Pass the real service ID from backend
-    onAddService({
-      id: result.id,
-      time: `${callTime} - 16:00`,
-      status: 'Scheduled',
-      operationalStatus: 'Importado',
-      financialStatus: 'Pendiente',
-      title: `${project}`,
-      company,
-      project: project || '',
-      location: pickupLocation,
-      driverName: driverSearch || 'Driver Unassigned',
-      date: displayDate,
-      startTime: callTime || '',
-      endTime: '16:00',
-      kmTotal: 0,
-      kmOver: 0,
-      diariaType: 'none',
-      rawText: '',
-      serviceType,
-      vehicleType: vehicleType || undefined,
-      vehiclePlate: vehiclePlate || undefined,
-      passengers: passengers || undefined,
-      notes: notes || undefined,
-      revenueBreakdown: { base: 0, kmOver: 0, hoursOver: 0, diaria: 0, notturno: 0 },
-      costBreakdown: { base: 0, kmOver: 0, hoursOver: 0, diaria: 0, notturno: 0 },
-      revenueValidated: false,
-      costValidated: false,
-    });
-
-    showToast('Service created successfully', 'success');
-    onNavigate('transport', 'push_back');
-  };
+  const {
+    company, setCompany,
+    project, setProject,
+    serviceDate, setServiceDate,
+    callTime, setCallTime,
+    serviceType, setServiceType,
+    vehicleType, setVehicleType,
+    vehiclePlate, setVehiclePlate,
+    passengers, setPassengers,
+    section, setSection,
+    flightInfo, setFlightInfo,
+    notes, setNotes,
+    pickupLocation, setPickupLocation,
+    dropoffLocation, setDropoffLocation,
+    errors, validateField,
+    isSaving, handleSaveService,
+    projects, drivers, setDrivers,
+    vehicleTypes, serviceTypes,
+    driverSearch, setDriverSearch,
+    selectedDriverId, setSelectedDriverId,
+    showDriverDropdown, setShowDriverDropdown,
+    filteredDrivers, exactMatch, driverRef,
+    showCreateDriverModal, setShowCreateDriverModal,
+    newDriverPhone, setNewDriverPhone,
+  } = useNewServiceForm({ onAddService, onNavigate });
 
   const sectionVariants = {
     hidden: { opacity: 0, y: 8 },
@@ -621,86 +445,25 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
         </form>
       </main>
 
-      {/* Create Driver On-The-Fly Modal */}
-      <AnimatePresence>
-        {showCreateDriverModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-            onClick={() => { setShowCreateDriverModal(false); setNewDriverPhone(''); }}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ duration: 0.2 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl w-full max-w-sm mx-4 max-h-[90vh] flex flex-col"
-            >
-              <div className="flex items-center justify-between px-5 py-4 shrink-0">
-                <h3 className="text-[14px] font-semibold text-on-surface">Create New Driver</h3>
-                <button
-                  type="button"
-                  onClick={() => { setShowCreateDriverModal(false); setNewDriverPhone(''); }}
-                  className="p-1 rounded hover:bg-surface-container transition-colors"
-                >
-                  <X className="w-4 h-4 text-on-surface-variant" />
-                </button>
-              </div>
-
-              <div className="px-5 py-4 space-y-4 overflow-y-auto flex-1 min-h-0">
-                <p className="text-[12px] text-on-surface-variant">
-                  Driver: <strong className="text-on-surface">{driverSearch}</strong>
-                </p>
-
-                <div>
-                  <label className="block text-[11px] text-on-surface-variant uppercase tracking-wide font-medium mb-1">
-                    Phone Number *
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="+34 600 000 000"
-                    value={newDriverPhone}
-                    onChange={(e) => setNewDriverPhone(e.target.value)}
-                    autoFocus
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2 justify-end px-5 py-4 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => { setShowCreateDriverModal(false); setNewDriverPhone(''); }}
-                  className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-on-surface bg-surface-dim hover:bg-surface-container transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCreateDriverOnTheFly}
-                  disabled={isCreatingDriver || !newDriverPhone.trim()}
-                  className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-on-primary bg-primary hover:bg-primary-hover transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isCreatingDriver ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-3.5 h-3.5" />
-                      Create Driver
-                    </>
-                  )}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {showCreateDriverModal && (
+        <CreateDriverModal
+          isOpen={showCreateDriverModal}
+          driverName={driverSearch}
+          company={company}
+          onClose={() => {
+            setShowCreateDriverModal(false);
+            setNewDriverPhone('');
+          }}
+          onCreated={(id, name) => {
+            setDrivers(prev => [...prev, { id, name, phone: newDriverPhone }]);
+            setSelectedDriverId(id);
+            setDriverSearch(name);
+            setShowCreateDriverModal(false);
+            setNewDriverPhone('');
+            showToast('Driver created successfully', 'success');
+          }}
+        />
+      )}
     </div>
   );
 }

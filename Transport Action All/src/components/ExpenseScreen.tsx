@@ -1,275 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Receipt,
   Plus,
   Search,
-  Calendar,
-  Loader2,
-  X,
-  Save,
-  CheckCircle,
-  Clock,
-  Ban,
-  Trash2,
-  Edit3,
-  Filter,
   Download,
-  FileText
+  FileText,
+  Edit3,
 } from 'lucide-react';
 import { ScreenId } from '../types';
-import {
-  getExpenses,
-  createExpense,
-  editExpense,
-  confirmExpense,
-  cancelExpense,
-  correctExpense,
-  ExpenseDTO
-} from '../services/api';
-import { useToast } from '../contexts/ToastContext';
-import { getErrorMessage } from '../utils/errorUtils';
+import { useExpenses } from '../hooks/useExpenses';
+import { STATUS_CONFIG, fmt, getTransitions } from '../utils/expenseHelpers';
+import { CreateExpenseModal, EditExpenseModal, ConfirmActionModal } from './ExpenseModals';
 
 interface Props {
   onNavigate: (screen: ScreenId) => void;
 }
 
-// ─── State machine per docs/04-STATE_MACHINES.md ──────────────────────────────
-// Draft → Confirmed (inmutable)
-// Draft → Cancelled
-// Confirmed → Cancelled
-
-const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string; label: string }> = {
-  Draft:     { icon: Clock,       color: 'text-amber-600',   bg: 'bg-amber-50',    label: 'Draft' },
-  Confirmed: { icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50',  label: 'Confirmed' },
-  Cancelled: { icon: Ban,         color: 'text-gray-400',    bg: 'bg-gray-50',     label: 'Cancelled' },
-};
-
-const OWNER_TYPES = ['empresa', 'proyecto', 'vehiculo', 'servicio', 'conductor'];
-const CATEGORIES = ['fuel', 'maintenance', 'insurance', 'tolls', 'parking', 'rent', 'utilities', 'salaries', 'software', 'office', 'travel', 'other'];
-
-const fmt = (n: number) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
-const fmtDate = (d: string) => {
-  if (!d) return '-';
-  try { return new Date(d).toLocaleDateString('it-IT'); } catch { return d; }
-};
-
 export default function ExpenseScreen({ onNavigate }: Props) {
-  const { showToast } = useToast();
-  const [expenses, setExpenses] = useState<ExpenseDTO[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('All');
-
-  // Create modal
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newExp, setNewExp] = useState({
-    ownerType: 'empresa',
-    ownerId: '',
-    category: 'other',
-    description: '',
-    amount: '',
-    expenseDate: '',
-    accountingDate: '',
-    projectId: '',
-  });
-  const [isCreating, setIsCreating] = useState(false);
-
-  // Edit modal
-  const [editTarget, setEditTarget] = useState<ExpenseDTO | null>(null);
-  const [editChanges, setEditChanges] = useState<Record<string, any>>({});
-  const [isEditing, setIsEditing] = useState(false);
-
-  // Delete/confirm/cancel confirmation
-  const [confirmTarget, setConfirmTarget] = useState<{ expense: ExpenseDTO; action: 'confirm' | 'cancel' | 'correct' } | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  useEffect(() => { loadData(); }, []);
-
-  const loadData = async () => {
-    setIsLoading(true);
-    try {
-      const data = await getExpenses();
-      setExpenses(data);
-    } finally { setIsLoading(false); }
-  };
-
-  const filtered = expenses.filter(e => {
-    const matchSearch = !searchQuery ||
-      e.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchStatus = statusFilter === 'All' || e.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
-
-  // Export to Excel (CSV)
-  const exportToExcel = () => {
-    const headers = ['ExpenseID', 'Description', 'Category', 'OwnerType', 'OwnerID', 'Amount', 'ExpenseDate', 'AccountingDate', 'ProjectID', 'Status'];
-    const rows = filtered.map(e => [
-      e.id,
-      e.description,
-      e.category,
-      e.ownerType,
-      e.ownerId || '',
-      e.amount || 0,
-      e.expenseDate || '',
-      e.accountingDate || '',
-      e.projectId || '',
-      e.status
-    ]);
-    const csvContent = [headers, ...rows]
-      .map(row => row.map(cell => `"${String(cell || '').replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `Expenses_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  };
-
-  // Export to PDF (browser print)
-  const exportToPDF = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-    const rows = filtered.map(e => `
-      <tr>
-        <td>${e.id}</td>
-        <td>${e.description}</td>
-        <td>${e.category}</td>
-        <td>${e.ownerType}${e.ownerId ? ` #${e.ownerId}` : ''}</td>
-        <td>${fmt(e.amount)}</td>
-        <td>${fmtDate(e.expenseDate)}</td>
-        <td>${fmtDate(e.accountingDate)}</td>
-        <td>${e.projectId || '—'}</td>
-        <td><span class="status-${e.status?.toLowerCase()}">${e.status}</span></td>
-      </tr>
-    `).join('');
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Expenses Report</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          h1 { color: #1a1a2e; font-size: 24px; margin-bottom: 5px; }
-          .subtitle { color: #6b7280; font-size: 14px; margin-bottom: 20px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-          th { background: #1a1a2e; color: white; padding: 10px 12px; text-align: left; font-size: 12px; }
-          td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
-          tr:nth-child(even) { background: #f9fafb; }
-          .status-draft { color: #d97706; font-weight: 600; }
-          .status-confirmed { color: #059669; font-weight: 600; }
-          .status-cancelled { color: #dc2626; font-weight: 600; }
-          .footer { margin-top: 20px; font-size: 11px; color: #9ca3af; }
-          @media print { body { padding: 0; } }
-        </style>
-      </head>
-      <body>
-        <h1>Expenses Report</h1>
-        <p class="subtitle">Generated: ${new Date().toLocaleDateString('it-IT')} | Total: ${filtered.length} expenses | Confirmed: ${fmt(totals.confirmed)}</p>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Description</th>
-              <th>Category</th>
-              <th>Owner</th>
-              <th>Amount</th>
-              <th>Expense Date</th>
-              <th>Accounting Date</th>
-              <th>Project</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <p class="footer">Transport Action ERP — Expenses Report</p>
-      </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-  };
-
-  const totals = {
-    draft: filtered.filter(e => e.status === 'Draft').reduce((s, e) => s + e.amount, 0),
-    confirmed: filtered.filter(e => e.status === 'Confirmed').reduce((s, e) => s + e.amount, 0),
-    cancelled: filtered.filter(e => e.status === 'Cancelled').reduce((s, e) => s + e.amount, 0),
-  };
-
-  // ─── Create ────────────────────────────────────────────────────────────────
-  const handleCreate = async () => {
-    if (!newExp.description.trim() || !newExp.amount || parseFloat(newExp.amount) <= 0) {
-      showToast('Description and amount (> 0) are required', 'warning');
-      return;
-    }
-    setIsCreating(true);
-    try {
-      const r = await createExpense('session', {
-        ownerType: newExp.ownerType,
-        ownerId: newExp.ownerId,
-        category: newExp.category,
-        description: newExp.description,
-        amount: parseFloat(newExp.amount) || 0,
-        expenseDate: newExp.expenseDate || new Date().toISOString(),
-        accountingDate: newExp.accountingDate || undefined,
-        projectId: newExp.projectId || undefined,
-      });
-      if (r.error) { showToast(r.error, 'error'); return; }
-      setNewExp({ ownerType: 'empresa', ownerId: '', category: 'other', description: '', amount: '', expenseDate: '', accountingDate: '', projectId: '' });
-      await loadData();
-    } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsCreating(false); setShowCreateModal(false); }
-  };
-
-  // ─── Edit ──────────────────────────────────────────────────────────────────
-  const handleEdit = async () => {
-    if (!editTarget) return;
-    setIsEditing(true);
-    try {
-      const r = await editExpense('session', editTarget.id, editChanges);
-      if (r.error) { showToast(r.error, 'error'); return; }
-      setEditChanges({});
-      await loadData();
-    } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsEditing(false); setEditTarget(null); }
-  };
-
-  // ─── Confirm ───────────────────────────────────────────────────────────────
-  const handleConfirm = async () => {
-    if (!confirmTarget) return;
-    setIsProcessing(true);
-    try {
-      let r;
-      if (confirmTarget.action === 'confirm') {
-        r = await confirmExpense('session', confirmTarget.expense.id);
-      } else if (confirmTarget.action === 'cancel') {
-        r = await cancelExpense('session', confirmTarget.expense.id);
-      } else if (confirmTarget.action === 'correct') {
-        r = await correctExpense(confirmTarget.expense.id);
-      }
-      if (r.error) { showToast(r.error, 'error'); return; }
-      setConfirmTarget(null);
-      await loadData();
-    } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsProcessing(false); }
-  };
-
-  // ─── Available transitions per state machine ────────────────────────────────
-  const getTransitions = (status: string) => {
-    switch (status) {
-      case 'Draft':
-        return [
-          { action: 'confirm' as const, label: 'Confirm', icon: CheckCircle, color: 'text-emerald-600 hover:bg-emerald-50' },
-          { action: 'cancel' as const, label: 'Cancel', icon: Ban, color: 'text-red-500 hover:bg-red-50' },
-        ];
-      case 'Confirmed':
-        return [
-          { action: 'correct' as const, label: 'Correct', icon: Edit3, color: 'text-amber-600 hover:bg-amber-50' },
-          { action: 'cancel' as const, label: 'Cancel', icon: Ban, color: 'text-red-500 hover:bg-red-50' },
-        ];
-      default:
-        return [];
-    }
-  };
+  const {
+    isLoading,
+    searchQuery, setSearchQuery,
+    statusFilter, setStatusFilter,
+    filtered,
+    totals,
+    showCreateModal, setShowCreateModal,
+    newExp, setNewExp,
+    isCreating,
+    editTarget, setEditTarget,
+    editChanges, setEditChanges,
+    isEditing,
+    confirmTarget, setConfirmTarget,
+    isProcessing,
+    exportToExcel,
+    exportToPDF,
+    handleCreate,
+    handleEdit,
+    handleConfirm,
+  } = useExpenses();
 
   return (
     <div className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-8">
@@ -375,7 +142,7 @@ export default function ExpenseScreen({ onNavigate }: Props) {
                 <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
                   <span>{exp.ownerType}{exp.ownerId ? ` #${exp.ownerId}` : ''}</span>
                   <span>·</span>
-                  <span>{fmtDate(exp.expenseDate)}</span>
+                  <span>{fmt(exp.expenseDate)}</span>
                   {exp.projectId && <><span>·</span><span>Project: {exp.projectId}</span></>}
                 </div>
               </div>
@@ -402,163 +169,33 @@ export default function ExpenseScreen({ onNavigate }: Props) {
         })}
       </div>
 
-      {/* ─── Create Modal ───────────────────────────────────────────────────── */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-lg shadow-xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
-              <h3 className="text-[15px] font-semibold text-on-surface">New Expense</h3>
-              <button onClick={() => setShowCreateModal(false)} className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
-            </div>
-            <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Description *</label>
-                <input type="text" value={newExp.description} onChange={e => setNewExp({ ...newExp, description: e.target.value })}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="e.g. Fuel for vehicle..." />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Amount (EUR) *</label>
-                  <input type="number" step="0.01" min="0.01" value={newExp.amount} onChange={e => setNewExp({ ...newExp, amount: e.target.value })}
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="0.00" />
-                </div>
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Category</label>
-                  <select value={newExp.category} onChange={e => setNewExp({ ...newExp, category: e.target.value })}
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">
-                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Owner Type</label>
-                  <select value={newExp.ownerType} onChange={e => setNewExp({ ...newExp, ownerType: e.target.value })}
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">
-                    {OWNER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Owner ID</label>
-                  <input type="text" value={newExp.ownerId} onChange={e => setNewExp({ ...newExp, ownerId: e.target.value })}
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="Optional" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Expense Date</label>
-                  <input type="date" value={newExp.expenseDate} onChange={e => setNewExp({ ...newExp, expenseDate: e.target.value })}
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
-                </div>
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Accounting Date</label>
-                  <input type="date" value={newExp.accountingDate} onChange={e => setNewExp({ ...newExp, accountingDate: e.target.value })}
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
-                </div>
-              </div>
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Project ID (optional)</label>
-                <input type="text" value={newExp.projectId} onChange={e => setNewExp({ ...newExp, projectId: e.target.value })}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="For cross-project analysis" />
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">
-              <button onClick={() => setShowCreateModal(false)} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
-              <button onClick={handleCreate} disabled={isCreating || !newExp.description.trim() || !newExp.amount || parseFloat(newExp.amount) <= 0}
-                className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
-                {isCreating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modals */}
+      <CreateExpenseModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSave={handleCreate}
+        newExp={newExp}
+        setNewExp={setNewExp}
+        isCreating={isCreating}
+      />
 
-      {/* ─── Edit Modal ─────────────────────────────────────────────────────── */}
-      {editTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
-              <h3 className="text-[15px] font-semibold text-on-surface">Edit Expense — {editTarget.id}</h3>
-              <button onClick={() => setEditTarget(null)} className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
-            </div>
-            <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Description</label>
-                <input type="text" value={editChanges.description || ''} onChange={e => setEditChanges({ ...editChanges, description: e.target.value })}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Amount (EUR)</label>
-                  <input type="number" step="0.01" value={editChanges.amount || ''} onChange={e => setEditChanges({ ...editChanges, amount: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
-                </div>
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Category</label>
-                  <select value={editChanges.category || ''} onChange={e => setEditChanges({ ...editChanges, category: e.target.value })}
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">
-                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Expense Date</label>
-                <input type="date" value={editChanges.expenseDate || ''} onChange={e => setEditChanges({ ...editChanges, expenseDate: e.target.value })}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
-              </div>
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Notes</label>
-                <textarea value={editChanges.notes || ''} onChange={e => setEditChanges({ ...editChanges, notes: e.target.value })}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary resize-none" rows={2} />
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">
-              <button onClick={() => setEditTarget(null)} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
-              <button onClick={handleEdit} disabled={isEditing}
-                className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
-                {isEditing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <EditExpenseModal
+        isOpen={!!editTarget}
+        onClose={() => setEditTarget(null)}
+        onSave={handleEdit}
+        editTarget={editTarget}
+        editChanges={editChanges}
+        setEditChanges={setEditChanges}
+        isEditing={isEditing}
+      />
 
-      {/* ─── Confirm/Cancel Modal ───────────────────────────────────────────── */}
-      {confirmTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-sm shadow-xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
-              <h3 className="text-[15px] font-semibold text-on-surface">
-                {confirmTarget.action === 'confirm' ? 'Confirm Expense' : confirmTarget.action === 'correct' ? 'Correct Expense' : 'Cancel Expense'}
-              </h3>
-              <button onClick={() => setConfirmTarget(null)} className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
-            </div>
-            <div className="px-5 py-4">
-              <p className="text-[13px] text-on-surface">
-                {confirmTarget.action === 'confirm'
-                  ? `Confirm expense "${confirmTarget.expense.description}" for ${fmt(confirmTarget.expense.amount)}? This action is irreversible.`
-                  : confirmTarget.action === 'correct'
-                    ? `Correct expense "${confirmTarget.expense.description}"? This will create a new Draft.`
-                    : `Cancel expense "${confirmTarget.expense.description}"? This action is irreversible.`}
-              </p>
-            </div>
-            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant">
-              <button onClick={() => setConfirmTarget(null)} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer">Back</button>
-              <button onClick={handleConfirm} disabled={isProcessing}
-                className={`px-4 py-1.5 text-[12px] font-medium rounded-lg flex items-center gap-1.5 disabled:opacity-50 cursor-pointer ${
-                  confirmTarget.action === 'confirm'
-                    ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                    : confirmTarget.action === 'correct'
-                      ? 'bg-amber-600 text-white hover:bg-amber-700'
-                      : 'bg-red-500 text-white hover:bg-red-600'
-                }`}>
-                {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (confirmTarget.action === 'confirm' ? <CheckCircle className="w-3.5 h-3.5" /> : confirmTarget.action === 'correct' ? <Edit3 className="w-3.5 h-3.5" /> : <Ban className="w-3.5 h-3.5" />)}
-                {confirmTarget.action === 'confirm' ? 'Confirm' : confirmTarget.action === 'correct' ? 'Correct' : 'Cancel'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmActionModal
+        isOpen={!!confirmTarget}
+        onClose={() => setConfirmTarget(null)}
+        onConfirm={handleConfirm}
+        confirmTarget={confirmTarget}
+        isProcessing={isProcessing}
+      />
     </div>
   );
 }

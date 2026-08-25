@@ -1,229 +1,45 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
   FolderOpen, 
   Plus, 
   Search, 
   Calendar, 
   Building2, 
-  Loader2, 
-  X, 
-  Save, 
-  Trash2, 
   Pencil,
-  CheckCircle,
-  PlayCircle,
-  Clock
+  Trash2,
 } from 'lucide-react';
 import { ScreenId } from '../types';
-import { Project, getProjects, createProject, updateProject, deleteProject, getClients, prepararProject, activarProject, pasarAFacturacionProject, pasarACobroProject, cerrarProject, getMainDashboard, DashboardSummary } from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
-import { useToast } from '../contexts/ToastContext';
+import { Project } from '../services/api';
+import { useProjects } from '../hooks/useProjects';
+import { STATUS_CONFIG, getLifecycleActions, StatusFilter } from '../utils/projectHelpers';
+import { ProjectFormModal } from './ProjectModals';
 
 interface ProjectScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
 }
 
-type StatusFilter = 'All' | Project['status'];
-
-type ClientOption = { id: string; name: string };
-
 export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
-  const { token } = useAuth();
-  const { showToast } = useToast();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [clients, setClients] = useState<ClientOption[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
-
-  // Add/Edit modal
-  const [editProject, setEditProject] = useState<Partial<Project> | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isNew, setIsNew] = useState(false);
-
-  // Delete confirmation
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-
-  // Dashboard summary
-  const [dashboardSummary, setDashboardSummary] = useState<DashboardSummary | null>(null);
-
-  useEffect(() => {
-    loadProjects();
-    loadClients();
-    loadDashboard();
-  }, []);
-
-  const loadDashboard = async () => {
-    try {
-      const summary = await getMainDashboard();
-      setDashboardSummary(summary);
-    } catch (err) {
-      console.error('Error loading dashboard:', err);
-      showToast('Error al cargar dashboard', 'error');
-    }
-  };
-
-  const loadClients = async () => {
-    try {
-      const result = await getClients();
-      if (Array.isArray(result)) {
-        setClients(result.map((c: any) => ({ id: c.id, name: c.name })));
-      }
-    } catch (err) {
-      console.error('Error loading clients:', err);
-      showToast('Error al cargar clientes', 'error');
-    }
-  };
-
-  const loadProjects = async () => {
-    setIsLoading(true);
-    try {
-      const result = await getProjects();
-      if (Array.isArray(result)) {
-        // Dedup by ID
-        const seen = new Set<string>();
-        const unique = result.filter(p => {
-          if (seen.has(p.id)) return false;
-          seen.add(p.id);
-          return true;
-        });
-        setProjects(unique);
-      }
-    } catch (err) {
-      console.error('Error loading projects:', err);
-      showToast('Error al cargar proyectos', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const filtered = projects.filter(p => {
-    if (statusFilter !== 'All' && p.status !== statusFilter) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return p.name.toLowerCase().includes(q) || 
-             p.transportCompany.toLowerCase().includes(q) ||
-             p.id.toLowerCase().includes(q);
-    }
-    return true;
-  });
-
-  const handleSave = async () => {
-    if (!editProject?.name?.trim()) {
-      showToast('Project name is required', 'warning');
-      return;
-    }
-    setIsSaving(true);
-    try {
-      if (isNew) {
-        const result = await createProject(token, {
-          name: editProject.name!.trim(),
-          clientId: editProject.clientId || '',
-          transportCompany: editProject.transportCompany || '',
-          operatingCompany: editProject.operatingCompany || '',
-          coordinator: editProject.coordinator || '',
-          status: editProject.status || 'Nuovo',
-          dateFrom: editProject.dateFrom || '',
-          dateTo: editProject.dateTo || '',
-          notes: editProject.notes || ''
-        });
-        if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
-      } else {
-        const result = await updateProject(token, editProject as Project);
-        if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
-      }
-      setEditProject(null);
-      await loadProjects();
-    } catch (err) {
-      showToast('Error: ' + err.message, 'error');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      const result = await deleteProject(token, id);
-      if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
-      setDeleteConfirm(null);
-      await loadProjects();
-    } catch (err) {
-      showToast('Error: ' + err.message, 'error');
-    }
-  };
-
-  // Project lifecycle transitions
-  const handleLifecycleTransition = async (projectId: string, action: 'preparar' | 'activar' | 'pasarAFacturacion' | 'pasarACobro' | 'cerrar') => {
-    const confirmMessages: Record<string, string> = {
-      preparar: 'Preparare questo progetto?',
-      activar: 'Attivare questo progetto?',
-      pasarAFacturacion: 'Passare a fatturazione?',
-      pasarACobro: 'Passare a incasso?',
-      cerrar: 'Chiudere questo progetto?',
-    };
-    
-    if (!confirm(confirmMessages[action])) return;
-    
-    try {
-      let result;
-      switch (action) {
-        case 'preparar': result = await prepararProject(token, projectId); break;
-        case 'activar': result = await activarProject(token, projectId); break;
-        case 'pasarAFacturacion': result = await pasarAFacturacionProject(token, projectId); break;
-        case 'pasarACobro': result = await pasarACobroProject(token, projectId); break;
-        case 'cerrar': result = await cerrarProject(token, projectId); break;
-      }
-      if (result?.error) {
-        showToast('Error: ' + result.error, 'error');
-      } else {
-        await loadProjects();
-      }
-    } catch (err) {
-      showToast('Error: ' + err.message, 'error');
-    }
-  };
-
-  // Get available lifecycle actions for a project status
-  const getLifecycleActions = (status: Project['status']): Array<{ action: 'preparar' | 'activar' | 'pasarAFacturacion' | 'pasarACobro' | 'cerrar'; label: string; color: string }> => {
-    switch (status) {
-      case 'Nuovo': return [{ action: 'preparar', label: 'Preparare', color: 'bg-amber-50 text-amber-600 hover:bg-amber-100' }];
-      case 'Preparazione': return [{ action: 'activar', label: 'Attivare', color: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' }];
-      case 'Attivo': return [{ action: 'pasarAFacturacion', label: 'Fatturazione', color: 'bg-blue-50 text-blue-600 hover:bg-blue-100' }];
-      case 'Fatturazione': return [{ action: 'pasarACobro', label: 'Incasso', color: 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100' }];
-      case 'Incasso': return [{ action: 'cerrar', label: 'Chiudi', color: 'bg-green-50 text-green-600 hover:bg-green-100' }];
-      default: return [];
-    }
-  };
-
-  const statusConfig: Record<Project['status'], { icon: any; color: string; bg: string; label: string }> = {
-    Nuovo: { icon: Clock, color: 'text-slate-600', bg: 'bg-slate-50', label: 'Nuovo' },
-    Preparazione: { icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', label: 'Preparazione' },
-    Attivo: { icon: PlayCircle, color: 'text-emerald-600', bg: 'bg-emerald-50', label: 'Attivo' },
-    Fatturazione: { icon: PlayCircle, color: 'text-blue-600', bg: 'bg-blue-50', label: 'Fatturazione' },
-    Incasso: { icon: PlayCircle, color: 'text-indigo-600', bg: 'bg-indigo-50', label: 'Incasso' },
-    Chiuso: { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50', label: 'Chiuso' },
-    Archiviato: { icon: CheckCircle, color: 'text-gray-500', bg: 'bg-gray-50', label: 'Archiviato' },
-  };
-
-  const openNew = () => {
-    setIsNew(true);
-    setEditProject({
-      name: '',
-      clientId: '',
-      transportCompany: '',
-      operatingCompany: '',
-      coordinator: '',
-      status: 'Nuovo',
-      dateFrom: '',
-      dateTo: '',
-      notes: ''
-    });
-  };
-
-  const openEdit = (p: Project) => {
-    setIsNew(false);
-    setEditProject({ ...p });
-  };
+  const {
+    clients,
+    isLoading,
+    searchQuery,
+    setSearchQuery,
+    statusFilter,
+    setStatusFilter,
+    editProject,
+    setEditProject,
+    isSaving,
+    isNew,
+    deleteConfirm,
+    setDeleteConfirm,
+    dashboardSummary,
+    filtered,
+    handleSave,
+    handleDelete,
+    handleLifecycleTransition,
+    openNew,
+    openEdit,
+  } = useProjects();
 
   return (
     <div id="project-screen" className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-8">
@@ -341,7 +157,7 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
           </div>
         ) : (
           filtered.map(p => {
-            const sc = statusConfig[p.status] || statusConfig.Nuovo;
+            const sc = STATUS_CONFIG[p.status] || STATUS_CONFIG.Nuovo;
             const StatusIcon = sc.icon;
             return (
               <div
@@ -429,138 +245,14 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
       </div>
 
       {/* Add/Edit Modal */}
-      {editProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
-              <h3 className="text-[15px] font-semibold text-on-surface">
-                {isNew ? 'New Project' : 'Edit Project'}
-              </h3>
-              <button onClick={() => setEditProject(null)} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
-                <X className="w-4 h-4 text-on-surface-variant" />
-              </button>
-            </div>
-
-            <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Project Name *</label>
-                <input
-                  type="text"
-                  value={editProject.name || ''}
-                  onChange={e => setEditProject({ ...editProject, name: e.target.value })}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                  placeholder="e.g. Film Production ABC"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Status</label>
-                <div className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface">
-                  {editProject.status || 'Nuovo'}
-                </div>
-                <p className="text-[10px] text-on-surface-variant mt-1">Status changes via lifecycle buttons</p>
-              </div>
-
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Client</label>
-                <select
-                  value={editProject.clientId || ''}
-                  onChange={e => setEditProject({ ...editProject, clientId: e.target.value })}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
-                >
-                  <option value="">— None —</option>
-                  {clients.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Operating Company</label>
-                  <input
-                    type="text"
-                    value={editProject.operatingCompany || ''}
-                    onChange={e => setEditProject({ ...editProject, operatingCompany: e.target.value })}
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                    placeholder="e.g. TA"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Coordinator</label>
-                  <input
-                    type="text"
-                    value={editProject.coordinator || ''}
-                    onChange={e => setEditProject({ ...editProject, coordinator: e.target.value })}
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                    placeholder="e.g. Marco"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Start Date</label>
-                  <input
-                    type="date"
-                    value={editProject.dateFrom || ''}
-                    onChange={e => setEditProject({ ...editProject, dateFrom: e.target.value })}
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">End Date</label>
-                  <input
-                    type="date"
-                    value={editProject.dateTo || ''}
-                    onChange={e => setEditProject({ ...editProject, dateTo: e.target.value })}
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Transport Company</label>
-                <input
-                  type="text"
-                  value={editProject.transportCompany || ''}
-                  onChange={e => setEditProject({ ...editProject, transportCompany: e.target.value })}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                  placeholder="e.g. Transport Movie SRL"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Notes</label>
-                <textarea
-                  value={editProject.notes || ''}
-                  onChange={e => setEditProject({ ...editProject, notes: e.target.value })}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary resize-none"
-                  rows={3}
-                  placeholder="Additional notes..."
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">
-              <button
-                onClick={() => setEditProject(null)}
-                className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={isSaving || !editProject.name?.trim()}
-                className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-              >
-                {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                {isNew ? 'Create' : 'Save'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ProjectFormModal
+        editProject={editProject}
+        setEditProject={setEditProject}
+        isNew={isNew}
+        isSaving={isSaving}
+        clients={clients}
+        handleSave={handleSave}
+      />
     </div>
   );
 }
