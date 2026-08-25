@@ -1,6 +1,7 @@
 import React from 'react';
 import { Building2, Mail, MessageSquare, X, Loader2 } from 'lucide-react';
 import { TransportService, passengerDisplay, pickupDisplay, dropoffDisplay, Agency } from '../services/api';
+import { Skeleton } from './ui/Skeleton';
 
 interface TransportListAgencyModalProps {
   isOpen: boolean;
@@ -51,9 +52,10 @@ export default function TransportListAgencyModal({
           <div>
             <label className="block text-[12px] font-medium text-on-surface-variant mb-1">Select Agency</label>
             {loadingAgencies ? (
-              <div className="space-y-2 animate-pulse">
+              <div className="space-y-2" role="status">
+                <span className="sr-only">Loading...</span>
                 {[1, 2, 3].map(i => (
-                  <div key={i} className="h-9 bg-surface-container-highest rounded-lg" />
+                  <Skeleton key={i} className="h-9 w-full rounded-lg" />
                 ))}
               </div>
             ) : agencies.length === 0 ? (

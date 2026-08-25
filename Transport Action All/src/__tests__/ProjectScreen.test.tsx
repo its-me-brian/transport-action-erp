@@ -55,7 +55,7 @@ describe('ProjectScreen', () => {
 
   it('renders and loads projects', async () => {
     const { container } = render(<ProjectScreen onNavigate={mockOnNavigate} />);
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[role="status"]')).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByText('Netflix Film')).toBeInTheDocument();
       expect(screen.getByText('Amazon Series')).toBeInTheDocument();

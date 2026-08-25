@@ -13,6 +13,7 @@ import {
 import { useOpenService } from '../hooks/useOpenService';
 import PullToRefresh from './PullToRefresh';
 import MotionCard from './ui/MotionCard';
+import { Skeleton } from './ui/Skeleton';
 
 interface ExecutiveDashboardScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -102,34 +103,35 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
       </header>
 
       {isLoading ? (
-        <div className="space-y-4">
+        <div className="space-y-4" role="status">
+          <span className="sr-only">Loading...</span>
           {/* KPI skeleton row 1 */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-lg border border-outline-variant/30 px-4 py-3 space-y-2 animate-pulse">
-                <div className="h-3 bg-surface-dim rounded w-1/2" />
-                <div className="h-7 bg-surface-dim rounded w-2/3" />
-                <div className="h-3 bg-surface-dim rounded w-1/3" />
+              <div key={i} className="rounded-lg border border-outline-variant/30 px-4 py-3 space-y-2">
+                <Skeleton className="h-3 w-1/2" />
+                <Skeleton className="h-7 w-2/3" />
+                <Skeleton className="h-3 w-1/3" />
               </div>
             ))}
           </div>
           {/* KPI skeleton row 2 */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-lg border border-outline-variant/30 px-4 py-3 space-y-2 animate-pulse">
-                <div className="h-3 bg-surface-dim rounded w-1/2" />
-                <div className="h-7 bg-surface-dim rounded w-2/3" />
-                <div className="h-3 bg-surface-dim rounded w-1/3" />
+              <div key={i} className="rounded-lg border border-outline-variant/30 px-4 py-3 space-y-2">
+                <Skeleton className="h-3 w-1/2" />
+                <Skeleton className="h-7 w-2/3" />
+                <Skeleton className="h-3 w-1/3" />
               </div>
             ))}
           </div>
           {/* Worklist skeleton */}
           <div className="grid grid-cols-2 gap-3">
             {Array.from({ length: 2 }).map((_, i) => (
-              <div key={i} className="rounded-lg border border-outline-variant/30 px-4 py-3 space-y-2 animate-pulse">
-                <div className="h-3 bg-surface-dim rounded w-1/2" />
-                <div className="h-7 bg-surface-dim rounded w-1/4" />
-                <div className="h-3 bg-surface-dim rounded w-2/3" />
+              <div key={i} className="rounded-lg border border-outline-variant/30 px-4 py-3 space-y-2">
+                <Skeleton className="h-3 w-1/2" />
+                <Skeleton className="h-7 w-1/4" />
+                <Skeleton className="h-3 w-2/3" />
               </div>
             ))}
           </div>

@@ -7,6 +7,7 @@ import { ScreenId } from '../types';
 import { exportToCSV, exportToPDF, formatDateExport } from '../utils/exportUtils';
 import CreateLinkModal from './CreateLinkModal';
 import EditLinkModal from './EditLinkModal';
+import { Skeleton } from './ui/Skeleton';
 
 export const AVAILABLE_FIELDS = [
   { key: 'orarioInizio',   label: 'Ora Inizio',        type: 'time',     required: true,  defaultEnabled: true },
@@ -421,17 +422,18 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
 
       <div className="flex-1 overflow-auto">
         {isLoading ? (
-          <div className="space-y-3 p-4">
+          <div className="space-y-3 p-4" role="status">
+            <span className="sr-only">Loading...</span>
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="border border-outline-variant/30 rounded-lg p-4 animate-pulse">
+              <div key={i} className="border border-outline-variant/30 rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-surface-dim rounded w-1/4" />
-                    <div className="h-3 bg-surface-dim rounded w-1/3" />
+                    <Skeleton className="h-4 w-1/4" />
+                    <Skeleton className="h-3 w-1/3" />
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="h-6 w-16 bg-surface-dim rounded-full" />
-                    <div className="h-8 w-8 bg-surface-dim rounded-lg" />
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                    <Skeleton className="h-8 w-8 rounded-lg" />
                   </div>
                 </div>
               </div>

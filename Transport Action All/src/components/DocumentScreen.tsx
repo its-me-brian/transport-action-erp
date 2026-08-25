@@ -19,6 +19,7 @@ import {
 } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { Skeleton } from './ui/Skeleton';
 
 interface DocumentScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -247,17 +248,18 @@ export default function DocumentScreen({ onNavigate }: DocumentScreenProps) {
       {/* Documents List */}
       <div id="documents-list" className="flex flex-col gap-2">
         {isLoading ? (
-          <div className="space-y-2">
+          <div className="space-y-2" role="status">
+            <span className="sr-only">Loading...</span>
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-surface-container-highest animate-pulse shrink-0" />
+                <Skeleton className="w-10 h-10 rounded-lg shrink-0" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-3.5 bg-surface-container-highest rounded w-36 animate-pulse" />
-                  <div className="h-2.5 bg-surface-container-highest rounded w-48 animate-pulse" />
+                  <Skeleton className="h-3.5 w-36" />
+                  <Skeleton className="h-2.5 w-48" />
                 </div>
                 <div className="flex gap-1">
-                  <div className="h-7 bg-surface-container-highest rounded w-7 animate-pulse" />
-                  <div className="h-7 bg-surface-container-highest rounded w-7 animate-pulse" />
+                  <Skeleton className="h-7 w-7" />
+                  <Skeleton className="h-7 w-7" />
                 </div>
               </div>
             ))}

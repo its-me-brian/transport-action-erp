@@ -105,7 +105,7 @@ describe('PaymentsScreen', () => {
   it('shows loading spinner initially', () => {
     mockGetPayments.mockReturnValue(new Promise(() => {}));
     const { container } = render(<PaymentsScreen onNavigate={mockOnNavigate} />);
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[role="status"]')).toBeInTheDocument();
   });
 
   it('shows empty state when no payments exist', async () => {

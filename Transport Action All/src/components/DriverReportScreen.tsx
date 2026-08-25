@@ -4,6 +4,7 @@ import { ScreenId } from '../types';
 import { getDriverReports, getDriverReport, approveDriverReport, rejectDriverReport, DriverReportDTO } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import { getErrorMessage } from '../utils/errorUtils';
+import { Skeleton } from './ui/Skeleton';
 
 interface Props { onNavigate: (screen: ScreenId) => void; }
 
@@ -121,14 +122,15 @@ export default function DriverReportScreen({ onNavigate }: Props) {
 
       <div className="space-y-2">
         {isLoading ? (
-          <div className="space-y-2">
+          <div className="space-y-2" role="status">
+            <span className="sr-only">Loading...</span>
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 animate-pulse">
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="flex-1 space-y-2">
-                  <div className="flex gap-2"><div className="h-5 w-16 bg-surface-dim rounded" /><div className="h-4 w-8 bg-surface-dim rounded" /></div>
-                  <div className="flex gap-4"><div className="h-3 w-20 bg-surface-dim rounded" /><div className="h-3 w-16 bg-surface-dim rounded" /><div className="h-3 w-24 bg-surface-dim rounded" /></div>
+                  <div className="flex gap-2"><Skeleton className="h-5 w-16" /><Skeleton className="h-4 w-8" /></div>
+                  <div className="flex gap-4"><Skeleton className="h-3 w-20" /><Skeleton className="h-3 w-16" /><Skeleton className="h-3 w-24" /></div>
                 </div>
-                <div className="flex gap-2"><div className="h-7 w-7 bg-surface-dim rounded" /><div className="h-7 w-7 bg-surface-dim rounded" /></div>
+                <div className="flex gap-2"><Skeleton className="h-7 w-7" /><Skeleton className="h-7 w-7" /></div>
               </div>
             ))}
           </div>

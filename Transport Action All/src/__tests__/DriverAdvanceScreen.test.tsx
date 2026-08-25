@@ -79,7 +79,7 @@ describe('DriverAdvanceScreen', () => {
     mockGetDriverAdvances.mockReturnValue(new Promise(() => {}));
     mockGetDrivers.mockReturnValue(new Promise(() => {}));
     const { container } = render(<DriverAdvanceScreen onNavigate={vi.fn()} />);
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[role="status"]')).toBeInTheDocument();
   });
 
   it('loads and displays advances', async () => {

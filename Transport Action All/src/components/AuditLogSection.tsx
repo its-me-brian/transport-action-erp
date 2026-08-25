@@ -1,6 +1,7 @@
 import React from 'react';
 import { History } from 'lucide-react';
 import { AuditEntry } from '../services/api';
+import { Skeleton } from './ui/Skeleton';
 
 interface AuditLogSectionProps {
   auditLogs: AuditEntry[];
@@ -36,7 +37,8 @@ export default function AuditLogSection({
       
       <div className="bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden">
         {isLoadingLogs ? (
-          <div className="overflow-hidden">
+          <div className="overflow-hidden" role="status">
+            <span className="sr-only">Loading...</span>
             <table className="w-full text-[11px]">
               <thead className="bg-surface-dim">
                 <tr className="border-b border-outline-variant">
@@ -50,13 +52,13 @@ export default function AuditLogSection({
               </thead>
               <tbody>
                 {[1, 2, 3, 4, 5].map(i => (
-                  <tr key={i} className="border-b border-outline-variant/50 animate-pulse">
-                    <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-16" /></td>
-                    <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-14" /></td>
-                    <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-20" /></td>
-                    <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-16" /></td>
-                    <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-24" /></td>
-                    <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-20" /></td>
+                  <tr key={i} className="border-b border-outline-variant/50">
+                    <td className="px-3 py-2"><Skeleton className="h-3 w-16" /></td>
+                    <td className="px-3 py-2"><Skeleton className="h-3 w-14" /></td>
+                    <td className="px-3 py-2"><Skeleton className="h-3 w-20" /></td>
+                    <td className="px-3 py-2"><Skeleton className="h-3 w-16" /></td>
+                    <td className="px-3 py-2"><Skeleton className="h-3 w-24" /></td>
+                    <td className="px-3 py-2"><Skeleton className="h-3 w-20" /></td>
                   </tr>
                 ))}
               </tbody>

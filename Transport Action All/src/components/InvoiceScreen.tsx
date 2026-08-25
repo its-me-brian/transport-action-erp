@@ -29,6 +29,7 @@ import InvoiceDetailModal from './InvoiceDetailModal';
 import InvoiceCreateModal from './InvoiceCreateModal';
 import InvoiceVoidModal from './InvoiceVoidModal';
 import InvoiceEditModal from './InvoiceEditModal';
+import { Skeleton, SkeletonAvatar } from './ui/Skeleton';
 
 interface InvoiceScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -394,24 +395,25 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
 
       <div id="invoices-list" className="space-y-2">
         {isLoading ? (
-          <div className="space-y-2">
+          <div className="space-y-2" role="status">
+            <span className="sr-only">Loading...</span>
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-surface-container-highest animate-pulse shrink-0" />
+                <SkeletonAvatar size="sm" />
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="h-3 bg-surface-container-highest rounded w-14 animate-pulse" />
-                    <div className="h-3.5 bg-surface-container-highest rounded w-20 animate-pulse" />
-                    <div className="h-2.5 bg-surface-container-highest rounded w-16 animate-pulse" />
+                    <Skeleton className="h-3 w-14" />
+                    <Skeleton className="h-3.5 w-20" />
+                    <Skeleton className="h-2.5 w-16" />
                   </div>
                   <div className="flex gap-3">
-                    <div className="h-2.5 bg-surface-container-highest rounded w-24 animate-pulse" />
-                    <div className="h-2.5 bg-surface-container-highest rounded w-20 animate-pulse" />
+                    <Skeleton className="h-2.5 w-24" />
+                    <Skeleton className="h-2.5 w-20" />
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <div className="h-7 bg-surface-container-highest rounded w-7 animate-pulse" />
-                  <div className="h-7 bg-surface-container-highest rounded w-7 animate-pulse" />
+                  <Skeleton className="h-7 w-7 rounded" />
+                  <Skeleton className="h-7 w-7 rounded" />
                 </div>
               </div>
             ))}

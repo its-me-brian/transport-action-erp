@@ -7,6 +7,7 @@ import DriverEditModal from './DriverEditModal';
 import DriverAddModal from './DriverAddModal';
 import DriverDeleteConfirm from './DriverDeleteConfirm';
 import SupplierRatesModal from './SupplierRatesModal';
+import { Skeleton, SkeletonAvatar } from './ui/Skeleton';
 
 interface DriverPanelScreenProps {
   drivers: Driver[];
@@ -141,20 +142,21 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
         {isLoading ? (
           <>
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 space-y-3">
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 space-y-3" role="status">
+                <span className="sr-only">Loading...</span>
                 <div className="flex justify-between items-start">
                   <div className="flex gap-2.5 items-center">
-                    <div className="w-10 h-10 rounded-full bg-surface-container-highest animate-pulse" />
+                    <SkeletonAvatar size="md" />
                     <div className="space-y-1.5">
-                      <div className="h-4 bg-surface-container-highest rounded w-28 animate-pulse" />
-                      <div className="h-2.5 bg-surface-container-highest rounded w-20 animate-pulse" />
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-2.5 w-20" />
                     </div>
                   </div>
-                  <div className="h-5 bg-surface-container-highest rounded w-16 animate-pulse" />
+                  <Skeleton className="h-5 w-16" />
                 </div>
                 <div className="flex gap-3">
-                  <div className="h-2.5 bg-surface-container-highest rounded w-24 animate-pulse" />
-                  <div className="h-2.5 bg-surface-container-highest rounded w-16 animate-pulse" />
+                  <Skeleton className="h-2.5 w-24" />
+                  <Skeleton className="h-2.5 w-16" />
                 </div>
               </div>
             ))}

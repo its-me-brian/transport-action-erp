@@ -101,7 +101,7 @@ describe('CompanySettingsScreen', () => {
     mockGetSettings.mockReturnValue(new Promise(() => {}));
     mockGetOperatingCompanies.mockReturnValue(new Promise(() => {}));
     const { container } = render(<CompanySettingsScreen onNavigate={mockOnNavigate} />);
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[role="status"]')).toBeInTheDocument();
   });
 
   it('loads and displays TA profile name', async () => {

@@ -9,6 +9,7 @@ import {
 import { ScreenId } from '../types';
 import { useCollaborators } from '../hooks/useCollaborators';
 import { CollaboratorFormModal, RatesModal } from './CollaboratorModals';
+import { Skeleton } from './ui/Skeleton';
 
 interface CollaboratorScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -148,23 +149,24 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
       {/* Collaborators List */}
       <div id="collaborators-list" className="space-y-2">
         {isLoading ? (
-          <div className="space-y-2">
+          <div className="space-y-2" role="status">
+            <span className="sr-only">Loading...</span>
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex items-center gap-3">
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="h-3.5 bg-surface-container-highest rounded w-24 animate-pulse" />
-                    <div className="h-3 bg-surface-container-highest rounded w-16 animate-pulse" />
-                    <div className="h-3 bg-surface-container-highest rounded w-12 animate-pulse" />
+                    <Skeleton className="h-3.5 w-24" />
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-3 w-12" />
                   </div>
                   <div className="flex gap-3">
-                    <div className="h-2.5 bg-surface-container-highest rounded w-20 animate-pulse" />
-                    <div className="h-2.5 bg-surface-container-highest rounded w-28 animate-pulse" />
+                    <Skeleton className="h-2.5 w-20" />
+                    <Skeleton className="h-2.5 w-28" />
                   </div>
                 </div>
                 <div className="flex gap-1.5">
-                  <div className="h-6 bg-surface-container-highest rounded w-12 animate-pulse" />
-                  <div className="h-6 bg-surface-container-highest rounded w-6 animate-pulse" />
+                  <Skeleton className="h-6 w-12" />
+                  <Skeleton className="h-6 w-6" />
                 </div>
               </div>
             ))}

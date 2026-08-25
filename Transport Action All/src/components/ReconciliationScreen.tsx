@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useOpenService } from '../hooks/useOpenService';
+import { Skeleton } from './ui/Skeleton';
 
 interface ReconciliationScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -350,17 +351,18 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
       {/* Content */}
       <div className="flex-1 overflow-auto px-4 sm:px-6 py-4 pb-24">
         {isLoading ? (
-          <div className="space-y-3">
+          <div className="space-y-3" role="status">
+            <span className="sr-only">Loading...</span>
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="border border-outline-variant/30 rounded-lg p-4 animate-pulse">
+              <div key={i} className="border border-outline-variant/30 rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-surface-dim rounded w-1/4" />
-                    <div className="h-3 bg-surface-dim rounded w-1/3" />
+                    <Skeleton className="h-4 w-1/4" />
+                    <Skeleton className="h-3 w-1/3" />
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="h-6 w-20 bg-surface-dim rounded-full" />
-                    <div className="h-8 w-8 bg-surface-dim rounded-lg" />
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                    <Skeleton className="h-8 w-8 rounded-lg" />
                   </div>
                 </div>
               </div>

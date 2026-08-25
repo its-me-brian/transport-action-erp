@@ -5,6 +5,7 @@ import InboxDetailsModal from './InboxDetailsModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useReportInbox, InboxItem } from '../hooks/useReportInbox';
 import { useOpenService } from '../hooks/useOpenService';
+import { Skeleton } from './ui/Skeleton';
 
 interface InboxItemRowProps {
   item: InboxItem;
@@ -173,7 +174,8 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
 
       {/* Items Table */}
       {isLoading ? (
-        <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden">
+        <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden" role="status">
+          <span className="sr-only">Loading...</span>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[700px]">
             <thead className="bg-surface-container">
@@ -188,13 +190,13 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
             </thead>
             <tbody className="divide-y divide-outline-variant">
               {Array.from({ length: 6 }).map((_, i) => (
-                <tr key={i} className="animate-pulse">
-                  <td className="px-4 py-3"><div className="h-5 w-16 bg-surface-dim rounded-full" /></td>
-                  <td className="px-4 py-3"><div className="h-4 w-20 bg-surface-dim rounded" /></td>
-                  <td className="px-4 py-3"><div className="h-4 w-24 bg-surface-dim rounded" /></td>
-                  <td className="px-4 py-3"><div className="h-4 w-24 bg-surface-dim rounded" /></td>
-                  <td className="px-4 py-3"><div className="h-5 w-20 bg-surface-dim rounded-full" /></td>
-                  <td className="px-4 py-3 text-right"><div className="h-7 w-7 bg-surface-dim rounded ml-auto" /></td>
+                <tr key={i}>
+                  <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                  <td className="px-4 py-3 text-right"><Skeleton className="h-7 w-7 rounded ml-auto" /></td>
                 </tr>
               ))}
             </tbody>

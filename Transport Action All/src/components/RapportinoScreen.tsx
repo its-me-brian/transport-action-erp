@@ -11,6 +11,7 @@ import {
 import RapportinoFilterBar from './RapportinoFilterBar';
 import RapportinoDetailModal from './RapportinoDetailModal';
 import DriverLinkModal from './DriverLinkModal';
+import { Skeleton } from './ui/Skeleton';
 
 interface RapportinoScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -143,16 +144,17 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
       {/* Rapportinos List */}
       <div id="rapportinos-list" className="space-y-2">
         {isLoading ? (
-          <div className="space-y-2">
+          <div className="space-y-2" role="status">
+            <span className="sr-only">Loading...</span>
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 animate-pulse">
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-surface-dim rounded w-1/3" />
-                  <div className="h-3 bg-surface-dim rounded w-1/2" />
+                  <Skeleton className="h-4 w-1/3" />
+                  <Skeleton className="h-3 w-1/2" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="h-6 w-16 bg-surface-dim rounded-full" />
-                  <div className="h-8 w-8 bg-surface-dim rounded-lg" />
+                  <Skeleton className="h-6 w-16 rounded-full" />
+                  <Skeleton className="h-8 w-8 rounded-lg" />
                 </div>
               </div>
             ))}

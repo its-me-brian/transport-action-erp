@@ -8,6 +8,7 @@ import { Service, ScreenId, formatTimeDisplay, parseDateKeyToDate } from '../typ
 import { RelatedData } from '../hooks/useRelatedData';
 import { getServiceStatusColor } from '../utils/statusColors';
 import { getAuditLog, AuditEntry } from '../services/api';
+import { Skeleton } from './ui/Skeleton';
 
 // ============================================================================
 // TAB: OVERVIEW
@@ -441,13 +442,14 @@ export function HistoryTab({ service }: { service: Service }) {
 
   if (loading) {
     return (
-      <div className="px-5 py-4 space-y-3 animate-pulse">
+      <div className="px-5 py-4 space-y-3" role="status">
+        <span className="sr-only">Loading...</span>
         {[1, 2, 3].map(i => (
           <div key={i} className="flex gap-3">
-            <div className="w-2 h-2 rounded-full bg-surface-container-highest mt-2 shrink-0" />
+            <Skeleton className="w-2 h-2 rounded-full mt-2 shrink-0" />
             <div className="flex-1 space-y-1">
-              <div className="h-3 bg-surface-container-highest rounded w-3/4" />
-              <div className="h-2 bg-surface-container-highest rounded w-1/2" />
+              <Skeleton className="h-3 w-3/4" />
+              <Skeleton className="h-2 w-1/2" />
             </div>
           </div>
         ))}

@@ -15,6 +15,7 @@ import {
 import { ScreenId } from '../types';
 import { Change, getChanges, createChange, updateChange, deleteChange } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
+import { Skeleton } from './ui/Skeleton';
 
 interface ChangesScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -325,16 +326,17 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
       {/* Changes List */}
       <div id="changes-list" className="space-y-2">
         {isLoading ? (
-          <div className="space-y-2">
+          <div className="space-y-2" role="status">
+            <span className="sr-only">Loading...</span>
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 animate-pulse">
-                <div className="w-8 h-8 rounded-full bg-surface-dim shrink-0" />
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+                <Skeleton className="w-8 h-8 rounded-full shrink-0" />
                 <div className="flex-1 space-y-2">
-                  <div className="flex gap-2"><div className="h-5 w-16 bg-surface-dim rounded" /><div className="h-5 w-12 bg-surface-dim rounded" /></div>
-                  <div className="h-3 w-3/4 bg-surface-dim rounded" />
-                  <div className="h-3 w-1/2 bg-surface-dim rounded" />
+                  <div className="flex gap-2"><Skeleton className="h-5 w-16" /><Skeleton className="h-5 w-12" /></div>
+                  <Skeleton className="h-3 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
                 </div>
-                <div className="h-7 w-16 bg-surface-dim rounded shrink-0" />
+                <Skeleton className="h-7 w-16 shrink-0" />
               </div>
             ))}
           </div>

@@ -79,7 +79,7 @@ describe('ClientScreen', () => {
   it('shows loading state', () => {
     mockGetClients.mockReturnValue(new Promise(() => {}));
     render(<ClientScreen onNavigate={vi.fn()} />);
-    const skeletons = document.querySelectorAll('.animate-pulse');
+    const skeletons = document.querySelectorAll('[role="status"]');
     expect(skeletons.length).toBeGreaterThan(0);
   });
 

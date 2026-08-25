@@ -3,6 +3,7 @@ import { Users, RefreshCw, Clock, Wifi } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { gasPost } from '../services/api';
+import { Skeleton } from './ui/Skeleton';
 
 interface PresenceUser {
   UserID: string;
@@ -173,7 +174,8 @@ export default function ActiveUsersScreen({ onNavigate }: ActiveUsersScreenProps
 
       {/* Users List */}
       {isLoading && users.length === 0 ? (
-        <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden">
+        <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden" role="status">
+          <span className="sr-only">Loading...</span>
           <div className="overflow-x-auto">
             <table className="w-full text-[12px]" aria-label="Active users loading">
               <thead className="bg-surface-container">
@@ -188,13 +190,13 @@ export default function ActiveUsersScreen({ onNavigate }: ActiveUsersScreenProps
               </thead>
               <tbody className="divide-y divide-outline-variant">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i} className="animate-pulse">
-                    <td className="px-3 sm:px-4 py-3"><div className="flex gap-2"><div className="w-2.5 h-2.5 rounded-full bg-surface-dim" /><div className="w-4 h-4 bg-surface-dim rounded" /></div></td>
-                    <td className="px-3 sm:px-4 py-3"><div className="space-y-1"><div className="h-4 w-32 bg-surface-dim rounded" /><div className="h-3 w-20 bg-surface-dim rounded" /></div></td>
-                    <td className="px-3 sm:px-4 py-3"><div className="h-5 w-16 bg-surface-dim rounded-full" /></td>
-                    <td className="px-3 sm:px-4 py-3"><div className="h-4 w-12 bg-surface-dim rounded" /></td>
-                    <td className="px-3 sm:px-4 py-3"><div className="h-3 w-24 bg-surface-dim rounded" /></td>
-                    <td className="px-3 sm:px-4 py-3"><div className="h-4 w-20 bg-surface-dim rounded" /></td>
+                  <tr key={i}>
+                    <td className="px-3 sm:px-4 py-3"><div className="flex gap-2"><Skeleton className="w-2.5 h-2.5 rounded-full" /><Skeleton className="w-4 h-4 rounded" /></div></td>
+                    <td className="px-3 sm:px-4 py-3"><div className="space-y-1"><Skeleton className="h-4 w-32" /><Skeleton className="h-3 w-20" /></div></td>
+                    <td className="px-3 sm:px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                    <td className="px-3 sm:px-4 py-3"><Skeleton className="h-4 w-12" /></td>
+                    <td className="px-3 sm:px-4 py-3"><Skeleton className="h-3 w-24" /></td>
+                    <td className="px-3 sm:px-4 py-3"><Skeleton className="h-4 w-20" /></td>
                   </tr>
                 ))}
               </tbody>

@@ -87,7 +87,7 @@ describe('InvoiceScreen', () => {
   it('shows loading state', () => {
     mockGetInvoices.mockReturnValue(new Promise(() => {}));
     const { container } = render(<InvoiceScreen onNavigate={vi.fn()} />);
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[role="status"]')).toBeInTheDocument();
   });
 
   it('loads and displays invoices', async () => {

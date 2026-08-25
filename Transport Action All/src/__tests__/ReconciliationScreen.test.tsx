@@ -113,8 +113,8 @@ describe('ReconciliationScreen', () => {
   it('shows loading state', () => {
     mockGetReconciliations.mockReturnValue(new Promise(() => {}));
     render(<ReconciliationScreen onNavigate={vi.fn()} />);
-    // Skeleton loading: check for animate-pulse containers
-    const skeletons = document.querySelectorAll('.animate-pulse');
+    // Skeleton loading: check for role="status" containers
+    const skeletons = document.querySelectorAll('[role="status"]');
     expect(skeletons.length).toBeGreaterThan(0);
   });
 

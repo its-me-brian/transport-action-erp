@@ -23,6 +23,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { getErrorMessage } from '../utils/errorUtils';
+import { Skeleton } from './ui/Skeleton';
 
 interface ClientScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -229,15 +230,16 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
       {/* Clients List */}
       <div id="clients-list" className="space-y-2">
         {isLoading ? (
-          <div className="space-y-2">
+          <div className="space-y-2" role="status">
+            <span className="sr-only">Loading...</span>
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-4 flex items-center gap-4 animate-pulse">
-                <div className="w-10 h-10 bg-surface-dim rounded-full" />
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-4 flex items-center gap-4">
+                <Skeleton className="w-10 h-10 rounded-full" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-surface-dim rounded w-1/3" />
-                  <div className="h-3 bg-surface-dim rounded w-1/2" />
+                  <Skeleton className="h-4 w-1/3" />
+                  <Skeleton className="h-3 w-1/2" />
                 </div>
-                <div className="h-8 w-8 bg-surface-dim rounded-lg" />
+                <Skeleton className="h-8 w-8 rounded-lg" />
               </div>
             ))}
           </div>

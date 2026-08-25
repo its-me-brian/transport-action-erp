@@ -14,6 +14,7 @@ import {
 import { ScreenId } from '../types';
 import { getUsers, approveUser, rejectUser, updateUserRole, deleteUser, createUser, updateUser, UserRecord } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { Skeleton } from './ui/Skeleton';
 
 interface UserRowProps {
   u: UserRecord;
@@ -342,20 +343,21 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
       {/* Users Table */}
       <div className="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
         {isLoading ? (
-          <div className="p-4 space-y-0">
+          <div className="p-4 space-y-0" role="status">
+            <span className="sr-only">Loading...</span>
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="flex items-center gap-4 py-3 border-b border-outline-variant/50">
                 <div className="flex items-center gap-3 flex-1">
-                  <div className="w-8 h-8 rounded-full bg-surface-container-highest animate-pulse" />
+                  <Skeleton className="w-8 h-8 rounded-full" />
                   <div className="space-y-1.5">
-                    <div className="h-3 bg-surface-container-highest rounded w-20 animate-pulse" />
-                    <div className="h-2.5 bg-surface-container-highest rounded w-28 animate-pulse" />
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-2.5 w-28" />
                   </div>
                 </div>
-                <div className="h-3 bg-surface-container-highest rounded w-16 animate-pulse" />
-                <div className="h-3 bg-surface-container-highest rounded w-20 animate-pulse" />
-                <div className="h-3 bg-surface-container-highest rounded w-16 animate-pulse" />
-                <div className="h-3 bg-surface-container-highest rounded w-20 animate-pulse" />
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-3 w-20" />
               </div>
             ))}
           </div>

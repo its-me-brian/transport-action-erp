@@ -72,7 +72,7 @@ describe('ActiveUsersScreen', () => {
     mockGasPost.mockReturnValue(new Promise(() => {})); // never resolves
     render(<ActiveUsersScreen onNavigate={vi.fn()} />);
     // Skeleton table rows shown during loading
-    const pulsingElements = document.querySelectorAll('.animate-pulse');
+    const pulsingElements = document.querySelectorAll('[role="status"]');
     expect(pulsingElements.length).toBeGreaterThan(0);
   });
 

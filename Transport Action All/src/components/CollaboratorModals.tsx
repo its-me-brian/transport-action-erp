@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { CollaboratorDTO } from '../services/api';
 import { SupplierRateDTO, DriverRecord } from '../services/api';
+import { Skeleton } from './ui/Skeleton';
 
 interface CollaboratorFormModalProps {
   editCollaborator: Partial<CollaboratorDTO> | null;
@@ -114,12 +115,13 @@ export function CollaboratorFormModal({
             <div className="border-t border-outline-variant pt-3 mt-1">
               <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-2">Conductores del proveedor</label>
               {loadingDrivers ? (
-                <div className="space-y-2 animate-pulse">
+                <div className="space-y-2" role="status">
+                  <span className="sr-only">Loading...</span>
                   {[1, 2, 3].map(i => (
                     <div key={i} className="flex items-center gap-2 bg-surface-container rounded-lg px-3 py-1.5">
-                      <div className="w-3 h-3 bg-surface-container-highest rounded" />
-                      <div className="h-3 bg-surface-container-highest rounded w-24" />
-                      <div className="h-2 bg-surface-container-highest rounded w-16 ml-auto" />
+                      <Skeleton className="w-3 h-3 rounded" />
+                      <Skeleton className="h-3 w-24" />
+                      <Skeleton className="h-2 w-16 ml-auto" />
                     </div>
                   ))}
                 </div>

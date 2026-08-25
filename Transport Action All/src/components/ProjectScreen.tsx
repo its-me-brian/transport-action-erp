@@ -13,6 +13,7 @@ import { Project } from '../services/api';
 import { useProjects } from '../hooks/useProjects';
 import { STATUS_CONFIG, getLifecycleActions, StatusFilter } from '../utils/projectHelpers';
 import { ProjectFormModal } from './ProjectModals';
+import { Skeleton } from './ui/Skeleton';
 
 interface ProjectScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -126,17 +127,18 @@ export default function ProjectScreen({ onNavigate }: ProjectScreenProps) {
         {isLoading ? (
           <>
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 space-y-3">
+              <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 space-y-3" role="status">
+                <span className="sr-only">Loading...</span>
                 <div className="flex justify-between items-start">
                   <div className="space-y-1.5 flex-1">
-                    <div className="h-4 bg-surface-container-highest rounded w-32 animate-pulse" />
-                    <div className="h-2.5 bg-surface-container-highest rounded w-20 animate-pulse" />
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-2.5 w-20" />
                   </div>
-                  <div className="h-5 bg-surface-container-highest rounded w-16 animate-pulse" />
+                  <Skeleton className="h-5 w-16" />
                 </div>
                 <div className="flex gap-3">
-                  <div className="h-2.5 bg-surface-container-highest rounded w-24 animate-pulse" />
-                  <div className="h-2.5 bg-surface-container-highest rounded w-16 animate-pulse" />
+                  <Skeleton className="h-2.5 w-24" />
+                  <Skeleton className="h-2.5 w-16" />
                 </div>
               </div>
             ))}

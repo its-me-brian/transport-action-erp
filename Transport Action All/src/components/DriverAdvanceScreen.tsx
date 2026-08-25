@@ -23,6 +23,7 @@ import {
   DriverAdvanceDTO,
   DriverRecord
 } from '../services/api';
+import { Skeleton, SkeletonAvatar } from './ui/Skeleton';
 
 interface Props {
   onNavigate: (screen: ScreenId) => void;
@@ -190,21 +191,22 @@ export default function DriverAdvanceScreen({ onNavigate }: Props) {
       {/* Advances List */}
       <div className="space-y-2">
         {isLoading ? (
-          <div className="space-y-2">
+          <div className="space-y-2" role="status">
+            <span className="sr-only">Loading...</span>
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-surface-container-highest animate-pulse shrink-0" />
+                <SkeletonAvatar size="sm" />
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="h-3.5 bg-surface-container-highest rounded w-28 animate-pulse" />
-                    <div className="h-3 bg-surface-container-highest rounded w-16 animate-pulse" />
+                    <Skeleton className="h-3.5 w-28" />
+                    <Skeleton className="h-3 w-16" />
                   </div>
                   <div className="flex gap-3">
-                    <div className="h-2.5 bg-surface-container-highest rounded w-20 animate-pulse" />
-                    <div className="h-2.5 bg-surface-container-highest rounded w-24 animate-pulse" />
+                    <Skeleton className="h-2.5 w-20" />
+                    <Skeleton className="h-2.5 w-24" />
                   </div>
                 </div>
-                <div className="h-5 bg-surface-container-highest rounded w-16 animate-pulse" />
+                <Skeleton className="h-5 w-16" />
               </div>
             ))}
           </div>
