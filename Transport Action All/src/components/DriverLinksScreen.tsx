@@ -225,7 +225,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full pb-24">
       <div className="flex items-center justify-between px-4 sm:px-6 pt-4 pb-3 border-b border-outline-variant shrink-0 gap-2">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <Link2 className="w-5 h-5 text-primary shrink-0" />

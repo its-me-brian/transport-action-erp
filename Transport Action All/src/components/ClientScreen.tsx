@@ -131,7 +131,7 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
   };
 
   return (
-    <div className="flex flex-col h-full gap-3 p-3">
+    <div className="flex flex-col h-full gap-3 p-3 pb-24">
       {/* Header */}
       <header id="client-header" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0 sticky top-0 py-2 z-30 bg-background/90 backdrop-blur-md">
         <div>

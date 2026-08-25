@@ -55,7 +55,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto overflow-x-hidden">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto overflow-x-hidden pb-24">
       <div className="mb-4 sm:mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-on-surface">Report Inbox</h1>
         <p className="text-xs sm:text-sm text-on-surface-variant mt-1">Unified capture layer for driver reports</p>

@@ -19,7 +19,7 @@ export default function HistoryScreen({ onNavigate }: Props) {
   const [activeTab, setActiveTab] = useState<HistoryTab>('reports');
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full pb-24">
       <div className="border-b border-outline-variant">
         <div className="flex items-center gap-2 px-4 sm:px-6 pt-4">
           <History className="w-5 h-5 text-primary shrink-0" />
