@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Link2, Plus, Trash2, Copy, Calendar, Filter, Search, LinkIcon, CheckCircle, ChevronDown, ExternalLink, X, Pencil, Download, FileText } from 'lucide-react';
+import { Link2, Plus, Trash2, Copy, Calendar, Search, CheckCircle, Pencil, Download, FileText } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { gasPost, getDrivers, getProjects, DriverRecord, Project, updateDriverLink } from '../services/api';
+import { gasPost, getDrivers, getProjects, DriverRecord, Project } from '../services/api';
 import { ScreenId } from '../types';
 import { exportToCSV, exportToPDF, formatDateExport } from '../utils/exportUtils';
+import CreateLinkModal from './CreateLinkModal';
+import EditLinkModal from './EditLinkModal';
 
-// Available fields for the driver form (matches backend DEFAULT_FIELDS_SCHEMA)
-const AVAILABLE_FIELDS = [
+export const AVAILABLE_FIELDS = [
   { key: 'orarioInizio',   label: 'Ora Inizio',        type: 'time',     required: true,  defaultEnabled: true },
   { key: 'orarioFine',     label: 'Ora Fine',           type: 'time',     required: true,  defaultEnabled: true },
   { key: 'kmTotali',       label: 'KM Totali',         type: 'number',   required: true,  defaultEnabled: true },
@@ -37,6 +38,17 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; dot: string }> =
   REVOKED: { bg: 'bg-red-50',     text: 'text-red-700',     dot: 'bg-red-500' },
 };
 
+const safeDate = (dateStr: string) => {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('it-IT');
+  } catch {
+    return '—';
+  }
+};
+
 export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps) {
   const { token, can } = useAuth();
   const { showToast } = useToast();
@@ -45,36 +57,16 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
   const [showCreate, setShowCreate] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
-  // Create form state
-  const [driverId, setDriverId] = useState('');
-  const [projectId, setProjectId] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [linkDuration, setLinkDuration] = useState<number>(1); // days after DateTo
-  const [isCreating, setIsCreating] = useState(false);
-
-  // Fields schema state — which fields to include in the driver form
-  const [selectedFields, setSelectedFields] = useState<Set<string>>(
-    new Set(AVAILABLE_FIELDS.filter(f => f.defaultEnabled).map(f => f.key))
-  );
-
-  // Result modal state
   const [createdLink, setCreatedLink] = useState<{ token: string; link: string; driverName: string; projectName: string; dateFrom: string; dateTo: string; expiresAt: string } | null>(null);
-
-  // Edit modal state
   const [editingLink, setEditingLink] = useState<DriverLink | null>(null);
-  const [editForm, setEditForm] = useState({ driverId: '', projectId: '', dateFrom: '', dateTo: '', fieldsSchema: 'standard' });
-  const [editSelectedFields, setEditSelectedFields] = useState<Set<string>>(new Set());
-  const [isSaving, setIsSaving] = useState(false);
 
-  // Filters
   const [filterDriver, setFilterDriver] = useState('');
   const [filterProject, setFilterProject] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
 
-  // Data for selects
   const [driversList, setDriversList] = useState<DriverRecord[]>([]);
   const [projectsList, setProjectsList] = useState<Project[]>([]);
 
@@ -103,7 +95,6 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
   const loadSelectData = async () => {
     try {
       const [drivers, projects] = await Promise.all([getDrivers(), getProjects()]);
-      // Deduplicate drivers by ID
       const seen = new Set<string>();
       const uniqueDrivers = (drivers || []).filter(d => {
         if (d.status === 'Deleted' || seen.has(d.id)) return false;
@@ -118,20 +109,12 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
     }
   };
 
-  const handleCreate = async () => {
-    if (!driverId || !projectId || !dateFrom || !dateTo) return;
+  const handleCreateLink = async (driverId: string, projectId: string, dateFrom: string, dateTo: string, linkDuration: number, selectedFields: Set<string>) => {
     setIsCreating(true);
     try {
-      // Build fieldsSchema from selected fields
       const fieldsSchema = AVAILABLE_FIELDS
         .filter(f => selectedFields.has(f.key))
-        .map(f => ({
-          key: f.key,
-          label: f.label,
-          type: f.type,
-          required: f.required,
-          ...(f.options ? { options: f.options } : {}),
-        }));
+        .map(f => ({ key: f.key, label: f.label, type: f.type, required: f.required, ...(f.options ? { options: f.options } : {}) }));
 
       const result = await gasPost('generateDriverLink', {
         driverId, projectId, dateFrom, dateTo,
@@ -139,28 +122,21 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
         fieldsSchema,
       });
 
-      // Build the link URL — ALWAYS use VITE_GAS_WEBAPP_URL to match the current deployment
-      const token = result?.token || result?.Token || '';
-      const link = `${import.meta.env.VITE_GAS_WEBAPP_URL}?action=driverForm&token=${token}`;
+      const tk = result?.token || result?.Token || '';
+      const link = `${import.meta.env.VITE_GAS_WEBAPP_URL}?action=driverForm&token=${tk}`;
 
-      // Show result modal
+      const dnMap = Object.fromEntries(driversList.map(d => [d.id, d.name]));
+      const pnMap = Object.fromEntries(projectsList.map(p => [p.id, p.name]));
+
       setCreatedLink({
-        token,
+        token: tk,
         link,
-        driverName: driverNameMap[driverId] || driverId,
-        projectName: projectNameMap[projectId] || projectId,
+        driverName: dnMap[driverId] || driverId,
+        projectName: pnMap[projectId] || projectId,
         dateFrom,
         dateTo,
         expiresAt: result?.expiresAt || result?.ExpiresAt || '',
       });
-
-      // Reset form
-      setDriverId('');
-      setProjectId('');
-      setDateFrom('');
-      setDateTo('');
-      setLinkDuration(1);
-      setSelectedFields(new Set(AVAILABLE_FIELDS.filter(f => f.defaultEnabled).map(f => f.key)));
       loadLinks();
     } catch (err) {
       console.error('Failed to create link:', err);
@@ -182,7 +158,6 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
     } catch (err) {
       console.error('Failed to deactivate link:', err);
       showToast('Error al desactivar link', 'error');
-      showToast('Failed to revoke link. Please try again.', 'error');
     }
   };
 
@@ -192,37 +167,21 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
     setTimeout(() => setCopiedToken(null), 2000);
   };
 
+  const activeCount = links.filter(l => l.Status === 'ACTIVE').length;
   const filteredLinks = links;
 
-  const activeCount = links.filter(l => l.Status === 'ACTIVE').length;
-
-  // Helper: safely format date string
-  const safeDate = (dateStr: string) => {
-    if (!dateStr) return '—';
-    try {
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return '—';
-      return d.toLocaleDateString('it-IT');
-    } catch {
-      return '—';
-    }
-  };
-
-  // Build driver name lookup
   const driverNameMap = React.useMemo(() => {
     const map: Record<string, string> = {};
     driversList.forEach(d => { map[d.id] = d.name; });
     return map;
   }, [driversList]);
 
-  // Build project name lookup
   const projectNameMap = React.useMemo(() => {
     const map: Record<string, string> = {};
     projectsList.forEach(p => { map[p.id] = p.name; });
     return map;
   }, [projectsList]);
 
-  // Export to Excel (client-side CSV generation)
   const handleExportExcel = () => {
     const headers = ['Token', 'Driver', 'DriverID', 'Project', 'ProjectID', 'DateFrom', 'DateTo', 'Status', 'CreatedAt', 'ExpiresAt'];
     const rows = filteredLinks.map(link => [
@@ -240,7 +199,6 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
     exportToCSV(headers, rows, 'DriverLinks');
   };
 
-  // Export to PDF (browser print)
   const handleExportPDF = () => {
     const columns = [
       { key: 'token', label: 'Token' },
@@ -268,7 +226,6 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header bar */}
       <div className="flex items-center justify-between px-4 sm:px-6 pt-4 pb-3 border-b border-outline-variant shrink-0 gap-2">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <Link2 className="w-5 h-5 text-primary shrink-0" />
@@ -310,7 +267,6 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
         )}
       </div>
 
-      {/* Filters bar */}
       <div className="px-4 sm:px-6 py-3 bg-surface-container-low border-b border-outline-variant shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -374,7 +330,6 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
         )}
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-auto">
         {isLoading ? (
           <div className="space-y-3 p-4">
@@ -418,7 +373,6 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
           </div>
         ) : (
           <div className="px-4 sm:px-6 py-4">
-            {/* Stats cards */}
             <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-5">
               {[
                 { label: 'Total Links', value: links.length, color: 'text-on-surface' },
@@ -432,7 +386,6 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
               ))}
             </div>
 
-            {/* Table */}
             <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[640px]">
@@ -494,28 +447,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
                             </button>
                             {link.Status === 'ACTIVE' && can('driverLink.update') && (
                               <button
-                                onClick={() => {
-                                  setEditingLink(link);
-                                  setEditForm({
-                                    driverId: link.DriverID,
-                                    projectId: link.ProjectID,
-                                    dateFrom: link.DateFrom?.split('T')[0] || '',
-                                    dateTo: link.DateTo?.split('T')[0] || '',
-                                    fieldsSchema: link.FieldsSchema || 'standard',
-                                  });
-                                  // Parse existing FieldsSchema JSON into selected fields
-                                  try {
-                                    const parsed = JSON.parse(link.FieldsSchema || '[]');
-                                    if (Array.isArray(parsed)) {
-                                      setEditSelectedFields(new Set(parsed.map((f: any) => f.key)));
-                                    } else {
-                                      // Preset string — enable required fields + defaults
-                                      setEditSelectedFields(new Set(AVAILABLE_FIELDS.filter(f => f.defaultEnabled || f.required).map(f => f.key)));
-                                    }
-                                  } catch {
-                                    setEditSelectedFields(new Set(AVAILABLE_FIELDS.filter(f => f.defaultEnabled || f.required).map(f => f.key)));
-                                  }
-                                }}
+                                onClick={() => setEditingLink(link)}
                                 className="p-2 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                                 title="Edit link"
                               >
@@ -544,372 +476,28 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
         )}
       </div>
 
-      {/* Create Modal */}
       {showCreate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm p-4">
-          <div className="bg-surface rounded-2xl w-full max-w-md shadow-2xl border border-outline-variant max-h-[90vh] flex flex-col">
-            <div className="flex items-center gap-3 mb-5 shrink-0 px-6 pt-6">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <LinkIcon className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-on-surface">Generate Driver Link</h2>
-                <p className="text-xs text-on-surface-variant">Create a new reporting link for a driver</p>
-              </div>
-            </div>
-            <div className="space-y-4 overflow-y-auto flex-1 min-h-0 px-6">
-              <div>
-                <label className="block text-[12px] font-medium text-on-surface-variant mb-1.5">Driver</label>
-                <div className="relative">
-                  <select
-                    value={driverId}
-                    onChange={e => setDriverId(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors cursor-pointer appearance-none"
-                  >
-                    <option value="">Select driver...</option>
-                    {driversList.map(d => (
-                      <option key={d.id} value={d.id}>{d.name} ({d.id})</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-on-surface-variant absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-[12px] font-medium text-on-surface-variant mb-1.5">Project</label>
-                <div className="relative">
-                  <select
-                    value={projectId}
-                    onChange={e => setProjectId(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors cursor-pointer appearance-none"
-                  >
-                    <option value="">Select project...</option>
-                    {projectsList.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} ({p.id})</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-on-surface-variant absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[12px] font-medium text-on-surface-variant mb-1.5">Date From</label>
-                  <input
-                    type="date"
-                    value={dateFrom}
-                    onChange={e => setDateFrom(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[12px] font-medium text-on-surface-variant mb-1.5">Date To</label>
-                  <input
-                    type="date"
-                    value={dateTo}
-                    onChange={e => setDateTo(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-[12px] font-medium text-on-surface-variant mb-1.5">Link expires after (days from Date To)</label>
-                <select
-                  value={linkDuration}
-                  onChange={e => setLinkDuration(Number(e.target.value))}
-                  className="w-full px-3 py-2.5 bg-surface-container-lowest border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors cursor-pointer"
-                >
-                  <option value={0}>Same day as Date To</option>
-                  <option value={1}>+1 day</option>
-                  <option value={2}>+2 days</option>
-                  <option value={3}>+3 days</option>
-                  <option value={5}>+5 days</option>
-                  <option value={7}>+7 days</option>
-                  <option value={14}>+14 days</option>
-                  <option value={30}>+30 days</option>
-                </select>
-              </div>
-              {/* Fields selector */}
-              <div>
-                <label className="block text-[12px] font-medium text-on-surface-variant mb-2">Fields included in driver form</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {AVAILABLE_FIELDS.map(field => (
-                    <label
-                      key={field.key}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-[12px] cursor-pointer transition-colors ${
-                        selectedFields.has(field.key)
-                          ? 'bg-primary/5 border-primary/30 text-on-surface'
-                          : 'bg-surface-container-lowest border-outline-variant text-on-surface-variant hover:bg-surface-dim'
-                      } ${field.required ? 'opacity-100' : ''}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedFields.has(field.key)}
-                        disabled={field.required}
-                        onChange={e => {
-                          const next = new Set(selectedFields);
-                          if (e.target.checked) next.add(field.key);
-                          else next.delete(field.key);
-                          setSelectedFields(next);
-                        }}
-                        className="rounded border-outline-variant text-primary focus:ring-primary"
-                      />
-                      <span className="flex-1">{field.label}</span>
-                      {field.required && <span className="text-[10px] text-on-surface-variant/60">required</span>}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-            {isCreating && (
-              <div className="mt-4 space-y-2 shrink-0 px-6">
-                <div className="h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: '60%' }} />
-                </div>
-                <p className="text-[11px] text-on-surface-variant text-center">Generating link...</p>
-              </div>
-            )}
-            <div className="flex gap-3 mt-6 shrink-0 px-6 pb-6">
-              <button
-                onClick={() => setShowCreate(false)}
-                className="flex-1 px-4 py-2.5 border border-outline-variant rounded-lg text-sm font-medium text-on-surface hover:bg-surface-container-low transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreate}
-                disabled={isCreating || !driverId || !projectId || !dateFrom || !dateTo}
-                className="flex-1 px-4 py-2.5 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {isCreating ? 'Creating...' : 'Generate Link'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <CreateLinkModal
+          onClose={() => { setShowCreate(false); setCreatedLink(null); }}
+          onCreate={handleCreateLink}
+          isCreating={isCreating}
+          driversList={driversList}
+          projectsList={projectsList}
+          createdLink={createdLink}
+          onDismissResult={() => { setCreatedLink(null); setShowCreate(false); }}
+          copiedLink={copiedToken}
+          onCopyLink={copyLink}
+        />
       )}
 
-      {/* Result Modal — shown after successful link creation */}
-      {createdLink && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm p-4">
-          <div className="bg-surface rounded-2xl w-full max-w-md shadow-2xl border border-outline-variant max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between mb-5 shrink-0 px-6 pt-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-emerald-600" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-on-surface">Link Created</h2>
-                  <p className="text-xs text-on-surface-variant">Share this link with the driver</p>
-                </div>
-              </div>
-              <button onClick={() => setCreatedLink(null)} className="p-1 hover:bg-surface-dim rounded-lg">
-                <X className="w-5 h-5 text-on-surface-variant" />
-              </button>
-            </div>
-            <div className="space-y-3 mb-5 overflow-y-auto flex-1 min-h-0 px-6">
-              <div className="flex justify-between text-[13px]">
-                <span className="text-on-surface-variant">Driver</span>
-                <span className="font-medium text-on-surface">{createdLink.driverName}</span>
-              </div>
-              <div className="flex justify-between text-[13px]">
-                <span className="text-on-surface-variant">Project</span>
-                <span className="font-medium text-on-surface">{createdLink.projectName}</span>
-              </div>
-              <div className="flex justify-between text-[13px]">
-                <span className="text-on-surface-variant">Date Range</span>
-                <span className="font-medium text-on-surface">{createdLink.dateFrom} → {createdLink.dateTo}</span>
-              </div>
-              {createdLink.expiresAt && (
-                <div className="flex justify-between text-[13px]">
-                  <span className="text-on-surface-variant">Expires</span>
-                  <span className="font-medium text-on-surface">{safeDate(createdLink.expiresAt)}</span>
-                </div>
-              )}
-              <div className="pt-2 border-t border-outline-variant">
-                <label className="block text-[11px] text-on-surface-variant mb-1">Link URL</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    readOnly
-                    value={createdLink.link}
-                    className="flex-1 px-3 py-2 bg-surface-dim border border-outline-variant rounded-lg text-[12px] text-on-surface font-mono truncate"
-                  />
-                  <button
-                    onClick={() => copyLink(createdLink.link)}
-                    className="px-3 py-2 bg-primary text-on-primary rounded-lg text-[12px] font-medium hover:bg-primary-hover transition-colors shrink-0"
-                  >
-                    {copiedToken === createdLink.link ? 'Copied!' : 'Copy'}
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-3 shrink-0 px-6 pb-6">
-              <a
-                href={createdLink.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-outline-variant rounded-lg text-sm font-medium text-on-surface hover:bg-surface-container-low transition-colors"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Open Link
-              </a>
-              <button
-                onClick={() => setCreatedLink(null)}
-                className="flex-1 px-4 py-2.5 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary-hover transition-colors"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Modal */}
       {editingLink && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm p-4">
-          <div className="bg-surface rounded-2xl w-full max-w-md shadow-2xl border border-outline-variant max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between mb-5 shrink-0 px-6 pt-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                  <Pencil className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-on-surface">Edit Driver Link</h2>
-                  <p className="text-xs text-on-surface-variant">Token: {editingLink.Token}</p>
-                </div>
-              </div>
-              <button onClick={() => setEditingLink(null)} className="p-1 hover:bg-surface-dim rounded-lg">
-                <X className="w-5 h-5 text-on-surface-variant" />
-              </button>
-            </div>
-
-            <div className="space-y-4 mb-5 overflow-y-auto flex-1 min-h-0 px-6">
-              <div>
-                <label className="block text-[12px] font-medium text-on-surface-variant mb-1">Driver</label>
-                <select
-                  value={editForm.driverId}
-                  onChange={e => setEditForm(prev => ({ ...prev, driverId: e.target.value }))}
-                  className="w-full px-3 py-2 bg-surface-dim border border-outline-variant rounded-lg text-[13px] text-on-surface"
-                >
-                  <option value="">Select driver...</option>
-                  {driversList.map(d => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[12px] font-medium text-on-surface-variant mb-1">Project</label>
-                <select
-                  value={editForm.projectId}
-                  onChange={e => setEditForm(prev => ({ ...prev, projectId: e.target.value }))}
-                  className="w-full px-3 py-2 bg-surface-dim border border-outline-variant rounded-lg text-[13px] text-on-surface"
-                >
-                  <option value="">Select project...</option>
-                  {projectsList.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[12px] font-medium text-on-surface-variant mb-1">Date From</label>
-                  <input
-                    type="date"
-                    value={editForm.dateFrom}
-                    onChange={e => setEditForm(prev => ({ ...prev, dateFrom: e.target.value }))}
-                    className="w-full px-3 py-2 bg-surface-dim border border-outline-variant rounded-lg text-[13px] text-on-surface"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[12px] font-medium text-on-surface-variant mb-1">Date To</label>
-                  <input
-                    type="date"
-                    value={editForm.dateTo}
-                    onChange={e => setEditForm(prev => ({ ...prev, dateTo: e.target.value }))}
-                    className="w-full px-3 py-2 bg-surface-dim border border-outline-variant rounded-lg text-[13px] text-on-surface"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[12px] font-medium text-on-surface-variant mb-1">Fields Schema</label>
-                <div className="flex flex-wrap gap-2">
-                  {AVAILABLE_FIELDS.map(field => (
-                    <label key={field.key} className="flex items-center gap-1.5 text-[12px] text-on-surface cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={field.required || editSelectedFields.has(field.key)}
-                        disabled={field.required}
-                        onChange={() => {
-                          if (field.required) return;
-                          setEditSelectedFields(prev => {
-                            const next = new Set(prev);
-                            if (next.has(field.key)) next.delete(field.key);
-                            else next.add(field.key);
-                            return next;
-                          });
-                        }}
-                        className="rounded border-outline-variant"
-                      />
-                      {field.label}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 shrink-0 px-6 pb-6">
-              <button
-                onClick={() => setEditingLink(null)}
-                className="flex-1 px-4 py-2.5 border border-outline-variant rounded-lg text-sm font-medium text-on-surface hover:bg-surface-container-low transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  if (!editForm.driverId || !editForm.projectId || !editForm.dateFrom || !editForm.dateTo) {
-                    showToast('All fields are required', 'warning');
-                    return;
-                  }
-                  setIsSaving(true);
-                  try {
-                    // Build fieldsSchema JSON from selected fields
-                    const fieldsSchemaJson = AVAILABLE_FIELDS
-                      .filter(f => editSelectedFields.has(f.key) || f.required)
-                      .map(f => ({
-                        key: f.key,
-                        label: f.label,
-                        type: f.type,
-                        required: f.required,
-                        ...(f.options ? { options: f.options } : {}),
-                      }));
-
-                    const result = await updateDriverLink(editingLink.Token, {
-                      DriverID: editForm.driverId,
-                      ProjectID: editForm.projectId,
-                      DateFrom: editForm.dateFrom,
-                      DateTo: editForm.dateTo,
-                      FieldsSchema: JSON.stringify(fieldsSchemaJson),
-                    });
-                    if (result.error) {
-                      showToast('Error: ' + result.error, 'error');
-                    } else {
-                      setEditingLink(null);
-                      loadLinks(); // Reload to show updated data
-                    }
-                  } catch (err) {
-                    showToast('Error: ' + (err.message || 'Unknown error'), 'error');
-                  } finally {
-                    setIsSaving(false);
-                  }
-                }}
-                disabled={isSaving}
-                className="flex-1 px-4 py-2.5 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
-              >
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <EditLinkModal
+          link={editingLink}
+          driversList={driversList}
+          projectsList={projectsList}
+          onClose={() => setEditingLink(null)}
+          onSaved={() => { setEditingLink(null); loadLinks(); }}
+        />
       )}
     </div>
   );

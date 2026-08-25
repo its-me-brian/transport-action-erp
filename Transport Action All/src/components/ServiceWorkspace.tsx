@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
-  X, ChevronRight, ChevronDown, Phone, MessageSquare,
+  X, ChevronRight, Phone, MessageSquare,
   CheckCircle, Clock, AlertCircle, Link2, FileText,
   ArrowLeftRight, Car, User, Calendar
 } from 'lucide-react';
-import { Service, ScreenId, formatTimeDisplay, parseDateKeyToDate, isProductionVehicle } from '../types';
-import { getDriverReports, getDriverLinks, getInboxItems, getReconciliations } from '../services/api';
+import { Service, ScreenId, formatTimeDisplay, parseDateKeyToDate } from '../types';
+import { useRelatedData, RelatedData } from '../hooks/useRelatedData';
+import { getServiceStatusColor } from '../utils/statusColors';
 
 // ============================================================================
 // SERVICE WORKSPACE — Reusable service context panel
@@ -38,14 +39,6 @@ interface TabConfig {
   badgeColor?: string;
 }
 
-interface RelatedData {
-  driverReport: any | null;
-  driverLink: any | null;
-  inboxItem: any | null;
-  reconciliation: any | null;
-  loading: boolean;
-}
-
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -58,50 +51,7 @@ export default function ServiceWorkspace({
   initialTab = 'overview'
 }: ServiceWorkspaceProps) {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
-  const [relatedData, setRelatedData] = useState<RelatedData>({
-    driverReport: null,
-    driverLink: null,
-    inboxItem: null,
-    reconciliation: null,
-    loading: false
-  });
-
-  // Load related data on mount
-  useEffect(() => {
-    loadRelatedData();
-  }, [service.id]);
-
-  const loadRelatedData = async () => {
-    setRelatedData(prev => ({ ...prev, loading: true }));
-    const svcId = service.id;
-
-    try {
-      const results = await Promise.allSettled([
-        getDriverReports(svcId).then((reports: any[]) =>
-          reports?.length > 0 ? reports[0] : null
-        ).catch(() => null),
-        getDriverLinks({ serviceId: svcId }).then((links: any[]) =>
-          links?.length > 0 ? links[0] : null
-        ).catch(() => null),
-        getInboxItems({ serviceId: svcId }).then((items: any[]) =>
-          items?.length > 0 ? items[0] : null
-        ).catch(() => null),
-        getReconciliations({ serviceId: svcId }).then((recs: any[]) =>
-          recs?.length > 0 ? recs[0] : null
-        ).catch(() => null),
-      ]);
-
-      setRelatedData({
-        driverReport: results[0].status === 'fulfilled' ? results[0].value : null,
-        driverLink: results[1].status === 'fulfilled' ? results[1].value : null,
-        inboxItem: results[2].status === 'fulfilled' ? results[2].value : null,
-        reconciliation: results[3].status === 'fulfilled' ? results[3].value : null,
-        loading: false,
-      });
-    } catch {
-      setRelatedData(prev => ({ ...prev, loading: false }));
-    }
-  };
+  const relatedData = useRelatedData(service.id);
 
   // Build tab configs with badges
   const tabs: TabConfig[] = [
@@ -789,23 +739,4 @@ function WorkflowFooter({ service, onServiceUpdate, onClose }: {
       </div>
     </div>
   );
-}
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function getServiceStatusColor(service: Service) {
-  const colors: Record<string, { hex: string; label: string }> = {
-    Importado: { hex: '#6366f1', label: 'Imported' },
-    Asignado: { hex: '#0ea5e9', label: 'Assigned' },
-    Confirmado: { hex: '#06b6d4', label: 'Confirmed' },
-    EnRuta: { hex: '#3b82f6', label: 'En Route' },
-    Realizado: { hex: '#22c55e', label: 'Completed' },
-    Reportado: { hex: '#f59e0b', label: 'Reported' },
-    Revision: { hex: '#f97316', label: 'In Review' },
-    Validado: { hex: '#10b981', label: 'Validated' },
-    Cancelado: { hex: '#ef4444', label: 'Canceled' },
-  };
-  return colors[service.operationalStatus] || { hex: '#6b7280', label: 'Unknown' };
 }

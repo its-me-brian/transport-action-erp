@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Inbox, Check, X, Lock, Eye, Filter, Send, Edit3, Zap, ChevronRight } from 'lucide-react';
+import { Inbox, Eye, Filter } from 'lucide-react';
+import InboxNormalizeModal from './InboxNormalizeModal';
+import InboxDetailsModal from './InboxDetailsModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import {
@@ -8,7 +10,7 @@ import {
   getServices
 } from '../services/api';
 
-interface InboxItem {
+export interface InboxItem {
   ID: string;
   Source: string;
   Channel: string;
@@ -27,7 +29,7 @@ interface InboxItem {
 }
 
 // Normalized data fields (what the user edits during normalization)
-interface NormalizedFields {
+export export interface NormalizedFields {
   serviceId: string;
   startTime: string;
   endTime: string;
@@ -546,356 +548,47 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
           COMPARISON MODAL — CAPTURED: Driver input vs Service reference
           ============================================================================ */}
       {selectedItem && isNormalizable && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-surface rounded-xl w-full max-w-2xl shadow-xl max-h-[90vh] flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-outline-variant shrink-0">
-              <div className="min-w-0">
-                <h2 className="text-base sm:text-lg font-bold text-on-surface">Review Driver Submission</h2>
-                <p className="text-[11px] sm:text-xs text-on-surface-variant mt-0.5 truncate">
-                  Compare driver input with transport list reference
-                </p>
-              </div>
-              <button onClick={() => setSelectedItem(null)} className="p-1 hover:bg-surface-container rounded-lg shrink-0">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Metadata */}
-            <div className="px-4 sm:px-6 py-3 bg-surface-container flex flex-wrap gap-2 sm:gap-4 text-xs shrink-0">
-              <div><span className="text-on-surface-variant">Source:</span> {getSourceBadge(selectedItem.Source)}</div>
-              <div><span className="text-on-surface-variant">Driver:</span> <strong>{driverName(selectedItem.DriverID, selectedItem)}</strong></div>
-              <div className="hidden sm:block"><span className="text-on-surface-variant">Project:</span> {projectName(selectedItem.ProjectID, selectedItem)}</div>
-              <div><span className="text-on-surface-variant">Date:</span> {formatDisplayDate(selectedItem.ServiceDate)}</div>
-            </div>
-
-            <div className="px-4 sm:px-6 py-4 overflow-y-auto flex-1 min-h-0">
-              {/* Service Reference — from API or from rawData fallback */}
-              {(serviceRef || getRawData(selectedItem).production) && (
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">
-                    Transport List Reference
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    {serviceRef?.time && (
-                      <div>
-                        <span className="text-blue-600">Time:</span>{' '}
-                        <strong className="font-mono">{serviceRef.time}</strong>
-                      </div>
-                    )}
-                    <div>
-                      <span className="text-blue-600">Production:</span>{' '}
-                      {serviceRef?.production || getRawData(selectedItem).production || '—'}
-                    </div>
-                    {(serviceRef?.section || getRawData(selectedItem).section) && (
-                      <div>
-                        <span className="text-blue-600">Section:</span>{' '}
-                        {serviceRef?.section || getRawData(selectedItem).section}
-                      </div>
-                    )}
-                    {(serviceRef?.passengerName || getRawData(selectedItem).passengerName) && (
-                      <div>
-                        <span className="text-blue-600">Passenger:</span>{' '}
-                        {serviceRef?.passengerName || getRawData(selectedItem).passengerName}
-                        {serviceRef?.passengerRole && ` (${serviceRef.passengerRole})`}
-                      </div>
-                    )}
-                    {serviceRef?.operationalStatus && (
-                      <div>
-                        <span className="text-blue-600">Status:</span> {serviceRef.operationalStatus}
-                      </div>
-                    )}
-                    {(serviceRef?.vehicleId || getRawData(selectedItem).vehicleId) && (
-                      <div>
-                        <span className="text-blue-600">Vehicle:</span>{' '}
-                        {serviceRef?.vehicleId || getRawData(selectedItem).vehicleId}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Service Selector — for WhatsApp captures without a linked service */}
-              {selectedItem.Source === 'whatsapp' && !serviceRef && (
-                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                  <div className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-2">
-                    Select Service (Required)
-                  </div>
-                  {isSearchingServices ? (
-                    <p className="text-xs text-amber-600">Searching for matching services...</p>
-                  ) : matchingServices.length > 0 ? (
-                    <select
-                      value={normForm.serviceId}
-                      onChange={e => setNormForm(p => ({ ...p, serviceId: e.target.value }))}
-                      className="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white"
-                    >
-                      <option value="">— Select a service —</option>
-                      {matchingServices.map((s: any) => {
-                        const dateLabel = s.date ? new Date(s.date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '?';
-                        const st = s.operationalStatus || s.status || '';
-                        return (
-                          <option key={s.id} value={s.id}>
-                            {dateLabel} | {s.time || '—'} | {st} | {s.production || 'No production'} | {s.passengerName || 'No passenger'}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  ) : (
-                    <p className="text-xs text-amber-600">No services found for this driver.</p>
-                  )}
-                </div>
-              )}
-
-              {/* Driver Input Fields — Editable */}
-              <div className="space-y-3">
-                <div className="text-xs font-semibold text-on-surface uppercase tracking-wider mb-2">
-                  Driver Input (editable)
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] text-on-surface-variant mb-1">
-                      Start Time
-                      {serviceRef?.time && getFieldDiff(normForm.startTime, serviceRef.time) && (
-                        <span className="ml-1 text-amber-600"> diff</span>
-                      )}
-                    </label>
-                    <input
-                      type="time"
-                      value={normForm.startTime}
-                      onChange={e => setNormForm(p => ({ ...p, startTime: e.target.value }))}
-                      className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-on-surface-variant mb-1">End Time</label>
-                    <input
-                      type="time"
-                      value={normForm.endTime}
-                      onChange={e => setNormForm(p => ({ ...p, endTime: e.target.value }))}
-                      className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-on-surface-variant mb-1">KM Total</label>
-                    <input
-                      type="number"
-                      value={normForm.kmTotal}
-                      onChange={e => setNormForm(p => ({ ...p, kmTotal: Number(e.target.value) }))}
-                      className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm"
-                      min={0}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-on-surface-variant mb-1">KM Over</label>
-                    <input
-                      type="number"
-                      value={normForm.kmOver}
-                      onChange={e => setNormForm(p => ({ ...p, kmOver: Number(e.target.value) }))}
-                      className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm"
-                      min={0}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[11px] text-on-surface-variant mb-1">Diaria</label>
-                  <select
-                    value={normForm.diariaType}
-                    onChange={e => setNormForm(p => ({ ...p, diariaType: e.target.value as NormalizedFields['diariaType'] }))}
-                    className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm"
-                  >
-                    <option value="none">Nessuna</option>
-                    <option value="piena">Piena</option>
-                    <option value="mezza">Mezza</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[11px] text-on-surface-variant mb-1">Notes</label>
-                  <textarea
-                    value={normForm.notes}
-                    onChange={e => setNormForm(p => ({ ...p, notes: e.target.value }))}
-                    className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm resize-none"
-                    rows={2}
-                    placeholder="Optional notes..."
-                  />
-                </div>
-              </div>
-
-              {/* Raw data preview from driver submission */}
-              {selectedItem.RawData && (
-                <details className="mt-3">
-                  <summary className="text-xs text-on-surface-variant cursor-pointer hover:text-on-surface font-medium">
-                    Raw data from driver submission
-                  </summary>
-                  <pre className="mt-2 p-3 bg-surface-container rounded-lg text-xs overflow-x-auto max-h-32 font-mono">
-                    {JSON.stringify(getRawData(selectedItem), null, 2)}
-                  </pre>
-                </details>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="px-4 sm:px-6 py-4 border-t border-outline-variant flex flex-col sm:flex-row gap-3 shrink-0">
-              {can('inbox.normalize') && (
-                <>
-                  {/* §28: Normalize + Send to Review — one click (no auto-accept) */}
-                  <button
-                    onClick={() => handleQuickApprove(selectedItem.ID)}
-                    disabled={isSaving}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 font-semibold"
-                  >
-                    <Send className="w-4 h-4" />
-                    {isSaving ? 'Processing...' : 'Normalize & Send'}
-                  </button>
-                  {/* Step-by-step normalize */}
-                  <button
-                    onClick={() => handleNormalize(selectedItem.ID)}
-                    disabled={isSaving}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 border border-outline-variant rounded-lg text-sm font-medium hover:bg-surface-container-low transition-colors disabled:opacity-50"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                    {isSaving ? 'Saving...' : 'Normalize Only'}
-                  </button>
-                </>
-              )}
-              <button
-                onClick={() => setSelectedItem(null)}
-                className="px-4 py-2.5 border border-outline-variant rounded-lg text-sm font-medium hover:bg-surface-container-low transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <InboxNormalizeModal
+          item={selectedItem}
+          normForm={normForm}
+          onNormFormChange={setNormForm}
+          serviceRef={serviceRef}
+          matchingServices={matchingServices}
+          isSearchingServices={isSearchingServices}
+          onClose={() => setSelectedItem(null)}
+          onQuickApprove={handleQuickApprove}
+          onNormalize={handleNormalize}
+          isSaving={isSaving}
+          canNormalize={!!can('inbox.normalize')}
+          driverName={driverName}
+          projectName={projectName}
+          formatDisplayDate={formatDisplayDate}
+          getFieldDiff={getFieldDiff}
+          getRawData={getRawData}
+        />
       )}
 
       {/* ============================================================================
           STANDARD MODAL — NORMALIZED / PENDING_REVIEW / ACCEPTED / REJECTED
           ============================================================================ */}
       {selectedItem && !isNormalizable && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-surface rounded-xl w-full max-w-lg shadow-xl max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-outline-variant shrink-0">
-              <h2 className="text-base sm:text-lg font-bold">Report Details</h2>
-              <button onClick={() => setSelectedItem(null)} className="p-1 hover:bg-surface-container rounded-lg">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Metadata */}
-            <div className="px-4 sm:px-6 py-4 space-y-2 text-sm mb-4 pb-4 border-b border-outline-variant overflow-y-auto flex-1 min-h-0">
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Source</span>
-                {getSourceBadge(selectedItem.Source)}
-              </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Channel</span>
-                <span>{selectedItem.Channel}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Driver</span>
-                <span className="font-medium">{driverName(selectedItem.DriverID, selectedItem)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Project</span>
-                <span>{projectName(selectedItem.ProjectID, selectedItem)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Date</span>
-                <span>{formatDisplayDate(selectedItem.ServiceDate)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Status</span>
-                {getStatusBadge(selectedItem.Status)}
-              </div>
-            </div>
-
-            {/* Show normalized data for NORMALIZED items (read-only) */}
-            {selectedItem.Status === 'NORMALIZED' && selectedItem.NormalizedData && (
-              <div className="mb-4">
-                <div className="text-sm font-semibold text-on-surface mb-2">Normalized Data</div>
-                <pre className="p-2 bg-surface-container rounded text-xs overflow-x-auto">
-                  {JSON.stringify(JSON.parse(selectedItem.NormalizedData), null, 2)}
-                </pre>
-              </div>
-            )}
-
-            {/* Show raw data for non-captured items */}
-            {selectedItem.RawData && (
-              <div className="mb-4">
-                <div className="text-sm font-semibold text-on-surface mb-2">Raw Data</div>
-                <pre className="p-2 bg-surface-container rounded text-xs overflow-x-auto">
-                  {JSON.stringify(JSON.parse(selectedItem.RawData), null, 2)}
-                </pre>
-              </div>
-            )}
-
-            {selectedItem.RejectionReason && (
-              <div className="text-sm mb-4">
-                <span className="font-semibold">Rejection Reason:</span> {selectedItem.RejectionReason}
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex flex-col sm:flex-row gap-3 mt-4 pt-4 border-t border-outline-variant shrink-0 px-4 sm:px-6 py-4">
-              {/* NORMALIZED → PENDING_REVIEW (submit to review) */}
-              {isReviewable && can('inbox.review') && (
-                <button
-                  onClick={() => handleSubmitToReview(selectedItem.ID)}
-                  disabled={isSaving}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50"
-                >
-                  <Send className="w-4 h-4" />
-                  {isSaving ? 'Sending...' : 'Submit to Review'}
-                </button>
-              )}
-
-              {/* PENDING_REVIEW → ACCEPTED/REJECTED/LOCKED */}
-              {isPendingReview && can('inbox.review') && (
-                <>
-                  <input
-                    type="text"
-                    value={rejectReason}
-                    onChange={e => setRejectReason(e.target.value)}
-                    placeholder="Rejection reason..."
-                    className="flex-1 px-3 py-2 border border-outline-variant rounded-lg text-sm"
-                  />
-                  <button
-                    onClick={() => handleReject(selectedItem.ID)}
-                    disabled={!rejectReason || isSaving}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleLock(selectedItem.ID)}
-                    disabled={isSaving}
-                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50"
-                  >
-                    <Lock className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleAccept(selectedItem.ID)}
-                    disabled={isSaving}
-                    className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
-                  >
-                    <Check className="w-4 h-4" />
-                  </button>
-                </>
-              )}
-
-              {/* Close button for other statuses */}
-              {!isReviewable && !isPendingReview && (
-                <button
-                  onClick={() => setSelectedItem(null)}
-                  className="flex-1 px-4 py-2.5 border border-outline-variant rounded-lg text-sm font-medium hover:bg-surface-container-low transition-colors"
-                >
-                  Close
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+        <InboxDetailsModal
+          item={selectedItem}
+          rejectReason={rejectReason}
+          onRejectReasonChange={setRejectReason}
+          onClose={() => setSelectedItem(null)}
+          onSubmitToReview={handleSubmitToReview}
+          onAccept={handleAccept}
+          onReject={handleReject}
+          onLock={handleLock}
+          isSaving={isSaving}
+          isReviewable={isReviewable}
+          isPendingReview={isPendingReview}
+          canReview={!!can('inbox.review')}
+          driverName={driverName}
+          projectName={projectName}
+          formatDisplayDate={formatDisplayDate}
+        />
       )}
     </div>
   );

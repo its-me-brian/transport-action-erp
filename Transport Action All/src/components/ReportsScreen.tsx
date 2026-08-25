@@ -1,30 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  FileSpreadsheet, 
-  X, 
-  History, 
-  Route, 
-  CheckCircle,
-  Loader2,
-  Calendar,
-  Users,
-  Building2,
-  ExternalLink,
-  AlertCircle,
-  ChevronRight,
-  Check,
-  Send,
-  Eye,
-  Clock,
-  MessageSquare,
-  ChevronDown,
-  ChevronUp,
-  Sparkles
-} from 'lucide-react';
+import { Check, Send, Eye, Clock } from 'lucide-react';
 import { 
   Service, Driver, ScreenId, dateKeyFromAny, calculateServiceCosts, 
   parseDriverReport, parseMultipleDriverReports, 
-  getDiariaCost, getKmOverCost, formatTimeDisplay, isProductionVehicle
+  getDiariaCost, getKmOverCost, isProductionVehicle
 } from '../types';
 import { 
   getRapportinoClients,
@@ -52,6 +31,10 @@ import {
   CollaboratorDTO
 } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import WhatsAppParserSection from './WhatsAppParserSection';
+import RapportinoGeneratorForm from './RapportinoGeneratorForm';
+import GeneratedRapportinosList from './GeneratedRapportinosList';
+import QuickStatsSection from './QuickStatsSection';
 
 interface ReportsScreenProps {
   services: Service[];
@@ -688,468 +671,53 @@ export default function ReportsScreen({ services, drivers, onNavigate, onService
         </div>
       </div>
 
-      {/* WhatsApp Driver Reports Parser */}
-      <section className="bg-surface-container-low rounded-xl border border-outline-variant">
-        <button 
-          onClick={() => setShowWhatsAppSection(!showWhatsAppSection)}
-          className="w-full flex items-center justify-between p-4 text-left"
-        >
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-primary" />
-            <span className="text-[14px] font-semibold text-on-surface">WhatsApp Driver Reports</span>
-            {parsedReports.length > 0 && (
-              <span className="text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                {parsedReports.length} parsed
-              </span>
-            )}
-          </div>
-          {showWhatsAppSection ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </button>
-        
-        {showWhatsAppSection && (
-          <div className="px-4 pb-4 space-y-3 border-t border-outline-variant">
-            <p className="text-[12px] text-on-surface-variant pt-3">
-              Paste driver WhatsApp reports. The system will search for matching services by date and driver name.
-            </p>
-            
-            <textarea
-              value={whatsappText}
-              onChange={e => setWhatsappText(e.target.value)}
-              className="w-full bg-surface-dim border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary resize-none font-mono"
-              rows={5}
-              placeholder={`Example:
-Isidoro dragone
-22/7/26
-Inizio 8:30
-Fine 18:30
-Km tot 488
-Km over 388
-Diaria piena`}
-            />
-            
-            <button
-              onClick={handleParseWhatsApp}
-              disabled={!whatsappText.trim()}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary text-[13px] font-medium hover:bg-primary/20 transition-colors disabled:opacity-50"
-            >
-              <Sparkles className="w-4 h-4" />
-              Parse & Match Services
-            </button>
+      <WhatsAppParserSection
+        whatsappText={whatsappText}
+        onWhatsappTextChange={setWhatsappText}
+        parsedReports={parsedReports}
+        showSection={showWhatsAppSection}
+        onToggleSection={setShowWhatsAppSection}
+        matchedServices={matchedServices}
+        onParse={handleParseWhatsApp}
+        onApplyToService={handleApplyToService}
+        applyingReport={applyingReport}
+      />
 
-            {/* Parsed Reports with Matches */}
-            {parsedReports.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-[12px] font-medium text-on-surface-variant">
-                  Found {parsedReports.length} report{parsedReports.length > 1 ? 's' : ''}:
-                </p>
-                
-                {parsedReports.map((report, idx) => {
-                  const matches = matchedServices.get(idx) || [];
-                  const diariaLabel = report.diariaType === 'piena' ? 'Piena' : 
-                                     report.diariaType === 'mezza' ? 'Mezza' : 'None';
-                  
-                  return (
-                    <div key={idx} className="bg-surface-dim rounded-lg p-3 border border-outline-variant">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <span className="text-[14px] font-medium text-on-surface">{report.driverName}</span>
-                          <span className="text-[12px] text-on-surface-variant ml-2">{report.dateParsed || report.date}</span>
-                        </div>
-                        {matches.length > 0 && (
-                          <span className="text-[11px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">
-                            {matches.length} match{matches.length > 1 ? 'es' : ''}
-                          </span>
-                        )}
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[12px] mb-2">
-                        <div><span className="text-on-surface-variant">Inizio:</span> <span className="font-medium">{report.start || '—'}</span></div>
-                        <div><span className="text-on-surface-variant">Fine:</span> <span className="font-medium">{report.end || '—'}</span></div>
-                        <div><span className="text-on-surface-variant">Km:</span> <span className="font-medium">{report.kmTotal}</span></div>
-                        <div><span className="text-on-surface-variant">Km Over:</span> <span className="font-medium text-amber-600">{report.kmOver}</span></div>
-                        <div><span className="text-on-surface-variant">Diaria:</span> <span className="font-medium">{diariaLabel}</span></div>
-                      </div>
-                      
-                      {/* Matching services */}
-                      {matches.length > 0 && (
-                        <div className="space-y-2 pt-2 border-t border-outline-variant/50">
-                          <p className="text-[11px] text-on-surface-variant font-medium">Matching services:</p>
-                          {matches.map(service => (
-                            <div key={service.id} className="bg-surface rounded-lg px-3 py-2 border border-outline-variant/30">
-                              {/* Top row: time + status */}
-                              <div className="flex items-center justify-between mb-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[12px] font-bold text-primary">{formatTimeDisplay(service.time)}</span>
-                                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
-                                    service.status === 'Completed' ? 'bg-primary/10 text-primary'
-                                    : service.status === 'In Transit' ? 'bg-secondary-container text-on-secondary-container'
-                                    : service.status === 'In Progress' ? 'bg-amber-100 text-amber-800'
-                                    : 'bg-surface-container text-on-surface-variant'
-                                  }`}>{service.status}</span>
-                                </div>
-                                <button
-                                  onClick={() => handleApplyToService(idx, service)}
-                                  disabled={applyingReport === idx}
-                                  className="text-[11px] bg-primary text-on-primary px-2.5 py-1 rounded hover:bg-primary-hover transition-colors disabled:opacity-50 shrink-0"
-                                >
-                                  {applyingReport === idx ? '...' : 'Apply'}
-                                </button>
-                              </div>
-                              {/* Driver + vehicle */}
-                              <div className="flex items-center gap-2 text-[11px] text-on-surface mb-0.5">
-                                <span className="font-medium">{service.driverName || 'Unassigned'}</span>
-                                <span className="text-on-surface-variant">·</span>
-                                <span className="text-on-surface-variant">{service.vehicleType || '—'}</span>
-                                {service.vehiclePlate && (
-                                  <>
-                                    <span className="text-on-surface-variant">·</span>
-                                    <span className="text-on-surface-variant">{service.vehiclePlate}</span>
-                                  </>
-                                )}
-                              </div>
-                              {/* Route: from → to */}
-                              <div className="text-[11px] text-on-surface-variant truncate">
-                                {service.from || '—'} → {service.to || '—'}
-                              </div>
-                              {/* Passengers */}
-                              {service.passengers && service.passengers.length > 0 && (
-                                <div className="text-[10px] text-on-surface-variant mt-0.5 truncate">
-                                  👤 {service.passengers}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      
-                      {matches.length === 0 && (
-                        <p className="text-[11px] text-amber-600 pt-2 border-t border-outline-variant/50">
-                          ⚠ No matching services found for this date/driver
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-      </section>
-
-      {/* Rapportino Generator */}
-      <section id="rapportino-generator" className="bg-surface-container-low rounded-xl border border-outline-variant p-4 space-y-4">
-        <div className="flex items-center gap-2 text-on-surface">
-          <FileSpreadsheet className="w-5 h-5 text-primary" />
-          <h2 className="text-[14px] font-semibold">Generate Rapportino</h2>
-        </div>
-
-        {/* Type Selector */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-          {[
-            { value: 'production', label: 'By Production', icon: Building2 },
-            { value: 'driver', label: 'By Driver', icon: Users },
-            { value: 'collaborator', label: 'By Collaborator', icon: Users },
-            { value: 'weekly', label: 'Weekly Summary', icon: Calendar },
-            { value: 'daily', label: 'Daily Summary', icon: FileSpreadsheet }
-          ].map(({ value, label, icon: Icon }) => (
-            <button
-              key={value}
-              onClick={() => setRapportinoType(value as RapportinoType)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-[12px] font-medium transition-colors ${
-                rapportinoType === value
-                  ? 'bg-primary text-on-primary border-primary'
-                  : 'bg-surface-container-lowest border-outline-variant text-on-surface hover:bg-surface-dim'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Filters based on type */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {rapportinoType === 'production' && (
-            <div className="space-y-0.5">
-              <label className="text-[11px] text-on-surface-variant font-medium uppercase tracking-wide">Production</label>
-              <select
-                value={selectedProduction}
-                onChange={e => setSelectedProduction(e.target.value)}
-                className="w-full h-9 rounded-lg border border-outline-variant bg-surface-container-lowest focus:border-primary text-[12px] text-on-surface outline-none px-3"
-              >
-                <option value="">All Productions</option>
-                {productions.map(p => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {rapportinoType === 'driver' && (
-            <div className="space-y-0.5 relative">
-              <label className="text-[11px] text-on-surface-variant font-medium uppercase tracking-wide">Driver</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  autoComplete="new-password"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  data-driver-search="true"
-                  value={selectedDriver || (driverSearchQuery || '')}
-                  onChange={e => {
-                    const val = e.target.value;
-                    setDriverSearchQuery(val);
-                    setSelectedDriver('');
-                    setShowDriverDropdown(true);
-                  }}
-                  onInput={e => {
-                    const val = (e.target as HTMLInputElement).value;
-                    setDriverSearchQuery(val);
-                    setSelectedDriver('');
-                    setShowDriverDropdown(true);
-                  }}
-                  onFocus={() => setShowDriverDropdown(true)}
-                  placeholder="Search drivers..."
-                  className="w-full h-9 rounded-lg border border-outline-variant bg-surface-container-lowest focus:border-primary text-[12px] text-on-surface outline-none px-3"
-                />
-                {showDriverDropdown && (
-                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg max-h-[200px] overflow-y-auto">
-                    <button
-                      onClick={() => {
-                        setSelectedDriver('');
-                        setDriverSearchQuery('');
-                        setShowDriverDropdown(false);
-                      }}
-                      className="w-full text-left px-3 py-2 text-[12px] hover:bg-surface-dim transition-colors text-on-surface"
-                    >
-                      All Drivers
-                    </button>
-                    {driverNames
-                      .filter(d => !driverSearchQuery || d.toLowerCase().includes(driverSearchQuery.toLowerCase()))
-                      .map(d => (
-                        <button
-                          key={d}
-                          onClick={() => {
-                            setSelectedDriver(d);
-                            setDriverSearchQuery('');
-                            setShowDriverDropdown(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 text-[12px] hover:bg-surface-dim transition-colors ${
-                            selectedDriver === d ? 'bg-primary/10 text-primary font-medium' : 'text-on-surface'
-                          }`}
-                        >
-                          {d}
-                        </button>
-                      ))
-                    }
-                    {driverNames.filter(d => !driverSearchQuery || d.toLowerCase().includes(driverSearchQuery.toLowerCase())).length === 0 && (
-                      <div className="px-3 py-2 text-[12px] text-on-surface-variant">No drivers found</div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {rapportinoType === 'collaborator' && (
-            <div className="space-y-0.5">
-              <label className="text-[11px] text-on-surface-variant font-medium uppercase tracking-wide">Collaborator</label>
-              <select
-                value={selectedCollaborator}
-                onChange={e => setSelectedCollaborator(e.target.value)}
-                className="w-full h-9 rounded-lg border border-outline-variant bg-surface-container-lowest focus:border-primary text-[12px] text-on-surface outline-none px-3"
-              >
-                <option value="">All Collaborators</option>
-                {collaboratorsList.map(c => (
-                  <option key={c.id} value={c.id}>{c.name} ({c.id})</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="space-y-0.5">
-            <label className="text-[11px] text-on-surface-variant font-medium uppercase tracking-wide">Date From</label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={e => setDateFrom(e.target.value)}
-              className="w-full h-9 rounded-lg border border-outline-variant bg-surface-container-lowest focus:border-primary text-[12px] text-on-surface outline-none px-3"
-            />
-          </div>
-
-          <div className="space-y-0.5">
-            <label className="text-[11px] text-on-surface-variant font-medium uppercase tracking-wide">Date To</label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={e => setDateTo(e.target.value)}
-              className="w-full h-9 rounded-lg border border-outline-variant bg-surface-container-lowest focus:border-primary text-[12px] text-on-surface outline-none px-3"
-            />
-          </div>
-
-          <div className="space-y-0.5">
-            <label className="text-[11px] text-on-surface-variant font-medium uppercase tracking-wide">Period Type</label>
-            <select
-              value={periodType}
-              onChange={e => setPeriodType(e.target.value)}
-              className="w-full h-9 rounded-lg border border-outline-variant bg-surface-container-lowest focus:border-primary text-[12px] text-on-surface outline-none px-3 cursor-pointer"
-            >
-              <option value="weekly">Semanal</option>
-              <option value="monthly">Mensual</option>
-              <option value="custom">Personalizado</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Rapportino Name */}
-        <div className="space-y-0.5">
-          <label className="text-[11px] text-on-surface-variant font-medium uppercase tracking-wide">Rapportino Name (optional)</label>
-          <input
-            type="text"
-            value={rapportinoName}
-            onChange={e => setRapportinoName(e.target.value)}
-            placeholder={rapportinoType === 'production' ? selectedProduction || 'Production Name' : rapportinoType === 'driver' ? selectedDriver || 'Driver Name' : 'Rapportino Name'}
-            className="w-full h-9 rounded-lg border border-outline-variant bg-surface-container-lowest focus:border-primary text-[12px] text-on-surface outline-none px-3"
-          />
-        </div>
-
-        {/* Rapportino Preview */}
-        {filteredServices.length > 0 && (
-          <div className="mt-4 p-4 bg-surface-dim rounded-xl border border-outline-variant">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[13px] font-semibold text-on-surface flex items-center gap-2">
-                <FileSpreadsheet className="w-4 h-4 text-primary" />
-                Preview ({getSelectedServices().length} of {filteredServices.length} selected)
-              </h3>
-              <span className="text-[12px] text-on-surface-variant">
-                Total: <span className="font-semibold text-primary">€ {getSelectedServices().reduce((sum, s) => sum + calcBackendCosts(s).total, 0).toFixed(2)}</span>
-              </span>
-            </div>
-            
-            {/* Preview table — 16 columns matching backend */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-[10px] border-collapse whitespace-nowrap">
-                <thead>
-                  <tr className="bg-[#388E3C] text-white">
-                    <th className="px-1 py-1.5 text-center font-medium w-[30px]">
-                      <input
-                        type="checkbox"
-                        checked={selectedServiceIds.size === filteredServices.length && filteredServices.length > 0}
-                        onChange={toggleSelectAll}
-                        className="rounded border-white"
-                      />
-                    </th>
-                    <th className="px-1.5 py-1.5 text-left font-medium">DATE</th>
-                    <th className="px-1.5 py-1.5 text-left font-medium">START-END</th>
-                    <th className="px-1.5 py-1.5 text-left font-medium">VAN/CAR</th>
-                    <th className="px-1.5 py-1.5 text-left font-medium max-w-[180px]">SERVICE</th>
-                    <th className="px-1.5 py-1.5 text-left font-medium">CLIENT</th>
-                    <th className="px-1.5 py-1.5 text-left font-medium">DRIVER</th>
-                    <th className="px-1.5 py-1.5 text-right font-medium">BASE</th>
-                    <th className="px-1.5 py-1.5 text-right font-medium">OT H</th>
-                    <th className="px-1.5 py-1.5 text-right font-medium">OT €</th>
-                    <th className="px-1.5 py-1.5 text-right font-medium">KM</th>
-                    <th className="px-1.5 py-1.5 text-right font-medium">KM €</th>
-                    <th className="px-1.5 py-1.5 text-right font-medium">FEST</th>
-                    <th className="px-1.5 py-1.5 text-right font-medium">NOT H</th>
-                    <th className="px-1.5 py-1.5 text-right font-medium">NOT €</th>
-                    <th className="px-1.5 py-1.5 text-right font-medium">DIARIA</th>
-                    <th className="px-1.5 py-1.5 text-right font-medium">TOTAL</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-outline-variant/50">
-                  {filteredServices.map((svc) => {
-                    const c = calcBackendCosts(svc);
-                    const startEnd = (svc.startTime && svc.endTime) 
-                      ? `${formatTimeDisplay(svc.startTime)} - ${formatTimeDisplay(svc.endTime)}` 
-                      : svc.time ? formatTimeDisplay(svc.time) : '—';
-                    return (
-                      <tr key={svc.id} className={`hover:bg-surface-container-lowest ${selectedServiceIds.has(svc.id) ? 'bg-primary/5' : ''}`}>
-                        <td className="px-1 py-1 text-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedServiceIds.has(svc.id)}
-                            onChange={() => toggleServiceSelection(svc.id)}
-                          />
-                        </td>
-                        <td className="px-1.5 py-1">{svc.date}</td>
-                        <td className="px-1.5 py-1 font-medium">{startEnd}</td>
-                        <td className="px-1.5 py-1">{c.vehicleType}</td>
-                        <td className="px-1.5 py-1 truncate max-w-[180px]">{buildServiceDescription(svc)}</td>
-                        <td className="px-1.5 py-1 truncate max-w-[120px]">{svc.passengers || '—'}</td>
-                        <td className="px-1.5 py-1 font-medium">{svc.driverName || '—'}</td>
-                        <td className="px-1.5 py-1 text-right bg-[#FFF9C4]">€ {c.baseCost.toFixed(2)}</td>
-                        <td className="px-1.5 py-1 text-right bg-[#FFF9C4]">{c.overtimeHours > 0 ? c.overtimeHours.toFixed(1) : ''}</td>
-                        <td className="px-1.5 py-1 text-right bg-[#FFF9C4]">{c.overtimeCost > 0 ? `€ ${c.overtimeCost.toFixed(2)}` : ''}</td>
-                        <td className="px-1.5 py-1 text-right bg-[#FFF9C4]">{c.kmDriven > 0 ? c.kmDriven : ''}</td>
-                        <td className="px-1.5 py-1 text-right bg-[#FFF9C4]">{c.kmCost > 0 ? `€ ${c.kmCost.toFixed(2)}` : ''}</td>
-                        <td className="px-1.5 py-1 text-right bg-[#F8BBD0]">{c.festivo > 0 ? `€ ${c.festivo.toFixed(2)}` : ''}</td>
-                        <td className="px-1.5 py-1 text-right bg-[#F8BBD0]">{c.notturnoHours > 0 ? c.notturnoHours.toFixed(1) : ''}</td>
-                        <td className="px-1.5 py-1 text-right bg-[#F8BBD0]">{c.notturnoCost > 0 ? `€ ${c.notturnoCost.toFixed(2)}` : ''}</td>
-                        <td className="px-1.5 py-1 text-right bg-[#FFF9C4]">{c.diaria > 0 ? `€ ${c.diaria.toFixed(2)}` : ''}</td>
-                        <td className="px-1.5 py-1 text-right font-semibold bg-amber-50">€ {c.total.toFixed(2)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-emerald-50 font-semibold text-[11px]">
-                    <td colSpan={7} className="px-1.5 py-1.5">TOTAL ({getSelectedServices().length} services)</td>
-                    <td className="px-1.5 py-1.5 text-right">€ {getSelectedServices().reduce((a, s) => a + calcBackendCosts(s).baseCost, 0).toFixed(2)}</td>
-                    <td className="px-1.5 py-1.5 text-right">{getSelectedServices().reduce((a, s) => a + calcBackendCosts(s).overtimeHours, 0).toFixed(1)}</td>
-                    <td className="px-1.5 py-1.5 text-right">€ {getSelectedServices().reduce((a, s) => a + calcBackendCosts(s).overtimeCost, 0).toFixed(2)}</td>
-                    <td className="px-1.5 py-1.5 text-right">{getSelectedServices().reduce((a, s) => a + calcBackendCosts(s).kmDriven, 0)}</td>
-                    <td className="px-1.5 py-1.5 text-right">€ {getSelectedServices().reduce((a, s) => a + calcBackendCosts(s).kmCost, 0).toFixed(2)}</td>
-                    <td className="px-1.5 py-1.5 text-right">€ {getSelectedServices().reduce((a, s) => a + calcBackendCosts(s).festivo, 0).toFixed(2)}</td>
-                    <td className="px-1.5 py-1.5 text-right">{getSelectedServices().reduce((a, s) => a + calcBackendCosts(s).notturnoHours, 0).toFixed(1)}</td>
-                    <td className="px-1.5 py-1.5 text-right">€ {getSelectedServices().reduce((a, s) => a + calcBackendCosts(s).notturnoCost, 0).toFixed(2)}</td>
-                    <td className="px-1.5 py-1.5 text-right">€ {getSelectedServices().reduce((a, s) => a + calcBackendCosts(s).diaria, 0).toFixed(2)}</td>
-                    <td className="px-1.5 py-1.5 text-right text-primary font-bold">€ {getSelectedServices().reduce((a, s) => a + calcBackendCosts(s).total, 0).toFixed(2)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Preview & Generate */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-2 border-t border-outline-variant/50">
-          <div className="flex items-center gap-4 text-[12px]">
-            <span className="text-on-surface-variant">
-              <span className="font-semibold text-on-surface">{getSelectedServices().length}</span> services selected
-            </span>
-            <span className="text-on-surface-variant">
-              Total: <span className="font-semibold text-primary">€ {getSelectedServices().reduce((sum, s) => sum + calcBackendCosts(s).total, 0).toFixed(2)}</span>
-            </span>
-          </div>
-
-          <button
-            id="generar-rapportino-btn"
-            onClick={handleGenerate}
-            disabled={isGenerating || getSelectedServices().length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg text-[12px] font-medium hover:bg-primary-hover transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <FileSpreadsheet className="w-4 h-4" />
-                Generate Rapportino
-              </>
-            )}
-          </button>
-        </div>
-
-        {generationError && (
-          <div className="flex items-center gap-2 text-red-600 text-[12px] bg-red-50 px-3 py-2 rounded-lg">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            {generationError}
-          </div>
-        )}
-      </section>
+      <RapportinoGeneratorForm
+        rapportinoType={rapportinoType}
+        onRapportinoTypeChange={setRapportinoType}
+        selectedProduction={selectedProduction}
+        onSelectedProductionChange={setSelectedProduction}
+        selectedDriver={selectedDriver}
+        onSelectedDriverChange={setSelectedDriver}
+        selectedCollaborator={selectedCollaborator}
+        onSelectedCollaboratorChange={setSelectedCollaborator}
+        collaboratorsList={collaboratorsList}
+        driverSearchQuery={driverSearchQuery}
+        onDriverSearchQueryChange={setDriverSearchQuery}
+        showDriverDropdown={showDriverDropdown}
+        onShowDriverDropdownChange={setShowDriverDropdown}
+        dateFrom={dateFrom}
+        onDateFromChange={setDateFrom}
+        dateTo={dateTo}
+        onDateToChange={setDateTo}
+        periodType={periodType}
+        onPeriodTypeChange={setPeriodType}
+        rapportinoName={rapportinoName}
+        onRapportinoNameChange={setRapportinoName}
+        filteredServices={filteredServices}
+        getSelectedServices={getSelectedServices}
+        selectedServiceIds={selectedServiceIds}
+        onToggleServiceSelection={toggleServiceSelection}
+        onToggleSelectAll={toggleSelectAll}
+        isGenerating={isGenerating}
+        generationError={generationError}
+        onGenerate={handleGenerate}
+        calcBackendCosts={calcBackendCosts}
+        buildServiceDescription={buildServiceDescription}
+        productions={productions}
+        driverNames={driverNames}
+      />
 
       {/* Status Filter Tabs */}
       {generatedList.length > 0 && (
@@ -1172,111 +740,17 @@ Diaria piena`}
         </section>
       )}
 
-      {/* Generated Rapportinos List */}
-      {filteredGeneratedList.length > 0 && (
-        <section id="generated-rapportinos" className="space-y-2">
-          <h3 className="text-[13px] font-semibold text-on-surface">Generated Reports</h3>
-          <div className="space-y-2">
-            {filteredGeneratedList.map((r, idx) => {
-              const statusConfig = STATUS_CONFIG[r.status];
-              return (
-                <div
-                  key={r.rapportinoId + idx}
-                  className="flex items-center justify-between bg-surface-container-low rounded-lg border border-outline-variant px-4 py-3 hover:bg-surface-dim transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
-                      <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                    </div>
-                    <div>
-                      <p className="text-[12px] font-medium text-on-surface">{r.label}</p>
-                      <p className="text-[11px] text-on-surface-variant">
-                        {r.totalServices} services · € {r.totalCost.toFixed(2)}
-                        {r.dateFrom && r.dateTo && ` · ${r.dateFrom} to ${r.dateTo}`}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    {/* Status Badge */}
-                    <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${statusConfig.color} ${statusConfig.bg}`}>
-                      {statusConfig.icon}
-                      {r.status}
-                    </span>
-                    
-                    {/* Advance Status Button */}
-                    {statusConfig.nextStatus && (
-                      <button
-                        onClick={() => handleAdvanceStatus(r)}
-                        className="flex items-center gap-1 px-2 py-1 rounded border border-outline-variant text-[10px] font-medium text-on-surface-variant hover:bg-surface-container transition-colors"
-                        title={`Mark as ${statusConfig.nextStatus}`}
-                      >
-                        <ChevronRight className="w-3 h-3" />
-                        {statusConfig.nextStatus}
-                      </button>
-                    )}
-                    
-                    {/* Open Sheet Link */}
-                    {r.sheetUrl && (
-                      <a
-                        href={r.sheetUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 text-primary text-[11px] font-medium hover:underline"
-                      >
-                        Open
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+      <GeneratedRapportinosList
+        filteredGeneratedList={filteredGeneratedList}
+        STATUS_CONFIG={STATUS_CONFIG}
+        onAdvanceStatus={handleAdvanceStatus}
+      />
 
-      {/* Quick Stats */}
-      <section id="reports-bento-dashboard" className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-primary/5 p-3 rounded-lg border border-primary/15 flex flex-col gap-1.5">
-          <div className="flex items-center gap-1.5 text-primary">
-            <History className="w-4 h-4" />
-            <h4 className="text-[11px] font-medium uppercase tracking-wide">Total Hours</h4>
-          </div>
-          <p className="text-[20px] font-bold text-primary leading-none">
-            {totalHours.toFixed(1)} hrs
-          </p>
-          <p className="text-[11px] text-on-surface-variant">
-            {services.filter(s => s.status === 'Completed').length} completed services
-          </p>
-        </div>
-
-        <div className="bg-secondary/5 p-3 rounded-lg border border-secondary/15 flex flex-col gap-1.5">
-          <div className="flex items-center gap-1.5 text-secondary">
-            <Route className="w-4 h-4" />
-            <h4 className="text-[11px] font-medium uppercase tracking-wide">Total Cost</h4>
-          </div>
-          <p className="text-[20px] font-bold text-secondary leading-none">
-            € {services.filter(s => s.operationalStatus === 'Validado').reduce((sum, s) => sum + calculateServiceCosts(s).totalCost, 0).toFixed(2)}
-          </p>
-          <p className="text-[11px] text-on-surface-variant">
-            All validated services
-          </p>
-        </div>
-
-        <div className="bg-surface-dim p-3 rounded-lg border border-outline-variant flex flex-col gap-1.5">
-          <div className="flex items-center gap-1.5 text-on-surface">
-            <CheckCircle className="w-4 h-4 text-primary" />
-            <h4 className="text-[11px] font-medium uppercase tracking-wide">Generated</h4>
-          </div>
-          <p className="text-[20px] font-bold text-on-surface leading-none">
-            {generatedList.length}
-          </p>
-          <p className="text-[11px] text-on-surface-variant">
-            rapportinos this session
-          </p>
-        </div>
-      </section>
+      <QuickStatsSection
+        totalHours={totalHours}
+        services={services}
+        generatedListCount={generatedList.length}
+      />
     </div>
   );
 }

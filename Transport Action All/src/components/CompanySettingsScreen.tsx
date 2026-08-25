@@ -1,35 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Building, 
-  Pencil, 
-  Settings, 
-  Check, 
-  Sliders, 
-  MoreVertical, 
-  FileText, 
-  ChevronRight, 
-  Link as LinkIcon, 
-  MessageSquare, 
-  CheckCircle, 
-  Wrench,
-  Mail,
-  MapPin,
-  X,
-  Loader2,
-  Save,
-  Users,
-  UserCheck,
-  UserX,
-  Shield,
-  Trash2,
-  History,
-  Plus,
-  Edit3
-} from 'lucide-react';
+import { Loader2, Save } from 'lucide-react';
 import { ScreenId } from '../types';
 import { getSettings, saveSettings, getUsers, approveUser, rejectUser, updateUserRole, deleteUser, createUser, updateUser, getAuditLog, AuditEntry, getOperatingCompanies, updateOperatingCompany, OperatingCompany, getVehicleTypes, getServiceTypes, saveVehicleTypes, saveServiceTypes } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import CompanyProfileCards from './CompanyProfileCards';
+import PricingReferenceSection from './PricingReferenceSection';
+import IntegrationSettingsSection from './IntegrationSettingsSection';
+import SettingsModals from './SettingsModals';
+import AuditLogSection from './AuditLogSection';
+import UserManagementSection from './UserManagementSection';
 
 interface CompanySettingsScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -457,758 +437,120 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
       </div>
 
       {/* General Profiles */}
-      <section id="general-profiles-section" className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Building className="w-4 h-4 text-primary" />
-          <h3 className="text-[14px] font-semibold text-on-surface">General Profiles</h3>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {/* Transport Action Card */}
-          <div id="profile-card-ta" className="bg-surface-container-lowest rounded-lg p-4 border border-outline-variant hover:bg-surface-dim/30 transition-colors">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Sliders className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <input
-                    value={taName}
-                    onChange={(e) => setTaName(e.target.value)}
-                    className="text-[14px] font-semibold text-on-surface bg-transparent border-b border-transparent hover:border-outline-variant focus:border-primary outline-none w-full"
-                  />
-                  <input
-                    value={taSubtitle}
-                    onChange={(e) => setTaSubtitle(e.target.value)}
-                    className="text-[11px] text-primary font-medium bg-transparent border-b border-transparent hover:border-outline-variant focus:border-primary outline-none w-full"
-                  />
-                </div>
-              </div>
-              <button 
-                id="edit-profile-ta-btn"
-                onClick={() => openCompanyEdit('TA')}
-                className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer"
-              >
-                <Pencil className="w-3.5 h-3.5 text-primary" />
-              </button>
-            </div>
-            
-            <div className="space-y-2 text-[12px]">
-              <div>
-                <label className="text-[10px] text-on-surface-variant uppercase tracking-wide">Contact</label>
-                <p className="text-on-surface font-medium">{taEmail}</p>
-              </div>
-              <div>
-                <label className="text-[10px] text-on-surface-variant uppercase tracking-wide">Address</label>
-                <p className="text-on-surface-variant flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-primary" /> {taAddress}
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-outline-variant/50">
-                <div>
-                  <label className="text-[10px] text-on-surface-variant uppercase tracking-wide">VAT</label>
-                  <p className="text-on-surface font-medium">{taVat || '—'}</p>
-                </div>
-                <div>
-                  <label className="text-[10px] text-on-surface-variant uppercase tracking-wide">Phone</label>
-                  <p className="text-on-surface font-medium">{taPhone || '—'}</p>
-                </div>
-                <div>
-                  <label className="text-[10px] text-on-surface-variant uppercase tracking-wide">Currency</label>
-                  <p className="text-on-surface font-medium">{taCurrency}</p>
-                </div>
-                <div>
-                  <label className="text-[10px] text-on-surface-variant uppercase tracking-wide">Tax Rate</label>
-                  <p className="text-on-surface font-medium">{taTaxRate}%</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Movie Motion Card */}
-          <div id="profile-card-mm" className="bg-surface-container-lowest rounded-lg p-4 border border-outline-variant hover:bg-surface-dim/30 transition-colors">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center">
-                  <Building className="w-5 h-5 text-secondary" />
-                </div>
-                <div>
-                  <input
-                    value={mmName}
-                    onChange={(e) => setMmName(e.target.value)}
-                    className="text-[14px] font-semibold text-on-surface bg-transparent border-b border-transparent hover:border-outline-variant focus:border-primary outline-none w-full"
-                  />
-                  <input
-                    value={mmSubtitle}
-                    onChange={(e) => setMmSubtitle(e.target.value)}
-                    className="text-[11px] text-secondary font-medium bg-transparent border-b border-transparent hover:border-outline-variant focus:border-primary outline-none w-full"
-                  />
-                </div>
-              </div>
-              <button 
-                id="edit-profile-mm-btn"
-                onClick={() => openCompanyEdit('MM')}
-                className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer"
-              >
-                <Pencil className="w-3.5 h-3.5 text-secondary" />
-              </button>
-            </div>
-            
-            <div className="space-y-2 text-[12px]">
-              <div>
-                <label className="text-[10px] text-on-surface-variant uppercase tracking-wide">Contact</label>
-                <p className="text-on-surface font-medium">{mmEmail}</p>
-              </div>
-              <div>
-                <label className="text-[10px] text-on-surface-variant uppercase tracking-wide">Address</label>
-                <p className="text-on-surface-variant flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-secondary" /> {mmAddress}
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-outline-variant/50">
-                <div>
-                  <label className="text-[10px] text-on-surface-variant uppercase tracking-wide">VAT</label>
-                  <p className="text-on-surface font-medium">{mmVat || '—'}</p>
-                </div>
-                <div>
-                  <label className="text-[10px] text-on-surface-variant uppercase tracking-wide">Phone</label>
-                  <p className="text-on-surface font-medium">{mmPhone || '—'}</p>
-                </div>
-                <div>
-                  <label className="text-[10px] text-on-surface-variant uppercase tracking-wide">Currency</label>
-                  <p className="text-on-surface font-medium">{mmCurrency}</p>
-                </div>
-                <div>
-                  <label className="text-[10px] text-on-surface-variant uppercase tracking-wide">Tax Rate</label>
-                  <p className="text-on-surface font-medium">{mmTaxRate}%</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <CompanyProfileCards
+        taName={taName}
+        onTaNameChange={setTaName}
+        taSubtitle={taSubtitle}
+        onTaSubtitleChange={setTaSubtitle}
+        taEmail={taEmail}
+        taAddress={taAddress}
+        taVat={taVat}
+        taPhone={taPhone}
+        taCurrency={taCurrency}
+        taTaxRate={taTaxRate}
+        mmName={mmName}
+        onMmNameChange={setMmName}
+        mmSubtitle={mmSubtitle}
+        onMmSubtitleChange={setMmSubtitle}
+        mmEmail={mmEmail}
+        mmAddress={mmAddress}
+        mmVat={mmVat}
+        mmPhone={mmPhone}
+        mmCurrency={mmCurrency}
+        mmTaxRate={mmTaxRate}
+        onEditCompany={openCompanyEdit}
+      />
 
       {/* Pricing Reference */}
-      <section id="pricing-reference-section" className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Sliders className="w-4 h-4 text-primary" />
-          <h3 className="text-[14px] font-semibold text-on-surface">Pricing Reference</h3>
-        </div>
-        <p className="text-[11px] text-on-surface-variant">Service types and vehicle types used across the system. Configure rates in Rate Cards (revenue) and Provider Rates (cost).</p>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {/* Service Types */}
-          <div className="bg-surface-container-lowest rounded-lg p-4 border border-outline-variant">
-            <h5 className="text-[13px] font-semibold text-on-surface mb-3">Service Types</h5>
-            <div className="space-y-1.5 mb-3">
-              {serviceTypes.map((st, i) => (
-                <div key={i} className="flex items-center justify-between gap-2">
-                  <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-medium rounded">{st}</span>
-                  <button
-                    onClick={() => {
-                      const next = serviceTypes.filter((_, idx) => idx !== i);
-                      setServiceTypes(next);
-                    }}
-                    className="text-on-surface-variant hover:text-red-500 transition-colors cursor-pointer"
-                  ><X className="w-3 h-3" /></button>
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-1.5">
-              <input
-                type="text"
-                value={newServiceType}
-                onChange={e => setNewServiceType(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && newServiceType.trim()) {
-                    setServiceTypes([...serviceTypes, newServiceType.trim()]);
-                    setNewServiceType('');
-                  }
-                }}
-                placeholder="New type..."
-                className="flex-1 bg-surface-dim border border-outline-variant rounded px-2 py-1 text-[11px] text-on-surface focus:outline-none focus:border-primary"
-              />
-              <button
-                onClick={() => {
-                  if (newServiceType.trim()) {
-                    setServiceTypes([...serviceTypes, newServiceType.trim()]);
-                    setNewServiceType('');
-                  }
-                }}
-                className="px-2 py-1 bg-primary/10 text-primary rounded text-[11px] font-medium hover:bg-primary/20 transition-colors cursor-pointer"
-              ><Plus className="w-3 h-3" /></button>
-            </div>
-          </div>
-
-          {/* Vehicle Types */}
-          <div className="bg-surface-container-lowest rounded-lg p-4 border border-outline-variant">
-            <h5 className="text-[13px] font-semibold text-on-surface mb-3">Vehicle Types</h5>
-            <div className="space-y-1.5 mb-3">
-              {vehicleTypes.map((vt, i) => (
-                <div key={i} className="flex items-center justify-between gap-2">
-                  <span className="px-1.5 py-0.5 bg-secondary/10 text-secondary text-[10px] font-medium rounded">{vt}</span>
-                  <button
-                    onClick={() => {
-                      const next = vehicleTypes.filter((_, idx) => idx !== i);
-                      setVehicleTypes(next);
-                    }}
-                    className="text-on-surface-variant hover:text-red-500 transition-colors cursor-pointer"
-                  ><X className="w-3 h-3" /></button>
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-1.5">
-              <input
-                type="text"
-                value={newVehicleType}
-                onChange={e => setNewVehicleType(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && newVehicleType.trim()) {
-                    setVehicleTypes([...vehicleTypes, newVehicleType.trim()]);
-                    setNewVehicleType('');
-                  }
-                }}
-                placeholder="New type..."
-                className="flex-1 bg-surface-dim border border-outline-variant rounded px-2 py-1 text-[11px] text-on-surface focus:outline-none focus:border-primary"
-              />
-              <button
-                onClick={() => {
-                  if (newVehicleType.trim()) {
-                    setVehicleTypes([...vehicleTypes, newVehicleType.trim()]);
-                    setNewVehicleType('');
-                  }
-                }}
-                className="px-2 py-1 bg-secondary/10 text-secondary rounded text-[11px] font-medium hover:bg-secondary/20 transition-colors cursor-pointer"
-              ><Plus className="w-3 h-3" /></button>
-            </div>
-          </div>
-
-          {/* Quick Links */}
-          <div className="bg-surface-container-lowest rounded-lg p-4 border border-outline-variant">
-            <h5 className="text-[13px] font-semibold text-on-surface mb-3">Configure Rates</h5>
-            <div className="space-y-2">
-              <button
-                onClick={() => onNavigate('rate_cards')}
-                className="w-full flex items-center justify-between p-2 bg-surface-dim/30 rounded-lg hover:bg-surface-dim/60 transition-colors text-left cursor-pointer"
-              >
-                <div>
-                  <p className="text-[12px] font-medium text-on-surface">Rate Cards</p>
-                  <p className="text-[10px] text-on-surface-variant">Client revenue pricing</p>
-                </div>
-                <ChevronRight className="w-3.5 h-3.5 text-on-surface-variant" />
-              </button>
-              <button
-                onClick={() => onNavigate('providers')}
-                className="w-full flex items-center justify-between p-2 bg-surface-dim/30 rounded-lg hover:bg-surface-dim/60 transition-colors text-left cursor-pointer"
-              >
-                <div>
-                  <p className="text-[12px] font-medium text-on-surface">Provider Rates</p>
-                  <p className="text-[10px] text-on-surface-variant">Supplier & driver costs</p>
-                </div>
-                <ChevronRight className="w-3.5 h-3.5 text-on-surface-variant" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <PricingReferenceSection
+        serviceTypes={serviceTypes}
+        onServiceTypesChange={setServiceTypes}
+        newServiceType={newServiceType}
+        onNewServiceTypeChange={setNewServiceType}
+        vehicleTypes={vehicleTypes}
+        onVehicleTypesChange={setVehicleTypes}
+        newVehicleType={newVehicleType}
+        onNewVehicleTypeChange={setNewVehicleType}
+        onNavigate={onNavigate}
+      />
 
       {/* Integration Settings */}
-      <section id="integration-settings-section" className="space-y-2 pb-8">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="w-4 h-4 text-primary" />
-          <h3 className="text-[14px] font-semibold text-on-surface">Integration Settings</h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {/* WhatsApp Template */}
-          <div id="integration-card-whatsapp" className="bg-surface-container-lowest rounded-lg p-4 border border-outline-variant">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                    <MessageSquare className="w-4 h-4" />
-                  </div>
-                  <h5 className="text-[13px] font-medium text-on-surface">WhatsApp Dispatch</h5>
-                </div>
-                <div className="flex items-center gap-1 text-emerald-600">
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  <span className="text-[10px] font-medium">Connected</span>
-                </div>
-              </div>
-              
-              <div className="p-2 bg-surface-dim/50 rounded border border-outline-variant/50 text-[11px] font-mono leading-relaxed text-on-surface-variant">
-                "{whatsappTemplate}"
-              </div>
-            </div>
-            
-            <button 
-              id="configure-whatsapp-template-btn"
-              onClick={openWhatsAppEdit}
-              className="w-full mt-3 py-1.5 border border-outline-variant text-on-surface-variant rounded-lg text-[12px] font-medium hover:bg-surface-dim transition-colors cursor-pointer"
-            >
-              Configure Template
-            </button>
-          </div>
-
-          {/* Email Templates */}
-          <div id="integration-card-email" className="bg-surface-container-lowest rounded-lg p-4 border border-outline-variant">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                  <Mail className="w-4 h-4" />
-                </div>
-                <h5 className="text-[13px] font-medium text-on-surface">Client Confirmation</h5>
-              </div>
-              <div className="flex items-center gap-1 text-primary">
-                <CheckCircle className="w-3.5 h-3.5" />
-                <span className="text-[10px] font-medium">Connected</span>
-              </div>
-            </div>
-            
-            <div className="space-y-1 text-[12px]">
-              <div 
-                onClick={() => { setTempEmailTemplate(emailTemplates.orderConfirmation); setEditingEmailTemplate('orderConfirmation'); }}
-                className="flex items-center justify-between p-2 hover:bg-surface-dim/50 rounded cursor-pointer transition-colors text-on-surface font-medium"
-              >
-                <span>Order Confirmation PDF</span>
-                <ChevronRight className="w-3.5 h-3.5 text-on-surface-variant" />
-              </div>
-              <div 
-                onClick={() => { setTempEmailTemplate(emailTemplates.weeklySummary); setEditingEmailTemplate('weeklySummary'); }}
-                className="flex items-center justify-between p-2 hover:bg-surface-dim/50 rounded cursor-pointer transition-colors text-on-surface font-medium"
-              >
-                <span>Weekly Summary Report</span>
-                <ChevronRight className="w-3.5 h-3.5 text-on-surface-variant" />
-              </div>
-              <div 
-                onClick={() => { setTempEmailTemplate(emailTemplates.invoice); setEditingEmailTemplate('invoice'); }}
-                className="flex items-center justify-between p-2 hover:bg-surface-dim/50 rounded cursor-pointer transition-colors text-on-surface font-medium text-primary"
-              >
-                <span>Invoice Generation (Stripe)</span>
-                <LinkIcon className="w-3.5 h-3.5" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <IntegrationSettingsSection
+        whatsappTemplate={whatsappTemplate}
+        onConfigureWhatsApp={openWhatsAppEdit}
+        emailTemplates={emailTemplates}
+        onEditEmailTemplate={(key, template) => {
+          setTempEmailTemplate(template);
+          setEditingEmailTemplate(key);
+        }}
+      />
 
       {/* Modals */}
-      {editingCompany && (
-        <div id="company-edit-modal-backdrop" className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div id="company-edit-modal" className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 max-w-md w-full shadow-lg max-h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center mb-3 shrink-0">
-              <h3 className="text-[14px] font-semibold text-primary">
-                Edit {editingCompany === 'TA' ? 'Transport Action' : 'Movie Motion'}
-              </h3>
-              <button onClick={() => setEditingCompany(null)} className="text-on-surface-variant hover:text-on-surface">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="space-y-3 text-[12px] overflow-y-auto flex-1 min-h-0">
-              <div>
-                <label className="block text-on-surface-variant font-medium mb-1 uppercase text-[11px]">Contact Email</label>
-                <input 
-                  type="email"
-                  value={tempEmail}
-                  onChange={(e) => setTempEmail(e.target.value)}
-                  className="w-full bg-surface-dim border border-outline-variant rounded px-2 py-1.5 focus:border-primary outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-on-surface-variant font-medium mb-1 uppercase text-[11px]">Address</label>
-                <input 
-                  type="text"
-                  value={tempAddress}
-                  onChange={(e) => setTempAddress(e.target.value)}
-                  className="w-full bg-surface-dim border border-outline-variant rounded px-2 py-1.5 focus:border-primary outline-none"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-on-surface-variant font-medium mb-1 uppercase text-[11px]">VAT / Tax ID</label>
-                  <input 
-                    type="text"
-                    value={tempVat}
-                    onChange={(e) => setTempVat(e.target.value)}
-                    placeholder="IT12345678901"
-                    className="w-full bg-surface-dim border border-outline-variant rounded px-2 py-1.5 focus:border-primary outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-on-surface-variant font-medium mb-1 uppercase text-[11px]">Phone</label>
-                  <input 
-                    type="tel"
-                    value={tempPhone}
-                    onChange={(e) => setTempPhone(e.target.value)}
-                    placeholder="+39 06 1234567"
-                    className="w-full bg-surface-dim border border-outline-variant rounded px-2 py-1.5 focus:border-primary outline-none"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-on-surface-variant font-medium mb-1 uppercase text-[11px]">Currency</label>
-                  <select 
-                    value={tempCurrency}
-                    onChange={(e) => setTempCurrency(e.target.value)}
-                    className="w-full bg-surface-dim border border-outline-variant rounded px-2 py-1.5 focus:border-primary outline-none"
-                  >
-                    <option value="EUR">EUR (€)</option>
-                    <option value="USD">USD ($)</option>
-                    <option value="GBP">GBP (£)</option>
-                    <option value="CHF">CHF (CHF)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-on-surface-variant font-medium mb-1 uppercase text-[11px]">Default Tax Rate (%)</label>
-                  <input 
-                    type="number"
-                    value={tempTaxRate}
-                    onChange={(e) => setTempTaxRate(e.target.value)}
-                    min="0"
-                    max="100"
-                    className="w-full bg-surface-dim border border-outline-variant rounded px-2 py-1.5 focus:border-primary outline-none"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 pt-1 shrink-0">
-                <button 
-                  onClick={() => setEditingCompany(null)}
-                  className="px-3 py-1.5 bg-surface-dim hover:bg-surface-container text-on-surface rounded font-medium"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={saveCompanyEdit}
-                  className="px-3 py-1.5 bg-primary text-on-primary rounded font-medium hover:bg-primary-hover"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {editingWhatsApp && (
-        <div id="whatsapp-edit-modal-backdrop" className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div id="whatsapp-edit-modal" className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 max-w-lg w-full shadow-lg max-h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center mb-3 shrink-0">
-              <h3 className="text-[14px] font-semibold text-emerald-600">
-                WhatsApp Template
-              </h3>
-              <button onClick={() => setEditingWhatsApp(false)} className="text-on-surface-variant hover:text-on-surface">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="space-y-3 text-[12px] overflow-y-auto flex-1 min-h-0">
-              <div>
-                <label className="block text-on-surface-variant font-medium mb-1 uppercase text-[11px]">Template</label>
-                <textarea 
-                  rows={4}
-                  value={tempWhatsApp}
-                  onChange={(e) => setTempWhatsApp(e.target.value)}
-                  className="w-full bg-surface-dim border border-outline-variant rounded px-2 py-1.5 focus:border-emerald-600 font-mono text-[11px] leading-relaxed outline-none"
-                />
-                <span className="text-on-surface-variant text-[10px] mt-1 block">
-                  Variables: <code>[Driver_Name]</code>, <code>[Project_ID]</code>, <code>[Pickup_Time]</code>, <code>[Dropoff_Location]</code>, <code>[Link]</code>
-                </span>
-              </div>
-              <div className="flex justify-end gap-2 pt-1 shrink-0">
-                <button 
-                  onClick={() => setEditingWhatsApp(false)}
-                  className="px-3 py-1.5 bg-surface-dim hover:bg-surface-container text-on-surface rounded font-medium"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={saveWhatsAppEdit}
-                  className="px-3 py-1.5 bg-emerald-600 text-white rounded font-medium hover:bg-emerald-700"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Email Template Modal */}
-      {editingEmailTemplate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 max-w-lg w-full shadow-lg max-h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center mb-3 shrink-0">
-              <h3 className="text-[14px] font-semibold text-primary">
-                {editingEmailTemplate === 'orderConfirmation' && 'Order Confirmation Template'}
-                {editingEmailTemplate === 'weeklySummary' && 'Weekly Summary Template'}
-                {editingEmailTemplate === 'invoice' && 'Invoice Template'}
-              </h3>
-              <button onClick={() => setEditingEmailTemplate(null)} className="text-on-surface-variant hover:text-on-surface">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="space-y-3 text-[12px] overflow-y-auto flex-1 min-h-0">
-              <div>
-                <label className="block text-on-surface-variant font-medium mb-1 uppercase text-[11px]">Email Body</label>
-                <textarea 
-                  rows={8}
-                  value={tempEmailTemplate}
-                  onChange={(e) => setTempEmailTemplate(e.target.value)}
-                  className="w-full bg-surface-dim border border-outline-variant rounded px-2 py-1.5 focus:border-primary font-mono text-[11px] leading-relaxed outline-none resize-none"
-                />
-                <span className="text-on-surface-variant text-[10px] mt-1 block">
-                  Variables: <code>[Client_Name]</code>, <code>[Driver_Name]</code>, <code>[Vehicle_Type]</code>, <code>[Pickup_Time]</code>, <code>[Pickup_Location]</code>, <code>[Dropoff_Location]</code>, <code>[PO_Number]</code>, <code>[Production]</code>, <code>[Date_Range]</code>, <code>[Total_Services]</code>, <code>[Completed]</code>, <code>[Cancelled]</code>, <code>[Total_Amount]</code>
-                </span>
-              </div>
-              <div className="flex justify-end gap-2 pt-1 shrink-0">
-                <button 
-                  onClick={() => setEditingEmailTemplate(null)}
-                  className="px-3 py-1.5 bg-surface-dim hover:bg-surface-container text-on-surface rounded font-medium"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={() => {
-                    setEmailTemplates({ ...emailTemplates, [editingEmailTemplate]: tempEmailTemplate });
-                    setEditingEmailTemplate(null);
-                  }}
-                  className="px-3 py-1.5 bg-primary text-on-primary rounded font-medium hover:bg-primary-hover"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <SettingsModals
+        editingCompany={editingCompany}
+        onCloseCompanyEdit={() => setEditingCompany(null)}
+        onSaveCompanyEdit={saveCompanyEdit}
+        tempEmail={tempEmail}
+        onTempEmailChange={setTempEmail}
+        tempAddress={tempAddress}
+        onTempAddressChange={setTempAddress}
+        tempVat={tempVat}
+        onTempVatChange={setTempVat}
+        tempPhone={tempPhone}
+        onTempPhoneChange={setTempPhone}
+        tempCurrency={tempCurrency}
+        onTempCurrencyChange={setTempCurrency}
+        tempTaxRate={tempTaxRate}
+        onTempTaxRateChange={setTempTaxRate}
+        editingWhatsApp={editingWhatsApp}
+        onCloseWhatsApp={() => setEditingWhatsApp(false)}
+        onSaveWhatsApp={saveWhatsAppEdit}
+        tempWhatsApp={tempWhatsApp}
+        onTempWhatsAppChange={setTempWhatsApp}
+        editingEmailTemplate={editingEmailTemplate}
+        onCloseEmailTemplate={() => setEditingEmailTemplate(null)}
+        onSaveEmailTemplate={() => {
+          setEmailTemplates({ ...emailTemplates, [editingEmailTemplate!]: tempEmailTemplate });
+          setEditingEmailTemplate(null);
+        }}
+        tempEmailTemplate={tempEmailTemplate}
+        onTempEmailTemplateChange={setTempEmailTemplate}
+      />
 
       {/* Audit Log (Admin Only) */}
       {can('userManagement') && (
-        <section id="audit-log-section" className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <History className="w-4 h-4 text-primary" />
-              <h3 className="text-[14px] font-semibold text-on-surface">Audit Log</h3>
-            </div>
-            <input
-              type="text"
-              value={logFilter}
-              onChange={(e) => setLogFilter(e.target.value)}
-              placeholder="Filter logs..."
-              className="px-3 py-1.5 rounded-lg border border-outline-variant bg-surface text-on-surface text-[12px] focus:outline-none focus:ring-1 focus:ring-primary w-full sm:w-48"
-            />
-          </div>
-          
-          <div className="bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden">
-            {isLoadingLogs ? (
-              <div className="flex items-center justify-center p-8 text-on-surface-variant text-[13px]">
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                Loading logs...
-              </div>
-            ) : filteredLogs.length === 0 ? (
-              <div className="p-8 text-center text-on-surface-variant text-[13px]">
-                {logFilter ? 'No matching logs found' : 'No audit logs yet'}
-              </div>
-            ) : (
-              <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-                <table className="w-full text-[11px]">
-                  <thead className="sticky top-0 bg-surface-dim">
-                    <tr className="border-b border-outline-variant">
-                      <th className="text-left px-3 py-2 font-medium text-on-surface-variant">Time</th>
-                      <th className="text-left px-3 py-2 font-medium text-on-surface-variant">User</th>
-                      <th className="text-left px-3 py-2 font-medium text-on-surface-variant">Action</th>
-                      <th className="text-left px-3 py-2 font-medium text-on-surface-variant">Entity</th>
-                      <th className="text-left px-3 py-2 font-medium text-on-surface-variant">Details</th>
-                      <th className="text-left px-3 py-2 font-medium text-on-surface-variant">Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredLogs.map((log, i) => (
-                      <tr key={i} className="border-b border-outline-variant/50 hover:bg-surface-dim/50">
-                        <td className="px-3 py-1.5 text-on-surface-variant whitespace-nowrap">
-                          {log.timestamp ? new Date(log.timestamp).toLocaleString() : '-'}
-                        </td>
-                        <td className="px-3 py-1.5">
-                          <span className="font-medium text-on-surface">{log.user || '-'}</span>
-                        </td>
-                        <td className="px-3 py-1.5">
-                          <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                            (log.action || '').includes('DELETE') ? 'bg-red-50 text-red-700' :
-                            (log.action || '').includes('APPROVE') ? 'bg-green-50 text-green-700' :
-                            (log.action || '').includes('REJECT') ? 'bg-orange-50 text-orange-700' :
-                            (log.action || '').includes('LOGIN') ? 'bg-blue-50 text-blue-700' :
-                            (log.action || '').includes('REGISTER') ? 'bg-purple-50 text-purple-700' :
-                            'bg-surface-container text-on-surface-variant'
-                          }`}>
-                            {log.action || '-'}
-                          </span>
-                        </td>
-                        <td className="px-3 py-1.5 text-on-surface-variant">
-                          {log.entity}{log.entityId ? ` #${log.entityId}` : ''}
-                        </td>
-                        <td className="px-3 py-1.5 text-on-surface-variant">
-                          {log.field && (
-                            <span>
-                              {log.field}: <span className="line-through text-red-500">{log.oldValue}</span> → <span className="text-green-600">{log.newValue}</span>
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-1.5 text-on-surface-variant max-w-[200px] truncate">
-                          {log.notes || '-'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-          <p className="text-[10px] text-on-surface-variant">
-            Showing {filteredLogs.length} of {auditLogs.length} entries
-          </p>
-        </section>
+        <AuditLogSection
+          auditLogs={auditLogs}
+          isLoadingLogs={isLoadingLogs}
+          logFilter={logFilter}
+          onLogFilterChange={setLogFilter}
+          filteredLogs={filteredLogs}
+        />
       )}
 
-      {/* Create User Modal */}
-      {showCreateUser && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-surface rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-outline-variant shrink-0">
-              <h3 className="text-[14px] font-semibold text-on-surface">Create New User</h3>
-              <button onClick={() => setShowCreateUser(false)}>
-                <X className="w-5 h-5 text-on-surface-variant" />
-              </button>
-            </div>
-            <div className="p-4 space-y-3 overflow-y-auto flex-1 min-h-0">
-              <div>
-                <label className="block text-[11px] text-on-surface-variant mb-1">Username *</label>
-                <input
-                  type="text"
-                  value={newUser.username}
-                  onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] text-on-surface-variant mb-1">Email *</label>
-                <input
-                  type="email"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] text-on-surface-variant mb-1">Full Name</label>
-                <input
-                  type="text"
-                  value={newUser.name}
-                  onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] text-on-surface-variant mb-1">Password *</label>
-                <input
-                  type="password"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] text-on-surface-variant mb-1">Role</label>
-                <select
-                  value={newUser.role}
-                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
-                >
-                  <option value="admin">Admin</option>
-                  <option value="coordinator">Coordinator</option>
-                  <option value="accounting">Accounting</option>
-                  <option value="driver">Driver</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-2 p-4 border-t border-outline-variant shrink-0">
-              <button
-                onClick={() => setShowCreateUser(false)}
-                className="px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant text-[12px] hover:bg-surface-container-low"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateUser}
-                disabled={!newUser.username || !newUser.email || !newUser.password || isCreatingUser}
-                className="px-4 py-2 rounded-lg bg-primary text-on-primary text-[12px] font-medium hover:bg-primary/90 disabled:opacity-50"
-              >
-                {isCreatingUser ? 'Creating...' : 'Create User'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit User Modal */}
-      {editingUser && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-surface rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-outline-variant shrink-0">
-              <h3 className="text-[14px] font-semibold text-on-surface">Edit User: {editingUser.username}</h3>
-              <button onClick={() => setEditingUser(null)}>
-                <X className="w-5 h-5 text-on-surface-variant" />
-              </button>
-            </div>
-            <div className="p-4 space-y-3 overflow-y-auto flex-1 min-h-0">
-              <div>
-                <label className="block text-[11px] text-on-surface-variant mb-1">Full Name</label>
-                <input
-                  type="text"
-                  value={editUserData.name}
-                  onChange={(e) => setEditUserData({ ...editUserData, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] text-on-surface-variant mb-1">Email</label>
-                <input
-                  type="email"
-                  value={editUserData.email}
-                  onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] text-on-surface-variant mb-1">Role</label>
-                <select
-                  value={editUserData.role}
-                  onChange={(e) => setEditUserData({ ...editUserData, role: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
-                >
-                  <option value="admin">Admin</option>
-                  <option value="coordinator">Coordinator</option>
-                  <option value="accounting">Accounting</option>
-                  <option value="driver">Driver</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-2 p-4 border-t border-outline-variant shrink-0">
-              <button
-                onClick={() => setEditingUser(null)}
-                className="px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant text-[12px] hover:bg-surface-container-low"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleEditUser}
-                disabled={isEditingUser}
-                className="px-4 py-2 rounded-lg bg-primary text-on-primary text-[12px] font-medium hover:bg-primary/90 disabled:opacity-50"
-              >
-                {isEditingUser ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* User Management */}
+      {can('userManagement') && (
+        <UserManagementSection
+          users={users}
+          isLoadingUsers={isLoadingUsers}
+          userAction={userAction}
+          onApproveUser={handleApproveUser}
+          onRejectUser={handleRejectUser}
+          onToggleRole={handleToggleRole}
+          onDeleteUser={handleDeleteUser}
+          onCreateUser={handleCreateUser}
+          showCreateUser={showCreateUser}
+          onShowCreateUserChange={setShowCreateUser}
+          newUser={newUser}
+          onNewUserChange={setNewUser}
+          isCreatingUser={isCreatingUser}
+          editingUser={editingUser}
+          onEditingUserChange={setEditingUser}
+          editUserData={editUserData}
+          onEditUserDataChange={setEditUserData}
+          onEditUser={handleEditUser}
+          isEditingUser={isEditingUser}
+        />
       )}
     </div>
   );

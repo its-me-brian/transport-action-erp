@@ -1,45 +1,16 @@
 ﻿import React, { useState, useCallback, useRef } from 'react';
-import { 
-  Upload, 
-  CheckCircle, 
-  X, 
-  FileSpreadsheet, 
-  RefreshCw, 
-  Check, 
+import {
+  Upload,
+  CheckCircle,
+  X,
+  Check,
   Loader2,
-  Edit3,
   Save,
   AlertTriangle,
-  ChevronDown,
-  ChevronUp,
-  ChevronRight,
-  Trash2,
-  Plus,
-  Eye,
-  EyeOff,
-  Download,
-  FileText,
-  Calendar,
-  MessageSquare,
-  Mail,
-  Send,
-  Users,
-  Building2,
-  Printer,
-  MoreVertical,
-  UserPlus,
-  Play,
-  Pause,
-  BadgeCheck,
-  MapPin,
-  LayoutList,
-  ListTree,
-  ChevronsUpDown
 } from 'lucide-react';
-import { ScreenId, formatTimeDisplay } from '../types';
-import { 
+import { ScreenId } from '../types';
+import {
   TransportService,
-  Passenger,
   normalizeTransportServices,
   passengerDisplay,
   passengerRolesDisplay,
@@ -76,6 +47,19 @@ import {
 } from '../services/api';
 import { PrintPreview } from './print';
 import { useToast } from '../contexts/ToastContext';
+import DriverCell from './DriverCell';
+import ServiceTableRows from './ServiceTableRows';
+import MobileServiceCard from './MobileServiceCard';
+import TransportListEmailModal from './TransportListEmailModal';
+import TransportListAgencyModal from './TransportListAgencyModal';
+import TransportListImportModal from './TransportListImportModal';
+import TransportListExportResultModal from './TransportListExportResultModal';
+import TransportListSavePromptModal from './TransportListSavePromptModal';
+import TransportListFilterBar from './TransportListFilterBar';
+import TransportListDesktopActions from './TransportListDesktopActions';
+import TransportListMobileMoreMenu from './TransportListMobileMoreMenu';
+import TransportListHistoryTable from './TransportListHistoryTable';
+import TransportListParserDebugPanel from './TransportListParserDebugPanel';
 
 interface TransportListScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -83,403 +67,6 @@ interface TransportListScreenProps {
 }
 
 type ImportStep = 'upload' | 'preview' | 'syncing' | 'done';
-
-// --- DriverCell: standalone component (outside parent to preserve state) ---
-interface DriverCellProps {
-  service: TransportService;
-  dbDrivers: DriverRecord[];
-  onUpdate: (serviceId: string, driver: string, driverPhone: string) => void;
-}
-
-function normalizePhone(phone: string): string {
-  return phone.replace(/[\s\-\(\)\+]/g, '');
-}
-
-const DriverCell = React.memo(function DriverCell({ service, dbDrivers, onUpdate }: DriverCellProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [phone, setPhone] = useState('');
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const phoneInputRef = useRef<HTMLInputElement>(null);
-  const currentValue = service.driver || '';
-  const isEmpty = !currentValue || currentValue.trim() === '';
-
-  // Sort drivers by last name, then filter by search (no useMemo — direct compute avoids stale closures)
-  const getLastName = (name: string) => {
-    const parts = name.trim().split(/\s+/);
-    return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : name.toLowerCase();
-  };
-
-  const sorted = [...dbDrivers].sort((a, b) => {
-    const lastA = getLastName(a.name);
-    const lastB = getLastName(b.name);
-    if (lastA !== lastB) return lastA.localeCompare(lastB);
-    return a.name.localeCompare(b.name);
-  });
-
-  const q = search.toLowerCase().trim();
-  const filteredDrivers = q
-    ? sorted.filter(d => d.name.toLowerCase().includes(q))
-    : sorted;
-
-  const isExistingDriver = dbDrivers.some(d => d.name === search.trim());
-  const showCreateOption = search.trim().length > 0 && !isExistingDriver;
-
-  const handleSelect = (name: string) => {
-    const matched = dbDrivers.find(d => d.name === name);
-    if (matched) {
-      // Existing driver — use their phone or current phone
-      const driverPhone = matched.phone || service.driverPhone || '';
-      setPhone(driverPhone);
-      onUpdate(service.id, name, driverPhone);
-    } else {
-      // Custom name — set phone from input
-      onUpdate(service.id, name, phone || service.driverPhone || '');
-    }
-    setIsOpen(false);
-    setSearch('');
-    setPhone('');
-  };
-
-  const handleCreateAndAssign = async () => {
-    const name = search.trim();
-    if (!name) return;
-    // Will be handled by parent via a special callback
-    onUpdate(service.id, name, phone || '');
-    setIsOpen(false);
-    setSearch('');
-    setPhone('');
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      setIsOpen(false);
-      setSearch('');
-      setPhone('');
-    }
-    if (e.key === 'Enter' && filteredDrivers.length > 0 && !showCreateOption) {
-      e.preventDefault();
-      handleSelect(filteredDrivers[0].name);
-    }
-  };
-
-  // Focus search input when dropdown opens
-  React.useEffect(() => {
-    if (isOpen && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [isOpen]);
-
-  // Close dropdown on outside click
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-        setSearch('');
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <div
-        className={`group flex items-center gap-1 cursor-pointer px-1 py-0.5 rounded hover:bg-primary/5 ${isEmpty ? 'text-red-500 italic' : ''}`}
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <span className="truncate">{isEmpty ? '(vacío)' : currentValue}</span>
-        <ChevronDown className="w-3 h-3 opacity-0 group-hover:opacity-50 shrink-0" />
-      </div>
-      {isOpen && (
-        <div className="absolute z-50 top-full left-0 mt-1 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg min-w-[180px] sm:min-w-[220px] max-h-[280px] flex flex-col">
-          <div className="px-2 pt-2 pb-1 border-b border-outline-variant/50">
-            <input
-              ref={searchInputRef}
-              type="text"
-              autoComplete="new-password"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              data-driver-search="true"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onInput={(e) => setSearch((e.target as HTMLInputElement).value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Search driver by name..."
-              className="w-full px-2 py-1.5 text-[12px] border border-outline-variant rounded bg-white text-on-surface focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant/50"
-            />
-          </div>
-          <div className="overflow-y-auto flex-1 py-0.5">
-            {search.trim() && showCreateOption && (
-              <div className="px-2 py-1.5 border-b border-outline-variant/30">
-                <div className="text-[11px] text-on-surface-variant mb-1">Phone for new driver:</div>
-                <input
-                  ref={phoneInputRef}
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+39..."
-                  className="w-full px-2 py-1 text-[11px] border border-outline-variant rounded bg-white text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-                <button
-                  onClick={handleCreateAndAssign}
-                  className="w-full mt-1 text-left px-2 py-1 text-[11px] bg-primary/10 hover:bg-primary/20 text-primary font-medium rounded transition-colors cursor-pointer"
-                >
-                  Create &quot;{search.trim()}&quot; {phone ? `(${phone})` : ''}
-                </button>
-              </div>
-            )}
-            {search.trim() && !showCreateOption && (
-              <button
-                onClick={() => { handleSelect(search.trim()); setIsOpen(false); setSearch(''); setPhone(''); }}
-                className="w-full text-left px-3 py-1.5 text-[12px] hover:bg-primary/5 transition-colors cursor-pointer border-b border-outline-variant/30"
-              >
-                <span className="text-primary font-medium">Use &quot;{search.trim()}&quot;</span>
-              </button>
-            )}
-            <button
-              onClick={() => { handleSelect(''); setIsOpen(false); setSearch(''); setPhone(''); }}
-              className="w-full text-left px-3 py-1.5 text-[12px] text-on-surface-variant hover:bg-surface-dim transition-colors cursor-pointer"
-            >
-              — Unassigned —
-            </button>
-            {filteredDrivers.length > 0 && <div className="border-t border-outline-variant/30 my-0.5" />}
-            {filteredDrivers.map(d => (
-              <button
-                key={d.id}
-                onClick={() => handleSelect(d.name)}
-                className={`w-full text-left px-3 py-1.5 text-[12px] hover:bg-surface-dim transition-colors cursor-pointer ${
-                  currentValue === d.name ? 'bg-primary/10 text-primary font-medium' : 'text-on-surface'
-                }`}
-              >
-                <span className="font-medium">{d.name}</span>
-                {d.phone && <span className="text-on-surface-variant ml-1">{d.phone}</span>}
-              </button>
-            ))}
-            {filteredDrivers.length === 0 && search.trim() && !showCreateOption && (
-              <div className="px-3 py-1.5 text-[11px] text-on-surface-variant italic text-center border-t border-outline-variant/30">
-                No drivers match
-              </div>
-            )}
-            {dbDrivers.length === 0 && (
-              <div className="px-3 py-2 text-[11px] text-on-surface-variant italic text-center">
-                No drivers in DB yet
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-});
-
-// --- OperatingCompanyCell: inline dropdown for TA/MM ---
-interface OperatingCompanyCellProps {
-  service: TransportService;
-  onUpdate: (serviceId: string, operatingCompany: string) => void;
-}
-
-const OperatingCompanyCell = React.memo(function OperatingCompanyCell({ service, onUpdate }: OperatingCompanyCellProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const current = service.operatingCompany || '';
-  const isEmpty = !current || current.trim() === '';
-
-  const options = [
-    { id: 'TA', name: 'Transport Action', color: 'text-blue-600' },
-    { id: 'MM', name: 'Movie Motion', color: 'text-purple-600' },
-  ];
-
-  const handleSelect = (id: string) => {
-    onUpdate(service.id, id);
-    setIsOpen(false);
-  };
-
-  // Close dropdown on outside click
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <div
-        className={`group flex items-center gap-1 cursor-pointer px-1.5 py-0.5 rounded hover:bg-primary/5 ${
-          isEmpty ? 'text-red-500 italic' :
-          current === 'TA' ? 'text-blue-600 font-medium' :
-          current === 'MM' ? 'text-purple-600 font-medium' : ''
-        }`}
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <span className="truncate text-[11px]">{isEmpty ? '(vacío)' : current}</span>
-        <ChevronDown className="w-3 h-3 opacity-0 group-hover:opacity-50 shrink-0" />
-      </div>
-      {isOpen && (
-        <div className="absolute z-50 top-full left-0 mt-1 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg min-w-[160px] py-1">
-          {options.map(opt => (
-            <button
-              key={opt.id}
-              onClick={() => handleSelect(opt.id)}
-              className={`w-full text-left px-3 py-1.5 text-[12px] hover:bg-surface-dim transition-colors cursor-pointer flex items-center gap-2 ${
-                current === opt.id ? 'bg-primary/10 font-medium' : ''
-              }`}
-            >
-              <span className={`w-2 h-2 rounded-full ${opt.id === 'TA' ? 'bg-blue-500' : 'bg-purple-500'}`}></span>
-              <span className={opt.color}>{opt.name}</span>
-              {current === opt.id && <Check className="w-3 h-3 text-primary ml-auto" />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-});
-
-// --- VehicleTypeCell: inline dropdown for Van/Car ---
-interface VehicleTypeCellProps {
-  service: TransportService;
-  onUpdate: (serviceId: string, vehicleType: string) => void;
-}
-
-const VehicleTypeCell = React.memo(function VehicleTypeCell({ service, onUpdate }: VehicleTypeCellProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const current = service.vehicleType || '';
-  const isEmpty = !current || current.trim() === '';
-
-  const options = [
-    { id: 'Van', name: 'Van' },
-    { id: 'Car', name: 'Car' },
-    { id: 'Walking', name: 'Walking' },
-  ];
-
-  const handleSelect = (id: string) => {
-    onUpdate(service.id, id);
-    setIsOpen(false);
-  };
-
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <div
-        className={`group flex items-center gap-1 cursor-pointer px-1.5 py-0.5 rounded hover:bg-primary/5 ${isEmpty ? 'text-red-500 italic' : ''}`}
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <span className="truncate text-[11px]">{isEmpty ? '(vacío)' : current}</span>
-        <ChevronDown className="w-3 h-3 opacity-0 group-hover:opacity-50 shrink-0" />
-      </div>
-      {isOpen && (
-        <div className="absolute z-50 top-full left-0 mt-1 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg min-w-[120px] py-1">
-          {options.map(opt => (
-            <button
-              key={opt.id}
-              onClick={() => handleSelect(opt.id)}
-              className={`w-full text-left px-3 py-1.5 text-[12px] hover:bg-surface-dim transition-colors cursor-pointer flex items-center gap-2 ${
-                current === opt.id ? 'bg-primary/10 font-medium' : ''
-              }`}
-            >
-              <span>{opt.name}</span>
-              {current === opt.id && <Check className="w-3 h-3 text-primary ml-auto" />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-});
-
-// --- ServiceTypeCell: inline dropdown for Dispo/Transfer Airport/Transfer City ---
-interface ServiceTypeCellProps {
-  service: TransportService;
-  onUpdate: (serviceId: string, serviceType: string) => void;
-}
-
-const ServiceTypeCell = React.memo(function ServiceTypeCell({ service, onUpdate }: ServiceTypeCellProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const current = service.serviceType || '';
-  const isConfirmed = service.serviceTypeConfirmed;
-  const isEmpty = !current || current.trim() === '';
-
-  const options = [
-    { id: 'Dispo', name: 'Dispo' },
-    { id: 'Transfer Airport', name: 'Transfer Airport' },
-    { id: 'Transfer City', name: 'Transfer City' },
-  ];
-
-  const handleSelect = (id: string) => {
-    onUpdate(service.id, id);
-    setIsOpen(false);
-  };
-
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  // Unconfirmed service type → red background
-  const bgClass = isEmpty ? 'text-red-500 italic' :
-    !isConfirmed ? 'bg-red-50 border border-red-200 text-red-700' :
-    current === 'Transfer Airport' ? 'bg-blue-50 text-blue-700' :
-    current === 'Transfer City' ? 'bg-blue-50 text-blue-700' :
-    current === 'Dispo' ? 'bg-amber-50 text-amber-700 border border-amber-300' :
-    'bg-surface-dim text-on-surface-variant';
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <div
-        className={`group flex items-center gap-1 cursor-pointer px-1.5 py-0.5 rounded hover:bg-primary/5 ${bgClass}`}
-        onClick={() => setIsOpen(!isOpen)}
-        title={!isConfirmed ? 'Service type intuited — click to confirm' : ''}
-      >
-        <span className="truncate text-[11px] font-medium">{isEmpty ? '(vacío)' : current}</span>
-        {!isConfirmed && !isEmpty && <span className="text-[9px] ml-0.5" title="Unconfirmed">⚠</span>}
-        <ChevronDown className="w-3 h-3 opacity-0 group-hover:opacity-50 shrink-0" />
-      </div>
-      {isOpen && (
-        <div className="absolute z-50 top-full left-0 mt-1 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg min-w-[160px] py-1">
-          {options.map(opt => (
-            <button
-              key={opt.id}
-              onClick={() => handleSelect(opt.id)}
-              className={`w-full text-left px-3 py-1.5 text-[12px] hover:bg-surface-dim transition-colors cursor-pointer flex items-center gap-2 ${
-                current === opt.id ? 'bg-primary/10 font-medium' : ''
-              }`}
-            >
-              <span>{opt.name}</span>
-              {current === opt.id && <Check className="w-3 h-3 text-primary ml-auto" />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-});
 
 export default function TransportListScreen({ onNavigate, onImportComplete }: TransportListScreenProps) {
   const { showToast } = useToast();
@@ -1423,43 +1010,6 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
     }
   };
 
-  // --- Editable cell component ---
-  const EditableCell = ({ rowId, field, value, type = 'text' }: {
-    rowId: string;
-    field: string;
-    value: string;
-    type?: 'text' | 'select';
-  }) => {
-    const isEditing = editingCell?.rowId === rowId && editingCell?.field === field;
-    const isEmpty = !value || value.trim() === '';
-
-    if (isEditing) {
-      return (
-        <div className="flex items-center gap-1">
-          <input
-            type={type === 'select' ? 'text' : 'text'}
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onKeyDown={handleEditKeyDown}
-            onBlur={saveEdit}
-            className="w-full px-2 py-1 text-[12px] border border-primary rounded bg-white text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
-            autoFocus
-          />
-        </div>
-      );
-    }
-
-    return (
-      <div 
-        className={`group flex items-center gap-1 cursor-pointer px-1 py-0.5 rounded hover:bg-primary/5 ${isEmpty ? 'text-red-500 italic' : ''}`}
-        onClick={() => startEdit(rowId, field, value)}
-      >
-        <span className="truncate">{isEmpty ? '(vacío)' : value}</span>
-        <Edit3 className="w-3 h-3 opacity-0 group-hover:opacity-50 shrink-0" />
-      </div>
-    );
-  };
-
   // --- Driver update handler (for standalone DriverCell) ---
   const handleDriverUpdate = async (serviceId: string, driver: string, driverPhone: string) => {
     // Optimistic update for immediate UI feedback
@@ -1577,341 +1127,6 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
         return { ...s, operatingCompany: originalValue } as TransportService;
       }));
     });
-  };
-
-  // --- Render a service block (grouped view with movements as sub-rows) ---
-  const renderServiceBlock = (service: TransportService, isSelected: boolean, _rowIdx: number) => {
-    const isExpanded = expandedServices.has(service.id);
-    const movements = service.movements && service.movements.length > 0 ? service.movements : [];
-    const hasMultipleMovements = movements.length > 1;
-
-    // If no movements or only 1 movement, fall back to flat row
-    if (!hasMultipleMovements) {
-      return renderServiceRow(service, isSelected, _rowIdx);
-    }
-
-    const rows: React.ReactNode[] = [];
-
-    // --- Main row (first movement) ---
-    const firstMovement = movements[0];
-    rows.push(
-      <tr
-        key={service.id}
-        className={`transition-colors border-b-0 ${
-          isServiceDimmed(service) ? 'bg-gray-50 opacity-60' :
-          isSelected ? 'bg-primary/5' : 'hover:bg-surface-dim/50'
-        }`}
-      >
-        <td className="px-2 py-2 w-8 align-top">
-          <div className="flex flex-col items-center gap-1">
-            {service.selectable !== false && (
-              <input
-                type="checkbox"
-                checked={isSelected}
-                onChange={() => toggleRowSelection(service.id)}
-                disabled={isServiceCompleted(service)}
-                className={`rounded ${isServiceCompleted(service) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-              />
-            )}
-            {hasMultipleMovements && (
-              <button
-                onClick={() => toggleServiceExpand(service.id)}
-                className="text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
-                title={isExpanded ? 'Collapse movements' : 'Expand movements'}
-              >
-                {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-              </button>
-            )}
-          </div>
-        </td>
-        <td className="px-2 py-2 align-top">
-          <EditableCell rowId={service.id} field="vehicle" value={service.vehicle} />
-        </td>
-        <td className="px-2 py-2 hidden lg:table-cell align-top">
-          <VehicleTypeCell service={service} onUpdate={handleVehicleTypeUpdate} />
-        </td>
-        <td className="px-2 py-2 hidden lg:table-cell align-top">
-          <ServiceTypeCell service={service} onUpdate={handleServiceTypeUpdate} />
-        </td>
-        <td className="px-2 py-2 align-top">
-          <DriverCell service={service} dbDrivers={dbDrivers} onUpdate={handleDriverUpdate} />
-        </td>
-        <td className="px-2 py-2 hidden lg:table-cell align-top">
-          <EditableCell rowId={service.id} field="driverPhone" value={service.driverPhone} />
-        </td>
-        <td className="px-2 py-2 w-[60px] align-top">
-          <span className="text-[11px] font-medium text-primary">{firstMovement.time || service.time || ''}</span>
-        </td>
-        <td className="px-2 py-2 max-w-[200px] align-top">
-          <div className="text-[11px]">
-            {firstMovement.passengers && firstMovement.passengers.length > 0
-              ? firstMovement.passengers.map(p => p.name).filter(Boolean).join('; ')
-              : passengerDisplay(service.passengers)}
-          </div>
-        </td>
-        {showRoles && (
-          <td className="px-2 py-2 text-on-surface-variant text-[11px] hidden xl:table-cell align-top">
-            {firstMovement.passengers && firstMovement.passengers.length > 0
-              ? firstMovement.passengers.map(p => p.role).filter(Boolean).join('; ')
-              : hasPassengerRole(service.passengers) ? passengerRolesDisplay(service.passengers) : '-'}
-          </td>
-        )}
-        <td className="px-2 py-2 max-w-[180px] hidden md:table-cell overflow-hidden align-top">
-          <div className="flex items-center gap-1 min-w-0 text-[11px]">
-            <span className="truncate">{firstMovement.pickupLines?.join('; ') || pickupDisplay(service.pickupLines)}</span>
-            {service.pickupMapsUrl && (
-              <a href={service.pickupMapsUrl} target="_blank" rel="noopener noreferrer" title="Open pickup in Maps" className="shrink-0 text-primary/60 hover:text-primary transition-colors">
-                <MapPin className="w-3 h-3" />
-              </a>
-            )}
-          </div>
-        </td>
-        <td className="px-2 py-2 max-w-[180px] hidden md:table-cell overflow-hidden align-top">
-          <div className="flex items-center gap-1 min-w-0 text-[11px]">
-            <span className="truncate">{firstMovement.dropoffLines?.join('; ') || dropoffDisplay(service.dropoffLines)}</span>
-            {service.dropoffMapsUrl && (
-              <a href={service.dropoffMapsUrl} target="_blank" rel="noopener noreferrer" title="Open dropoff in Maps" className="shrink-0 text-primary/60 hover:text-primary transition-colors">
-                <MapPin className="w-3 h-3" />
-              </a>
-            )}
-          </div>
-        </td>
-        <td className="px-2 py-2 align-top">
-          <OperatingCompanyCell service={service} onUpdate={handleOperatingCompanyUpdate} />
-        </td>
-        <td className="px-2 py-2 hidden xl:table-cell align-top">
-          <span className="text-[11px]">{firstMovement.flightInfo || service.flightInfo || ''}</span>
-        </td>
-        <td className="px-2 py-2 hidden xl:table-cell align-top">
-          <EditableCell rowId={service.id} field="notes" value={service.notes} />
-        </td>
-        <td className="px-2 py-2 hidden 2xl:table-cell align-top">
-          <EditableCell rowId={service.id} field="passengersList" value={service.passengersList} />
-        </td>
-        <td className="px-2 py-2 hidden 2xl:table-cell align-top">
-          <EditableCell rowId={service.id} field="originalTransportDate" value={service.originalTransportDate} />
-        </td>
-        <td className="px-2 py-2 w-[120px] align-top">
-          {service.status === 'Importado' && (
-            <span className="text-[10px] text-on-surface-variant italic">Asignar conductor</span>
-          )}
-          {service.status === 'Asignado' && (
-            <button
-              onClick={() => handleLifecycleTransition(service.id, 'confirmService')}
-              disabled={!!lifecycleLoading[service.id]}
-              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer disabled:opacity-50"
-            >
-              {lifecycleLoading[service.id] === 'confirmService' ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
-              Confirmar
-            </button>
-          )}
-          {service.status === 'Confirmado' && (
-            <button
-              onClick={() => handleLifecycleTransition(service.id, 'startService')}
-              disabled={!!lifecycleLoading[service.id]}
-              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors cursor-pointer disabled:opacity-50"
-            >
-              {lifecycleLoading[service.id] === 'startService' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
-              Iniciar
-            </button>
-          )}
-        </td>
-      </tr>
-    );
-
-    // --- Sub-rows (movement 2..N) ---
-    if (isExpanded) {
-      for (let m = 1; m < movements.length; m++) {
-        const mov = movements[m];
-        const prevMov = movements[m - 1];
-        const timeChanged = mov.time && mov.time !== (prevMov?.time || firstMovement.time);
-        rows.push(
-          <tr
-            key={service.id + '-mov-' + m}
-            className={`transition-colors ${timeChanged ? 'border-t border-primary/20' : ''}`}
-          >
-            <td className="px-2 py-1.5 w-8"></td>
-            <td className="px-2 py-1.5" colSpan={5}></td>
-            <td className="px-2 py-1.5 w-[60px] align-top">
-              {timeChanged && (
-                <span className="text-[11px] font-medium text-primary">{mov.time}</span>
-              )}
-            </td>
-            <td className="px-2 py-1.5 max-w-[200px] align-top">
-              <div className="text-[11px]">
-                {mov.passengers && mov.passengers.length > 0
-                  ? mov.passengers.map(p => p.name).filter(Boolean).join('; ')
-                  : ''}
-              </div>
-            </td>
-            {showRoles && (
-              <td className="px-2 py-1.5 text-on-surface-variant text-[11px] hidden xl:table-cell align-top">
-                {mov.passengers && mov.passengers.length > 0
-                  ? mov.passengers.map(p => p.role).filter(Boolean).join('; ')
-                  : ''}
-              </td>
-            )}
-            <td className="px-2 py-1.5 max-w-[180px] hidden md:table-cell overflow-hidden align-top">
-              <div className="flex items-center gap-1 min-w-0 text-[11px]">
-                <span className="truncate">{mov.pickupLines?.join('; ') || ''}</span>
-              </div>
-            </td>
-            <td className="px-2 py-1.5 max-w-[180px] hidden md:table-cell overflow-hidden align-top">
-              <div className="flex items-center gap-1 min-w-0 text-[11px]">
-                <span className="truncate">{mov.dropoffLines?.join('; ') || ''}</span>
-              </div>
-            </td>
-            <td className="px-2 py-1.5 align-top"></td>
-            <td className="px-2 py-1.5 hidden xl:table-cell align-top">
-              <span className="text-[11px]">{mov.flightInfo || ''}</span>
-            </td>
-            <td className="px-2 py-1.5 hidden xl:table-cell align-top"></td>
-            <td className="px-2 py-1.5 hidden 2xl:table-cell align-top"></td>
-            <td className="px-2 py-1.5 hidden 2xl:table-cell align-top"></td>
-            <td className="px-2 py-1.5 w-[120px] align-top"></td>
-          </tr>
-        );
-      }
-    }
-
-    return <React.Fragment key={service.id}>{rows}</React.Fragment>;
-  };
-
-  // --- Render a single service row ---
-  const renderServiceRow = (service: TransportService, isSelected: boolean, _rowIdx: number) => {
-    return (
-      <tr 
-        key={service.id} 
-        className={`transition-colors ${
-          isServiceDimmed(service) ? 'bg-gray-50 opacity-60' :
-          isSelected ? 'bg-primary/5' : 'hover:bg-surface-dim/50'
-        }`}
-      >
-        <td className="px-2 py-2 w-8">
-          {service.selectable !== false ? (
-            <input 
-              type="checkbox" 
-              checked={isSelected}
-              onChange={() => toggleRowSelection(service.id)}
-              disabled={isServiceCompleted(service)}
-              className={`rounded ${isServiceCompleted(service) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-            />
-          ) : null}
-        </td>
-        <td className="px-2 py-2">
-          <EditableCell rowId={service.id} field="vehicle" value={service.vehicle} />
-        </td>
-        <td className="px-2 py-2 hidden lg:table-cell">
-          <VehicleTypeCell service={service} onUpdate={handleVehicleTypeUpdate} />
-        </td>
-        <td className="px-2 py-2 hidden lg:table-cell">
-          <ServiceTypeCell service={service} onUpdate={handleServiceTypeUpdate} />
-        </td>
-        <td className="px-2 py-2">
-          <DriverCell service={service} dbDrivers={dbDrivers} onUpdate={handleDriverUpdate} />
-        </td>
-        <td className="px-2 py-2 hidden lg:table-cell">
-          <EditableCell rowId={service.id} field="driverPhone" value={service.driverPhone} />
-        </td>
-        <td className="px-2 py-2 w-[60px]">
-          <EditableCell rowId={service.id} field="time" value={service.time} />
-        </td>
-        <td className="px-2 py-2 max-w-[200px]">
-          <EditableCell rowId={service.id} field="passengers" value={passengerDisplay(service.passengers)} />
-        </td>
-        {showRoles && (
-          <td className="px-2 py-2 text-on-surface-variant text-[11px] hidden xl:table-cell">
-            {hasPassengerRole(service.passengers) ? passengerRolesDisplay(service.passengers) : '-'}
-          </td>
-        )}
-        <td className="px-2 py-2 max-w-[180px] hidden md:table-cell overflow-hidden">
-          <div className="flex items-center gap-1 min-w-0">
-            <EditableCell rowId={service.id} field="pickupLines" value={pickupDisplay(service.pickupLines)} />
-            {service.pickupMapsUrl && (
-              <a href={service.pickupMapsUrl} target="_blank" rel="noopener noreferrer" title="Open pickup in Maps" className="shrink-0 text-primary/60 hover:text-primary transition-colors">
-                <MapPin className="w-3 h-3" />
-              </a>
-            )}
-          </div>
-        </td>
-        <td className="px-2 py-2 max-w-[180px] hidden md:table-cell overflow-hidden">
-          <div className="flex items-center gap-1 min-w-0">
-            <EditableCell rowId={service.id} field="dropoffLines" value={dropoffDisplay(service.dropoffLines)} />
-            {service.dropoffMapsUrl && (
-              <a href={service.dropoffMapsUrl} target="_blank" rel="noopener noreferrer" title="Open dropoff in Maps" className="shrink-0 text-primary/60 hover:text-primary transition-colors">
-                <MapPin className="w-3 h-3" />
-              </a>
-            )}
-          </div>
-        </td>
-        <td className="px-2 py-2">
-          <OperatingCompanyCell service={service} onUpdate={handleOperatingCompanyUpdate} />
-        </td>
-        <td className="px-2 py-2 hidden xl:table-cell">
-          <EditableCell rowId={service.id} field="flightInfo" value={service.flightInfo} />
-        </td>
-        <td className="px-2 py-2 hidden xl:table-cell">
-          <EditableCell rowId={service.id} field="notes" value={service.notes} />
-        </td>
-        <td className="px-2 py-2 hidden 2xl:table-cell">
-          <EditableCell rowId={service.id} field="passengersList" value={service.passengersList} />
-        </td>
-        <td className="px-2 py-2 hidden 2xl:table-cell">
-          <EditableCell rowId={service.id} field="originalTransportDate" value={service.originalTransportDate} />
-        </td>
-        {/* Lifecycle actions */}
-        <td className="px-2 py-2 w-[120px]">
-          {service.status === 'Importado' && (
-            <span className="text-[10px] text-on-surface-variant italic">Asignar conductor</span>
-          )}
-          {service.status === 'Asignado' && (
-            <button
-              onClick={() => handleLifecycleTransition(service.id, 'confirmService')}
-              disabled={!!lifecycleLoading[service.id]}
-              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer disabled:opacity-50"
-            >
-              {lifecycleLoading[service.id] === 'confirmService' ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
-              Confirmar
-            </button>
-          )}
-          {service.status === 'Confirmado' && (
-            <button
-              onClick={() => handleLifecycleTransition(service.id, 'startService')}
-              disabled={!!lifecycleLoading[service.id]}
-              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors cursor-pointer disabled:opacity-50"
-            >
-              {lifecycleLoading[service.id] === 'startService' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
-              Iniciar
-            </button>
-          )}
-          {service.status === 'EnRuta' && (
-            <button
-              onClick={() => handleLifecycleTransition(service.id, 'completeService')}
-              disabled={!!lifecycleLoading[service.id]}
-              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer disabled:opacity-50"
-            >
-              {lifecycleLoading[service.id] === 'completeService' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Pause className="w-3 h-3" />}
-              Completar
-            </button>
-          )}
-          {service.status === 'Reportado' && (
-            <button
-              onClick={() => handleLifecycleTransition(service.id, 'validateService')}
-              disabled={!!lifecycleLoading[service.id]}
-              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 transition-colors cursor-pointer disabled:opacity-50"
-            >
-              {lifecycleLoading[service.id] === 'validateService' ? <Loader2 className="w-3 h-3 animate-spin" /> : <BadgeCheck className="w-3 h-3" />}
-              Validar
-            </button>
-          )}
-          {['Realizado', 'Validado'].includes(service.status) && (
-            <span className="flex items-center gap-1 text-[10px] text-emerald-600">
-              <CheckCircle className="w-3 h-3" /> Completado
-            </span>
-          )}
-        </td>
-      </tr>
-    );
   };
 
   // --- Render ---
@@ -2039,211 +1254,15 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
 
         {/* History — show below upload when on upload step */}
         {step === 'upload' && (
-          <div className="mt-6">
-            <h3 className="text-[13px] font-semibold text-on-surface mb-3 flex items-center gap-2">
-              <FileSpreadsheet className="w-4 h-4 text-primary" />
-              Transport History
-            </h3>
-            {loadingHistory ? (
-              <div className="flex items-center justify-center py-8 text-on-surface-variant text-[12px]">
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                Loading history...
-              </div>
-            ) : history.length === 0 ? (
-              <div className="text-center py-8 text-on-surface-variant text-[12px] border border-dashed border-outline-variant rounded-lg">
-                No transport lists imported yet
-              </div>
-            ) : (
-              <>
-                {/* Desktop: table view */}
-                <div className="hidden md:block border border-outline-variant rounded-lg overflow-hidden">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="bg-surface-dim text-on-surface-variant text-[11px] font-medium border-b border-outline-variant">
-                        <th className="px-3 py-2">Date</th>
-                        <th className="px-3 py-2">File</th>
-                        <th className="px-3 py-2">Production</th>
-                        <th className="px-3 py-2">Services</th>
-                        <th className="px-3 py-2">Drivers</th>
-                        <th className="px-3 py-2">Status</th>
-                        <th className="px-3 py-2">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-[12px] text-on-surface divide-y divide-outline-variant/50">
-                      {history.slice(0, 20).map((entry) => (
-                        <tr key={entry.id || entry.fileName} className="hover:bg-surface-dim/50 transition-colors">
-                       <td className="px-3 py-2 whitespace-nowrap text-[11px]">
-                             <span className="text-on-surface-variant">Import</span>{' '}
-                             <span className="font-medium text-on-surface">{formatImportDate(entry.importDate)}</span>
-                             {entry.dateRange && (
-                               <>
-                                 <span className="text-on-surface-variant mx-1">·</span>
-                                 <span className="text-on-surface-variant">Servicios del</span>{' '}
-                                 <span className="font-medium text-on-surface">{formatServiceDate(entry.dateRange)}</span>
-                               </>
-                             )}
-                           </td>
-                          <td className="px-3 py-2 truncate max-w-[200px] font-medium">
-                            {entry.fileName || '—'}
-                          </td>
-                          <td className="px-3 py-2 truncate max-w-[150px] text-on-surface-variant">
-                            {entry.production || '—'}
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            {entry.totalServices || 0}
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            {entry.totalDrivers || 0}
-                          </td>
-                          <td className="px-3 py-2">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                              entry.status === 'registered' 
-                                ? 'bg-emerald-100 text-emerald-700' 
-                                : 'bg-amber-100 text-amber-700'
-                            }`}>
-                              {entry.status || 'parsed'}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2">
-                            <button
-                              onClick={() => handleViewHistory(entry)}
-                              className="text-primary hover:text-primary/80 text-[11px] font-medium underline cursor-pointer"
-                            >
-                              View
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {history.length > 20 && (
-                    <div className="px-3 py-2 text-center text-[11px] text-on-surface-variant border-t border-outline-variant">
-                      Showing 20 of {history.length} entries
-                    </div>
-                  )}
-                </div>
-
-                {/* Mobile: card view */}
-                <div className="md:hidden space-y-2">
-                  {history.slice(0, 10).map((entry) => (
-                    <div
-                      key={entry.id || entry.fileName}
-                      className="border border-outline-variant rounded-lg p-3 bg-surface-container-lowest active:bg-surface-dim transition-colors"
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                       <span className="text-[11px] text-on-surface-variant">
-                           <span className="font-medium text-on-surface">{formatImportDate(entry.importDate)}</span>
-                           {entry.dateRange && (
-                             <>
-                               <span className="mx-1">·</span>
-                               <span className="text-on-surface-variant">Servicios del</span>{' '}
-                               <span className="font-medium">{formatServiceDate(entry.dateRange)}</span>
-                             </>
-                           )}
-                         </span>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                          entry.status === 'registered' 
-                            ? 'bg-emerald-100 text-emerald-700' 
-                            : 'bg-amber-100 text-amber-700'
-                        }`}>
-                          {entry.status || 'parsed'}
-                        </span>
-                      </div>
-                      <p className="text-[13px] font-semibold text-on-surface truncate">
-                        {entry.production || '—'}
-                      </p>
-                      <p className="text-[11px] text-on-surface-variant truncate mt-0.5">
-                        {entry.fileName || '—'}
-                      </p>
-                      <div className="flex items-center justify-between mt-2">
-                        <div className="flex items-center gap-3 text-[11px] text-on-surface-variant">
-                          <span>{entry.totalServices || 0} services</span>
-                          <span>{entry.totalDrivers || 0} drivers</span>
-                        </div>
-                        <button
-                          onClick={() => handleViewHistory(entry)}
-                          className="text-[12px] font-medium text-primary px-3 py-1 rounded-lg border border-primary/30 hover:bg-primary/5 transition-colors cursor-pointer"
-                        >
-                          View
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  {history.length > 10 && (
-                    <div className="text-center text-[11px] text-on-surface-variant py-2">
-                      Showing 10 of {history.length} entries
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* History Preview Overlay */}
-        {viewingHistory && (
-          <div className="mt-6 border-2 border-primary/30 rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 bg-primary/5 border-b border-primary/20">
-              <div className="flex items-center gap-3">
-                <FileSpreadsheet className="w-4 h-4 text-primary" />
-                <span className="text-[13px] font-semibold text-on-surface">
-                  {viewingHistory.entry.production || 'Transport'}
-                </span>
-               <span className="text-[11px] text-on-surface-variant">
-                   {viewingHistory.entry.dateRange ? formatServiceDate(viewingHistory.entry.dateRange) : (viewingHistory.entry.importDate ? formatImportDate(viewingHistory.entry.importDate) : '')}
-                 </span>
-                <span className="text-[11px] text-on-surface-variant">
-                  {viewingHistory.services.length} services
-                </span>
-              </div>
-              <button
-                onClick={() => setViewingHistory(null)}
-                className="text-on-surface-variant hover:text-on-surface text-[12px] px-2 py-1 rounded hover:bg-surface-dim cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-            <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-              <table className="w-full text-left">
-                <thead className="sticky top-0 bg-surface-dim z-10">
-                  <tr className="text-[11px] font-medium text-on-surface-variant border-b border-outline-variant">
-                    <th className="px-3 py-2">Vehicle</th>
-                    <th className="px-3 py-2">Driver</th>
-                    <th className="px-3 py-2">Time</th>
-                    <th className="px-3 py-2">Passengers</th>
-                    <th className="px-3 py-2">From</th>
-                    <th className="px-3 py-2">To</th>
-                    <th className="px-3 py-2">Section</th>
-                  </tr>
-                </thead>
-                <tbody className="text-[12px] divide-y divide-outline-variant/30">
-                  {viewingHistory.services.map((s) => (
-                    <tr key={s.id} className="hover:bg-surface-dim/30">
-                      <td className="px-3 py-1.5 font-medium">{s.vehicle || '—'}</td>
-                      <td className="px-3 py-1.5">{s.driver || <span className="text-red-500 italic">(vacío)</span>}</td>
-                      <td className="px-3 py-1.5">{formatTimeDisplay(s.time || '') || '—'}</td>
-                      <td className="px-3 py-1.5">
-                        {Array.isArray(s.passengers) && s.passengers.length > 0
-                          ? s.passengers.map((p: any) => typeof p === 'string' ? p : p.name).join(', ')
-                          : typeof s.passengers === 'string' ? s.passengers : '—'}
-                      </td>
-                      <td className="px-3 py-1.5 max-w-[200px] truncate">
-                        {Array.isArray(s.pickupLines) && s.pickupLines.length > 0
-                          ? s.pickupLines.join('; ')
-                          : s.from || '—'}
-                      </td>
-                      <td className="px-3 py-1.5 max-w-[200px] truncate">
-                        {Array.isArray(s.dropoffLines) && s.dropoffLines.length > 0
-                          ? s.dropoffLines.join('; ')
-                          : s.to || '—'}
-                      </td>
-                      <td className="px-3 py-1.5 text-on-surface-variant">{s.section || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <TransportListHistoryTable
+            history={history}
+            loadingHistory={loadingHistory}
+            viewingHistory={viewingHistory}
+            onViewHistory={handleViewHistory}
+            onClosePreview={() => setViewingHistory(null)}
+            formatImportDate={formatImportDate}
+            formatServiceDate={formatServiceDate}
+          />
         )}
 
         {/* STEP: Preview & Edit */}
@@ -2317,638 +1336,169 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
               </div>
 
               {/* Filters bar */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-on-surface-variant" />
-                  <input
-                    type="date"
-                    value={filterDateFrom}
-                    onChange={e => setFilterDateFrom(e.target.value)}
-                    placeholder="From"
-                    className="px-2 py-1 bg-surface border border-outline-variant rounded text-[11px] text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                  <span className="text-on-surface-variant text-[11px]">—</span>
-                  <input
-                    type="date"
-                    value={filterDateTo}
-                    onChange={e => setFilterDateTo(e.target.value)}
-                    placeholder="To"
-                    className="px-2 py-1 bg-surface border border-outline-variant rounded text-[11px] text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Driver..."
-                  value={filterDriver}
-                  onChange={e => setFilterDriver(e.target.value)}
-                  className="px-2 py-1 bg-surface border border-outline-variant rounded text-[11px] text-on-surface w-24 focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-                <select
-                  value={filterOperatingCompany}
-                  onChange={e => setFilterOperatingCompany(e.target.value)}
-                  className="px-2 py-1 bg-surface border border-outline-variant rounded text-[11px] text-on-surface focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                >
-                  <option value="">All Companies</option>
-                  <option value="TA">TA</option>
-                  <option value="MM">MM</option>
-                </select>
-                <select
-                  value={filterStatus}
-                  onChange={e => setFilterStatus(e.target.value)}
-                  className="px-2 py-1 bg-surface border border-outline-variant rounded text-[11px] text-on-surface focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                >
-                  <option value="">All Status</option>
-                  <option value="Importado">Importado</option>
-                  <option value="Asignado">Asignado</option>
-                  <option value="Confirmado">Confirmado</option>
-                  <option value="EnRuta">En Ruta</option>
-                  <option value="Realizado">Realizado</option>
-                  <option value="Reportado">Reportado</option>
-                  <option value="Revision">Revisión</option>
-                  <option value="Validado">Validado</option>
-                  <option value="Cancelado">Cancelado</option>
-                </select>
-                <select
-                  value={filterProject}
-                  onChange={e => setFilterProject(e.target.value)}
-                  className="px-2 py-1 bg-surface border border-outline-variant rounded text-[11px] text-on-surface focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                >
-                  <option value="">All Projects</option>
-                  {[...new Set(services.map(s => s.project).filter(Boolean))].map(p => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-                <select
-                  value={filterFinancialStatus}
-                  onChange={e => setFilterFinancialStatus(e.target.value)}
-                  className="px-2 py-1 bg-surface border border-outline-variant rounded text-[11px] text-on-surface focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                >
-                  <option value="">All Financial</option>
-                  <option value="Pendiente">Pendiente</option>
-                  <option value="Calculado">Calculado</option>
-                  <option value="Confrontacion">Confrontacion</option>
-                  <option value="ActualsConfirmados">ActualsConfirmados</option>
-                  <option value="Aprobado">Aprobado</option>
-                  <option value="Facturable">Facturable</option>
-                  <option value="Facturado">Facturado</option>
-                  <option value="Cobrado">Cobrado</option>
-                  <option value="Cerrado">Cerrado</option>
-                  <option value="CerradoComercial">CerradoComercial</option>
-                </select>
-                {(filterDateFrom || filterDateTo || filterDriver || filterOperatingCompany || filterStatus || filterProject || filterFinancialStatus) && (
-                  <button
-                    onClick={() => { setFilterDateFrom(''); setFilterDateTo(''); setFilterDriver(''); setFilterOperatingCompany(''); setFilterStatus(''); setFilterProject(''); setFilterFinancialStatus(''); }}
-                    className="text-[11px] text-primary hover:text-primary-hover font-medium cursor-pointer"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
+              <TransportListFilterBar
+                filterDateFrom={filterDateFrom}
+                filterDateTo={filterDateTo}
+                filterDriver={filterDriver}
+                filterOperatingCompany={filterOperatingCompany}
+                filterStatus={filterStatus}
+                filterProject={filterProject}
+                filterFinancialStatus={filterFinancialStatus}
+                services={services}
+                onDateFromChange={setFilterDateFrom}
+                onDateToChange={setFilterDateTo}
+                onDriverChange={setFilterDriver}
+                onOperatingCompanyChange={setFilterOperatingCompany}
+                onStatusChange={setFilterStatus}
+                onProjectChange={setFilterProject}
+                onFinancialStatusChange={setFilterFinancialStatus}
+                onClear={() => {
+                  setFilterDateFrom('');
+                  setFilterDateTo('');
+                  setFilterDriver('');
+                  setFilterOperatingCompany('');
+                  setFilterStatus('');
+                  setFilterProject('');
+                  setFilterFinancialStatus('');
+                }}
+              />
 
               {/* Right: Secondary actions — hidden on mobile, shown in overflow menu */}
-              <div className="hidden md:flex items-center gap-2 flex-wrap">
-                {/* Roles toggle */}
-                <button
-                  onClick={() => setShowRoles(!showRoles)}
-                  className={`flex items-center gap-1 text-[12px] px-2 py-1 rounded border transition-colors cursor-pointer ${
-                    showRoles 
-                      ? 'bg-primary/10 border-primary text-primary' 
-                      : 'border-outline-variant text-on-surface-variant hover:border-primary'
-                  }`}
-                >
-                  {showRoles ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                  Roles
-                </button>
-
-                {/* Grouped view toggle */}
-                <button
-                  onClick={toggleViewMode}
-                  className={`flex items-center gap-1 text-[12px] px-2 py-1 rounded border transition-colors cursor-pointer ${
-                    viewMode === 'grouped'
-                      ? 'bg-primary/10 border-primary text-primary'
-                      : 'border-outline-variant text-on-surface-variant hover:border-primary'
-                  }`}
-                  title={viewMode === 'grouped' ? 'Vista agrupada (movements como sub-filas)' : 'Vista plana (una fila por servicio)'}
-                >
-                  {viewMode === 'grouped' ? <ListTree className="w-3.5 h-3.5" /> : <LayoutList className="w-3.5 h-3.5" />}
-                  {viewMode === 'grouped' ? 'Agrupada' : 'Plana'}
-                </button>
-                {viewMode === 'grouped' && (
-                  <>
-                    <button onClick={expandAllGrouped} className="text-[11px] text-primary hover:text-primary-hover font-medium cursor-pointer" title="Expand all">
-                      Expand
-                    </button>
-                    <button onClick={collapseAllGrouped} className="text-[11px] text-primary hover:text-primary-hover font-medium cursor-pointer" title="Collapse all">
-                      Collapse
-                    </button>
-                  </>
-                )}
-
-                {/* Generate PDF */}
-                <button
-                  onClick={handleExportPdf}
-                  disabled={selectedRows.size === 0}
-                  className="flex items-center gap-1 text-[12px] px-2 py-1 rounded border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  PDF
-                </button>
-
-                {/* Print */}
-                <button
-                  onClick={() => setShowPrintPreview(true)}
-                  disabled={selectedRows.size === 0}
-                  className="flex items-center gap-1 text-[12px] px-2 py-1 rounded border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  Print
-                </button>
-
-                {/* Excel dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowExportMenu(!showExportMenu); setShowWhatsAppMenu(false); setShowMoreMenu(false); }}
-                    disabled={selectedRows.size === 0 || isExporting}
-                    className="flex items-center gap-1 text-[12px] px-2 py-1 rounded border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />}
-                    {isExporting ? 'Exporting...' : 'Excel'}
-                    {!isExporting && <ChevronDown className="w-3 h-3" />}
-                  </button>
-                  {showExportMenu && (
-                    <div onClick={(e) => e.stopPropagation()} className="absolute right-0 top-full mt-1 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg z-50 py-1 min-w-[180px]">
-                      <button
-                        onClick={handleExportExcel}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-on-surface hover:bg-surface-dim transition-colors cursor-pointer"
-                      >
-                        <FileSpreadsheet className="w-3.5 h-3.5" />
-                        Export as Excel
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* WhatsApp dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowWhatsAppMenu(!showWhatsAppMenu); setShowExportMenu(false); setShowMoreMenu(false); }}
-                    disabled={selectedRows.size === 0}
-                    className="flex items-center gap-1 text-[12px] px-2 py-1 rounded border border-emerald-300 text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    WhatsApp
-                    <ChevronDown className="w-3 h-3" />
-                  </button>
-                  {showWhatsAppMenu && (
-                    <div onClick={(e) => e.stopPropagation()} className="absolute right-0 top-full mt-1 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg z-50 py-1 min-w-[200px]">
-                      {[...new Set(services.filter(s => selectedRows.has(s.id)).map(s => s.driver).filter(Boolean))].map((driver: string) => (
-                        <button
-                          key={driver}
-                          onClick={() => { handleWhatsAppDriver(driver); setShowWhatsAppMenu(false); }}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-on-surface hover:bg-surface-dim transition-colors cursor-pointer"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                          Send to {driver}
-                        </button>
-                      ))}
-                      <div className="border-t border-outline-variant my-1"></div>
-                      <button
-                        onClick={handleWhatsAppGroup}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-on-surface hover:bg-surface-dim transition-colors cursor-pointer"
-                      >
-                        <Users className="w-3.5 h-3.5 text-emerald-600" />
-                        Copy for Group
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Email */}
-                <button
-                  onClick={() => setShowEmailModal(true)}
-                  disabled={selectedRows.size === 0}
-                  className="flex items-center gap-1 text-[12px] px-2 py-1 rounded border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Mail className="w-3.5 h-3.5" />
-                  Email
-                </button>
-
-                {/* Agency */}
-                <button
-                  onClick={openAgencyModal}
-                  disabled={selectedRows.size === 0}
-                  className="flex items-center gap-1 text-[12px] px-2 py-1 rounded border border-amber-300 text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Building2 className="w-3.5 h-3.5" />
-                  Agency
-                </button>
-
-                {/* Remove */}
-                {selectedRows.size > 0 && (
-                  <button
-                    onClick={removeSelectedRows}
-                    className="flex items-center gap-1 text-[12px] px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Remove ({selectedRows.size})
-                  </button>
-                )}
-              </div>
+              <TransportListDesktopActions
+                showRoles={showRoles}
+                viewMode={viewMode}
+                selectedCount={selectedRows.size}
+                isExporting={isExporting}
+                showExportMenu={showExportMenu}
+                showWhatsAppMenu={showWhatsAppMenu}
+                services={services}
+                selectedRows={selectedRows}
+                onToggleRoles={() => setShowRoles(!showRoles)}
+                onToggleViewMode={toggleViewMode}
+                onExpandAll={expandAllGrouped}
+                onCollapseAll={collapseAllGrouped}
+                onExportPdf={handleExportPdf}
+                onPrint={() => setShowPrintPreview(true)}
+                onExportExcel={handleExportExcel}
+                onToggleExportMenu={() => { setShowExportMenu(!showExportMenu); setShowWhatsAppMenu(false); setShowMoreMenu(false); }}
+                onToggleWhatsAppMenu={() => { setShowWhatsAppMenu(!showWhatsAppMenu); setShowExportMenu(false); setShowMoreMenu(false); }}
+                onWhatsAppDriver={handleWhatsAppDriver}
+                onWhatsAppGroup={handleWhatsAppGroup}
+                onOpenEmail={() => setShowEmailModal(true)}
+                onOpenAgency={openAgencyModal}
+                onRemoveSelected={removeSelectedRows}
+              />
 
               {/* Mobile: Overflow "More" menu */}
-              <div className="md:hidden relative">
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowMoreMenu(!showMoreMenu); setShowExportMenu(false); setShowWhatsAppMenu(false); }}
-                  className="flex items-center gap-1 text-[12px] px-2 py-1.5 rounded border border-outline-variant text-on-surface-variant hover:border-primary transition-colors cursor-pointer"
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </button>
-                {showMoreMenu && (
-                  <div onClick={(e) => e.stopPropagation()} className="absolute right-0 top-full mt-1 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-xl z-50 py-1 min-w-[200px]">
-                    {/* Roles */}
-                    <button
-                      onClick={() => { setShowRoles(!showRoles); setShowMoreMenu(false); }}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 text-[12px] text-on-surface hover:bg-surface-dim transition-colors cursor-pointer"
-                    >
-                      {showRoles ? <Eye className="w-4 h-4 text-primary" /> : <EyeOff className="w-4 h-4" />}
-                      {showRoles ? 'Hide Roles' : 'Show Roles'}
-                    </button>
-                    {/* PDF */}
-                    <button
-                      onClick={() => { handleExportPdf(); setShowMoreMenu(false); }}
-                      disabled={selectedRows.size === 0}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 text-[12px] text-on-surface hover:bg-surface-dim transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download PDF
-                    </button>
-                    {/* Print */}
-                    <button
-                      onClick={() => { setShowPrintPreview(true); setShowMoreMenu(false); }}
-                      disabled={selectedRows.size === 0}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 text-[12px] text-on-surface hover:bg-surface-dim transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      <Printer className="w-4 h-4" />
-                      Print Preview
-                    </button>
-                    {/* Excel */}
-                    <button
-                      onClick={() => { handleExportExcel(); setShowMoreMenu(false); }}
-                      disabled={selectedRows.size === 0 || isExporting}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 text-[12px] text-on-surface hover:bg-surface-dim transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      <FileSpreadsheet className="w-4 h-4" />
-                      Export Excel
-                    </button>
-                    <div className="border-t border-outline-variant my-1"></div>
-                    {/* WhatsApp */}
-                    <button
-                      onClick={() => { handleWhatsAppGroup(); setShowMoreMenu(false); }}
-                      disabled={selectedRows.size === 0}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 text-[12px] text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                      Copy WhatsApp Group
-                    </button>
-                    {/* Email */}
-                    <button
-                      onClick={() => { setShowEmailModal(true); setShowMoreMenu(false); }}
-                      disabled={selectedRows.size === 0}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 text-[12px] text-on-surface hover:bg-surface-dim transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      <Mail className="w-4 h-4" />
-                      Send Email
-                    </button>
-                    {/* Agency */}
-                    <button
-                      onClick={() => { openAgencyModal(); setShowMoreMenu(false); }}
-                      disabled={selectedRows.size === 0}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 text-[12px] text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      <Building2 className="w-4 h-4" />
-                      Send to Agency
-                    </button>
-                    {selectedRows.size > 0 && (
-                      <>
-                        <div className="border-t border-outline-variant my-1"></div>
-                        <button
-                          onClick={() => { removeSelectedRows(); setShowMoreMenu(false); }}
-                          className="w-full flex items-center gap-2 px-3 py-2.5 text-[12px] text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Remove ({selectedRows.size})
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
+              <TransportListMobileMoreMenu
+                showMoreMenu={showMoreMenu}
+                showRoles={showRoles}
+                selectedCount={selectedRows.size}
+                isExporting={isExporting}
+                onToggleMenu={() => { setShowMoreMenu(!showMoreMenu); setShowExportMenu(false); setShowWhatsAppMenu(false); }}
+                onToggleRoles={() => { setShowRoles(!showRoles); setShowMoreMenu(false); }}
+                onExportPdf={() => { handleExportPdf(); setShowMoreMenu(false); }}
+                onPrint={() => { setShowPrintPreview(true); setShowMoreMenu(false); }}
+                onExportExcel={() => { handleExportExcel(); setShowMoreMenu(false); }}
+                onWhatsAppGroup={() => { handleWhatsAppGroup(); setShowMoreMenu(false); }}
+                onOpenEmail={() => { setShowEmailModal(true); setShowMoreMenu(false); }}
+                onOpenAgency={() => { openAgencyModal(); setShowMoreMenu(false); }}
+                onRemoveSelected={() => { removeSelectedRows(); setShowMoreMenu(false); }}
+              />
             </div>
 
-            {/* Services — Desktop: table, Mobile: cards */}
-            {(() => {
-              // Group services by section, preserving order
-              const sectionMap = new Map<string, typeof filteredServices>();
-              const noSection: typeof filteredServices = [];
-              for (const svc of filteredServices) {
-                const sec = svc.section || '';
-                if (!sec) {
-                  noSection.push(svc);
-                } else {
-                  if (!sectionMap.has(sec)) sectionMap.set(sec, []);
-                  sectionMap.get(sec)!.push(svc);
+            {/* Services — Desktop: table */}
+            <ServiceTableRows
+              services={services}
+              filteredServices={filteredServices}
+              selectedRows={selectedRows}
+              showRoles={showRoles}
+              viewMode={viewMode}
+              expandedServices={expandedServices}
+              dbDrivers={dbDrivers}
+              editingCell={editingCell}
+              editValue={editValue}
+              lifecycleLoading={lifecycleLoading}
+              onToggleRowSelection={toggleRowSelection}
+              onToggleServiceExpand={toggleServiceExpand}
+              onToggleAllSelection={toggleAllSelection}
+              onStartEdit={startEdit}
+              onEditValueChange={setEditValue}
+              onSaveEdit={saveEdit}
+              onEditKeyDown={handleEditKeyDown}
+              onDriverUpdate={handleDriverUpdate}
+              onVehicleTypeUpdate={handleVehicleTypeUpdate}
+              onServiceTypeUpdate={handleServiceTypeUpdate}
+              onOperatingCompanyUpdate={handleOperatingCompanyUpdate}
+              onLifecycleTransition={handleLifecycleTransition}
+            />
+
+            {/* Services — Mobile: cards */}
+            <div className="md:hidden space-y-2">
+              <div className="flex items-center justify-between px-1 py-1">
+                <button
+                  onClick={toggleAllSelection}
+                  className="text-[12px] text-primary font-medium cursor-pointer"
+                >
+                  {selectedRows.size === filteredServices.length ? 'Deselect All' : 'Select All'}
+                </button>
+                <span className="text-on-surface-variant text-[11px]">{selectedRows.size} of {filteredServices.length}</span>
+              </div>
+
+              {(() => {
+                const sectionMap = new Map<string, typeof filteredServices>();
+                const noSection: typeof filteredServices = [];
+                for (const svc of filteredServices) {
+                  const sec = svc.section || '';
+                  if (!sec) {
+                    noSection.push(svc);
+                  } else {
+                    if (!sectionMap.has(sec)) sectionMap.set(sec, []);
+                    sectionMap.get(sec)!.push(svc);
+                  }
                 }
-              }
 
-              const getSectionStyle = (name: string): string => {
-                const upper = name.toUpperCase();
-                if (upper.indexOf('ARRIVALS') > -1 || upper.indexOf('DEPARTURES') > -1) return 'bg-[#7ecfc0] text-black';
-                if (upper === 'PUGLIA') return 'bg-[#a8d8ea] text-black';
-                return 'bg-[#c6d44e] text-black';
-              };
+                const getSectionStyleMobile = (name: string): string => {
+                  const upper = name.toUpperCase();
+                  if (upper.indexOf('ARRIVALS') > -1 || upper.indexOf('DEPARTURES') > -1) return 'bg-[#7ecfc0]';
+                  if (upper === 'PUGLIA') return 'bg-[#a8d8ea]';
+                  return 'bg-[#c6d44e]';
+                };
 
-              const getSectionStyleMobile = (name: string): string => {
-                const upper = name.toUpperCase();
-                if (upper.indexOf('ARRIVALS') > -1 || upper.indexOf('DEPARTURES') > -1) return 'bg-[#7ecfc0]';
-                if (upper === 'PUGLIA') return 'bg-[#a8d8ea]';
-                return 'bg-[#c6d44e]';
-              };
+                const orderedGroups: { section: string; services: typeof services }[] = [];
+                for (const [secName, secServices] of sectionMap) {
+                  orderedGroups.push({ section: secName, services: secServices });
+                }
+                if (noSection.length > 0) {
+                  orderedGroups.push({ section: '', services: noSection });
+                }
 
-              // Build ordered list of [sectionName, services[]] pairs
-              const orderedGroups: { section: string; services: typeof services }[] = [];
-              for (const [secName, secServices] of sectionMap) {
-                orderedGroups.push({ section: secName, services: secServices });
-              }
-              if (noSection.length > 0) {
-                orderedGroups.push({ section: '', services: noSection });
-              }
-
-              return (
-                <>
-                  {/* Desktop: table view */}
-                  <div className="hidden md:block bg-surface-container-lowest rounded-lg border border-outline-variant">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                      <tr className="bg-surface-dim text-on-surface-variant text-[11px] font-medium border-b border-outline-variant uppercase tracking-wide">
-                        <th className="px-2 py-2 w-8">
-                          <input 
-                            type="checkbox" 
-                            checked={selectedRows.size === services.filter(s => !isServiceCompleted(s)).length && services.filter(s => !isServiceCompleted(s)).length > 0}
-                            onChange={toggleAllSelection}
-                            className="rounded cursor-pointer"
-                          />
-                        </th>
-                        <th className="px-2 py-2">Vehicle</th>
-                        <th className="px-2 py-2 hidden lg:table-cell">Vehicle Type</th>
-                        <th className="px-2 py-2 hidden lg:table-cell">Service Type</th>
-                        <th className="px-2 py-2">Driver</th>
-                        <th className="px-2 py-2 hidden lg:table-cell">Phone</th>
-                        <th className="px-2 py-2 w-[60px]">Time</th>
-                        <th className="px-2 py-2">Passengers</th>
-                        {showRoles && <th className="px-2 py-2 hidden xl:table-cell">Roles</th>}
-                        <th className="px-2 py-2 hidden md:table-cell">From</th>
-                        <th className="px-2 py-2 hidden md:table-cell">To</th>
-                        <th className="px-2 py-2">Company</th>
-                        <th className="px-2 py-2 hidden xl:table-cell">Flight</th>
-                        <th className="px-2 py-2 hidden xl:table-cell">Notes</th>
-                        <th className="px-2 py-2 hidden 2xl:table-cell">Pax List</th>
-                        <th className="px-2 py-2 hidden 2xl:table-cell">Orig. Date</th>
-                        <th className="px-2 py-2 w-[120px]">Actions</th>
-                      </tr>
-                        </thead>
-                        <tbody className="text-[12px] text-on-surface divide-y divide-outline-variant/50">
-                          {orderedGroups.map((group) => (
-                            <React.Fragment key={group.section || 'nosection'}>
-                              {group.section && (
-                                <tr>
-                                  <td colSpan={showRoles ? 17 : 16} className={`px-3 py-1 text-center text-[11px] font-bold ${getSectionStyle(group.section)}`} style={{ border: '1px solid #000' }}>
-                                    {group.section}
-                                  </td>
-                                </tr>
-                              )}
-                              {group.services.map((service, idx) => viewMode === 'grouped'
-                                ? renderServiceBlock(service, selectedRows.has(service.id), idx)
-                                : renderServiceRow(service, selectedRows.has(service.id), idx)
-                              )}
-                            </React.Fragment>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Mobile: card view */}
-                  <div className="md:hidden space-y-2">
-                    {/* Select all on mobile */}
-                    <div className="flex items-center justify-between px-1 py-1">
-                      <button
-                        onClick={toggleAllSelection}
-                        className="text-[12px] text-primary font-medium cursor-pointer"
-                      >
-                        {selectedRows.size === filteredServices.length ? 'Deselect All' : 'Select All'}
-                      </button>
-                      <span className="text-on-surface-variant text-[11px]">{selectedRows.size} of {filteredServices.length}</span>
-                    </div>
-
-                    {orderedGroups.map((group) => (
-                      <React.Fragment key={group.section || 'nosection'}>
-                        {group.section && (
-                          <div className={`px-3 py-1.5 rounded-md text-center text-[11px] font-bold ${getSectionStyleMobile(group.section)}`} style={{ border: '1px solid #000' }}>
-                            {group.section}
-                          </div>
-                        )}
-                        {group.services.map((service) => {
-                          const isSelected = selectedRows.has(service.id);
-                          const hasDriver = !!(service.driver && service.driver.trim());
-                          const firstMov = service.movements?.[0];
-                          return (
-                            <div
-                              key={service.id}
-                              className={`rounded-xl overflow-hidden transition-all ${
-                                isServiceDimmed(service) ? 'bg-gray-50 opacity-60 border border-gray-200' :
-                                isSelected ? 'border-2 border-primary shadow-sm' : 'border border-outline-variant'
-                              }`}
-                            >
-                              {/* Header: time + vehicle + badges */}
-                              <div className={`flex items-center gap-2 px-3 py-2 ${
-                                service.isProduction ? 'bg-gray-100' :
-                                !service.serviceTypeConfirmed ? 'bg-red-50/80' :
-                                'bg-surface-dim/50'
-                              }`}>
-                                {service.selectable !== false && (
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    onChange={() => toggleRowSelection(service.id)}
-                                    onClick={(e) => e.stopPropagation()}
-                                    disabled={isServiceCompleted(service)}
-                                    className={`rounded shrink-0 ${isServiceCompleted(service) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-                                  />
-                                )}
-                                <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md shrink-0">
-                                  {service.time || '??:??'}
-                                </span>
-                                <span className="text-[12px] font-semibold text-on-surface truncate flex-1">
-                                  {service.vehicle || '(sin vehículo)'}
-                                </span>
-                                <div className="flex items-center gap-1 shrink-0">
-                                  {service.section && (
-                                    <span className="text-[8px] font-bold text-on-surface-variant bg-surface-dim px-1.5 py-0.5 rounded uppercase">
-                                      {service.section}
-                                    </span>
-                                  )}
-                                  <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${
-                                    service.vehicleType === 'Walking' ? 'bg-teal-100 text-teal-700' :
-                                    'bg-surface-dim text-on-surface-variant'
-                                  }`}>
-                                    {service.vehicleType || 'Van'}
-                                  </span>
-                                  <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${
-                                    service.isProduction ? 'bg-gray-200 text-gray-600' :
-                                    !service.serviceTypeConfirmed ? 'bg-red-100 text-red-600' :
-                                    service.serviceType === 'Transfer Airport' ? 'bg-blue-100 text-blue-600' :
-                                    service.serviceType === 'Transfer City' ? 'bg-blue-100 text-blue-600' :
-                                    'bg-amber-100 text-amber-700'
-                                  }`}>
-                                    {service.isProduction ? 'PROD' : service.serviceType?.substring(0, 5)?.toUpperCase() || 'DISP'}
-                                    {!service.serviceTypeConfirmed && ' !'}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Driver section */}
-                              <div className={`px-3 py-2.5 flex items-center gap-2.5 ${
-                                !hasDriver ? 'bg-amber-50/70' : 'bg-white'
-                              }`}>
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                                  !hasDriver ? 'bg-amber-200 text-amber-700' :
-                                  'bg-primary/15 text-primary'
-                                }`}>
-                                  {!hasDriver ? '?' : (service.driver || '?').split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase()}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className={`text-[13px] font-semibold leading-tight ${!hasDriver ? 'text-amber-600 italic' : 'text-on-surface'}`}>
-                                    <DriverCell service={service} dbDrivers={dbDrivers} onUpdate={handleDriverUpdate} />
-                                  </div>
-                                  {service.driverPhone && (
-                                    <div className="text-[10px] text-on-surface-variant/70 mt-0.5">
-                                      {service.driverPhone.replace(/^'/, '')}
-                                    </div>
-                                  )}
-                                </div>
-                                <OperatingCompanyCell service={service} onUpdate={handleOperatingCompanyUpdate} />
-                              </div>
-
-                              {/* Route section — first movement */}
-                              {viewMode === 'grouped' && firstMov && (firstMov.passengers?.length > 0 || firstMov.pickupLines?.length > 0 || firstMov.dropoffLines?.length > 0) && (
-                                <div className="px-3 py-2 border-t border-outline-variant/30 bg-white">
-                                  {firstMov.passengers && firstMov.passengers.length > 0 && (
-                                    <div className="text-[11px] text-on-surface mb-1">
-                                      {firstMov.passengers.map((p, pi) => (
-                                        <span key={p.name}>
-                                          {pi > 0 && '; '}
-                                          <span className="font-medium">{p.name}</span>
-                                          {p.role && <span className="text-on-surface-variant/50 text-[10px]"> {p.role}</span>}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  )}
-                                  {(firstMov.pickupLines?.length > 0 || firstMov.dropoffLines?.length > 0) && (
-                                    <div className="text-[10px] text-on-surface-variant/70 space-y-0.5">
-                                      <div className="flex items-start gap-1">
-                                        {service.pickupMapsUrl && (
-                                          <a href={service.pickupMapsUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-primary/60 hover:text-primary mt-0.5">
-                                            <MapPin className="w-3 h-3" />
-                                          </a>
-                                        )}
-                                        <span className="line-clamp-2">{firstMov.pickupLines?.join('; ')}</span>
-                                      </div>
-                                      <div className="flex items-start gap-1">
-                                        {service.dropoffMapsUrl && (
-                                          <a href={service.dropoffMapsUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-primary/60 hover:text-primary mt-0.5">
-                                            <MapPin className="w-3 h-3" />
-                                          </a>
-                                        )}
-                                        <span className="line-clamp-2">→ {firstMov.dropoffLines?.join('; ')}</span>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              {/* Flat mode: show all passengers */}
-                              {viewMode !== 'grouped' && (
-                                <div className="px-3 py-2 border-t border-outline-variant/30 bg-white">
-                                  {(Array.isArray(service.passengers) ? service.passengers.length > 0 : !!service.passengers) && (
-                                    <div className="text-[11px] text-on-surface mb-1">
-                                      {passengerDisplay(service.passengers)}
-                                    </div>
-                                  )}
-                                  {(pickupDisplay(service.pickupLines) || dropoffDisplay(service.dropoffLines)) && (
-                                    <div className="text-[10px] text-on-surface-variant/70 flex items-start gap-1">
-                                      {service.pickupMapsUrl && (
-                                        <a href={service.pickupMapsUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-primary/60 hover:text-primary mt-0.5">
-                                          <MapPin className="w-3 h-3" />
-                                        </a>
-                                      )}
-                                      <span className="line-clamp-2">{pickupDisplay(service.pickupLines)} → {dropoffDisplay(service.dropoffLines)}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              {/* Grouped: additional movements */}
-                              {viewMode === 'grouped' && service.movements && service.movements.length > 1 && (
-                                <div className="px-3 py-2 border-t border-outline-variant/30 bg-white">
-                                  <button
-                                    onClick={() => toggleServiceExpand(service.id)}
-                                    className="flex items-center gap-1 text-[10px] font-medium text-primary hover:text-primary-hover cursor-pointer"
-                                  >
-                                    {expandedServices.has(service.id) ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                                    {service.movements.length - 1} movimientos adicionales
-                                  </button>
-                                  {expandedServices.has(service.id) && service.movements.slice(1).map((mov, mi) => {
-                                    const allMovements = service.movements || [];
-                                    const prevMov = allMovements[mi] || allMovements[0];
-                                    const timeChanged = mov.time && mov.time !== (prevMov?.time || '');
-                                    return (
-                                    <div key={mi} className={`ml-2 mt-1.5 pl-2 border-l-2 text-[10px] space-y-0.5 ${timeChanged ? 'border-primary/40' : 'border-primary/15'}`}>
-                                      {timeChanged && (
-                                        <div className="font-bold text-primary text-[11px]">{mov.time}</div>
-                                      )}
-                                      {mov.passengers && mov.passengers.length > 0 && (
-                                        <div className="text-on-surface">
-                                          {mov.passengers.map((p, pi) => (
-                                            <span key={p.name}>
-                                              {pi > 0 && '; '}
-                                              <span className="font-medium">{p.name}</span>
-                                              {p.role && <span className="text-on-surface-variant/50 text-[9px]"> {p.role}</span>}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      )}
-                                      {(mov.pickupLines?.length > 0 || mov.dropoffLines?.length > 0) && (
-                                        <div className="text-on-surface-variant/70 text-[9px]">
-                                          {mov.pickupLines?.join('; ')}
-                                          {mov.pickupLines?.length > 0 && mov.dropoffLines?.length > 0 && ' → '}
-                                          {mov.dropoffLines?.join('; ')}
-                                        </div>
-                                      )}
-                                    </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </React.Fragment>
+                return orderedGroups.map((group) => (
+                  <React.Fragment key={group.section || 'nosection'}>
+                    {group.section && (
+                      <div className={`px-3 py-1.5 rounded-md text-center text-[11px] font-bold ${getSectionStyleMobile(group.section)}`} style={{ border: '1px solid #000' }}>
+                        {group.section}
+                      </div>
+                    )}
+                    {group.services.map((service) => (
+                      <MobileServiceCard
+                        key={service.id}
+                        service={service}
+                        isSelected={selectedRows.has(service.id)}
+                        isExpanded={expandedServices.has(service.id)}
+                        viewMode={viewMode}
+                        dbDrivers={dbDrivers}
+                        isServiceCompleted={isServiceCompleted}
+                        onToggleRowSelection={toggleRowSelection}
+                        onToggleServiceExpand={toggleServiceExpand}
+                        onDriverUpdate={handleDriverUpdate}
+                        onOperatingCompanyUpdate={handleOperatingCompanyUpdate}
+                      />
                     ))}
-                  </div>
-                </>
-              );
-            })()}
+                  </React.Fragment>
+                ));
+              })()}
+            </div>
 
             {/* Summary */}
             <div className="flex flex-wrap items-center gap-4 text-[12px] text-on-surface-variant">
@@ -2979,88 +1529,12 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
             )}
 
             {/* DEBUG: Parser parsing log */}
-            {parsingLog.length > 0 && (
-              <div className="rounded-lg border border-outline-variant overflow-hidden">
-                <button
-                  onClick={() => setShowDebug(!showDebug)}
-                  className="w-full px-3 py-2 text-[11px] font-medium text-on-surface-variant hover:bg-surface-dim flex items-center justify-between cursor-pointer"
-                >
-                  <span>Debug Parser Log ({parsingLog.length} entries)</span>
-                  {showDebug ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                </button>
-                {showDebug && (
-                  <div className="px-3 pb-3 max-h-[400px] overflow-auto">
-                    <table className="w-full text-[10px] border-collapse">
-                      <thead>
-                        <tr className="text-left text-on-surface-variant border-b border-outline-variant">
-                          <th className="px-1 py-0.5">Row</th>
-                          <th className="px-1 py-0.5">Action</th>
-                          <th className="px-1 py-0.5">Vehicle</th>
-                          <th className="px-1 py-0.5">Driver</th>
-                          <th className="px-1 py-0.5">Time</th>
-                          <th className="px-1 py-0.5">Last Vehicle</th>
-                          <th className="px-1 py-0.5">Last Driver</th>
-                          <th className="px-1 py-0.5">Detail</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-outline-variant/30">
-                        {parsingLog.map((entry: any, idx: number) => (
-                          <tr key={idx} className={
-                            entry.action === 'INHERITED' ? 'bg-emerald-50' :
-                            entry.action === 'SAVED' && !entry.vehicle ? 'bg-red-50' :
-                            entry.action === 'SAVED' ? 'bg-surface-dim/30' :
-                            entry.action?.startsWith('SUB_BREAK') ? 'bg-amber-50' :
-                            entry.action === 'NO_INHERIT' ? 'bg-yellow-50' :
-                            ''
-                          }>
-                            <td className="px-1 py-0.5 font-mono">{entry.row}</td>
-                            <td className="px-1 py-0.5 font-medium">{entry.action}</td>
-                            <td className="px-1 py-0.5">{entry.vehicle || '—'}</td>
-                            <td className="px-1 py-0.5">{entry.driver || '—'}</td>
-                            <td className="px-1 py-0.5">{entry.time || '—'}</td>
-                            <td className="px-1 py-0.5">{entry.lastVehicle || '—'}</td>
-                            <td className="px-1 py-0.5">{entry.lastDriver || '—'}</td>
-                            <td className="px-1 py-0.5 max-w-[200px] truncate">{entry.detail || entry.reason || entry.fromRow !== undefined ? `from:${entry.fromRow}` : '—'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {/* Service Summary — shows final parsed state for each service */}
-                    {serviceSummary.length > 0 && (
-                      <div className="mt-3">
-                        <div className="text-[11px] font-semibold text-on-surface mb-1">Service Summary (final parser output):</div>
-                        <table className="w-full text-[10px] border-collapse">
-                          <thead>
-                            <tr className="text-left text-on-surface-variant border-b border-outline-variant">
-                              <th className="px-1 py-0.5">#</th>
-                              <th className="px-1 py-0.5">Vehicle</th>
-                              <th className="px-1 py-0.5">Driver</th>
-                              <th className="px-1 py-0.5">Phone</th>
-                              <th className="px-1 py-0.5">Time</th>
-                              <th className="px-1 py-0.5">Passengers</th>
-                              <th className="px-1 py-0.5">Section</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-outline-variant/30">
-                            {serviceSummary.map((s: any) => (
-                              <tr key={s.idx} className={!s.driver && s.vehicle ? 'bg-amber-50' : ''}>
-                                <td className="px-1 py-0.5 font-mono">{s.idx + 1}</td>
-                                <td className="px-1 py-0.5">{s.vehicle || '—'}</td>
-                                <td className="px-1 py-0.5 font-medium">{s.driver || '(empty)'}</td>
-                                <td className="px-1 py-0.5">{s.driverPhone || '—'}</td>
-                                <td className="px-1 py-0.5">{s.time || '—'}</td>
-                                <td className="px-1 py-0.5 max-w-[200px] truncate">{s.passengers || '—'}</td>
-                                <td className="px-1 py-0.5">{s.section || '—'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+            <TransportListParserDebugPanel
+              parsingLog={parsingLog}
+              serviceSummary={serviceSummary}
+              showDebug={showDebug}
+              onToggleDebug={() => setShowDebug(!showDebug)}
+            />
           </>
         )}
 
@@ -3094,406 +1568,56 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
       </div>
 
       {/* Email Modal */}
-      {showEmailModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-surface-container-lowest rounded-xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant">
-              <h3 className="font-semibold text-on-surface flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                Send Transport List by Email
-              </h3>
-              <button onClick={() => setShowEmailModal(false)} className="text-on-surface-variant hover:text-on-surface cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-[12px] font-medium text-on-surface-variant mb-1">
-                  Recipients (comma separated)
-                </label>
-                <input
-                  type="text"
-                  value={emailRecipients}
-                  onChange={(e) => setEmailRecipients(e.target.value)}
-                  placeholder="email1@example.com, email2@example.com"
-                  className="w-full px-3 py-2 text-[13px] border border-outline-variant rounded-lg bg-white text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-[12px] font-medium text-on-surface-variant mb-1">
-                  Subject
-                </label>
-                <input
-                  type="text"
-                  value={emailSubject}
-                  onChange={(e) => setEmailSubject(e.target.value)}
-                  placeholder={`Transport List — ${dateStr || 'Today'}`}
-                  className="w-full px-3 py-2 text-[13px] border border-outline-variant rounded-lg bg-white text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                />
-              </div>
-              <div className="text-[12px] text-on-surface-variant">
-                {selectedRows.size} servicios serán incluidos como adjunto Excel
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 px-4 py-3 border-t border-outline-variant">
-              <button
-                onClick={() => setShowEmailModal(false)}
-                className="px-3 py-1.5 text-[12px] font-medium border border-outline-variant rounded-lg hover:bg-surface-dim transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSendEmail}
-                disabled={isSending || !emailRecipients.trim()}
-                className="px-3 py-1.5 text-[12px] font-medium bg-primary text-on-primary rounded-lg hover:bg-primary-hover transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-              >
-                {isSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                Send Email
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <TransportListEmailModal
+        isOpen={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
+        onSend={handleSendEmail}
+        recipients={emailRecipients}
+        subject={emailSubject}
+        dateStr={dateStr}
+        selectedCount={selectedRows.size}
+        isSending={isSending}
+        onRecipientsChange={setEmailRecipients}
+        onSubjectChange={setEmailSubject}
+      />
 
-      {/* Agency Modal */}
-      {showAgencyModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-surface-container-lowest rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant">
-              <h3 className="font-semibold text-on-surface flex items-center gap-2">
-                <Building2 className="w-4 h-4" />
-                Send Services to Agency
-              </h3>
-              <button onClick={() => setShowAgencyModal(false)} className="text-on-surface-variant hover:text-on-surface cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-4 space-y-4 overflow-y-auto flex-1">
-              {/* Agency selection */}
-              <div>
-                <label className="block text-[12px] font-medium text-on-surface-variant mb-1">
-                  Select Agency
-                </label>
-                {loadingAgencies ? (
-                  <div className="flex items-center gap-2 text-[12px] text-on-surface-variant py-2">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Loading agencies...
-                  </div>
-                ) : agencies.length === 0 ? (
-                  <div className="text-[12px] text-amber-600 py-2">
-                    No agencies configured. Add them in the Agencies sheet.
-                  </div>
-                ) : (
-                  <select
-                    value={selectedAgency?.name || ''}
-                    onChange={(e) => {
-                      const agency = agencies.find(a => a.name === e.target.value);
-                      setSelectedAgency(agency || null);
-                    }}
-                    className="w-full px-3 py-2 text-[13px] border border-outline-variant rounded-lg bg-white text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                  >
-                    <option value="">Select an agency...</option>
-                    {agencies.map(agency => (
-                      <option key={agency.name} value={agency.name}>
-                        {agency.name} — {agency.contactPerson || agency.email}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
+      <TransportListAgencyModal
+        isOpen={showAgencyModal}
+        onClose={() => setShowAgencyModal(false)}
+        agencies={agencies}
+        agencyServices={agencyServices}
+        selectedAgency={selectedAgency}
+        agencyNotes={agencyNotes}
+        loadingAgencies={loadingAgencies}
+        isSending={isSending}
+        onAgencyChange={setSelectedAgency}
+        onNotesChange={setAgencyNotes}
+        onRemoveService={(id) => setAgencyServices(prev => prev.filter(s => s.id !== id))}
+        onSendWhatsApp={handleWhatsAppAgency}
+        onSendEmail={handleSendToAgency}
+      />
 
-              {/* Services to send */}
-              <div>
-                <label className="block text-[12px] font-medium text-on-surface-variant mb-1">
-                  Services to send ({agencyServices.length})
-                </label>
-                <div className="border border-outline-variant rounded-lg max-h-[200px] overflow-y-auto">
-                  {agencyServices.length === 0 ? (
-                    <div className="text-[12px] text-on-surface-variant p-3 text-center">
-                      No services selected
-                    </div>
-                  ) : (
-                    agencyServices.map((service, i) => (
-                      <div key={service.id} className="px-3 py-2 border-b border-outline-variant/50 last:border-0 text-[12px]">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{service.time} — {service.vehicle}</span>
-                          <button
-                            onClick={() => setAgencyServices(prev => prev.filter(s => s.id !== service.id))}
-                            className="text-red-500 hover:text-red-700 cursor-pointer"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                        <div className="text-on-surface-variant">{passengerDisplay(service.passengers)}</div>
-                        <div className="text-on-surface-variant text-[11px]">{pickupDisplay(service.pickupLines)} → {dropoffDisplay(service.dropoffLines)}</div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+      <TransportListImportModal
+        isOpen={showImportModal}
+        onClose={() => { setShowImportModal(false); setStep('preview'); }}
+        onConfirm={handleImportModalConfirm}
+        production={production}
+        projectName={projectName}
+        selectedCount={selectedRows.size}
+        operatingCompany={importModalOperatingCompany}
+        clientId={importModalClientId}
+        projectId={importModalProjectId}
+        loading={importModalLoading}
+        autoDetected={importModalAutoDetected}
+        onOperatingCompanyChange={setImportModalOperatingCompany}
+        onClientChange={setImportModalClientId}
+        onProjectChange={setImportModalProjectId}
+      />
 
-              {/* Notes */}
-              <div>
-                <label className="block text-[12px] font-medium text-on-surface-variant mb-1">
-                  Notes (optional)
-                </label>
-                <textarea
-                  value={agencyNotes}
-                  onChange={(e) => setAgencyNotes(e.target.value)}
-                  placeholder="Additional notes for the agency..."
-                  rows={2}
-                  className="w-full px-3 py-2 text-[13px] border border-outline-variant rounded-lg bg-white text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
-                />
-              </div>
-
-              {/* Actions */}
-              {selectedAgency && agencyServices.length > 0 && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleWhatsAppAgency}
-                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium border border-emerald-300 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors cursor-pointer"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    Send via WhatsApp
-                  </button>
-                  <button
-                    onClick={handleSendToAgency}
-                    disabled={isSending}
-                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-[12px] font-medium bg-primary text-on-primary rounded-lg hover:bg-primary-hover transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
-                    Send via Email
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex justify-end px-4 py-3 border-t border-outline-variant">
-              <button
-                onClick={() => setShowAgencyModal(false)}
-                className="px-3 py-1.5 text-[12px] font-medium border border-outline-variant rounded-lg hover:bg-surface-dim transition-colors cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Import Modal — Client/Project/OperatingCompany selection */}
-      {showImportModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant">
-              <h3 className="font-semibold text-on-surface flex items-center gap-2">
-                <FileSpreadsheet className="w-4 h-4 text-primary" />
-                Link Import to Project
-              </h3>
-              <button onClick={() => { setShowImportModal(false); setStep('preview'); }} className="text-on-surface-variant hover:text-on-surface cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-4 space-y-4">
-              {/* Production / Project info */}
-              <div className="bg-surface-dim rounded-lg px-3 py-2 text-[12px] space-y-1">
-                {production && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-on-surface-variant font-medium">Production:</span>
-                    <span className="text-on-surface font-semibold">{production}</span>
-                  </div>
-                )}
-                {projectName && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-on-surface-variant font-medium">Project:</span>
-                    <span className="text-on-surface font-semibold italic" style={{ fontFamily: 'Georgia, serif' }}>{projectName}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <span className="text-on-surface-variant font-medium">Services:</span>
-                  <span className="text-on-surface">{selectedRows.size} selected</span>
-                </div>
-              </div>
-
-              {/* OperatingCompany */}
-              <div>
-                <label className="block text-[12px] font-medium text-on-surface-variant mb-1.5">
-                  Operating Company
-                </label>
-                <div className="flex gap-2">
-                  {['TA', 'MM'].map(co => (
-                    <button
-                      key={co}
-                      onClick={() => setImportModalOperatingCompany(co)}
-                      className={`flex-1 px-3 py-2 text-[13px] font-semibold rounded-lg border-2 transition-colors cursor-pointer ${
-                        importModalOperatingCompany === co
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-outline-variant text-on-surface-variant hover:border-primary/50'
-                      }`}
-                    >
-                      {co === 'TA' ? 'Transport Action' : 'Movie Motion'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Client */}
-              <div>
-                <label className="block text-[12px] font-medium text-on-surface-variant mb-1.5">
-                  Client
-                </label>
-                {importModalLoading ? (
-                  <div className="flex items-center gap-2 text-[12px] text-on-surface-variant py-2">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Detecting...
-                  </div>
-                ) : (
-                  <select
-                    value={importModalClientId}
-                    onChange={(e) => setImportModalClientId(e.target.value)}
-                    className="w-full px-3 py-2 text-[13px] border border-outline-variant rounded-lg bg-white text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                  >
-                    <option value="">
-                      {importModalAutoDetected?.client
-                        ? `— Use detected: ${importModalAutoDetected.client.name} —`
-                        : `— Auto-create from "${production || 'production'}" —`}
-                    </option>
-                    {importModalAutoDetected?.clients?.map((c: any) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                )}
-                {importModalAutoDetected?.client && (
-                  <p className="text-[10px] text-emerald-600 mt-1">
-                    Detected: {importModalAutoDetected.client.name}
-                  </p>
-                )}
-              </div>
-
-              {/* Project */}
-              <div>
-                <label className="block text-[12px] font-medium text-on-surface-variant mb-1.5">
-                  Project
-                </label>
-                {importModalLoading ? (
-                  <div className="flex items-center gap-2 text-[12px] text-on-surface-variant py-2">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Detecting...
-                  </div>
-                ) : (
-                  <select
-                    value={importModalProjectId}
-                    onChange={(e) => setImportModalProjectId(e.target.value)}
-                    className="w-full px-3 py-2 text-[13px] border border-outline-variant rounded-lg bg-white text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                  >
-                    <option value="">
-                      {importModalAutoDetected?.project
-                        ? `— Use detected: ${importModalAutoDetected.project.name} —`
-                        : `— Auto-create from "${projectName || production || 'project'}" —`}
-                    </option>
-                    {importModalAutoDetected?.projects?.map((p: any) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                )}
-                {importModalAutoDetected?.project && (
-                  <p className="text-[10px] text-emerald-600 mt-1">
-                    Detected: {importModalAutoDetected.project.name}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 px-4 py-3 border-t border-outline-variant">
-              <button
-                onClick={() => { setShowImportModal(false); setStep('preview'); }}
-                className="px-3 py-1.5 text-[12px] font-medium border border-outline-variant rounded-lg hover:bg-surface-dim transition-colors cursor-pointer"
-              >
-                Skip
-              </button>
-              <button
-                onClick={handleImportModalConfirm}
-                disabled={importModalLoading || selectedRows.size === 0}
-                className="px-4 py-1.5 text-[12px] font-medium bg-primary text-on-primary rounded-lg hover:bg-primary-hover transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-              >
-                <Save className="w-3.5 h-3.5" />
-                Import {selectedRows.size} Services
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Export Result Modal */}
-      {exportResult && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl w-full max-w-sm">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant">
-              <h3 className="font-semibold text-on-surface flex items-center gap-2">
-                {exportResult.type === 'pdf' ? (
-                  <><FileText className="w-4 h-4 text-primary" /> PDF Generado</>
-                ) : (
-                  <><FileSpreadsheet className="w-4 h-4 text-emerald-600" /> Excel Exportado</>
-                )}
-              </h3>
-              <button onClick={() => setExportResult(null)} className="text-on-surface-variant hover:text-on-surface cursor-pointer">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-4 flex flex-col items-center gap-4">
-              <div className={`w-14 h-14 rounded-full flex items-center justify-center ${
-                exportResult.type === 'pdf' ? 'bg-primary/10' : 'bg-emerald-100'
-              }`}>
-                {exportResult.type === 'pdf' ? (
-                  <FileText className="w-7 h-7 text-primary" />
-                ) : (
-                  <FileSpreadsheet className="w-7 h-7 text-emerald-600" />
-                )}
-              </div>
-              <div className="text-center">
-                <p className="text-[13px] font-medium text-on-surface">
-                  {exportResult.type === 'pdf' ? 'PDF descargado correctamente' : 'Archivo generado con éxito'}
-                </p>
-                <p className="text-[11px] text-on-surface-variant mt-0.5 truncate max-w-[250px]">{exportResult.fileName}</p>
-              </div>
-              {/* Excel-only: download + copy link */}
-              {exportResult.type === 'excel' && (
-                <div className="flex flex-col gap-2 w-full">
-                  {exportResult.downloadUrl && (
-                    <a
-                      href={exportResult.downloadUrl}
-                      download
-                      className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-[13px] font-medium bg-primary text-on-primary rounded-lg hover:bg-primary-hover transition-colors text-center"
-                    >
-                      <Download className="w-4 h-4" />
-                      Descargar archivo
-                    </a>
-                  )}
-                  <button
-                    onClick={() => {
-                      const url = exportResult.downloadUrl || exportResult.url;
-                      if (url) {
-                        navigator.clipboard.writeText(url).then(() => {
-                          showToast('Link copiado al portapapeles', 'success');
-                        });
-                      }
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2 text-[12px] font-medium border border-outline-variant text-on-surface-variant rounded-lg hover:bg-surface-dim transition-colors cursor-pointer"
-                  >
-                    Copiar link
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex justify-end px-4 py-3 border-t border-outline-variant">
-              <button
-                onClick={() => setExportResult(null)}
-                className="px-3 py-1.5 text-[12px] font-medium text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <TransportListExportResultModal
+        result={exportResult}
+        onClose={() => setExportResult(null)}
+      />
 
       {/* Print Preview Modal — separated component tree for clean print output */}
       <PrintPreview
@@ -3515,40 +1639,12 @@ export default function TransportListScreen({ onNavigate, onImportComplete }: Tr
         footerContacts={footerContacts}
       />
 
-      {/* Save Prompt — appears after PDF generation asking to register transport */}
-      {showSavePrompt && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl w-full max-w-sm">
-            <div className="p-5 text-center">
-              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                <Save className="w-7 h-7 text-primary" />
-              </div>
-              <h3 className="font-semibold text-on-surface text-[15px] mb-1">¿Guardar transport?</h3>
-              <p className="text-[12px] text-on-surface-variant leading-relaxed">
-                ¿Querés registrar estos <strong>{selectedRows.size} servicios</strong> en el sheet para usarlos en Calendar, Rapportinos e History?
-              </p>
-            </div>
-            <div className="flex gap-2 px-5 pb-5">
-              <button
-                onClick={() => {
-                  setShowSavePrompt(false);
-                  handleSync();
-                }}
-                className="flex-1 px-3 py-2.5 text-[13px] font-medium bg-primary text-on-primary rounded-lg hover:bg-primary-hover transition-colors cursor-pointer"
-              >
-                <RefreshCw className="w-4 h-4 inline mr-1.5" />
-                Guardar en Sheet
-              </button>
-              <button
-                onClick={() => setShowSavePrompt(false)}
-                className="flex-1 px-3 py-2 text-[12px] font-medium border border-outline-variant text-on-surface-variant rounded-lg hover:bg-surface-dim transition-colors cursor-pointer"
-              >
-                No, gracias
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <TransportListSavePromptModal
+        isOpen={showSavePrompt}
+        selectedCount={selectedRows.size}
+        onSave={() => { setShowSavePrompt(false); handleSync(); }}
+        onDismiss={() => setShowSavePrompt(false)}
+      />
     </div>
   );
 }

@@ -1,24 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  FileText, 
-  Plus, 
-  Search, 
-  Calendar, 
-  Loader2, 
-  X, 
-  Send,
-  Eye,
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-  Trash2,
-  Ban,
-  Pencil,
-  Save,
-  Download
+import {
+  FileText,
+  Plus,
+  Search,
+  Download,
 } from 'lucide-react';
 import { ScreenId } from '../types';
-import { 
+import {
   getInvoices,
   getInvoiceItems,
   createInvoice,
@@ -35,37 +23,16 @@ import {
 } from '../services/api';
 import { exportToCSV, exportToPDF, formatDateExport, formatCurrencyExport } from '../utils/exportUtils';
 import { useToast } from '../contexts/ToastContext';
+import { STATUS_CONFIG, STATUSES, formatCurrency } from './invoiceShared';
+import InvoiceListItem from './InvoiceListItem';
+import InvoiceDetailModal from './InvoiceDetailModal';
+import InvoiceCreateModal from './InvoiceCreateModal';
+import InvoiceVoidModal from './InvoiceVoidModal';
+import InvoiceEditModal from './InvoiceEditModal';
 
 interface InvoiceScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
 }
-
-// ─── State machine per docs/04-STATE_MACHINES.md ──────────────────────────────
-// Borrador → Emitida → Enviada → PagoParcial → Pagada
-//                             ↘ Vencida ↗
-// Borrador → Anulada (sin pagos)
-// Emitida → Anulada (sin pagos)
-
-const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string; label: string }> = {
-  Borrador:    { icon: FileText,      color: 'text-gray-600',    bg: 'bg-gray-100',    label: 'Borrador' },
-  Emitida:     { icon: Clock,         color: 'text-amber-600',   bg: 'bg-amber-50',    label: 'Emitida' },
-  Enviada:     { icon: Send,          color: 'text-blue-600',    bg: 'bg-blue-50',     label: 'Enviada' },
-  PagoParcial: { icon: AlertTriangle, color: 'text-orange-600',  bg: 'bg-orange-50',   label: 'Pago Parcial' },
-  Pagada:      { icon: CheckCircle,   color: 'text-emerald-600', bg: 'bg-emerald-50',  label: 'Pagada' },
-  Vencida:     { icon: AlertTriangle, color: 'text-red-600',     bg: 'bg-red-50',      label: 'Vencida' },
-  Anulada:     { icon: Ban,           color: 'text-gray-400',    bg: 'bg-gray-50',     label: 'Anulada' },
-};
-
-// Next transitions per state machine
-const NEXT_TRANSITIONS: Record<string, { action: string; label: string; target: string } | null> = {
-  Borrador:    { action: 'emit',  label: 'Emitir',  target: 'Emitida' },
-  Emitida:     { action: 'send',  label: 'Enviar',  target: 'Enviada' },
-  Enviada:     null,  // transitions to PagoParcial/Pagada come from payments
-  PagoParcial: null,  // transitions to Pagada come from payments
-  Pagada:      null,
-  Vencida:     null,
-  Anulada:     null,
-};
 
 export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
   const { showToast } = useToast();
@@ -79,31 +46,25 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
   const [filterClient, setFilterClient] = useState('');
   const [filterProject, setFilterProject] = useState('');
 
-  // Data for selects
   const [clientsList, setClientsList] = useState<ClientDTO[]>([]);
   const [projectsList, setProjectsList] = useState<Project[]>([]);
 
-  // Detail view
   const [viewTarget, setViewTarget] = useState<InvoiceDTO | null>(null);
   const [viewItems, setViewItems] = useState<InvoiceItemDTO[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
 
-  // Create modal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newInvoice, setNewInvoice] = useState({ projectId: '', clientId: '', dueDate: '', notes: '' });
   const [isCreating, setIsCreating] = useState(false);
 
-  // Void modal
   const [voidTarget, setVoidTarget] = useState<InvoiceDTO | null>(null);
   const [voidReason, setVoidReason] = useState('');
   const [isVoiding, setIsVoiding] = useState(false);
 
-  // Edit modal (Borrador only)
   const [editTarget, setEditTarget] = useState<InvoiceDTO | null>(null);
   const [editChanges, setEditChanges] = useState({ ClientID: '', ProjectID: '', DueDate: '', Notes: '' });
   const [isEditing, setIsEditing] = useState(false);
 
-  // Status update
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   useEffect(() => { loadData(); }, [statusFilter, dateFrom, dateTo, driverFilter, filterClient, filterProject]);
@@ -132,7 +93,7 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
       if (driverFilter) filters.driverId = driverFilter;
       if (filterClient) filters.clientId = filterClient;
       if (filterProject) filters.projectId = filterProject;
-      
+
       const result = await getInvoices(filters);
       setInvoices(result || []);
     } catch (err) {
@@ -149,7 +110,7 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
     if (filterProject && inv.projectId !== filterProject) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      return inv.id?.toLowerCase().includes(q) || 
+      return inv.id?.toLowerCase().includes(q) ||
              inv.invoiceNumber?.toLowerCase().includes(q) ||
              inv.clientId?.toLowerCase().includes(q) ||
              inv.projectId?.toLowerCase().includes(q);
@@ -266,24 +227,6 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
     }
   };
 
-  const canVoid = (status: string) => ['Borrador', 'Emitida', 'Enviada'].includes(status);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(amount);
-  };
-
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return '—';
-    try {
-      return new Date(dateStr).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  const statuses = ['Borrador', 'Emitida', 'Enviada', 'PagoParcial', 'Pagada', 'Vencida', 'Anulada'];
-
-  // Export to Excel (client-side CSV)
   const handleExportExcel = () => {
     const headers = ['InvoiceNumber', 'Date', 'DueDate', 'Client', 'Project', 'Status', 'Subtotal', 'Tax', 'Total', 'Paid', 'Balance'];
     const rows = filtered.map(inv => [
@@ -302,7 +245,6 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
     exportToCSV(headers, rows, 'Invoices');
   };
 
-  // Export to PDF (browser print)
   const handleExportPDF = () => {
     const columns = [
       { key: 'invoiceNumber', label: 'Invoice #' },
@@ -338,7 +280,6 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
 
   return (
     <div id="invoice-screen" className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-8">
-      {/* Header */}
       <header id="invoice-header" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0 sticky top-0 py-2 z-30 bg-background/90 backdrop-blur-md">
         <div>
           <h2 className="font-headline-lg-mobile md:font-headline-lg text-on-surface">Invoices</h2>
@@ -371,7 +312,6 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
         </div>
       </header>
 
-      {/* Filters */}
       <div id="invoice-filters" className="flex flex-col gap-2 px-3 py-2 bg-surface-dim border border-outline-variant rounded-lg">
         <div className="flex flex-col gap-2">
           <div className="relative w-full">
@@ -434,7 +374,7 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
                 className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] font-medium rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer shrink-0"
               >
                 <option value="All">All Status</option>
-                {statuses.map(s => (
+                {STATUSES.map(s => (
                   <option key={s} value={s}>{STATUS_CONFIG[s]?.label || s}</option>
                 ))}
               </select>
@@ -451,7 +391,6 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
         </div>
       </div>
 
-      {/* Invoices List */}
       <div id="invoices-list" className="space-y-2">
         {isLoading ? (
           <div className="space-y-2">
@@ -487,403 +426,59 @@ export default function InvoiceScreen({ onNavigate }: InvoiceScreenProps) {
             </p>
           </div>
         ) : (
-          filtered.map(inv => {
-            const sc = STATUS_CONFIG[inv.status] || STATUS_CONFIG.Borrador;
-            const StatusIcon = sc.icon;
-            const next = NEXT_TRANSITIONS[inv.status];
-            return (
-              <div
-                key={inv.id}
-                className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors hover:bg-surface-dim/30"
-              >
-                {/* Status icon */}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sc.bg}`}>
-                  <StatusIcon className={`w-4 h-4 ${sc.color}`} />
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${sc.bg} ${sc.color}`}>
-                      {sc.label}
-                    </span>
-                    {inv.invoiceNumber && (
-                      <span className="text-[12px] font-semibold text-on-surface font-mono">{inv.invoiceNumber}</span>
-                    )}
-                    <span className="text-[10px] text-on-surface-variant font-mono">{inv.id}</span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1 text-[12px] text-on-surface-variant">
-                    <span className="font-medium">{inv.clientId}</span>
-                    {inv.projectId && <span>{inv.projectId}</span>}
-                  </div>
-                  <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
-                    {inv.date && (
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {formatDate(inv.date)}
-                      </span>
-                    )}
-                    {inv.dueDate && <span>Due: {formatDate(inv.dueDate)}</span>}
-                  </div>
-                </div>
-
-                {/* Amount + Actions */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[14px] font-bold text-on-surface">{formatCurrency(inv.total)}</span>
-                  
-                  {next && (
-                    <button
-                      onClick={() => handleStatusUpdate(inv, next.action)}
-                      disabled={updatingStatus === inv.id}
-                      className="px-3 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary text-[11px] font-medium rounded transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                    >
-                      {updatingStatus === inv.id ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <Send className="w-3 h-3" />
-                      )}
-                      {next.label}
-                    </button>
-                  )}
-
-                  {canVoid(inv.status) && (
-                    <>
-                      {inv.status === 'Borrador' && (
-                        <button
-                          onClick={() => openEdit(inv)}
-                          className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-colors cursor-pointer"
-                          title="Modifica"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setVoidTarget(inv)}
-                        className="p-1.5 hover:bg-red-50 text-on-surface-variant hover:text-red-500 rounded transition-colors cursor-pointer"
-                        title="Annulla"
-                      >
-                        <Ban className="w-3.5 h-3.5" />
-                      </button>
-                    </>
-                  )}
-
-                  <button
-                    onClick={() => openDetail(inv)}
-                    className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-colors cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            );
-          })
+          filtered.map(inv => (
+            <InvoiceListItem
+              key={inv.id}
+              inv={inv}
+              updatingStatus={updatingStatus}
+              onStatusUpdate={handleStatusUpdate}
+              onEdit={openEdit}
+              onVoid={setVoidTarget}
+              onView={openDetail}
+            />
+          ))
         )}
       </div>
 
-      {/* Detail Modal */}
       {viewTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-lg shadow-xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
-              <div>
-                <h3 className="text-[15px] font-semibold text-on-surface">Invoice Detail</h3>
-                <p className="text-[11px] text-on-surface-variant">{viewTarget.invoiceNumber || viewTarget.id}</p>
-              </div>
-              <button onClick={() => { setViewTarget(null); setViewItems([]); }} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
-                <X className="w-4 h-4 text-on-surface-variant" />
-              </button>
-            </div>
-
-            <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
-              <div className="grid grid-cols-2 gap-3 text-[12px]">
-                <div>
-                  <span className="text-on-surface-variant uppercase text-[10px]">Status</span>
-                  <p className={`font-medium ${STATUS_CONFIG[viewTarget.status]?.color || 'text-on-surface'}`}>
-                    {STATUS_CONFIG[viewTarget.status]?.label || viewTarget.status}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-on-surface-variant uppercase text-[10px]">Invoice Number</span>
-                  <p className="font-medium text-on-surface font-mono">{viewTarget.invoiceNumber || '—'}</p>
-                </div>
-                <div>
-                  <span className="text-on-surface-variant uppercase text-[10px]">Client</span>
-                  <p className="font-medium text-on-surface">{viewTarget.clientId || '—'}</p>
-                </div>
-                <div>
-                  <span className="text-on-surface-variant uppercase text-[10px]">Project</span>
-                  <p className="font-medium text-on-surface">{viewTarget.projectId || '—'}</p>
-                </div>
-                <div>
-                  <span className="text-on-surface-variant uppercase text-[10px]">Date</span>
-                  <p className="font-medium text-on-surface">{formatDate(viewTarget.date)}</p>
-                </div>
-                <div>
-                  <span className="text-on-surface-variant uppercase text-[10px]">Due Date</span>
-                  <p className="font-medium text-on-surface">{formatDate(viewTarget.dueDate)}</p>
-                </div>
-              </div>
-
-              {/* Totals */}
-              <div className="bg-surface-dim rounded-lg p-3 space-y-1.5">
-                <div className="flex justify-between text-[12px]">
-                  <span className="text-on-surface-variant">Subtotal</span>
-                  <span className="text-on-surface">{formatCurrency(viewTarget.subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-[12px]">
-                  <span className="text-on-surface-variant">Tax ({viewTarget.taxRate}%)</span>
-                  <span className="text-on-surface">{formatCurrency(viewTarget.taxAmount)}</span>
-                </div>
-                <div className="flex justify-between text-[13px] font-semibold border-t border-outline-variant pt-1.5">
-                  <span className="text-on-surface">Total</span>
-                  <span className="text-on-surface">{formatCurrency(viewTarget.total)}</span>
-                </div>
-              </div>
-
-              {/* Invoice Items */}
-              {loadingItems ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                </div>
-              ) : viewItems.length > 0 && (
-                <div>
-                  <span className="text-on-surface-variant uppercase text-[10px]">Items ({viewItems.length})</span>
-                  <div className="mt-1 space-y-1">
-                    {viewItems.map(item => (
-                      <div key={item.id} className="flex justify-between text-[11px] bg-surface-dim rounded px-2 py-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-on-surface-variant font-mono">{item.rapportinoClientId}</span>
-                          {item.serviceId && <span className="text-on-surface-variant/60 font-mono">→ {item.serviceId}</span>}
-                        </div>
-                        <span className="text-on-surface font-medium">{formatCurrency(item.amount)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {viewTarget.voidReason && (
-                <div>
-                  <span className="text-on-surface-variant uppercase text-[10px]">Void Reason</span>
-                  <p className="text-[12px] text-red-600 mt-1">{viewTarget.voidReason}</p>
-                </div>
-              )}
-
-              {viewTarget.notes && (
-                <div>
-                  <span className="text-on-surface-variant uppercase text-[10px]">Notes</span>
-                  <p className="text-[12px] text-on-surface mt-1">{viewTarget.notes}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">
-              <button
-                onClick={() => { setViewTarget(null); setViewItems([]); }}
-                className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <InvoiceDetailModal
+          viewTarget={viewTarget}
+          viewItems={viewItems}
+          loadingItems={loadingItems}
+          onClose={() => { setViewTarget(null); setViewItems([]); }}
+        />
       )}
 
-      {/* Create Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
-              <h3 className="text-[15px] font-semibold text-on-surface">New Invoice</h3>
-              <button onClick={() => setShowCreateModal(false)} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
-                <X className="w-4 h-4 text-on-surface-variant" />
-              </button>
-            </div>
-
-            <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Project ID *</label>
-                <input
-                  type="text"
-                  value={newInvoice.projectId}
-                  onChange={e => setNewInvoice({ ...newInvoice, projectId: e.target.value })}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                  placeholder="PRJ-2026-00001"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Client ID *</label>
-                <input
-                  type="text"
-                  value={newInvoice.clientId}
-                  onChange={e => setNewInvoice({ ...newInvoice, clientId: e.target.value })}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                  placeholder="CLI-2026-00001"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Due Date</label>
-                <input
-                  type="date"
-                  value={newInvoice.dueDate}
-                  onChange={e => setNewInvoice({ ...newInvoice, dueDate: e.target.value })}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Notes</label>
-                <textarea
-                  value={newInvoice.notes}
-                  onChange={e => setNewInvoice({ ...newInvoice, notes: e.target.value })}
-                  rows={2}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary resize-none"
-                  placeholder="Optional notes..."
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreate}
-                disabled={isCreating}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {isCreating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                Create
-              </button>
-            </div>
-          </div>
-        </div>
+        <InvoiceCreateModal
+          newInvoice={newInvoice}
+          onChange={setNewInvoice}
+          onClose={() => setShowCreateModal(false)}
+          onCreate={handleCreate}
+          isCreating={isCreating}
+        />
       )}
 
-      {/* Void Modal */}
       {voidTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-sm shadow-xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
-              <h3 className="text-[15px] font-semibold text-on-surface">Annulla Factura</h3>
-              <button onClick={() => { setVoidTarget(null); setVoidReason(''); }} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
-                <X className="w-4 h-4 text-on-surface-variant" />
-              </button>
-            </div>
-
-            <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
-              <p className="text-[12px] text-on-surface-variant">
-                Stai per annullare la factura <span className="font-mono font-medium text-on-surface">{voidTarget.invoiceNumber || voidTarget.id}</span>.
-                Questa azione non può essere annullata.
-              </p>
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Motivo *</label>
-                <textarea
-                  value={voidReason}
-                  onChange={e => setVoidReason(e.target.value)}
-                  rows={2}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary resize-none"
-                  placeholder="Motivo dell'annullamento..."
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">
-              <button
-                onClick={() => { setVoidTarget(null); setVoidReason(''); }}
-                className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors cursor-pointer"
-              >
-                Annulla
-              </button>
-              <button
-                onClick={handleVoid}
-                disabled={isVoiding || !voidReason.trim()}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-red-500 text-white text-[12px] font-medium rounded-lg hover:bg-red-600 transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {isVoiding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
-                Conferma
-              </button>
-            </div>
-          </div>
-        </div>
+        <InvoiceVoidModal
+          voidTarget={voidTarget}
+          voidReason={voidReason}
+          onReasonChange={setVoidReason}
+          onClose={() => { setVoidTarget(null); setVoidReason(''); }}
+          onConfirm={handleVoid}
+          isVoiding={isVoiding}
+        />
       )}
 
-      {/* Edit Modal — Borrador only */}
       {editTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
-              <div>
-                <h3 className="text-[15px] font-semibold text-on-surface">Modifica Fattura</h3>
-                <p className="text-[11px] text-on-surface-variant">{editTarget.invoiceNumber || editTarget.id}</p>
-              </div>
-              <button onClick={() => setEditTarget(null)} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
-                <X className="w-4 h-4 text-on-surface-variant" />
-              </button>
-            </div>
-
-            <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Client ID</label>
-                <input
-                  type="text"
-                  value={editChanges.ClientID}
-                  onChange={e => setEditChanges({ ...editChanges, ClientID: e.target.value })}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Project ID</label>
-                <input
-                  type="text"
-                  value={editChanges.ProjectID}
-                  onChange={e => setEditChanges({ ...editChanges, ProjectID: e.target.value })}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Due Date</label>
-                <input
-                  type="date"
-                  value={editChanges.DueDate}
-                  onChange={e => setEditChanges({ ...editChanges, DueDate: e.target.value })}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Notes</label>
-                <textarea
-                  value={editChanges.Notes}
-                  onChange={e => setEditChanges({ ...editChanges, Notes: e.target.value })}
-                  rows={2}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary resize-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">
-              <button
-                onClick={() => setEditTarget(null)}
-                className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleEdit}
-                disabled={isEditing}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {isEditing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                Salva
-              </button>
-            </div>
-          </div>
-        </div>
+        <InvoiceEditModal
+          editTarget={editTarget}
+          editChanges={editChanges}
+          onChange={setEditChanges}
+          onClose={() => setEditTarget(null)}
+          onSave={handleEdit}
+          isEditing={isEditing}
+        />
       )}
     </div>
   );

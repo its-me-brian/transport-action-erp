@@ -1,39 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  Search, 
-  Plus, 
-  Download, 
-  MessageSquare, 
-  Mail, 
-  MapPin, 
-  Clock, 
-  AlertCircle, 
-  Filter, 
-  CheckCircle,
-  Truck,
-  Loader2,
-  X,
-  Save,
-  Trash2,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Pencil
-} from 'lucide-react';
+import { Users, Search, Plus, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Driver, ScreenId, getDriverAvatar } from '../types';
 import { getDrivers, createDriver, updateDriver, deleteDriver, cleanupDrivers, DriverRecord, getSupplierRates, createSupplierRate, updateSupplierRate, deleteSupplierRate, SupplierRateDTO, getVehicleTypes, getServiceTypes, getCollaborators } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
+import DriverCard from './DriverCard';
+import DriverEditModal from './DriverEditModal';
+import DriverAddModal from './DriverAddModal';
+import DriverDeleteConfirm from './DriverDeleteConfirm';
+import SupplierRatesModal from './SupplierRatesModal';
 
 interface DriverPanelScreenProps {
   drivers: Driver[];
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
 }
 
-type SortField = 'name' | 'status' | 'vehicle' | 'lastUsed';
-type SortDir = 'asc' | 'desc';
+export type SortField = 'name' | 'status' | 'vehicle' | 'lastUsed';
+export type SortDir = 'asc' | 'desc';
 
-interface EditModalDriver {
+export interface EditModalDriver {
   id: string;
   name: string;
   phone: string;
@@ -84,8 +68,6 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
   const [loadingRates, setLoadingRates] = useState(false);
   const [editRate, setEditRate] = useState<Partial<SupplierRateDTO> | null>(null);
   const [isNewRate, setIsNewRate] = useState(false);
-  
-  // Cleanup handler
 
   // Vehicle Types & Service Types (admin-configurable)
   const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
@@ -474,612 +456,90 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
             </span>
           </div>
         ) : filteredDrivers.map((dr) => {
-          const isAvailable = dr.status === 'Disponible';
-          const isInTransit = dr.status === 'Asignado';
-          const isOffDuty = dr.status === 'Inactivo';
           const dbRec = findDbRecord(dr.id);
-
           return (
-            <div 
-              key={dr.id} 
-              id={`driver-card-${dr.id}`}
-              className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col gap-2 hover:bg-surface-dim/30 transition-colors group relative"
-            >
-              {/* Header: avatar + name + status */}
-              <div className="flex justify-between items-start">
-                <div className="flex gap-2.5 items-center min-w-0">
-                  <div className={`w-10 h-10 rounded-full overflow-hidden bg-surface-container shrink-0 ${
-                    isAvailable ? 'ring-2 ring-primary/30' : isInTransit ? 'ring-2 ring-amber-400/30' : ''
-                  }`}>
-                    <img className="w-full h-full object-cover" src={dr.avatar} alt={dr.name} />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-[14px] font-semibold text-on-surface truncate">{dr.name}</h3>
-                    <p className="text-[11px] text-on-surface-variant">{dr.id}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1 shrink-0">
-                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium gap-1 ${
-                    isAvailable 
-                      ? 'bg-emerald-100 text-emerald-700' 
-                      : isInTransit 
-                      ? 'bg-amber-100 text-amber-700' 
-                      : 'bg-surface-container text-on-surface-variant'
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${
-                      isAvailable ? 'bg-emerald-500 animate-ping' : isInTransit ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'
-                    }`}></span>
-                    {dr.status}
-                  </span>
-                  {/* Edit button */}
-                  <button
-                    onClick={() => {
-                      setEditDriver({
-                        id: dr.id,
-                        name: dr.name,
-                        phone: dbRec?.phone || '',
-                        whatsapp: dbRec?.whatsapp || '',
-                        vehiclePreferred: dbRec?.vehiclePreferred || dr.vehicle,
-                        notes: dbRec?.notes || '',
-                        status: dr.status || 'Disponible',
-                        type: dbRec?.type || 'interno',
-                        collaboratorId: dbRec?.collaboratorId || '',
-                        driverOwnership: dbRec?.driverOwnership || 'own',
-                        email: dbRec?.email || '',
-                        iban: dbRec?.iban || '',
-                        licenseType: dbRec?.licenseType || '',
-                        licenseExpiry: dbRec?.licenseExpiry || '',
-                        operatingCompany: dbRec?.operatingCompany || '',
-                        lastImportDate: dbRec?.lastImportDate || '',
-                      });
-                    }}
-                    className="p-1 rounded hover:bg-surface-container-high text-on-surface-variant hover:text-primary transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
-                    title="Edit driver"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Info grid */}
-              <div className="flex-1 py-1">
-                <div className="grid grid-cols-2 gap-2 text-[12px]">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] text-on-surface-variant uppercase tracking-wide">Vehicle</span>
-                    <span className="font-medium text-on-surface">{dr.vehicle || '—'}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] text-on-surface-variant uppercase tracking-wide">Phone</span>
-                    <span className="font-medium text-on-surface truncate">{dbRec?.phone || '—'}</span>
-                  </div>
-                </div>
-
-                <div className="h-px w-full bg-outline-variant/30 my-2"></div>
-
-                {dbRec?.notes && (
-                  <p className="text-[11px] text-on-surface-variant flex items-center gap-1 truncate">
-                    <MapPin className="w-3 h-3 text-primary shrink-0" /> 
-                    <span className="truncate">{dbRec.notes}</span>
-                  </p>
-                )}
-                {!dbRec?.notes && isAvailable && dr.currentLocation && (
-                  <p className="text-[11px] text-on-surface-variant flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-primary shrink-0" /> 
-                    <span>{dr.currentLocation}</span>
-                  </p>
-                )}
-
-                {isInTransit && dr.progress !== undefined && (
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[11px] text-on-surface-variant">
-                      <span className="flex items-center gap-1">
-                        <Truck className="w-3 h-3 text-amber-500" /> Transit
-                      </span>
-                      <span>{dr.progress}%</span>
-                    </div>
-                    <div className="w-full h-1 bg-surface-container rounded-full overflow-hidden">
-                      <div className="h-full bg-amber-500" style={{ width: `${dr.progress}%` }}></div>
-                    </div>
-                  </div>
-                )}
-
-                {isOffDuty && dr.restMandated && (
-                  <p className="text-[11px] text-red-500 flex items-center gap-1">
-                    <Clock className="w-3 h-3 shrink-0" /> Rest mandated
-                  </p>
-                )}
-
-                {dbRec && (
-                  <div className="flex gap-3 mt-1 text-[10px] text-on-surface-variant">
-                    <span>Rides: {dbRec.totalRides || 0}</span>
-                    {dbRec.source && <span>Source: {dbRec.source}</span>}
-                  </div>
-                )}
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-1.5 pt-2 border-t border-outline-variant/30">
-                <button 
-                  onClick={() => {
-                    setEditDriver({
-                      id: dr.id,
-                      name: dr.name,
-                      phone: dbRec?.phone || '',
-                      whatsapp: dbRec?.whatsapp || '',
-                      vehiclePreferred: dbRec?.vehiclePreferred || dr.vehicle,
-                      notes: dbRec?.notes || '',
-                      status: dr.status || 'Disponible',
-                      type: dbRec?.type || 'interno',
-                      collaboratorId: dbRec?.collaboratorId || '',
-                      driverOwnership: dbRec?.driverOwnership || 'own',
-                      email: dbRec?.email || '',
-                      iban: dbRec?.iban || '',
-                      licenseType: dbRec?.licenseType || '',
-                      licenseExpiry: dbRec?.licenseExpiry || '',
-                      operatingCompany: dbRec?.operatingCompany || '',
-                      lastImportDate: dbRec?.lastImportDate || '',
-                    });
-                  }}
-                  className="flex-1 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary text-[12px] font-medium rounded transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  Edit
-                </button>
-                <button 
-                  onClick={() => {
-                    const phone = (dbRec?.whatsapp || dbRec?.phone || '').replace(/[^0-9+]/g, '');
-                    if (phone) {
-                      window.open(`https://wa.me/${phone.replace(/^\+/, '')}`, '_blank');
-                    }
-                  }}
-                  className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 hover:text-emerald-700 rounded transition-colors cursor-pointer"
-                  title="Send WhatsApp"
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                </button>
-                <button 
-                  onClick={() => setDeleteConfirm(dr.id)}
-                  className="p-1.5 bg-surface-container hover:bg-red-50 text-on-surface-variant hover:text-red-500 rounded transition-colors cursor-pointer"
-                  title="Delete driver"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
+            <DriverCard
+              key={dr.id}
+              driver={dr}
+              dbRec={dbRec}
+              onEdit={(driver, dbRec) => {
+                setEditDriver({
+                  id: driver.id,
+                  name: driver.name,
+                  phone: dbRec?.phone || '',
+                  whatsapp: dbRec?.whatsapp || '',
+                  vehiclePreferred: dbRec?.vehiclePreferred || driver.vehicle,
+                  notes: dbRec?.notes || '',
+                  status: driver.status || 'Disponible',
+                  type: dbRec?.type || 'interno',
+                  collaboratorId: dbRec?.collaboratorId || '',
+                  driverOwnership: dbRec?.driverOwnership || 'own',
+                  email: dbRec?.email || '',
+                  iban: dbRec?.iban || '',
+                  licenseType: dbRec?.licenseType || '',
+                  licenseExpiry: dbRec?.licenseExpiry || '',
+                  operatingCompany: dbRec?.operatingCompany || '',
+                  lastImportDate: dbRec?.lastImportDate || '',
+                });
+              }}
+              onDelete={(id) => setDeleteConfirm(id)}
+              onWhatsApp={(phone) => {
+                const clean = phone.replace(/[^0-9+]/g, '');
+                if (clean) window.open(`https://wa.me/${clean.replace(/^\+/, '')}`, '_blank');
+              }}
+            />
           );
         })}
       </div>
 
-      {/* ===== EDIT MODAL ===== */}
+      {/* Modals */}
       {editDriver && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-container">
-                  <img className="w-full h-full object-cover" src={getDriverAvatar(editDriver.name)} alt="" />
-                </div>
-                <div>
-                  <h3 className="text-[15px] font-semibold text-on-surface">Edit Driver</h3>
-                  <p className="text-[11px] text-on-surface-variant">{editDriver.id}</p>
-                </div>
-              </div>
-              <button onClick={() => setEditDriver(null)} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
-                <X className="w-4 h-4 text-on-surface-variant" />
-              </button>
-            </div>
-
-            {/* Fields */}
-            <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Name</label>
-                <input
-                  type="text"
-                  value={editDriver.name}
-                  onChange={(e) => setEditDriver({ ...editDriver, name: e.target.value })}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Phone</label>
-                  <input
-                    type="text"
-                    value={editDriver.phone}
-                    onChange={(e) => setEditDriver({ ...editDriver, phone: e.target.value })}
-                    placeholder="+39 ..."
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">WhatsApp</label>
-                  <input
-                    type="text"
-                    value={editDriver.whatsapp}
-                    onChange={(e) => setEditDriver({ ...editDriver, whatsapp: e.target.value })}
-                    placeholder="+39 ..."
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Preferred Vehicle</label>
-                <input
-                  type="text"
-                  value={editDriver.vehiclePreferred}
-                  onChange={(e) => setEditDriver({ ...editDriver, vehiclePreferred: e.target.value })}
-                   placeholder="e.g. Van"
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Notes</label>
-                <textarea
-                  value={editDriver.notes}
-                  onChange={(e) => setEditDriver({ ...editDriver, notes: e.target.value })}
-                  rows={2}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary resize-none"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Status</label>
-                <select
-                  value={editDriver.status}
-                  onChange={(e) => setEditDriver({ ...editDriver, status: e.target.value as EditModalDriver['status'] })}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
-                >
-                  <option value="Disponible">Disponible</option>
-                  <option value="Asignado">Asignado</option>
-                  <option value="Inactivo">Inactivo</option>
-                </select>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Type</label>
-                  <select
-                    value={editDriver.type}
-                    onChange={(e) => setEditDriver({ ...editDriver, type: e.target.value, collaboratorId: e.target.value === 'interno' ? '' : editDriver.collaboratorId })}
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
-                  >
-                    <option value="interno">Interno (Propio)</option>
-                    <option value="colaborador">Colaborador</option>
-                  </select>
-                </div>
-                {editDriver.type === 'colaborador' && (
-                  <div>
-                    <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Collaborator / Provider</label>
-                    <select
-                      value={editDriver.collaboratorId}
-                      onChange={(e) => setEditDriver({ ...editDriver, collaboratorId: e.target.value })}
-                      className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
-                    >
-                      <option value="">— Select collaborator —</option>
-                      {collaborators.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                {editDriver.type !== 'colaborador' && (
-                  <div>
-                    <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Operating Company</label>
-                    <select
-                      value={editDriver.operatingCompany}
-                      onChange={(e) => setEditDriver({ ...editDriver, operatingCompany: e.target.value })}
-                      className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
-                    >
-                      <option value="">—</option>
-                      <option value="Transport Action">Transport Action</option>
-                      <option value="Movie Motion">Movie Motion</option>
-                    </select>
-                  </div>
-                )}
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Driver Ownership</label>
-                  <select
-                    value={editDriver.driverOwnership}
-                    onChange={(e) => setEditDriver({ ...editDriver, driverOwnership: e.target.value })}
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
-                  >
-                    <option value="own">Propio (Own)</option>
-                    <option value="rented">Alquilado (Rented)</option>
-                    <option value="partner">Socio (Partner)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Last Import Date</label>
-                  <input
-                    type="text"
-                    value={editDriver.lastImportDate ? new Date(editDriver.lastImportDate).toLocaleDateString() : '—'}
-                    readOnly
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface-variant cursor-not-allowed"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={editDriver.email}
-                    onChange={(e) => setEditDriver({ ...editDriver, email: e.target.value })}
-                    placeholder="driver@email.com"
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">IBAN</label>
-                  <input
-                    type="text"
-                    value={editDriver.iban}
-                    onChange={(e) => setEditDriver({ ...editDriver, iban: e.target.value })}
-                    placeholder="IT60 X054 2811 1010 0000 0123 456"
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">License Type</label>
-                  <input
-                    type="text"
-                    value={editDriver.licenseType}
-                    onChange={(e) => setEditDriver({ ...editDriver, licenseType: e.target.value })}
-                    placeholder="e.g. B, C, D"
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">License Expiry</label>
-                  <input
-                    type="date"
-                    value={editDriver.licenseExpiry}
-                    onChange={(e) => setEditDriver({ ...editDriver, licenseExpiry: e.target.value })}
-                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between px-5 py-3 border-t border-outline-variant shrink-0">
-              <button
-                onClick={() => { setShowRatesModal(editDriver); loadDriverRates(editDriver.id); }}
-                className="px-4 py-1.5 text-[12px] font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors cursor-pointer"
-              >
-                💰 Supplier Rates
-              </button>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setEditDriver(null)}
-                  className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={saveEdit}
-                  disabled={editSaving}
-                  className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-                >
-                  {editSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                  Save
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <DriverEditModal
+          driver={editDriver}
+          onClose={() => setEditDriver(null)}
+          onSave={saveEdit}
+          saving={editSaving}
+          collaborators={collaborators}
+          onOpenRates={() => { setShowRatesModal(editDriver); loadDriverRates(editDriver.id); }}
+          onChange={(d) => setEditDriver(d)}
+        />
       )}
 
-      {/* ===== ADD DRIVER MODAL ===== */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Plus className="w-5 h-5 text-primary" />
-                </div>
-                <h3 className="text-[15px] font-semibold text-on-surface">New Driver</h3>
-              </div>
-              <button onClick={() => setShowAddModal(false)} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
-                <X className="w-4 h-4 text-on-surface-variant" />
-              </button>
-            </div>
-
-            <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Name *</label>
-                <input
-                  type="text"
-                  value={newDriver.name}
-                  onChange={(e) => setNewDriver({ ...newDriver, name: e.target.value })}
-                  placeholder="e.g. Marco Rossi"
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Phone</label>
-                <input
-                  type="text"
-                  value={newDriver.phone}
-                  onChange={(e) => setNewDriver({ ...newDriver, phone: e.target.value })}
-                  placeholder="+39 ..."
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Notes</label>
-                <textarea
-                  value={newDriver.notes}
-                  onChange={(e) => setNewDriver({ ...newDriver, notes: e.target.value })}
-                  rows={2}
-                  placeholder="Optional notes..."
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary resize-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveNewDriver}
-                disabled={addSaving || !newDriver.name.trim()}
-                className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-              >
-                {addSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                Add Driver
-              </button>
-            </div>
-          </div>
-        </div>
+        <DriverAddModal
+          onClose={() => setShowAddModal(false)}
+          onSave={saveNewDriver}
+          saving={addSaving}
+          newDriver={newDriver}
+          onChange={setNewDriver}
+        />
       )}
 
-      {/* ===== DELETE CONFIRM ===== */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-sm shadow-xl p-5 max-h-[90vh] flex flex-col">
-            <div className="flex items-center gap-3 mb-4 shrink-0">
-              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 text-red-500" />
-              </div>
-              <div>
-                <h3 className="text-[14px] font-semibold text-on-surface">Delete Driver</h3>
-                <p className="text-[12px] text-on-surface-variant">This action cannot be undone.</p>
-              </div>
-            </div>
-            <p className="text-[13px] text-on-surface mb-4 overflow-y-auto flex-1 min-h-0">
-              Are you sure you want to delete <strong>{allDrivers.find(d => d.id === deleteConfirm)?.name}</strong>?
-            </p>
-            <div className="flex items-center justify-end gap-2 shrink-0">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDelete(deleteConfirm)}
-                className="px-4 py-1.5 bg-red-500 text-white text-[12px] font-medium rounded-lg hover:bg-red-600 transition-colors flex items-center gap-1.5 cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
+        <DriverDeleteConfirm
+          driverName={allDrivers.find(d => d.id === deleteConfirm)?.name || ''}
+          onClose={() => setDeleteConfirm(null)}
+          onConfirm={() => handleDelete(deleteConfirm)}
+        />
       )}
 
-      {/* ===== SUPPLIER RATES MODAL ===== */}
       {showRatesModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-lg shadow-xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
-              <div>
-                <h3 className="text-[15px] font-semibold text-on-surface">Supplier Rates — {showRatesModal.name}</h3>
-                <p className="text-[11px] text-on-surface-variant">Internal driver pricing</p>
-              </div>
-              <button onClick={() => { setShowRatesModal(null); setEditRate(null); }} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
-                <X className="w-4 h-4 text-on-surface-variant" />
-              </button>
-            </div>
-            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0">
-              {loadingRates ? (
-                <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
-              ) : (
-                <>
-                  {/* Existing rates */}
-                  {driverRates.length > 0 ? (
-                    <div className="space-y-2 mb-4">
-                      {driverRates.map(rate => (
-                        <div key={rate.id} className="bg-surface-container-low border border-outline-variant rounded-lg p-3">
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[12px] font-semibold text-on-surface">{rate.serviceType}</span>
-                              <span className="text-[11px] text-on-surface-variant bg-surface-dim px-1.5 py-0.5 rounded">{rate.vehicleType}</span>
-                              {rate.projectId && rate.projectId !== 'GLOBAL' && <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">{rate.projectId}</span>}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <button onClick={() => { setEditRate(rate); setIsNewRate(false); }} className="text-[11px] text-primary hover:underline cursor-pointer">Edit</button>
-                              <button onClick={() => handleDeleteRate(rate.id)} className="text-[11px] text-red-500 hover:underline cursor-pointer ml-2">Delete</button>
-                            </div>
-                          </div>
-                          <div className="text-[12px] text-on-surface-variant">
-                            Base: €{rate.baseRate} | Km: €{rate.extraKmRate}/km | Hour: €{rate.extraHourRate}/h | Night: €{rate.nightExtra} | Holiday: €{rate.holidayExtra}
-                          </div>
-                          <div className="text-[11px] text-on-surface-variant mt-0.5">
-                            Diaria Piena: €{rate.diariaPiena} | Mezza: €{rate.diariaMezza} | Included: {rate.includedKm}km / {rate.includedHours}h
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[12px] text-on-surface-variant mb-4">No rates configured for this driver.</p>
-                  )}
-
-                  {/* Add/Edit rate form */}
-                  {editRate ? (
-                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
-                      <h4 className="text-[13px] font-semibold text-on-surface">{isNewRate ? 'New Rate' : 'Edit Rate'}</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                          <label className="text-[10px] text-on-surface-variant uppercase block mb-1">Service Type</label>
-                          <select value={editRate.serviceType || 'Dispo'} onChange={e => setEditRate({ ...editRate, serviceType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]">
-                            {serviceTypes.map(st => <option key={st} value={st}>{st}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-on-surface-variant uppercase block mb-1">Vehicle Type</label>
-                          <select value={editRate.vehicleType || 'Van'} onChange={e => setEditRate({ ...editRate, vehicleType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]">
-                            {vehicleTypes.map(vt => <option key={vt} value={vt}>{vt}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-on-surface-variant uppercase block mb-1">Project</label>
-                          <input type="text" value={editRate.projectId || ''} onChange={e => setEditRate({ ...editRate, projectId: e.target.value || 'GLOBAL' })} placeholder="GLOBAL" className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Base Rate (€)</label><input type="number" step="0.01" value={editRate.baseRate || ''} onChange={e => setEditRate({ ...editRate, baseRate: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
-                        <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Included Km</label><input type="number" value={editRate.includedKm || ''} onChange={e => setEditRate({ ...editRate, includedKm: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
-                        <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Included Hours</label><input type="number" step="0.5" value={editRate.includedHours || ''} onChange={e => setEditRate({ ...editRate, includedHours: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Extra Km (€)</label><input type="number" step="0.01" value={editRate.extraKmRate || ''} onChange={e => setEditRate({ ...editRate, extraKmRate: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
-                        <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Extra Hour (€)</label><input type="number" step="0.01" value={editRate.extraHourRate || ''} onChange={e => setEditRate({ ...editRate, extraHourRate: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
-                        <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Night (€)</label><input type="number" step="0.01" value={editRate.nightExtra || ''} onChange={e => setEditRate({ ...editRate, nightExtra: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
-                        <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Holiday (€)</label><input type="number" step="0.01" value={editRate.holidayExtra || ''} onChange={e => setEditRate({ ...editRate, holidayExtra: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Diaria Piena (€)</label><input type="number" step="0.01" value={editRate.diariaPiena || ''} onChange={e => setEditRate({ ...editRate, diariaPiena: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
-                        <div><label className="text-[10px] text-on-surface-variant uppercase block mb-1">Diaria Mezza (€)</label><input type="number" step="0.01" value={editRate.diariaMezza || ''} onChange={e => setEditRate({ ...editRate, diariaMezza: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-container-low border border-outline-variant rounded px-2 py-1.5 text-[12px]" /></div>
-                      </div>
-                      <div className="flex items-center justify-end gap-2 pt-2">
-                        <button onClick={() => setEditRate(null)} className="px-3 py-1 text-[12px] text-on-surface-variant hover:bg-surface-container rounded cursor-pointer">Cancel</button>
-                        <button onClick={handleSaveRate} className="px-3 py-1 bg-primary text-on-primary text-[12px] font-medium rounded hover:bg-primary-hover flex items-center gap-1 cursor-pointer"><Save className="w-3 h-3" /> Save Rate</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button onClick={() => { setEditRate({ serviceType: 'Dispo', vehicleType: 'Van', projectId: 'GLOBAL', baseRate: 0, includedKm: 0, includedHours: 0, extraKmRate: 0, extraHourRate: 0, diariaPiena: 0, diariaMezza: 0, nightExtra: 0, holidayExtra: 0, waitHourRate: 0 }); setIsNewRate(true); }} className="w-full py-2 border border-dashed border-outline-variant rounded-lg text-[12px] text-primary font-medium hover:bg-primary/5 transition-colors cursor-pointer">
-                      + Add Supplier Rate
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+        <SupplierRatesModal
+          driverName={showRatesModal.name}
+          onClose={() => { setShowRatesModal(null); setEditRate(null); }}
+          loading={loadingRates}
+          rates={driverRates}
+          editRate={editRate}
+          isNewRate={isNewRate}
+          onEditRate={(r) => setEditRate(r)}
+          onSetIsNewRate={setIsNewRate}
+          onSaveRate={handleSaveRate}
+          onDeleteRate={handleDeleteRate}
+          onCancelEdit={() => setEditRate(null)}
+          serviceTypes={serviceTypes}
+          vehicleTypes={vehicleTypes}
+        />
       )}
-
     </div>
   );
 }
