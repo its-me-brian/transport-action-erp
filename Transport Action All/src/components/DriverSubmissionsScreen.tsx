@@ -4,6 +4,53 @@ import { useToast } from '../contexts/ToastContext';
 import { getDriverLinkResponses, getDrivers, getProjects, DriverLinkResponse } from '../services/api';
 import { useOpenService } from '../hooks/useOpenService';
 
+interface SubmissionRowProps {
+  item: DriverLinkResponse;
+  driverName: (id: string) => string;
+  projectName: (id: string) => string;
+  formatDate: (d: string) => string;
+  formatTime: (t: string) => string;
+  formatDateTime: (d: string) => string;
+  openService: (serviceId: string) => void;
+  setSelectedItem: (item: DriverLinkResponse) => void;
+}
+
+const SubmissionRow = React.memo(function SubmissionRow({ item, driverName, projectName, formatDate, formatTime, formatDateTime, openService, setSelectedItem }: SubmissionRowProps) {
+  return (
+    <tr key={item.ID} className="hover:bg-surface-container-low transition-colors">
+      <td className="px-4 py-3 text-sm font-medium">{driverName(item.DriverID)}</td>
+      <td className="px-4 py-3 text-sm text-on-surface-variant">{projectName(item.ProjectID)}</td>
+      <td className="px-4 py-3 text-sm">
+        {item.ServiceID ? (
+          <button
+            onClick={() => openService(item.ServiceID!)}
+            className="text-primary hover:underline cursor-pointer font-medium font-mono text-xs"
+          >
+            {item.ServiceID}
+          </button>
+        ) : (
+          <span className="text-on-surface-variant/50">—</span>
+        )}
+      </td>
+      <td className="px-4 py-3 text-sm">{formatDate(item.DataServizio)}</td>
+      <td className="px-4 py-3 text-sm font-mono">{formatTime(item.OrarioInizio)}</td>
+      <td className="px-4 py-3 text-sm font-mono">{formatTime(item.OrarioFine)}</td>
+      <td className="px-4 py-3 text-sm">{item.KmTotali || 0}</td>
+      <td className="px-4 py-3 text-sm">{item.Diaria || 'nessuna'}</td>
+      <td className="px-4 py-3 text-xs text-on-surface-variant">{formatDateTime(item.SubmittedAt)}</td>
+      <td className="px-4 py-3 text-right">
+        <button
+          onClick={() => setSelectedItem(item)}
+          className="p-1.5 hover:bg-surface-container rounded-lg transition-colors"
+          title="View details"
+        >
+          <Eye className="w-4 h-4 text-on-surface-variant" />
+        </button>
+      </td>
+    </tr>
+  );
+});
+
 interface Props {
   onNavigate: (screen: string) => void;
 }
@@ -222,37 +269,17 @@ export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Pro
             </thead>
             <tbody className="divide-y divide-outline-variant">
               {filteredItems.map(item => (
-                <tr key={item.ID} className="hover:bg-surface-container-low transition-colors">
-                  <td className="px-4 py-3 text-sm font-medium">{driverName(item.DriverID)}</td>
-                  <td className="px-4 py-3 text-sm text-on-surface-variant">{projectName(item.ProjectID)}</td>
-                  <td className="px-4 py-3 text-sm">
-                    {item.ServiceID ? (
-                      <button
-                        onClick={() => openService(item.ServiceID!)}
-                        className="text-primary hover:underline cursor-pointer font-medium font-mono text-xs"
-                      >
-                        {item.ServiceID}
-                      </button>
-                    ) : (
-                      <span className="text-on-surface-variant/50">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-sm">{formatDate(item.DataServizio)}</td>
-                  <td className="px-4 py-3 text-sm font-mono">{formatTime(item.OrarioInizio)}</td>
-                  <td className="px-4 py-3 text-sm font-mono">{formatTime(item.OrarioFine)}</td>
-                  <td className="px-4 py-3 text-sm">{item.KmTotali || 0}</td>
-                  <td className="px-4 py-3 text-sm">{item.Diaria || 'nessuna'}</td>
-                  <td className="px-4 py-3 text-xs text-on-surface-variant">{formatDateTime(item.SubmittedAt)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => setSelectedItem(item)}
-                      className="p-1.5 hover:bg-surface-container rounded-lg transition-colors"
-                      title="View details"
-                    >
-                      <Eye className="w-4 h-4 text-on-surface-variant" />
-                    </button>
-                  </td>
-                </tr>
+                <SubmissionRow
+                  key={item.ID}
+                  item={item}
+                  driverName={driverName}
+                  projectName={projectName}
+                  formatDate={formatDate}
+                  formatTime={formatTime}
+                  formatDateTime={formatDateTime}
+                  openService={openService}
+                  setSelectedItem={setSelectedItem}
+                />
               ))}
             </tbody>
           </table>

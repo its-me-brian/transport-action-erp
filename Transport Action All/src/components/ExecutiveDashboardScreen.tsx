@@ -18,6 +18,45 @@ interface ExecutiveDashboardScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
 }
 
+interface WorklistValidationItemProps {
+  s: ServiceSummary;
+  openService: (serviceId: string) => void;
+}
+
+const WorklistValidationItem = React.memo(function WorklistValidationItem({ s, openService }: WorklistValidationItemProps) {
+  return (
+    <div key={s.serviceId} className="flex items-center justify-between text-[11px] bg-white/60 rounded px-2 py-1.5">
+      <button
+        onClick={() => openService(s.serviceId)}
+        className="text-on-surface font-medium truncate hover:text-primary hover:underline cursor-pointer text-left"
+      >
+        {s.serviceId}
+      </button>
+      <span className="text-amber-700">{s.driver || 'Unassigned'}</span>
+    </div>
+  );
+});
+
+interface WorklistInvoicingItemProps {
+  s: ServiceSummary;
+  openService: (serviceId: string) => void;
+  fmt: (n: number) => string;
+}
+
+const WorklistInvoicingItem = React.memo(function WorklistInvoicingItem({ s, openService, fmt }: WorklistInvoicingItemProps) {
+  return (
+    <div key={s.serviceId} className="flex items-center justify-between text-[11px] bg-white/60 rounded px-2 py-1.5">
+      <button
+        onClick={() => openService(s.serviceId)}
+        className="text-on-surface font-medium truncate hover:text-primary hover:underline cursor-pointer text-left"
+      >
+        {s.serviceId}
+      </button>
+      <span className="text-blue-700">{fmt(s.revenue)}</span>
+    </div>
+  );
+});
+
 export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashboardScreenProps) {
   const openService = useOpenService();
   const [isLoading, setIsLoading] = useState(true);
@@ -195,15 +234,11 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
                   <div className="text-[11px] font-semibold text-amber-800 uppercase tracking-wide mb-2">Pending Validation</div>
                   <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
                     {pendingValidation.slice(0, 10).map(s => (
-                      <div key={s.serviceId} className="flex items-center justify-between text-[11px] bg-white/60 rounded px-2 py-1.5">
-                        <button
-                          onClick={() => openService(s.serviceId)}
-                          className="text-on-surface font-medium truncate hover:text-primary hover:underline cursor-pointer text-left"
-                        >
-                          {s.serviceId}
-                        </button>
-                        <span className="text-amber-700">{s.driver || 'Unassigned'}</span>
-                      </div>
+                      <WorklistValidationItem
+                        key={s.serviceId}
+                        s={s}
+                        openService={openService}
+                      />
                     ))}
                   </div>
                   {pendingValidation.length > 10 && (
@@ -222,15 +257,12 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
                   <div className="text-[11px] font-semibold text-blue-800 uppercase tracking-wide mb-2">Ready to Invoice</div>
                   <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
                     {pendingInvoicing.slice(0, 10).map(s => (
-                      <div key={s.serviceId} className="flex items-center justify-between text-[11px] bg-white/60 rounded px-2 py-1.5">
-                        <button
-                          onClick={() => openService(s.serviceId)}
-                          className="text-on-surface font-medium truncate hover:text-primary hover:underline cursor-pointer text-left"
-                        >
-                          {s.serviceId}
-                        </button>
-                        <span className="text-blue-700">{fmt(s.revenue)}</span>
-                      </div>
+                      <WorklistInvoicingItem
+                        key={s.serviceId}
+                        s={s}
+                        openService={openService}
+                        fmt={fmt}
+                      />
                     ))}
                   </div>
                   {pendingInvoicing.length > 10 && (

@@ -14,6 +14,62 @@ interface CollaboratorScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
 }
 
+const CollaboratorCardItem = React.memo(function CollaboratorCardItem({ c, onOpenRates, onEdit, deleteConfirm, onDelete, onDeleteConfirmSet }: {
+  c: any;
+  onOpenRates: (c: any) => void;
+  onEdit: (c: any) => void;
+  deleteConfirm: string | null;
+  onDelete: (id: string) => void;
+  onDeleteConfirmSet: (id: string | null) => void;
+}) {
+  return (
+    <div
+      key={c.id}
+      className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors hover:bg-surface-dim/30"
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[13px] font-semibold text-on-surface">{c.name}</span>
+          {c.vat && <span className="text-[10px] text-on-surface-variant font-mono">VAT: {c.vat}</span>}
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${c.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+            {c.active ? 'Active' : 'Inactive'}
+          </span>
+        </div>
+        <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
+          {c.phone && <span>{c.phone}</span>}
+          {c.email && <span>{c.email}</span>}
+          {c.operatingCompany && <span>{c.operatingCompany}</span>}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1.5 shrink-0">
+        <button
+          onClick={() => onOpenRates(c)}
+          className="px-2.5 py-1 bg-primary/10 hover:bg-primary/15 text-primary text-[11px] font-medium rounded transition-colors cursor-pointer"
+        >
+          Rates
+        </button>
+        <button
+          onClick={() => onEdit(c)}
+          className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-colors cursor-pointer"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+        {deleteConfirm === c.id ? (
+          <div className="flex gap-1">
+            <button onClick={() => onDelete(c.id)} className="px-2 py-1 bg-red-500 text-white text-[10px] font-medium rounded hover:bg-red-600 cursor-pointer">Yes</button>
+            <button onClick={() => onDeleteConfirmSet(null)} className="px-2 py-1 bg-surface-container text-on-surface-variant text-[10px] font-medium rounded cursor-pointer">No</button>
+          </div>
+        ) : (
+          <button onClick={() => onDeleteConfirmSet(c.id)} className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-red-500 rounded transition-colors cursor-pointer">
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+});
+
 export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenProps) {
   const {
     isLoading,
@@ -119,50 +175,15 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
           </div>
         ) : (
           filtered.map(c => (
-            <div
+            <CollaboratorCardItem
               key={c.id}
-              className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors hover:bg-surface-dim/30"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[13px] font-semibold text-on-surface">{c.name}</span>
-                  {c.vat && <span className="text-[10px] text-on-surface-variant font-mono">VAT: {c.vat}</span>}
-                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${c.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                    {c.active ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
-                  {c.phone && <span>{c.phone}</span>}
-                  {c.email && <span>{c.email}</span>}
-                  {c.operatingCompany && <span>{c.operatingCompany}</span>}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  onClick={() => handleOpenRates(c)}
-                  className="px-2.5 py-1 bg-primary/10 hover:bg-primary/15 text-primary text-[11px] font-medium rounded transition-colors cursor-pointer"
-                >
-                  Rates
-                </button>
-                <button
-                  onClick={() => { setEditCollaborator(c); setIsNew(false); loadLinkedDrivers(c.id); }}
-                  className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-colors cursor-pointer"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
-                {deleteConfirm === c.id ? (
-                  <div className="flex gap-1">
-                    <button onClick={() => handleDelete(c.id)} className="px-2 py-1 bg-red-500 text-white text-[10px] font-medium rounded hover:bg-red-600 cursor-pointer">Yes</button>
-                    <button onClick={() => setDeleteConfirm(null)} className="px-2 py-1 bg-surface-container text-on-surface-variant text-[10px] font-medium rounded cursor-pointer">No</button>
-                  </div>
-                ) : (
-                  <button onClick={() => setDeleteConfirm(c.id)} className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-red-500 rounded transition-colors cursor-pointer">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
+              c={c}
+              onOpenRates={handleOpenRates}
+              onEdit={(c) => { setEditCollaborator(c); setIsNew(false); loadLinkedDrivers(c.id); }}
+              deleteConfirm={deleteConfirm}
+              onDelete={handleDelete}
+              onDeleteConfirmSet={setDeleteConfirm}
+            />
           ))
         )}
       </div>

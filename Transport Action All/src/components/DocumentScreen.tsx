@@ -32,6 +32,79 @@ const MIME_ICONS: Record<string, typeof File> = {
   'text/csv': FileSpreadsheet,
 };
 
+const getIcon = (mimeType: string) => {
+  return MIME_ICONS[mimeType] || File;
+};
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return '—';
+  try {
+    return new Date(dateStr).toLocaleDateString('it-IT');
+  } catch {
+    return dateStr;
+  }
+};
+
+const DocumentCardItem = React.memo(function DocumentCardItem({ doc, deleteConfirm, onDelete, onDeleteConfirmSet }: {
+  doc: DocumentDTO;
+  deleteConfirm: string | null;
+  onDelete: (id: string) => void;
+  onDeleteConfirmSet: (id: string | null) => void;
+}) {
+  const IconComponent = getIcon(doc.mimeType);
+  return (
+    <div
+      key={doc.id}
+      className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex items-center gap-3 hover:bg-surface-dim/30 transition-colors"
+    >
+      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+        <IconComponent className="w-5 h-5 text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[13px] font-medium text-on-surface truncate">{doc.fileName}</div>
+        <div className="text-[11px] text-on-surface-variant">
+          {doc.entityType} • {doc.entityId} • {formatDate(doc.createdAt)}
+        </div>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <a
+          href={doc.fileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded transition-colors"
+          title="Open"
+        >
+          <ExternalLink className="w-4 h-4" />
+        </a>
+        {deleteConfirm === doc.id ? (
+          <div className="flex gap-1">
+            <button
+              onClick={() => onDelete(doc.id)}
+              className="px-2 py-1 bg-red-500 text-white text-[11px] font-medium rounded hover:bg-red-600 transition-colors cursor-pointer"
+            >
+              Yes
+            </button>
+            <button
+              onClick={() => onDeleteConfirmSet(null)}
+              className="px-2 py-1 bg-surface-container text-on-surface-variant text-[11px] font-medium rounded hover:bg-surface-container-high transition-colors cursor-pointer"
+            >
+              No
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => onDeleteConfirmSet(doc.id)}
+            className="p-1.5 text-on-surface-variant hover:text-red-500 hover:bg-red-50 rounded transition-colors cursor-pointer"
+            title="Delete"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+});
+
 export default function DocumentScreen({ onNavigate }: DocumentScreenProps) {
   const { token } = useAuth();
   const { showToast } = useToast();
@@ -119,19 +192,6 @@ export default function DocumentScreen({ onNavigate }: DocumentScreenProps) {
            doc.entityId.toLowerCase().includes(q);
   });
 
-  const getIcon = (mimeType: string) => {
-    return MIME_ICONS[mimeType] || File;
-  };
-
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return '—';
-    try {
-      return new Date(dateStr).toLocaleDateString('it-IT');
-    } catch {
-      return dateStr;
-    }
-  };
-
   return (
     <div id="document-screen" className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-24">
       {/* Header */}
@@ -206,60 +266,15 @@ export default function DocumentScreen({ onNavigate }: DocumentScreenProps) {
             </span>
           </div>
         ) : (
-          filtered.map(doc => {
-            const IconComponent = getIcon(doc.mimeType);
-            return (
-              <div
-                key={doc.id}
-                className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex items-center gap-3 hover:bg-surface-dim/30 transition-colors"
-              >
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <IconComponent className="w-5 h-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-medium text-on-surface truncate">{doc.fileName}</div>
-                  <div className="text-[11px] text-on-surface-variant">
-                    {doc.entityType} • {doc.entityId} • {formatDate(doc.createdAt)}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <a
-                    href={doc.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded transition-colors"
-                    title="Open"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                  {deleteConfirm === doc.id ? (
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => handleDelete(doc.id)}
-                        className="px-2 py-1 bg-red-500 text-white text-[11px] font-medium rounded hover:bg-red-600 transition-colors cursor-pointer"
-                      >
-                        Yes
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirm(null)}
-                        className="px-2 py-1 bg-surface-container text-on-surface-variant text-[11px] font-medium rounded hover:bg-surface-container-high transition-colors cursor-pointer"
-                      >
-                        No
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setDeleteConfirm(doc.id)}
-                      className="p-1.5 text-on-surface-variant hover:text-red-500 hover:bg-red-50 rounded transition-colors cursor-pointer"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })
+          filtered.map(doc => (
+            <DocumentCardItem
+              key={doc.id}
+              doc={doc}
+              deleteConfirm={deleteConfirm}
+              onDelete={handleDelete}
+              onDeleteConfirmSet={setDeleteConfirm}
+            />
+          ))
         )}
       </div>
     </div>

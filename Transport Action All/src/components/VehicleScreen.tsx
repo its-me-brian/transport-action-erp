@@ -12,6 +12,40 @@ const STATUSES = ['Disponible', 'En uso', 'Mantenimiento', 'Inactivo'];
 
 const fmtDate = (d: string) => { if (!d) return '-'; try { return new Date(d).toLocaleDateString('it-IT'); } catch { return d; } };
 
+const isExpiringSoon = (d: string) => {
+  if (!d) return false;
+  const diff = new Date(d).getTime() - Date.now();
+  return diff > 0 && diff < 30 * 24 * 60 * 60 * 1000;
+};
+
+const VehicleCardItem = React.memo(function VehicleCardItem({ v, onEdit }: {
+  v: VehicleDTO;
+  onEdit: (v: VehicleDTO) => void;
+}) {
+  return (
+    <div key={v.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[13px] font-semibold text-on-surface">{v.plate}</span>
+          <span className="text-[10px] text-on-surface-variant uppercase bg-surface-container px-1.5 py-0.5 rounded">{v.type}</span>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded ${v.status === 'Disponible' ? 'bg-emerald-50 text-emerald-700' : v.status === 'En uso' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{v.status}</span>
+        </div>
+        <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
+          <span>{v.brand} {v.model}</span>
+          <span>·</span>
+          <span>{v.ownership}</span>
+          {v.capacity > 0 && <><span>·</span><span>{v.capacity} pax</span></>}
+          {isExpiringSoon(v.insuranceExpiry) && <span className="flex items-center gap-1 text-amber-600"><AlertTriangle className="w-3 h-3" />Insurance expiring</span>}
+          {isExpiringSoon(v.inspectionExpiry) && <span className="flex items-center gap-1 text-amber-600"><AlertTriangle className="w-3 h-3" />Inspection expiring</span>}
+        </div>
+      </div>
+      <button onClick={() => onEdit(v)} className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer" title="Edit">
+        <Edit3 className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+});
+
 export default function VehicleScreen({ onNavigate }: Props) {
   const { showToast } = useToast();
   const [vehicles, setVehicles] = useState<VehicleDTO[]>([]);
@@ -40,12 +74,6 @@ export default function VehicleScreen({ onNavigate }: Props) {
     const matchStatus = !statusFilter || v.status === statusFilter;
     return matchSearch && matchStatus;
   });
-
-  const isExpiringSoon = (d: string) => {
-    if (!d) return false;
-    const diff = new Date(d).getTime() - Date.now();
-    return diff > 0 && diff < 30 * 24 * 60 * 60 * 1000;
-  };
 
   const handleCreate = async () => {
     if (!form.plate.trim()) { showToast('Plate is required', 'warning'); return; }
@@ -225,26 +253,11 @@ export default function VehicleScreen({ onNavigate }: Props) {
             <Car className="w-10 h-10 text-outline" /><span className="text-[13px] text-on-surface-variant">No vehicles found</span>
           </div>
         ) : filtered.map(v => (
-          <div key={v.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[13px] font-semibold text-on-surface">{v.plate}</span>
-                <span className="text-[10px] text-on-surface-variant uppercase bg-surface-container px-1.5 py-0.5 rounded">{v.type}</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded ${v.status === 'Disponible' ? 'bg-emerald-50 text-emerald-700' : v.status === 'En uso' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{v.status}</span>
-              </div>
-              <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
-                <span>{v.brand} {v.model}</span>
-                <span>·</span>
-                <span>{v.ownership}</span>
-                {v.capacity > 0 && <><span>·</span><span>{v.capacity} pax</span></>}
-                {isExpiringSoon(v.insuranceExpiry) && <span className="flex items-center gap-1 text-amber-600"><AlertTriangle className="w-3 h-3" />Insurance expiring</span>}
-                {isExpiringSoon(v.inspectionExpiry) && <span className="flex items-center gap-1 text-amber-600"><AlertTriangle className="w-3 h-3" />Inspection expiring</span>}
-              </div>
-            </div>
-            <button onClick={() => openEdit(v)} className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer" title="Edit">
-              <Edit3 className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          <VehicleCardItem
+            key={v.id}
+            v={v}
+            onEdit={openEdit}
+          />
         ))}
       </div>
 

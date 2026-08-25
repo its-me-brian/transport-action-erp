@@ -14,6 +14,46 @@ const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; bg
 };
 const fmt = (n: number) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
 
+const ReportCardItem = React.memo(function ReportCardItem({ r, isProcessing, onApprove, onReject, onView }: {
+  r: DriverReportDTO;
+  isProcessing: boolean;
+  onApprove: (r: DriverReportDTO) => void;
+  onReject: (r: DriverReportDTO) => void;
+  onView: (r: DriverReportDTO) => void;
+}) {
+  const cfg = STATUS_CONFIG[r.status] || STATUS_CONFIG.Pendiente;
+  const Icon = cfg.icon;
+  return (
+    <div key={r.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${cfg.bg} ${cfg.color}`}><Icon className="w-3 h-3" />{cfg.label}</span>
+          <span className="text-[10px] text-on-surface-variant">v{r.version}</span>
+          <span className="text-[10px] text-on-surface-variant">Service: {r.serviceId}</span>
+        </div>
+        <div className="flex items-center gap-4 mt-1 text-[11px] text-on-surface-variant">
+          {r.kmExtra > 0 && <span>Km Extra: {r.kmExtra}</span>}
+          {r.hoursExtra > 0 && <span>Hours Extra: {r.hoursExtra}</span>}
+          {r.parking > 0 && <span>Parking: {fmt(r.parking)}</span>}
+          {r.tolls > 0 && <span>Tolls: {fmt(r.tolls)}</span>}
+          {r.fuel > 0 && <span>Fuel: {fmt(r.fuel)}</span>}
+          {r.waitMinutes > 0 && <span>Wait: {r.waitMinutes}min</span>}
+          <span className="font-semibold">Total: {fmt(r.totalExtras)}</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button onClick={() => onView(r)} className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer" title="View"><Eye className="w-3.5 h-3.5" /></button>
+        {r.status === 'Pendiente' && (
+          <>
+            <button onClick={() => onApprove(r)} disabled={isProcessing} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded cursor-pointer" title="Approve"><CheckCircle className="w-3.5 h-3.5" /></button>
+            <button onClick={() => onReject(r)} className="p-1.5 text-red-500 hover:bg-red-50 rounded cursor-pointer" title="Reject"><XCircle className="w-3.5 h-3.5" /></button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+});
+
 export default function DriverReportScreen({ onNavigate }: Props) {
   const { showToast } = useToast();
   const [reports, setReports] = useState<DriverReportDTO[]>([]);
@@ -96,39 +136,16 @@ export default function DriverReportScreen({ onNavigate }: Props) {
           <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-outline-variant rounded-xl">
             <ClipboardCheck className="w-10 h-10 text-outline" /><span className="text-[13px] text-on-surface-variant">No reports found</span>
           </div>
-        ) : filtered.map(r => {
-          const cfg = STATUS_CONFIG[r.status] || STATUS_CONFIG.Pendiente;
-          const Icon = cfg.icon;
-          return (
-            <div key={r.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${cfg.bg} ${cfg.color}`}><Icon className="w-3 h-3" />{cfg.label}</span>
-                  <span className="text-[10px] text-on-surface-variant">v{r.version}</span>
-                  <span className="text-[10px] text-on-surface-variant">Service: {r.serviceId}</span>
-                </div>
-                <div className="flex items-center gap-4 mt-1 text-[11px] text-on-surface-variant">
-                  {r.kmExtra > 0 && <span>Km Extra: {r.kmExtra}</span>}
-                  {r.hoursExtra > 0 && <span>Hours Extra: {r.hoursExtra}</span>}
-                  {r.parking > 0 && <span>Parking: {fmt(r.parking)}</span>}
-                  {r.tolls > 0 && <span>Tolls: {fmt(r.tolls)}</span>}
-                  {r.fuel > 0 && <span>Fuel: {fmt(r.fuel)}</span>}
-                  {r.waitMinutes > 0 && <span>Wait: {r.waitMinutes}min</span>}
-                  <span className="font-semibold">Total: {fmt(r.totalExtras)}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button onClick={() => setViewTarget(r)} className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer" title="View"><Eye className="w-3.5 h-3.5" /></button>
-                {r.status === 'Pendiente' && (
-                  <>
-                    <button onClick={() => handleApprove(r)} disabled={isProcessing} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded cursor-pointer" title="Approve"><CheckCircle className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => setRejectTarget(r)} className="p-1.5 text-red-500 hover:bg-red-50 rounded cursor-pointer" title="Reject"><XCircle className="w-3.5 h-3.5" /></button>
-                  </>
-                )}
-              </div>
-            </div>
-          );
-        })}
+        ) : filtered.map(r => (
+          <ReportCardItem
+            key={r.id}
+            r={r}
+            isProcessing={isProcessing}
+            onApprove={(report) => handleApprove(report)}
+            onReject={(report) => setRejectTarget(report)}
+            onView={(report) => setViewTarget(report)}
+          />
+        ))}
       </div>
 
       {/* View Detail Modal */}

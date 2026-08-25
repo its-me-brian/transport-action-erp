@@ -24,6 +24,26 @@ function getEventColor(eventType: string): string {
   return EVENT_COLORS.default;
 }
 
+const ActivityItem = React.memo(function ActivityItem({ a }: {
+  a: ActivityFeedEntry;
+}) {
+  return (
+    <div key={a.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex items-start gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${getEventColor(a.eventType)}`}>{a.eventType}</span>
+          <span className="text-[10px] text-on-surface-variant">{a.entityType} #{a.entityId}</span>
+        </div>
+        <p className="text-[13px] text-on-surface mt-1">{a.description}</p>
+        <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
+          <span>{fmtTime(a.timestamp)}</span>
+          {a.user && <span>· {a.user}</span>}
+        </div>
+      </div>
+    </div>
+  );
+});
+
 export default function ActivityFeedScreen({ onNavigate }: Props) {
   const [activities, setActivities] = useState<ActivityFeedEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,19 +95,10 @@ export default function ActivityFeedScreen({ onNavigate }: Props) {
             <Activity className="w-10 h-10 text-outline" /><span className="text-[13px] text-on-surface-variant">No activity found</span>
           </div>
         ) : filtered.map(a => (
-          <div key={a.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex items-start gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${getEventColor(a.eventType)}`}>{a.eventType}</span>
-                <span className="text-[10px] text-on-surface-variant">{a.entityType} #{a.entityId}</span>
-              </div>
-              <p className="text-[13px] text-on-surface mt-1">{a.description}</p>
-              <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
-                <span>{fmtTime(a.timestamp)}</span>
-                {a.user && <span>· {a.user}</span>}
-              </div>
-            </div>
-          </div>
+          <ActivityItem
+            key={a.id}
+            a={a}
+          />
         ))}
       </div>
     </div>

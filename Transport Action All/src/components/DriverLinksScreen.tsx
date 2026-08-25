@@ -49,6 +49,85 @@ const safeDate = (dateStr: string) => {
   }
 };
 
+interface LinkRowProps {
+  link: DriverLink;
+  driverNameMap: Record<string, string>;
+  projectNameMap: Record<string, string>;
+  copiedToken: string | null;
+  copyLink: (linkUrl: string) => void;
+  setEditingLink: (link: DriverLink | null) => void;
+  handleDeactivate: (token: string) => void;
+  can: (permission: string) => boolean;
+}
+
+const LinkRow = React.memo(function LinkRow({ link, driverNameMap, projectNameMap, copiedToken, copyLink, setEditingLink, handleDeactivate, can }: LinkRowProps) {
+  const st = STATUS_CONFIG[link.Status] || STATUS_CONFIG.ACTIVE;
+  return (
+    <tr key={link.Token} className="hover:bg-surface-container-low/50 transition-colors">
+      <td className="px-5 py-3.5">
+        <span className="text-sm font-medium text-on-surface">{driverNameMap[link.DriverID] || link.DriverID}</span>
+        {driverNameMap[link.DriverID] && <span className="text-xs text-on-surface-variant block">{link.DriverID}</span>}
+      </td>
+      <td className="px-5 py-3.5">
+        <span className="text-sm text-on-surface-variant">{projectNameMap[link.ProjectID] || link.ProjectID}</span>
+      </td>
+      <td className="px-5 py-3.5 whitespace-nowrap">
+        <div className="flex items-center gap-1.5 text-sm text-on-surface">
+          <Calendar className="w-3.5 h-3.5 text-on-surface-variant" />
+          <span>{safeDate(link.DateFrom)}</span>
+          <span className="text-on-surface-variant">→</span>
+          <span>{safeDate(link.DateTo)}</span>
+        </div>
+      </td>
+      <td className="px-5 py-3.5 text-sm text-on-surface-variant">
+        {safeDate(link.ExpiresAt)}
+      </td>
+      <td className="px-5 py-3.5">
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full ${st.bg} ${st.text}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
+          {link.Status.charAt(0) + link.Status.slice(1).toLowerCase()}
+        </span>
+      </td>
+      <td className="px-5 py-3.5 text-sm text-on-surface-variant">
+        {safeDate(link.CreatedAt)}
+      </td>
+      <td className="px-5 py-3.5 text-right">
+        <div className="flex items-center justify-end gap-1">
+          <button
+            onClick={() => copyLink(`${import.meta.env.VITE_GAS_WEBAPP_URL}?action=driverForm&token=${link.Token}`)}
+            className="p-2 hover:bg-surface-container rounded-lg transition-colors cursor-pointer"
+            title="Copy link"
+          >
+            {copiedToken === link.Token ? (
+              <CheckCircle className="w-4 h-4 text-emerald-600" />
+            ) : (
+              <Copy className="w-4 h-4 text-on-surface-variant" />
+            )}
+          </button>
+          {link.Status === 'ACTIVE' && can('driverLink.update') && (
+            <button
+              onClick={() => setEditingLink(link)}
+              className="p-2 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+              title="Edit link"
+            >
+              <Pencil className="w-4 h-4 text-blue-500" />
+            </button>
+          )}
+          {link.Status === 'ACTIVE' && can('driverLink.deactivate') && (
+            <button
+              onClick={() => handleDeactivate(link.Token)}
+              className="p-2 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+              title="Revoke link"
+            >
+              <Trash2 className="w-4 h-4 text-red-500" />
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+});
+
 export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps) {
   const { token, can } = useAuth();
   const { showToast } = useToast();
@@ -403,70 +482,18 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
                 </thead>
                 <tbody className="divide-y divide-outline-variant">
                   {filteredLinks.map(link => {
-                    const st = STATUS_CONFIG[link.Status] || STATUS_CONFIG.ACTIVE;
                     return (
-                      <tr key={link.Token} className="hover:bg-surface-container-low/50 transition-colors">
-                        <td className="px-5 py-3.5">
-                          <span className="text-sm font-medium text-on-surface">{driverNameMap[link.DriverID] || link.DriverID}</span>
-                          {driverNameMap[link.DriverID] && <span className="text-xs text-on-surface-variant block">{link.DriverID}</span>}
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <span className="text-sm text-on-surface-variant">{projectNameMap[link.ProjectID] || link.ProjectID}</span>
-                        </td>
-                        <td className="px-5 py-3.5 whitespace-nowrap">
-                          <div className="flex items-center gap-1.5 text-sm text-on-surface">
-                            <Calendar className="w-3.5 h-3.5 text-on-surface-variant" />
-                            <span>{safeDate(link.DateFrom)}</span>
-                            <span className="text-on-surface-variant">→</span>
-                            <span>{safeDate(link.DateTo)}</span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3.5 text-sm text-on-surface-variant">
-                          {safeDate(link.ExpiresAt)}
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full ${st.bg} ${st.text}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
-                            {link.Status.charAt(0) + link.Status.slice(1).toLowerCase()}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-sm text-on-surface-variant">
-                          {safeDate(link.CreatedAt)}
-                        </td>
-                        <td className="px-5 py-3.5 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              onClick={() => copyLink(`${import.meta.env.VITE_GAS_WEBAPP_URL}?action=driverForm&token=${link.Token}`)}
-                              className="p-2 hover:bg-surface-container rounded-lg transition-colors cursor-pointer"
-                              title="Copy link"
-                            >
-                              {copiedToken === link.Token ? (
-                                <CheckCircle className="w-4 h-4 text-emerald-600" />
-                              ) : (
-                                <Copy className="w-4 h-4 text-on-surface-variant" />
-                              )}
-                            </button>
-                            {link.Status === 'ACTIVE' && can('driverLink.update') && (
-                              <button
-                                onClick={() => setEditingLink(link)}
-                                className="p-2 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                                title="Edit link"
-                              >
-                                <Pencil className="w-4 h-4 text-blue-500" />
-                              </button>
-                            )}
-                            {link.Status === 'ACTIVE' && can('driverLink.deactivate') && (
-                              <button
-                                onClick={() => handleDeactivate(link.Token)}
-                                className="p-2 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                                title="Revoke link"
-                              >
-                                <Trash2 className="w-4 h-4 text-red-500" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
+                      <LinkRow
+                        key={link.Token}
+                        link={link}
+                        driverNameMap={driverNameMap}
+                        projectNameMap={projectNameMap}
+                        copiedToken={copiedToken}
+                        copyLink={copyLink}
+                        setEditingLink={setEditingLink}
+                        handleDeactivate={handleDeactivate}
+                        can={can}
+                      />
                     );
                   })}
                 </tbody>

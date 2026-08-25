@@ -9,6 +9,33 @@ interface Props { onNavigate: (screen: ScreenId) => void; }
 
 const fmt = (n: number) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
 
+const RateCardItem = React.memo(function RateCardItem({ c, clients, onEdit }: {
+  c: RateCardDTO;
+  clients: { id: string; name: string }[];
+  onEdit: (c: RateCardDTO) => void;
+}) {
+  return (
+    <div key={c.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[13px] font-semibold text-on-surface">{c.name}</span>
+          <span className="text-[10px] text-on-surface-variant uppercase bg-surface-container px-1.5 py-0.5 rounded">{c.vehicleType}</span>
+          {c.clientId && <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">{clients.find(cl => cl.id === c.clientId)?.name || c.clientId}</span>}
+        </div>
+        <div className="flex items-center gap-4 mt-1 text-[11px] text-on-surface-variant">
+          <span>Base: {fmt(c.basePrice)}</span>
+          {c.halfDayPrice > 0 && <span>HalfDay: {fmt(c.halfDayPrice)}</span>}
+          {c.fullDayPrice > 0 && <span>FullDay: {fmt(c.fullDayPrice)}</span>}
+          {c.extraKmRate > 0 && <span>ExtraKm: {fmt(c.extraKmRate)}</span>}
+        </div>
+      </div>
+      <button onClick={() => onEdit(c)} className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer" title="Edit">
+        <Edit3 className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+});
+
 export default function RateCardScreen({ onNavigate }: Props) {
   const { showToast } = useToast();
   const [cards, setCards] = useState<RateCardDTO[]>([]);
@@ -165,24 +192,12 @@ export default function RateCardScreen({ onNavigate }: Props) {
             <CreditCard className="w-10 h-10 text-outline" /><span className="text-[13px] text-on-surface-variant">No rate cards found</span>
           </div>
         ) : filtered.map(c => (
-          <div key={c.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[13px] font-semibold text-on-surface">{c.name}</span>
-                <span className="text-[10px] text-on-surface-variant uppercase bg-surface-container px-1.5 py-0.5 rounded">{c.vehicleType}</span>
-                {c.clientId && <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">{clients.find(cl => cl.id === c.clientId)?.name || c.clientId}</span>}
-              </div>
-              <div className="flex items-center gap-4 mt-1 text-[11px] text-on-surface-variant">
-                <span>Base: {fmt(c.basePrice)}</span>
-                {c.halfDayPrice > 0 && <span>HalfDay: {fmt(c.halfDayPrice)}</span>}
-                {c.fullDayPrice > 0 && <span>FullDay: {fmt(c.fullDayPrice)}</span>}
-                {c.extraKmRate > 0 && <span>ExtraKm: {fmt(c.extraKmRate)}</span>}
-              </div>
-            </div>
-            <button onClick={() => openEdit(c)} className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer" title="Edit">
-              <Edit3 className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          <RateCardItem
+            key={c.id}
+            c={c}
+            clients={clients}
+            onEdit={openEdit}
+          />
         ))}
       </div>
 

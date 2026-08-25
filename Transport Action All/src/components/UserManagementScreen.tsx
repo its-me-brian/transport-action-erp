@@ -15,6 +15,112 @@ import { ScreenId } from '../types';
 import { getUsers, approveUser, rejectUser, updateUserRole, deleteUser, createUser, updateUser, UserRecord } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
+interface UserRowProps {
+  u: UserRecord;
+  currentUserId?: string;
+  userAction: string | null;
+  safeDate: (s: string) => string;
+  handleApproveUser: (userId: string) => void;
+  handleRejectUser: (userId: string) => void;
+  handleToggleRole: (userId: string, currentRole: string) => void;
+  handleDeleteUser: (userId: string) => void;
+  setEditingUser: (user: UserRecord | null) => void;
+  setEditUserData: (data: { name: string; email: string; role: string }) => void;
+}
+
+const UserRow = React.memo(function UserRow({ u, currentUserId, userAction, safeDate, handleApproveUser, handleRejectUser, handleToggleRole, handleDeleteUser, setEditingUser, setEditUserData }: UserRowProps) {
+  return (
+    <tr key={u.id} className="border-b border-outline-variant/50 hover:bg-surface-dim/50 transition-colors">
+      <td className="px-3 sm:px-4 py-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[11px] font-bold shrink-0">
+            {u.username?.charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <div className="font-medium text-on-surface truncate">{u.username}</div>
+            {u.name && <div className="text-[11px] text-on-surface-variant truncate">{u.name}</div>}
+            <div className="text-[11px] text-on-surface-variant truncate sm:hidden">{u.email}</div>
+          </div>
+        </div>
+      </td>
+      <td className="px-3 sm:px-4 py-3 text-on-surface-variant hidden sm:table-cell">{u.email}</td>
+      <td className="px-3 sm:px-4 py-3">
+        <button
+          onClick={() => handleToggleRole(u.id, u.role)}
+          disabled={userAction === u.id}
+          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition-colors hover:opacity-80 disabled:opacity-50 ${
+            u.role === 'admin' ? 'bg-primary/10 text-primary' : 
+            u.role === 'coordinator' ? 'bg-blue-50 text-blue-700' :
+            u.role === 'accounting' ? 'bg-purple-50 text-purple-700' :
+            'bg-gray-100 text-gray-700'
+          }`}
+          title="Click to cycle role"
+        >
+          {u.role === 'admin' && <Shield className="w-2.5 h-2.5" />}
+          {u.role}
+        </button>
+      </td>
+      <td className="px-3 sm:px-4 py-3">
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium ${
+          u.status === 'approved' ? 'bg-green-50 text-green-700' :
+          u.status === 'pending' ? 'bg-amber-50 text-amber-700' :
+          'bg-red-50 text-red-700'
+        }`}>
+          {u.status === 'approved' && <UserCheck className="w-2.5 h-2.5" />}
+          {u.status === 'pending' && <Loader2 className="w-2.5 h-2.5" />}
+          {u.status === 'rejected' && <UserX className="w-2.5 h-2.5" />}
+          {u.status}
+        </span>
+      </td>
+      <td className="px-3 sm:px-4 py-3 text-on-surface-variant text-[11px] hidden md:table-cell">
+        {u.lastLogin ? safeDate(u.lastLogin) : 'Never'}
+      </td>
+      <td className="px-3 sm:px-4 py-3 text-right">
+        <div className="flex items-center justify-end gap-1">
+          {u.status === 'pending' && (
+            <>
+              <button
+                onClick={() => handleApproveUser(u.id)}
+                disabled={userAction === u.id}
+                className="p-1.5 rounded hover:bg-green-50 text-green-600 disabled:opacity-50 transition-colors"
+                title="Approve"
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => handleRejectUser(u.id)}
+                disabled={userAction === u.id}
+                className="p-1.5 rounded hover:bg-red-50 text-red-600 disabled:opacity-50 transition-colors"
+                title="Reject"
+              >
+                <UserX className="w-3.5 h-3.5" />
+              </button>
+            </>
+          )}
+          <button
+            onClick={() => {
+              setEditingUser(u);
+              setEditUserData({ name: u.name || '', email: u.email || '', role: u.role });
+            }}
+            className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant transition-colors"
+            title="Edit"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => handleDeleteUser(u.id)}
+            disabled={userAction === u.id || u.id === currentUserId}
+            className="p-1.5 rounded hover:bg-red-50 text-red-500 disabled:opacity-30 transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+});
+
 interface UserManagementScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
 }
@@ -269,95 +375,19 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
               </thead>
               <tbody>
                 {filteredUsers.map((u) => (
-                  <tr key={u.id} className="border-b border-outline-variant/50 hover:bg-surface-dim/50 transition-colors">
-                    <td className="px-3 sm:px-4 py-3">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[11px] font-bold shrink-0">
-                          {u.username?.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="font-medium text-on-surface truncate">{u.username}</div>
-                          {u.name && <div className="text-[11px] text-on-surface-variant truncate">{u.name}</div>}
-                          {/* Show email on mobile since column is hidden */}
-                          <div className="text-[11px] text-on-surface-variant truncate sm:hidden">{u.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 text-on-surface-variant hidden sm:table-cell">{u.email}</td>
-                    <td className="px-3 sm:px-4 py-3">
-                      <button
-                        onClick={() => handleToggleRole(u.id, u.role)}
-                        disabled={userAction === u.id}
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition-colors hover:opacity-80 disabled:opacity-50 ${
-                          u.role === 'admin' ? 'bg-primary/10 text-primary' : 
-                          u.role === 'coordinator' ? 'bg-blue-50 text-blue-700' :
-                          u.role === 'accounting' ? 'bg-purple-50 text-purple-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}
-                        title="Click to cycle role"
-                      >
-                        {u.role === 'admin' && <Shield className="w-2.5 h-2.5" />}
-                        {u.role}
-                      </button>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium ${
-                        u.status === 'approved' ? 'bg-green-50 text-green-700' :
-                        u.status === 'pending' ? 'bg-amber-50 text-amber-700' :
-                        'bg-red-50 text-red-700'
-                      }`}>
-                        {u.status === 'approved' && <UserCheck className="w-2.5 h-2.5" />}
-                        {u.status === 'pending' && <Loader2 className="w-2.5 h-2.5" />}
-                        {u.status === 'rejected' && <UserX className="w-2.5 h-2.5" />}
-                        {u.status}
-                      </span>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 text-on-surface-variant text-[11px] hidden md:table-cell">
-                      {u.lastLogin ? safeDate(u.lastLogin) : 'Never'}
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {u.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => handleApproveUser(u.id)}
-                              disabled={userAction === u.id}
-                              className="p-1.5 rounded hover:bg-green-50 text-green-600 disabled:opacity-50 transition-colors"
-                              title="Approve"
-                            >
-                              <UserCheck className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleRejectUser(u.id)}
-                              disabled={userAction === u.id}
-                              className="p-1.5 rounded hover:bg-red-50 text-red-600 disabled:opacity-50 transition-colors"
-                              title="Reject"
-                            >
-                              <UserX className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        )}
-                        <button
-                          onClick={() => {
-                            setEditingUser(u);
-                            setEditUserData({ name: u.name || '', email: u.email || '', role: u.role });
-                          }}
-                          className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant transition-colors"
-                          title="Edit"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteUser(u.id)}
-                          disabled={userAction === u.id || u.id === user?.id}
-                          className="p-1.5 rounded hover:bg-red-50 text-red-500 disabled:opacity-30 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                  <UserRow
+                    key={u.id}
+                    u={u}
+                    currentUserId={user?.id}
+                    userAction={userAction}
+                    safeDate={safeDate}
+                    handleApproveUser={handleApproveUser}
+                    handleRejectUser={handleRejectUser}
+                    handleToggleRole={handleToggleRole}
+                    handleDeleteUser={handleDeleteUser}
+                    setEditingUser={setEditingUser}
+                    setEditUserData={setEditUserData}
+                  />
                 ))}
               </tbody>
             </table>

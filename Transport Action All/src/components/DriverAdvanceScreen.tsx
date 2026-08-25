@@ -39,6 +39,51 @@ const fmtDate = (d: string) => {
   try { return new Date(d).toLocaleDateString('it-IT'); } catch { return d; }
 };
 
+const AdvanceCardItem = React.memo(function AdvanceCardItem({ a, drivers }: {
+  a: DriverAdvanceDTO;
+  drivers: DriverRecord[];
+}) {
+  const driver = drivers.find(d => d.id === a.driverId);
+  const sc = STATUS_CONFIG[a.status] || STATUS_CONFIG.Pendiente;
+  const StatusIcon = sc.icon;
+  return (
+    <div key={a.id}
+      className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors hover:bg-surface-dim/30">
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sc.bg}`}>
+        <StatusIcon className={`w-4 h-4 ${sc.color}`} />
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[13px] font-semibold text-on-surface">{driver?.name || a.driverId}</span>
+          <StatusBadge status={a.status || 'Pendiente'} size="xs" />
+        </div>
+        <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
+          {a.projectId && <span>Project: {a.projectId}</span>}
+          <span className="flex items-center gap-1">
+            <Calendar className="w-3 h-3" />
+            {fmtDate(a.date)}
+          </span>
+          {a.deductedIn && <span>Deducted in: {a.deductedIn}</span>}
+        </div>
+        {a.notes && <p className="text-[11px] text-on-surface-variant mt-1 truncate">{a.notes}</p>}
+      </div>
+
+      <div className="flex items-center gap-4 shrink-0">
+        <div className="text-right">
+          <div className="text-[14px] font-bold text-on-surface">{fmt(a.amount)}</div>
+          {a.status === 'Pendiente' && a.remainingAmount < a.amount && (
+            <div className="text-[10px] text-amber-600 flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3" />
+              Remaining: {fmt(a.remainingAmount)}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+
 export default function DriverAdvanceScreen({ onNavigate }: Props) {
   const { showToast } = useToast();
   const [advances, setAdvances] = useState<DriverAdvanceDTO[]>([]);
@@ -175,50 +220,13 @@ export default function DriverAdvanceScreen({ onNavigate }: Props) {
             )}
           </div>
         ) : (
-          filtered.map(a => {
-            const driver = drivers.find(d => d.id === a.driverId);
-            const sc = STATUS_CONFIG[a.status] || STATUS_CONFIG.Pendiente;
-            const StatusIcon = sc.icon;
-            return (
-              <div key={a.id}
-                className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors hover:bg-surface-dim/30">
-                {/* Icon */}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sc.bg}`}>
-                  <StatusIcon className={`w-4 h-4 ${sc.color}`} />
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[13px] font-semibold text-on-surface">{driver?.name || a.driverId}</span>
-                    <StatusBadge status={a.status || 'Pendiente'} size="xs" />
-                  </div>
-                  <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
-                    {a.projectId && <span>Project: {a.projectId}</span>}
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {fmtDate(a.date)}
-                    </span>
-                    {a.deductedIn && <span>Deducted in: {a.deductedIn}</span>}
-                  </div>
-                  {a.notes && <p className="text-[11px] text-on-surface-variant mt-1 truncate">{a.notes}</p>}
-                </div>
-
-                {/* Amounts */}
-                <div className="flex items-center gap-4 shrink-0">
-                  <div className="text-right">
-                    <div className="text-[14px] font-bold text-on-surface">{fmt(a.amount)}</div>
-                    {a.status === 'Pendiente' && a.remainingAmount < a.amount && (
-                      <div className="text-[10px] text-amber-600 flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3" />
-                        Remaining: {fmt(a.remainingAmount)}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })
+          filtered.map(a => (
+            <AdvanceCardItem
+              key={a.id}
+              a={a}
+              drivers={drivers}
+            />
+          ))
         )}
       </div>
 

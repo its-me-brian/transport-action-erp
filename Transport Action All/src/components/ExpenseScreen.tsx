@@ -16,6 +16,53 @@ interface Props {
   onNavigate: (screen: ScreenId) => void;
 }
 
+const ExpenseCardItem = React.memo(function ExpenseCardItem({ exp, onConfirm, onEdit }: {
+  exp: any;
+  onConfirm: (expense: any, action: string) => void;
+  onEdit: (expense: any) => void;
+}) {
+  const cfg = STATUS_CONFIG[exp.status] || STATUS_CONFIG.Draft;
+  const Icon = cfg.icon;
+  const transitions = getTransitions(exp.status);
+  return (
+    <div key={exp.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${cfg.bg} ${cfg.color}`}>
+            <Icon className="w-3 h-3" />{cfg.label}
+          </span>
+          <span className="text-[13px] font-semibold text-on-surface">{exp.description}</span>
+          <span className="text-[10px] text-on-surface-variant uppercase bg-surface-container px-1.5 py-0.5 rounded">{exp.category}</span>
+        </div>
+        <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
+          <span>{exp.ownerType}{exp.ownerId ? ` #${exp.ownerId}` : ''}</span>
+          <span>·</span>
+          <span>{fmt(exp.expenseDate)}</span>
+          {exp.projectId && <><span>·</span><span>Project: {exp.projectId}</span></>}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <span className="text-[14px] font-bold text-on-surface">{fmt(exp.amount)}</span>
+        {transitions.map(t => {
+          const TIcon = t.icon;
+          return (
+            <button key={t.action} onClick={() => onConfirm(exp, t.action)}
+              className={`p-1.5 rounded cursor-pointer ${t.color}`} title={t.label}>
+              <TIcon className="w-3.5 h-3.5" />
+            </button>
+          );
+        })}
+        {exp.status === 'Draft' && (
+          <button onClick={() => onEdit(exp)}
+            className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer" title="Edit">
+            <Edit3 className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+});
+
 export default function ExpenseScreen({ onNavigate }: Props) {
   const {
     isLoading,
@@ -125,48 +172,14 @@ export default function ExpenseScreen({ onNavigate }: Props) {
             <Receipt className="w-10 h-10 text-outline" />
             <span className="text-[13px] text-on-surface-variant">No expenses found</span>
           </div>
-        ) : filtered.map(exp => {
-          const cfg = STATUS_CONFIG[exp.status] || STATUS_CONFIG.Draft;
-          const Icon = cfg.icon;
-          const transitions = getTransitions(exp.status);
-          return (
-            <div key={exp.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${cfg.bg} ${cfg.color}`}>
-                    <Icon className="w-3 h-3" />{cfg.label}
-                  </span>
-                  <span className="text-[13px] font-semibold text-on-surface">{exp.description}</span>
-                  <span className="text-[10px] text-on-surface-variant uppercase bg-surface-container px-1.5 py-0.5 rounded">{exp.category}</span>
-                </div>
-                <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
-                  <span>{exp.ownerType}{exp.ownerId ? ` #${exp.ownerId}` : ''}</span>
-                  <span>·</span>
-                  <span>{fmt(exp.expenseDate)}</span>
-                  {exp.projectId && <><span>·</span><span>Project: {exp.projectId}</span></>}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[14px] font-bold text-on-surface">{fmt(exp.amount)}</span>
-                {transitions.map(t => {
-                  const TIcon = t.icon;
-                  return (
-                    <button key={t.action} onClick={() => setConfirmTarget({ expense: exp, action: t.action })}
-                      className={`p-1.5 rounded cursor-pointer ${t.color}`} title={t.label}>
-                      <TIcon className="w-3.5 h-3.5" />
-                    </button>
-                  );
-                })}
-                {exp.status === 'Draft' && (
-                  <button onClick={() => { setEditTarget(exp); setEditChanges({ description: exp.description, amount: exp.amount, category: exp.category, expenseDate: exp.expenseDate || '', notes: exp.notes || '' }); }}
-                    className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer" title="Edit">
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
+        ) : filtered.map(exp => (
+          <ExpenseCardItem
+            key={exp.id}
+            exp={exp}
+            onConfirm={(expense, action) => setConfirmTarget({ expense, action })}
+            onEdit={(expense) => { setEditTarget(expense); setEditChanges({ description: expense.description, amount: expense.amount, category: expense.category, expenseDate: expense.expenseDate || '', notes: expense.notes || '' }); }}
+          />
+        ))}
       </div>
 
       {/* Modals */}

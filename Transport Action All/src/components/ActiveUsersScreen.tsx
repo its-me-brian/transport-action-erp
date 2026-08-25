@@ -15,6 +15,45 @@ interface PresenceUser {
   StartedAt: string;
 }
 
+interface ActiveUserRowProps {
+  user: PresenceUser;
+  getTimeSince: (dateStr: string) => string;
+  getRoleBadge: (role: string) => React.ReactNode;
+  isRecent: (dateStr: string) => boolean;
+}
+
+const ActiveUserRow = React.memo(function ActiveUserRow({ user, getTimeSince, getRoleBadge, isRecent }: ActiveUserRowProps) {
+  return (
+    <tr key={user.SessionID} className="hover:bg-surface-container-low transition-colors">
+      <td className="px-3 sm:px-4 py-3">
+        <div className="flex items-center gap-2">
+          <div className={`w-2.5 h-2.5 rounded-full ${isRecent(user.LastSeen) ? 'bg-green-500' : 'bg-yellow-500'}`} />
+          <Wifi className={`w-4 h-4 ${isRecent(user.LastSeen) ? 'text-green-500' : 'text-yellow-500'}`} />
+        </div>
+      </td>
+      <td className="px-3 sm:px-4 py-3">
+        <div>
+          <div className="font-medium text-on-surface">{user.Email}</div>
+          <div className="text-[11px] text-on-surface-variant">{user.UserID}</div>
+        </div>
+      </td>
+      <td className="px-3 sm:px-4 py-3">{getRoleBadge(user.Role)}</td>
+      <td className="px-3 sm:px-4 py-3">
+        <div className="flex items-center gap-1">
+          <Clock className="w-3.5 h-3.5 text-on-surface-variant" />
+          {getTimeSince(user.LastSeen)}
+        </div>
+      </td>
+      <td className="px-3 sm:px-4 py-3 text-[11px] text-on-surface-variant font-mono">
+        {user.SessionID?.substring(0, 12)}...
+      </td>
+      <td className="px-3 sm:px-4 py-3 text-on-surface-variant">
+        {user.IPAddress || '—'}
+      </td>
+    </tr>
+  );
+});
+
 interface ActiveUsersScreenProps {
   onNavigate: (screen: string) => void;
 }
@@ -183,33 +222,13 @@ export default function ActiveUsersScreen({ onNavigate }: ActiveUsersScreenProps
               </thead>
               <tbody className="divide-y divide-outline-variant">
                 {users.map(user => (
-                  <tr key={user.SessionID} className="hover:bg-surface-container-low transition-colors">
-                    <td className="px-3 sm:px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2.5 h-2.5 rounded-full ${isRecent(user.LastSeen) ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                        <Wifi className={`w-4 h-4 ${isRecent(user.LastSeen) ? 'text-green-500' : 'text-yellow-500'}`} />
-                      </div>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3">
-                      <div>
-                        <div className="font-medium text-on-surface">{user.Email}</div>
-                        <div className="text-[11px] text-on-surface-variant">{user.UserID}</div>
-                      </div>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3">{getRoleBadge(user.Role)}</td>
-                    <td className="px-3 sm:px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-on-surface-variant" />
-                        {getTimeSince(user.LastSeen)}
-                      </div>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 text-[11px] text-on-surface-variant font-mono">
-                      {user.SessionID?.substring(0, 12)}...
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 text-on-surface-variant">
-                      {user.IPAddress || '—'}
-                    </td>
-                  </tr>
+                  <ActiveUserRow
+                    key={user.SessionID}
+                    user={user}
+                    getTimeSince={getTimeSince}
+                    getRoleBadge={getRoleBadge}
+                    isRecent={isRecent}
+                  />
                 ))}
               </tbody>
             </table>

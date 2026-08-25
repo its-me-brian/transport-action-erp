@@ -27,6 +27,130 @@ interface ReconciliationScreenProps {
 
 type StatusFilter = 'all' | 'Pendiente' | 'EnProceso' | 'Resuelto';
 
+interface ReconciliationCardProps {
+  r: ReconciliationDTO;
+  expandedId: string | null;
+  setExpandedId: (id: string | null) => void;
+  openService: (serviceId: string) => void;
+  openResolveModal: (reconciliation: ReconciliationDTO) => void;
+  hasDifferences: (r: ReconciliationDTO) => boolean;
+  getStatusIcon: (status: string) => React.ReactNode;
+  getStatusColor: (status: string) => string;
+  diffClass: (prod: any, driver: any) => string;
+}
+
+const ReconciliationCard = React.memo(function ReconciliationCard({ r, expandedId, setExpandedId, openService, openResolveModal, hasDifferences, getStatusIcon, getStatusColor, diffClass }: ReconciliationCardProps) {
+  const isExpanded = expandedId === r.id;
+  const diffs = hasDifferences(r);
+  return (
+    <div
+      key={r.id}
+      className={`border rounded-lg transition-colors ${
+        diffs && r.status !== 'Resuelto'
+          ? 'border-orange-300 bg-orange-50'
+          : 'border-outline-variant bg-surface'
+      }`}
+    >
+      <div
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-surface-container-low transition-colors"
+        onClick={() => setExpandedId(isExpanded ? null : r.id)}
+      >
+        {isExpanded ? (
+          <ChevronUp className="w-4 h-4 text-on-surface-variant shrink-0" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-on-surface-variant shrink-0" />
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); openService(r.serviceId); }}
+              className="font-medium text-on-surface truncate hover:text-primary hover:underline cursor-pointer text-left"
+            >
+              {r.serviceId}
+            </button>
+            <span className="text-xs text-on-surface-variant">→</span>
+            <span className="text-sm text-on-surface-variant truncate">{r.projectId}</span>
+          </div>
+        </div>
+        {diffs && r.status !== 'Resuelto' && (
+          <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+            Differences
+          </span>
+        )}
+        <span className={`text-xs px-2 py-0.5 rounded-full border ${getStatusColor(r.status)}`}>
+          {getStatusIcon(r.status)}
+          <span className="ml-1">{r.status}</span>
+        </span>
+        {r.status !== 'Resuelto' && (
+          <button
+            onClick={(e) => { e.stopPropagation(); openResolveModal(r); }}
+            className="px-3 py-1.5 text-xs font-medium bg-primary text-on-primary rounded-lg hover:bg-primary-container transition-colors"
+          >
+            Resolve
+          </button>
+        )}
+      </div>
+
+      {isExpanded && (
+        <div className="px-4 pb-4 border-t border-outline-variant">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <h4 className="text-xs font-bold text-blue-700 mb-2">Production</h4>
+              <div className="space-y-1 text-sm">
+                <div><span className="text-on-surface-variant">Start:</span> <span className={diffClass(r.production.startTime, r.driver.startTime)}>{r.production.startTime || '—'}</span></div>
+                <div><span className="text-on-surface-variant">End:</span> <span className={diffClass(r.production.endTime, r.driver.endTime)}>{r.production.endTime || '—'}</span></div>
+                <div><span className="text-on-surface-variant">KM:</span> <span className={diffClass(r.production.km, r.driver.km)}>{r.production.km}</span></div>
+                <div><span className="text-on-surface-variant">Diaria:</span> <span className={diffClass(r.production.diaria, r.driver.diaria)}>{r.production.diaria}</span></div>
+                <div><span className="text-on-surface-variant">Festivo:</span> <span className={diffClass(r.production.festivo, r.driver.festivo)}>{r.production.festivo ? 'Yes' : 'No'}</span></div>
+                <div><span className="text-on-surface-variant">Notturno:</span> <span className={diffClass(r.production.notturno, r.driver.notturno)}>{r.production.notturno ? 'Yes' : 'No'}</span></div>
+              </div>
+            </div>
+
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <h4 className="text-xs font-bold text-green-700 mb-2">Driver</h4>
+              <div className="space-y-1 text-sm">
+                <div><span className="text-on-surface-variant">Start:</span> <span className={diffClass(r.driver.startTime, r.production.startTime)}>{r.driver.startTime || '—'}</span></div>
+                <div><span className="text-on-surface-variant">End:</span> <span className={diffClass(r.driver.endTime, r.production.endTime)}>{r.driver.endTime || '—'}</span></div>
+                <div><span className="text-on-surface-variant">KM:</span> <span className={diffClass(r.driver.km, r.production.km)}>{r.driver.km}</span></div>
+                <div><span className="text-on-surface-variant">Diaria:</span> <span className={diffClass(r.driver.diaria, r.production.diaria)}>{r.driver.diaria}</span></div>
+                <div><span className="text-on-surface-variant">Festivo:</span> <span className={diffClass(r.driver.festivo, r.production.festivo)}>{r.driver.festivo ? 'Yes' : 'No'}</span></div>
+                <div><span className="text-on-surface-variant">Notturno:</span> <span className={diffClass(r.driver.notturno, r.production.notturno)}>{r.driver.notturno ? 'Yes' : 'No'}</span></div>
+              </div>
+            </div>
+
+            <div className={`rounded-lg p-3 ${
+              r.status === 'Resuelto'
+                ? 'bg-purple-50 border border-purple-200'
+                : 'bg-gray-50 border border-gray-200'
+            }`}>
+              <h4 className={`text-xs font-bold mb-2 ${
+                r.status === 'Resuelto' ? 'text-purple-700' : 'text-gray-500'
+              }`}>
+                Final {r.status === 'Resuelto' ? '(Resolved)' : '(Pending)'}
+              </h4>
+              <div className="space-y-1 text-sm">
+                <div><span className="text-on-surface-variant">Start:</span> {r.final.startTime || '—'}</div>
+                <div><span className="text-on-surface-variant">End:</span> {r.final.endTime || '—'}</div>
+                <div><span className="text-on-surface-variant">KM:</span> {r.final.km}</div>
+                <div><span className="text-on-surface-variant">Diaria:</span> {r.final.diaria}</div>
+                <div><span className="text-on-surface-variant">Festivo:</span> {r.final.festivo ? 'Yes' : 'No'}</div>
+                <div><span className="text-on-surface-variant">Notturno:</span> {r.final.notturno ? 'Yes' : 'No'}</div>
+              </div>
+            </div>
+          </div>
+
+          {r.status === 'Resuelto' && (
+            <div className="mt-3 text-xs text-on-surface-variant">
+              Resolved by {r.resolvedBy} at {new Date(r.resolvedAt).toLocaleString()}
+              {r.resolutionNotes && <> — {r.resolutionNotes}</>}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+});
+
 export default function ReconciliationScreen({ onNavigate }: ReconciliationScreenProps) {
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -248,120 +372,19 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
         ) : (
           <div className="space-y-2">
             {filtered.map(r => {
-              const isExpanded = expandedId === r.id;
-              const diffs = hasDifferences(r);
               return (
-                <div
+                <ReconciliationCard
                   key={r.id}
-                  className={`border rounded-lg transition-colors ${
-                    diffs && r.status !== 'Resuelto'
-                      ? 'border-orange-300 bg-orange-50'
-                      : 'border-outline-variant bg-surface'
-                  }`}
-                >
-                  {/* Row header */}
-                  <div
-                    className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-surface-container-low transition-colors"
-                    onClick={() => setExpandedId(isExpanded ? null : r.id)}
-                  >
-                    {isExpanded ? (
-                      <ChevronUp className="w-4 h-4 text-on-surface-variant shrink-0" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-on-surface-variant shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openService(r.serviceId); }}
-                          className="font-medium text-on-surface truncate hover:text-primary hover:underline cursor-pointer text-left"
-                        >
-                          {r.serviceId}
-                        </button>
-                        <span className="text-xs text-on-surface-variant">→</span>
-                        <span className="text-sm text-on-surface-variant truncate">{r.projectId}</span>
-                      </div>
-                    </div>
-                    {diffs && r.status !== 'Resuelto' && (
-                      <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
-                        Differences
-                      </span>
-                    )}
-                    <span className={`text-xs px-2 py-0.5 rounded-full border ${getStatusColor(r.status)}`}>
-                      {getStatusIcon(r.status)}
-                      <span className="ml-1">{r.status}</span>
-                    </span>
-                    {r.status !== 'Resuelto' && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); openResolveModal(r); }}
-                        className="px-3 py-1.5 text-xs font-medium bg-primary text-on-primary rounded-lg hover:bg-primary-container transition-colors"
-                      >
-                        Resolve
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Expanded detail */}
-                  {isExpanded && (
-                    <div className="px-4 pb-4 border-t border-outline-variant">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-3">
-                        {/* Production */}
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                          <h4 className="text-xs font-bold text-blue-700 mb-2">Production</h4>
-                          <div className="space-y-1 text-sm">
-                            <div><span className="text-on-surface-variant">Start:</span> <span className={diffClass(r.production.startTime, r.driver.startTime)}>{r.production.startTime || '—'}</span></div>
-                            <div><span className="text-on-surface-variant">End:</span> <span className={diffClass(r.production.endTime, r.driver.endTime)}>{r.production.endTime || '—'}</span></div>
-                            <div><span className="text-on-surface-variant">KM:</span> <span className={diffClass(r.production.km, r.driver.km)}>{r.production.km}</span></div>
-                            <div><span className="text-on-surface-variant">Diaria:</span> <span className={diffClass(r.production.diaria, r.driver.diaria)}>{r.production.diaria}</span></div>
-                            <div><span className="text-on-surface-variant">Festivo:</span> <span className={diffClass(r.production.festivo, r.driver.festivo)}>{r.production.festivo ? 'Yes' : 'No'}</span></div>
-                            <div><span className="text-on-surface-variant">Notturno:</span> <span className={diffClass(r.production.notturno, r.driver.notturno)}>{r.production.notturno ? 'Yes' : 'No'}</span></div>
-                          </div>
-                        </div>
-
-                        {/* Driver */}
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                          <h4 className="text-xs font-bold text-green-700 mb-2">Driver</h4>
-                          <div className="space-y-1 text-sm">
-                            <div><span className="text-on-surface-variant">Start:</span> <span className={diffClass(r.driver.startTime, r.production.startTime)}>{r.driver.startTime || '—'}</span></div>
-                            <div><span className="text-on-surface-variant">End:</span> <span className={diffClass(r.driver.endTime, r.production.endTime)}>{r.driver.endTime || '—'}</span></div>
-                            <div><span className="text-on-surface-variant">KM:</span> <span className={diffClass(r.driver.km, r.production.km)}>{r.driver.km}</span></div>
-                            <div><span className="text-on-surface-variant">Diaria:</span> <span className={diffClass(r.driver.diaria, r.production.diaria)}>{r.driver.diaria}</span></div>
-                            <div><span className="text-on-surface-variant">Festivo:</span> <span className={diffClass(r.driver.festivo, r.production.festivo)}>{r.driver.festivo ? 'Yes' : 'No'}</span></div>
-                            <div><span className="text-on-surface-variant">Notturno:</span> <span className={diffClass(r.driver.notturno, r.production.notturno)}>{r.driver.notturno ? 'Yes' : 'No'}</span></div>
-                          </div>
-                        </div>
-
-                        {/* Final (if resolved) */}
-                        <div className={`rounded-lg p-3 ${
-                          r.status === 'Resuelto'
-                            ? 'bg-purple-50 border border-purple-200'
-                            : 'bg-gray-50 border border-gray-200'
-                        }`}>
-                          <h4 className={`text-xs font-bold mb-2 ${
-                            r.status === 'Resuelto' ? 'text-purple-700' : 'text-gray-500'
-                          }`}>
-                            Final {r.status === 'Resuelto' ? '(Resolved)' : '(Pending)'}
-                          </h4>
-                          <div className="space-y-1 text-sm">
-                            <div><span className="text-on-surface-variant">Start:</span> {r.final.startTime || '—'}</div>
-                            <div><span className="text-on-surface-variant">End:</span> {r.final.endTime || '—'}</div>
-                            <div><span className="text-on-surface-variant">KM:</span> {r.final.km}</div>
-                            <div><span className="text-on-surface-variant">Diaria:</span> {r.final.diaria}</div>
-                            <div><span className="text-on-surface-variant">Festivo:</span> {r.final.festivo ? 'Yes' : 'No'}</div>
-                            <div><span className="text-on-surface-variant">Notturno:</span> {r.final.notturno ? 'Yes' : 'No'}</div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Resolution info */}
-                      {r.status === 'Resuelto' && (
-                        <div className="mt-3 text-xs text-on-surface-variant">
-                          Resolved by {r.resolvedBy} at {new Date(r.resolvedAt).toLocaleString()}
-                          {r.resolutionNotes && <> — {r.resolutionNotes}</>}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                  r={r}
+                  expandedId={expandedId}
+                  setExpandedId={setExpandedId}
+                  openService={openService}
+                  openResolveModal={openResolveModal}
+                  hasDifferences={hasDifferences}
+                  getStatusIcon={getStatusIcon}
+                  getStatusColor={getStatusColor}
+                  diffClass={diffClass}
+                />
               );
             })}
           </div>

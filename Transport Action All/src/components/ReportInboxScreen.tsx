@@ -6,6 +6,50 @@ import { useAuth } from '../contexts/AuthContext';
 import { useReportInbox, InboxItem } from '../hooks/useReportInbox';
 import { useOpenService } from '../hooks/useOpenService';
 
+interface InboxItemRowProps {
+  item: InboxItem;
+  getSourceBadge: (source: string) => React.ReactNode;
+  getStatusBadge: (status: string) => React.ReactNode;
+  driverName: (id: string, item?: InboxItem) => string;
+  formatDisplayDate: (date: string) => string;
+  getServiceId: (item: InboxItem) => string;
+  openService: (serviceId: string) => void;
+  handleSelectItem: (item: InboxItem) => void;
+}
+
+const InboxItemRow = React.memo(function InboxItemRow({ item, getSourceBadge, getStatusBadge, driverName, formatDisplayDate, getServiceId, openService, handleSelectItem }: InboxItemRowProps) {
+  const svcId = getServiceId(item);
+  return (
+    <tr key={item.ID} className="hover:bg-surface-container-low transition-colors">
+      <td className="px-4 py-3">{getSourceBadge(item.Source)}</td>
+      <td className="px-4 py-3 text-sm font-medium">{driverName(item.DriverID, item)}</td>
+      <td className="px-4 py-3 text-sm">
+        {svcId ? (
+          <button
+            onClick={() => openService(svcId)}
+            className="text-primary hover:underline cursor-pointer font-medium"
+          >
+            {svcId}
+          </button>
+        ) : (
+          <span className="text-on-surface-variant/50">—</span>
+        )}
+      </td>
+      <td className="px-4 py-3 text-sm">{formatDisplayDate(item.ServiceDate)}</td>
+      <td className="px-4 py-3">{getStatusBadge(item.Status)}</td>
+      <td className="px-4 py-3 text-right">
+        <button
+          onClick={() => handleSelectItem(item)}
+          className="p-1.5 hover:bg-surface-container rounded-lg transition-colors"
+          title="View details"
+        >
+          <Eye className="w-4 h-4 text-on-surface-variant" />
+        </button>
+      </td>
+    </tr>
+  );
+});
+
 interface ReportInboxScreenProps {
   onNavigate: (screen: string) => void;
 }
@@ -174,35 +218,18 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
             </thead>
             <tbody className="divide-y divide-outline-variant">
               {filteredItems.map(item => {
-                const svcId = getServiceId(item);
                 return (
-                  <tr key={item.ID} className="hover:bg-surface-container-low transition-colors">
-                    <td className="px-4 py-3">{getSourceBadge(item.Source)}</td>
-                    <td className="px-4 py-3 text-sm font-medium">{driverName(item.DriverID, item)}</td>
-                    <td className="px-4 py-3 text-sm">
-                      {svcId ? (
-                        <button
-                          onClick={() => openService(svcId)}
-                          className="text-primary hover:underline cursor-pointer font-medium"
-                        >
-                          {svcId}
-                        </button>
-                      ) : (
-                        <span className="text-on-surface-variant/50">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm">{formatDisplayDate(item.ServiceDate)}</td>
-                    <td className="px-4 py-3">{getStatusBadge(item.Status)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => handleSelectItem(item)}
-                        className="p-1.5 hover:bg-surface-container rounded-lg transition-colors"
-                        title="View details"
-                      >
-                        <Eye className="w-4 h-4 text-on-surface-variant" />
-                      </button>
-                    </td>
-                  </tr>
+                  <InboxItemRow
+                    key={item.ID}
+                    item={item}
+                    getSourceBadge={getSourceBadge}
+                    getStatusBadge={getStatusBadge}
+                    driverName={driverName}
+                    formatDisplayDate={formatDisplayDate}
+                    getServiceId={getServiceId}
+                    openService={openService}
+                    handleSelectItem={handleSelectItem}
+                  />
                 );
               })}
             </tbody>

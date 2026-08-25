@@ -9,6 +9,34 @@ interface Props { onNavigate: (screen: ScreenId) => void; }
 
 const fmtDate = (d: string) => { if (!d) return '-'; try { return new Date(d).toLocaleDateString('it-IT'); } catch { return d; } };
 
+const ContactCardItem = React.memo(function ContactCardItem({ c, clients, onEdit }: {
+  c: ContactDTO;
+  clients: { id: string; name: string }[];
+  onEdit: (c: ContactDTO) => void;
+}) {
+  return (
+    <div key={c.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[13px] font-semibold text-on-surface">{c.name}</span>
+          {c.role && <span className="text-[10px] text-on-surface-variant uppercase bg-surface-container px-1.5 py-0.5 rounded">{c.role}</span>}
+        </div>
+        <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant flex-wrap">
+          {c.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{c.phone}</span>}
+          {c.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{c.email}</span>}
+          {c.whatsapp && <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" />{c.whatsapp}</span>}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <span className="text-[10px] text-on-surface-variant">Client: {clients.find(cl => cl.id === c.clientId)?.name || c.clientId}</span>
+        <button onClick={() => onEdit(c)} className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer" title="Edit">
+          <Edit3 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+});
+
 export default function ContactScreen({ onNavigate }: Props) {
   const { showToast } = useToast();
   const [contacts, setContacts] = useState<ContactDTO[]>([]);
@@ -171,25 +199,12 @@ export default function ContactScreen({ onNavigate }: Props) {
             <Users className="w-10 h-10 text-outline" /><span className="text-[13px] text-on-surface-variant">No contacts found</span>
           </div>
         ) : filtered.map(c => (
-          <div key={c.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[13px] font-semibold text-on-surface">{c.name}</span>
-                {c.role && <span className="text-[10px] text-on-surface-variant uppercase bg-surface-container px-1.5 py-0.5 rounded">{c.role}</span>}
-              </div>
-              <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant flex-wrap">
-                {c.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{c.phone}</span>}
-                {c.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{c.email}</span>}
-                {c.whatsapp && <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" />{c.whatsapp}</span>}
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-[10px] text-on-surface-variant">Client: {clients.find(cl => cl.id === c.clientId)?.name || c.clientId}</span>
-              <button onClick={() => openEdit(c)} className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer" title="Edit">
-                <Edit3 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
+          <ContactCardItem
+            key={c.id}
+            c={c}
+            clients={clients}
+            onEdit={openEdit}
+          />
         ))}
       </div>
 

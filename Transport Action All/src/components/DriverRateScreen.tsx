@@ -10,6 +10,33 @@ interface Props { onNavigate: (screen: ScreenId) => void; }
 const VEHICLE_TYPES = ['Transfer', 'Dispo', 'HalfDay', 'FullDay'];
 const fmt = (n: number) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
 
+const RateRowItem = React.memo(function RateRowItem({ r, drivers, onEdit }: {
+  r: DriverRateDTO;
+  drivers: { id: string; name: string }[];
+  onEdit: (r: DriverRateDTO) => void;
+}) {
+  return (
+    <div key={r.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[13px] font-semibold text-on-surface">{drivers.find(d => d.id === r.driverId)?.name || r.driverId}</span>
+          <span className="text-[10px] text-on-surface-variant uppercase bg-surface-container px-1.5 py-0.5 rounded">{r.vehicleType}</span>
+        </div>
+        <div className="flex items-center gap-4 mt-1 text-[11px] text-on-surface-variant flex-wrap">
+          <span>Transfer: {fmt(r.transferRate)}</span>
+          <span>HalfDay: {fmt(r.halfDayRate)}</span>
+          <span>FullDay: {fmt(r.fullDayRate)}</span>
+          {r.nightExtra > 0 && <span>Night: +{fmt(r.nightExtra)}</span>}
+          {r.holidayExtra > 0 && <span>Holiday: +{fmt(r.holidayExtra)}</span>}
+        </div>
+      </div>
+      <button onClick={() => onEdit(r)} className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer" title="Edit">
+        <Edit3 className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+});
+
 export default function DriverRateScreen({ onNavigate }: Props) {
   const { showToast } = useToast();
   const [rates, setRates] = useState<DriverRateDTO[]>([]);
@@ -155,24 +182,12 @@ export default function DriverRateScreen({ onNavigate }: Props) {
             <DollarSign className="w-10 h-10 text-outline" /><span className="text-[13px] text-on-surface-variant">No rates found</span>
           </div>
         ) : filtered.map(r => (
-          <div key={r.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[13px] font-semibold text-on-surface">{drivers.find(d => d.id === r.driverId)?.name || r.driverId}</span>
-                <span className="text-[10px] text-on-surface-variant uppercase bg-surface-container px-1.5 py-0.5 rounded">{r.vehicleType}</span>
-              </div>
-              <div className="flex items-center gap-4 mt-1 text-[11px] text-on-surface-variant flex-wrap">
-                <span>Transfer: {fmt(r.transferRate)}</span>
-                <span>HalfDay: {fmt(r.halfDayRate)}</span>
-                <span>FullDay: {fmt(r.fullDayRate)}</span>
-                {r.nightExtra > 0 && <span>Night: +{fmt(r.nightExtra)}</span>}
-                {r.holidayExtra > 0 && <span>Holiday: +{fmt(r.holidayExtra)}</span>}
-              </div>
-            </div>
-            <button onClick={() => openEdit(r)} className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer" title="Edit">
-              <Edit3 className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          <RateRowItem
+            key={r.id}
+            r={r}
+            drivers={drivers}
+            onEdit={openEdit}
+          />
         ))}
       </div>
 

@@ -22,6 +22,97 @@ interface ChangesScreenProps {
 
 type StatusFilter = 'All' | 'Open' | 'Resolved';
 
+interface ChangeCardProps {
+  c: Change;
+  typeConfig: Record<string, { label: string; color: string; bg: string }>;
+  statusConfig: Record<string, { icon: React.ElementType; color: string; bg: string }>;
+  priorityConfig: Record<string, { label: string; color: string; bg: string }>;
+  safeDate: (s: string) => string;
+  deleteConfirm: string | null;
+  setResolveTarget: (change: Change | null) => void;
+  setDeleteConfirm: (id: string | null) => void;
+  handleDelete: (id: string) => void;
+}
+
+const ChangeCard = React.memo(function ChangeCard({ c, typeConfig, statusConfig, priorityConfig, safeDate, deleteConfirm, setResolveTarget, setDeleteConfirm, handleDelete }: ChangeCardProps) {
+  const tc = typeConfig[c.type] || typeConfig.other;
+  const sc = statusConfig[c.status] || statusConfig.Open;
+  const pc = priorityConfig[c.priority] || priorityConfig.Medium;
+  const StatusIcon = sc.icon;
+  return (
+    <motion.div
+      key={c.id}
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.2 }}
+      whileHover={{ scale: 1.01 }}
+      className={`bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors ${c.status === 'Open' ? 'border-l-4 border-l-orange-500' : ''}`}
+    >
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sc.bg}`}>
+        <StatusIcon className={`w-4 h-4 ${sc.color}`} />
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${tc.bg} ${tc.color}`}>
+            {tc.label}
+          </span>
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${pc.bg} ${pc.color}`}>
+            {pc.label}
+          </span>
+          <span className="text-[10px] text-on-surface-variant font-mono">{c.entityType}: {c.entityId}</span>
+          <span className="text-[10px] text-on-surface-variant">{c.createdAt}</span>
+        </div>
+        <p className="text-[13px] text-on-surface mt-1">{c.description}</p>
+        {c.dueDate && (
+          <p className="text-[11px] text-on-surface-variant mt-1">Due: {safeDate(c.dueDate)}</p>
+        )}
+        {c.notes && (
+          <p className="text-[11px] text-on-surface-variant mt-1 italic">Notes: {c.notes}</p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1.5 shrink-0">
+        {c.status === 'Open' && (
+          <>
+            <button
+              onClick={() => setResolveTarget(c)}
+              className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-[11px] font-medium rounded transition-colors cursor-pointer"
+            >
+              Resolve
+            </button>
+          </>
+        )}
+        {deleteConfirm === c.id ? (
+          <div className="flex gap-1">
+            <button
+              onClick={() => handleDelete(c.id)}
+              className="px-2 py-1 bg-red-500 text-white text-[10px] font-medium rounded hover:bg-red-600 cursor-pointer"
+            >
+              Del
+            </button>
+            <button
+              onClick={() => setDeleteConfirm(null)}
+              className="px-2 py-1 bg-surface-container text-on-surface-variant text-[10px] font-medium rounded cursor-pointer"
+            >
+              No
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setDeleteConfirm(c.id)}
+            className="p-1.5 hover:bg-red-50 text-on-surface-variant hover:text-red-500 rounded transition-colors cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+    </motion.div>
+  );
+});
+
 export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
   const { showToast } = useToast();
   const [changes, setChanges] = useState<Change[]>([]);
@@ -263,86 +354,21 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
         ) : (
           <AnimatePresence mode="popLayout">
             {filtered.map(c => {
-              const tc = typeConfig[c.type] || typeConfig.other;
-              const sc = statusConfig[c.status] || statusConfig.Open;
-              const pc = priorityConfig[c.priority] || priorityConfig.Medium;
-              const StatusIcon = sc.icon;
               return (
-                <motion.div
+                <ChangeCard
                   key={c.id}
-                  layout
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                  whileHover={{ scale: 1.01 }}
-                  className={`bg-surface-container-lowest border border-outline-variant rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors ${c.status === 'Open' ? 'border-l-4 border-l-orange-500' : ''}`}
-                >
-                {/* Status icon */}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sc.bg}`}>
-                  <StatusIcon className={`w-4 h-4 ${sc.color}`} />
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${tc.bg} ${tc.color}`}>
-                      {tc.label}
-                    </span>
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${pc.bg} ${pc.color}`}>
-                      {pc.label}
-                    </span>
-                    <span className="text-[10px] text-on-surface-variant font-mono">{c.entityType}: {c.entityId}</span>
-                    <span className="text-[10px] text-on-surface-variant">{c.createdAt}</span>
-                  </div>
-                  <p className="text-[13px] text-on-surface mt-1">{c.description}</p>
-                  {c.dueDate && (
-                    <p className="text-[11px] text-on-surface-variant mt-1">Due: {safeDate(c.dueDate)}</p>
-                  )}
-                  {c.notes && (
-                    <p className="text-[11px] text-on-surface-variant mt-1 italic">Notes: {c.notes}</p>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {c.status === 'Open' && (
-                    <>
-                      <button
-                        onClick={() => setResolveTarget(c)}
-                        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-[11px] font-medium rounded transition-colors cursor-pointer"
-                      >
-                        Resolve
-                      </button>
-                    </>
-                  )}
-                  {deleteConfirm === c.id ? (
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => handleDelete(c.id)}
-                        className="px-2 py-1 bg-red-500 text-white text-[10px] font-medium rounded hover:bg-red-600 cursor-pointer"
-                      >
-                        Del
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirm(null)}
-                        className="px-2 py-1 bg-surface-container text-on-surface-variant text-[10px] font-medium rounded cursor-pointer"
-                      >
-                        No
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setDeleteConfirm(c.id)}
-                      className="p-1.5 hover:bg-red-50 text-on-surface-variant hover:text-red-500 rounded transition-colors cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
+                  c={c}
+                  typeConfig={typeConfig}
+                  statusConfig={statusConfig}
+                  priorityConfig={priorityConfig}
+                  safeDate={safeDate}
+                  deleteConfirm={deleteConfirm}
+                  setResolveTarget={setResolveTarget}
+                  setDeleteConfirm={setDeleteConfirm}
+                  handleDelete={handleDelete}
+                />
+              );
+            })}
           </AnimatePresence>
         )}
       </div>
