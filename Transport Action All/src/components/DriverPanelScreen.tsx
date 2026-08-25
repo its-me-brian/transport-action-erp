@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Users, Search, Plus, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Driver, ScreenId, getDriverAvatar } from '../types';
-import { getDrivers, createDriver, updateDriver, deleteDriver, cleanupDrivers, DriverRecord, getSupplierRates, createSupplierRate, updateSupplierRate, deleteSupplierRate, SupplierRateDTO, getVehicleTypes, getServiceTypes, getCollaborators } from '../services/api';
-import { useToast } from '../contexts/ToastContext';
+import useDriverPanel, { SortField } from '../hooks/useDriverPanel';
 import DriverCard from './DriverCard';
 import DriverEditModal from './DriverEditModal';
 import DriverAddModal from './DriverAddModal';
@@ -14,317 +13,28 @@ interface DriverPanelScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
 }
 
-export type SortField = 'name' | 'status' | 'vehicle' | 'lastUsed';
-export type SortDir = 'asc' | 'desc';
-
-export interface EditModalDriver {
-  id: string;
-  name: string;
-  phone: string;
-  whatsapp: string;
-  vehiclePreferred: string;
-  notes: string;
-  status: 'Disponible' | 'Asignado' | 'Inactivo';
-  type: string;
-  collaboratorId: string;
-  driverOwnership: string;
-  email: string;
-  iban: string;
-  licenseType: string;
-  licenseExpiry: string;
-  operatingCompany: string;
-  lastImportDate: string;
-}
-
 export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: DriverPanelScreenProps) {
-  const { showToast } = useToast();
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Disponible' | 'Asignado' | 'Inactivo'>('All');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [dbDrivers, setDbDrivers] = useState<DriverRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Sorting
-  const [sortField, setSortField] = useState<SortField>('name');
-  const [sortDir, setSortDir] = useState<SortDir>('asc');
-
-  // Edit modal
-  const [editDriver, setEditDriver] = useState<EditModalDriver | null>(null);
-  const [editSaving, setEditSaving] = useState(false);
-
-  // Collaborators list for dropdown
-  const [collaborators, setCollaborators] = useState<{ id: string; name: string }[]>([]);
-
-  // Add driver modal
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newDriver, setNewDriver] = useState({ name: '', phone: '', notes: '' });
-  const [addSaving, setAddSaving] = useState(false);
-
-  // Delete confirmation
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-
-  // SupplierRate modal for internal drivers
-  const [showRatesModal, setShowRatesModal] = useState<EditModalDriver | null>(null);
-  const [driverRates, setDriverRates] = useState<SupplierRateDTO[]>([]);
-  const [loadingRates, setLoadingRates] = useState(false);
-  const [editRate, setEditRate] = useState<Partial<SupplierRateDTO> | null>(null);
-  const [isNewRate, setIsNewRate] = useState(false);
-
-  // Vehicle Types & Service Types (admin-configurable)
-  const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
-  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
-  const handleCleanup = async () => {
-    if (!confirm('Remove non-driver entries (roles, titles, departments) from the database?')) return;
-    try {
-      const result = await cleanupDrivers();
-      if (result.removed > 0) {
-        showToast(`Removed ${result.removed} entries`, 'success');
-        loadDrivers();
-      } else {
-        showToast('No entries to clean', 'warning');
-      }
-    } catch (err) {
-      showToast('Error: ' + err.message, 'error');
-    }
-  };
-
-  // Load drivers from API
-  const loadDrivers = () => {
-    setIsLoading(true);
-    getDrivers()
-      .then(data => {
-        const arr = Array.isArray(data) ? data : [];
-        setDbDrivers(arr);
-      })
-      .catch(err => {
-        console.error('[DriverPanel] getDrivers failed:', err);
-      })
-      .finally(() => setIsLoading(false));
-  };
-
-  useEffect(() => {
-    loadDrivers();
-    getVehicleTypes().then(vt => setVehicleTypes(vt)).catch(() => {});
-    getServiceTypes().then(st => setServiceTypes(st)).catch(() => {});
-    // Load collaborators for the dropdown
-    getCollaborators({ active: true }).then(list => {
-      console.log('[DriverPanel] Collaborators loaded:', list);
-      setCollaborators(Array.isArray(list) ? list.map(c => ({ id: c.id, name: c.name })) : []);
-    }).catch(err => {
-      console.error('[DriverPanel] Failed to load collaborators:', err);
-    });
-  }, []);
-
-  // Map DB drivers to the format the UI expects, with deduplication
-  const mappedDbDrivers: Driver[] = (() => {
-    // Pass 1: dedup by ID (same ID = same physical row in Sheets)
-    const byId = new Map<string, Driver>();
-    dbDrivers.forEach(d => {
-      const name = (d.name || '').trim();
-      if (!name) return;
-      const id = (d.id || '').trim();
-      const existing = id ? byId.get(id) : undefined;
-      if (existing) {
-        // Keep the one with more data
-        if (!existing.vehicle && d.vehiclePreferred) existing.vehicle = d.vehiclePreferred;
-        if (!existing.currentLocation && d.notes) existing.currentLocation = d.notes;
-        return;
-      }
-      byId.set(id || `new-${Date.now()}-${Math.random().toString(36).slice(2,6)}`, {
-        id: id || `new-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
-        name,
-        avatar: getDriverAvatar(name),
-        status: (d.status || 'Disponible') as 'Disponible' | 'Asignado' | 'Inactivo',
-        vehicle: d.vehiclePreferred || '',
-        nextShift: d.lastUsed || '—',
-        currentLocation: d.notes || '',
-      });
-    });
-    // Pass 2: dedup by normalized name (different IDs, same name)
-    const byName = new Map<string, Driver>();
-    for (const dr of byId.values()) {
-      const key = dr.name.toLowerCase().replace(/\s+/g, ' ').replace(/['']/g, "'").trim();
-      const existing = byName.get(key);
-      if (existing) {
-        if (!existing.vehicle && dr.vehicle) existing.vehicle = dr.vehicle;
-        continue;
-      }
-      byName.set(key, dr);
-    }
-    return Array.from(byName.values());
-  })();
-
-  // Use DB drivers as the primary source — propDrivers is always [] from App.tsx
-  const allDrivers: Driver[] = mappedDbDrivers.length > 0 ? mappedDbDrivers : propDrivers;
-
-  // Sort + Filter
-  const filteredDrivers = allDrivers
-    .filter(dr => {
-      const driverName = (dr.name || '').toLowerCase();
-      const driverStatus = dr.status || 'Disponible';
-      if (statusFilter !== 'All' && driverStatus !== statusFilter) return false;
-      if (searchQuery && searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        return driverName.includes(q) || (dr.vehicle || '').toLowerCase().includes(q) || (dr.id || '').toLowerCase().includes(q);
-      }
-      return true;
-    })
-    .sort((a, b) => {
-      const dir = sortDir === 'asc' ? 1 : -1;
-      switch (sortField) {
-        case 'name': return (a.name || '').localeCompare(b.name || '') * dir;
-        case 'status': return (a.status || '').localeCompare(b.status || '') * dir;
-        case 'vehicle': return (a.vehicle || '').localeCompare(b.vehicle || '') * dir;
-        case 'lastUsed': return (a.nextShift || '').localeCompare(b.nextShift || '') * dir;
-        default: return 0;
-      }
-    });
-
-  // Toggle sort
-  const toggleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDir('asc');
-    }
-  };
-
-  // Save edit
-  const saveEdit = async () => {
-    if (!editDriver) return;
-    setEditSaving(true);
-    try {
-      const result = await updateDriver(editDriver.id, {
-        name: editDriver.name,
-        phone: editDriver.phone,
-        whatsapp: editDriver.whatsapp,
-        vehiclePreferred: editDriver.vehiclePreferred,
-        notes: editDriver.notes,
-        status: editDriver.status,
-        type: editDriver.type,
-        collaboratorId: editDriver.collaboratorId,
-        driverOwnership: editDriver.driverOwnership,
-        email: editDriver.email,
-        iban: editDriver.iban,
-        licenseType: editDriver.licenseType,
-        licenseExpiry: editDriver.licenseExpiry,
-        operatingCompany: editDriver.operatingCompany,
-      });
-      if (result.error) {
-        showToast('Error: ' + result.error, 'error');
-      } else {
-        loadDrivers();
-      }
-    } catch (e: any) {
-      showToast('Error: ' + (e.message || 'Unknown'), 'error');
-    } finally {
-      setEditSaving(false);
-      setEditDriver(null);
-    }
-  };
-
-  // SupplierRate functions for internal drivers
-  const loadDriverRates = async (driverId: string) => {
-    setLoadingRates(true);
-    try {
-      const result = await getSupplierRates({ supplierType: 'internal_driver', supplierId: driverId });
-      if (Array.isArray(result)) {
-        setDriverRates(result);
-      }
-    } catch (err) {
-      console.error('Error loading rates:', err);
-      showToast('Error loading rates', 'error');
-    } finally {
-      setLoadingRates(false);
-    }
-  };
-
-  const handleSaveRate = async () => {
-    if (!editRate || !showRatesModal) return;
-    try {
-      if (isNewRate) {
-        const result = await createSupplierRate({
-          supplierType: 'internal_driver',
-          supplierId: showRatesModal.id,
-          projectId: editRate.projectId || 'GLOBAL',
-          serviceType: editRate.serviceType || 'disposal',
-          vehicleType: editRate.vehicleType || 'Van',
-          baseRate: editRate.baseRate || 0,
-          includedKm: editRate.includedKm || 0,
-          includedHours: editRate.includedHours || 0,
-          extraKmRate: editRate.extraKmRate || 0,
-          extraHourRate: editRate.extraHourRate || 0,
-          diariaPiena: editRate.diariaPiena || 0,
-          diariaMezza: editRate.diariaMezza || 0,
-          nightExtra: editRate.nightExtra || 0,
-          holidayExtra: editRate.holidayExtra || 0,
-          waitHourRate: editRate.waitHourRate || 0,
-          validFrom: editRate.validFrom || '',
-          validTo: editRate.validTo || '',
-          operatingCompany: editRate.operatingCompany || '',
-        });
-        if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
-      } else {
-        const result = await updateSupplierRate(editRate.id!, editRate);
-        if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
-      }
-      setEditRate(null);
-      await loadDriverRates(showRatesModal.id);
-    } catch (err: any) {
-      showToast('Error: ' + (err.message || err), 'error');
-    }
-  };
-
-  const handleDeleteRate = async (rateId: string) => {
-    try {
-      const result = await deleteSupplierRate(rateId);
-      if (result.error) { showToast('Error: ' + result.error, 'error'); return; }
-      if (showRatesModal) await loadDriverRates(showRatesModal.id);
-    } catch (err: any) {
-      showToast('Error: ' + (err.message || err), 'error');
-    }
-  };
-
-  // Add new driver
-  const saveNewDriver = async () => {
-    if (!newDriver.name.trim()) {
-      showToast('Name is required', 'warning');
-      return;
-    }
-    setAddSaving(true);
-    try {
-      const result = await createDriver(newDriver.name, newDriver.phone, newDriver.notes);
-      if (result.error) {
-        showToast('Error: ' + result.error, 'error');
-      } else {
-        setNewDriver({ name: '', phone: '', notes: '' });
-        loadDrivers();
-      }
-    } catch (e: any) {
-      showToast('Error: ' + (e.message || 'Unknown'), 'error');
-    } finally {
-      setAddSaving(false);
-      setShowAddModal(false);
-    }
-  };
-
-  // Delete driver
-  const handleDelete = async (id: string) => {
-    try {
-      const result = await deleteDriver(id);
-      if (result.error) {
-        showToast('Error: ' + result.error, 'error');
-      } else {
-        setDeleteConfirm(null);
-        loadDrivers();
-      }
-    } catch (e: any) {
-      showToast('Error: ' + (e.message || 'Unknown'), 'error');
-    }
-  };
-
-  // Find DB record by ID for edit modal
-  const findDbRecord = (id: string): DriverRecord | undefined => dbDrivers.find(d => d.id === id);
+  const {
+    statusFilter, setStatusFilter,
+    searchQuery, setSearchQuery,
+    isLoading,
+    sortField, sortDir,
+    editDriver, setEditDriver, editSaving,
+    collaborators,
+    showAddModal, setShowAddModal,
+    newDriver, setNewDriver, addSaving,
+    deleteConfirm, setDeleteConfirm,
+    showRatesModal, driverRates, loadingRates,
+    editRate, setEditRate, isNewRate, setIsNewRate,
+    vehicleTypes, serviceTypes,
+    allDrivers, filteredDrivers,
+    toggleSort, handleCleanup,
+    saveEdit, loadDriverRates, handleSaveRate, handleDeleteRate,
+    saveNewDriver, handleDelete, findDbRecord,
+    handleEditDriver, handleWhatsApp,
+    openRatesModal, closeRatesModal,
+    deleteConfirmDriverName,
+  } = useDriverPanel({ drivers: propDrivers, onNavigate });
 
   const SortButton = ({ field, label }: { field: SortField; label: string }) => (
     <button
@@ -500,7 +210,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
           onSave={saveEdit}
           saving={editSaving}
           collaborators={collaborators}
-          onOpenRates={() => { setShowRatesModal(editDriver); loadDriverRates(editDriver.id); }}
+          onOpenRates={() => { openRatesModal(editDriver); loadDriverRates(editDriver.id); }}
           onChange={(d) => setEditDriver(d)}
         />
       )}
@@ -517,7 +227,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
 
       {deleteConfirm && (
         <DriverDeleteConfirm
-          driverName={allDrivers.find(d => d.id === deleteConfirm)?.name || ''}
+          driverName={deleteConfirmDriverName}
           onClose={() => setDeleteConfirm(null)}
           onConfirm={() => handleDelete(deleteConfirm)}
         />
@@ -526,7 +236,7 @@ export default function DriverPanelScreen({ drivers: propDrivers, onNavigate }: 
       {showRatesModal && (
         <SupplierRatesModal
           driverName={showRatesModal.name}
-          onClose={() => { setShowRatesModal(null); setEditRate(null); }}
+          onClose={closeRatesModal}
           loading={loadingRates}
           rates={driverRates}
           editRate={editRate}
