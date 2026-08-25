@@ -28,6 +28,7 @@ const InboxItemRow = React.memo(function InboxItemRow({ item, getSourceBadge, ge
           <button
             onClick={() => openService(svcId)}
             className="text-primary hover:underline cursor-pointer font-medium"
+            aria-label={`Open service ${svcId}`}
           >
             {svcId}
           </button>
@@ -42,6 +43,7 @@ const InboxItemRow = React.memo(function InboxItemRow({ item, getSourceBadge, ge
           onClick={() => handleSelectItem(item)}
           className="p-1.5 hover:bg-surface-container rounded-lg transition-colors"
           title="View details"
+          aria-label="View details"
         >
           <Eye className="w-4 h-4 text-on-surface-variant" />
         </button>
@@ -136,6 +138,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
           <select
             value={filterSource}
             onChange={e => setFilterSource(e.target.value)}
+            aria-label="Filter by source"
             className="px-2 py-1.5 border border-outline-variant rounded-lg text-[12px] bg-surface focus:border-primary outline-none cursor-pointer"
           >
             <option value="">All Sources</option>
@@ -147,6 +150,7 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
         <select
           value={filterStatus}
           onChange={e => setFilterStatus(e.target.value)}
+          aria-label="Filter by status"
           className="px-2 py-1.5 border border-outline-variant rounded-lg text-[12px] bg-surface focus:border-primary outline-none cursor-pointer shrink-0"
         >
           <option value="">All Status</option>

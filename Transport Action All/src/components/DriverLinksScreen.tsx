@@ -97,6 +97,7 @@ const LinkRow = React.memo(function LinkRow({ link, driverNameMap, projectNameMa
             onClick={() => copyLink(`${import.meta.env.VITE_GAS_WEBAPP_URL}?action=driverForm&token=${link.Token}`)}
             className="p-2 hover:bg-surface-container rounded-lg transition-colors cursor-pointer"
             title="Copy link"
+            aria-label="Copy link"
           >
             {copiedToken === link.Token ? (
               <CheckCircle className="w-4 h-4 text-emerald-600" />
@@ -109,6 +110,7 @@ const LinkRow = React.memo(function LinkRow({ link, driverNameMap, projectNameMa
               onClick={() => setEditingLink(link)}
               className="p-2 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
               title="Edit link"
+              aria-label="Edit link"
             >
               <Pencil className="w-4 h-4 text-blue-500" />
             </button>
@@ -118,6 +120,7 @@ const LinkRow = React.memo(function LinkRow({ link, driverNameMap, projectNameMa
               onClick={() => handleDeactivate(link.Token)}
               className="p-2 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
               title="Revoke link"
+              aria-label="Revoke link"
             >
               <Trash2 className="w-4 h-4 text-red-500" />
             </button>
@@ -323,6 +326,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
             <button
               onClick={handleExportExcel}
               className="hidden sm:flex items-center gap-2 px-3 py-2 bg-surface border border-outline-variant text-on-surface text-sm font-medium rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer"
+              aria-label="Export to Excel"
             >
               <Download className="w-4 h-4" />
               Excel
@@ -330,6 +334,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
             <button
               onClick={handleExportPDF}
               className="hidden sm:flex items-center gap-2 px-3 py-2 bg-surface border border-outline-variant text-on-surface text-sm font-medium rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer"
+              aria-label="Export to PDF"
             >
               <FileText className="w-4 h-4" />
               PDF
@@ -363,6 +368,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
             <select
               value={filterProject}
               onChange={e => setFilterProject(e.target.value)}
+              aria-label="Filter by project"
               className="px-3 py-1.5 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors cursor-pointer shrink-0"
             >
               <option value="">All Projects</option>
@@ -373,6 +379,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
             <select
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
+              aria-label="Filter by status"
               className="px-3 py-1.5 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors cursor-pointer shrink-0"
             >
               <option value="">All Status</option>
@@ -386,6 +393,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
                 type="date"
                 value={filterDateFrom}
                 onChange={e => setFilterDateFrom(e.target.value)}
+                aria-label="Filter from date"
                 placeholder="From"
                 className="px-2 py-1.5 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
               />
@@ -394,6 +402,7 @@ export default function DriverLinksScreen({ onNavigate }: DriverLinksScreenProps
                 type="date"
                 value={filterDateTo}
                 onChange={e => setFilterDateTo(e.target.value)}
+                aria-label="Filter to date"
                 placeholder="To"
                 className="px-2 py-1.5 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
               />

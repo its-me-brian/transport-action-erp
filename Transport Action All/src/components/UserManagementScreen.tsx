@@ -84,6 +84,7 @@ const UserRow = React.memo(function UserRow({ u, currentUserId, userAction, safe
                 disabled={userAction === u.id}
                 className="p-1.5 rounded hover:bg-green-50 text-green-600 disabled:opacity-50 transition-colors"
                 title="Approve"
+                aria-label="Approve"
               >
                 <UserCheck className="w-3.5 h-3.5" />
               </button>
@@ -92,6 +93,7 @@ const UserRow = React.memo(function UserRow({ u, currentUserId, userAction, safe
                 disabled={userAction === u.id}
                 className="p-1.5 rounded hover:bg-red-50 text-red-600 disabled:opacity-50 transition-colors"
                 title="Reject"
+                aria-label="Reject"
               >
                 <UserX className="w-3.5 h-3.5" />
               </button>
@@ -104,6 +106,7 @@ const UserRow = React.memo(function UserRow({ u, currentUserId, userAction, safe
             }}
             className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant transition-colors"
             title="Edit"
+            aria-label="Edit"
           >
             <Edit3 className="w-3.5 h-3.5" />
           </button>
@@ -112,6 +115,7 @@ const UserRow = React.memo(function UserRow({ u, currentUserId, userAction, safe
             disabled={userAction === u.id || u.id === currentUserId}
             className="p-1.5 rounded hover:bg-red-50 text-red-500 disabled:opacity-30 transition-colors"
             title="Delete"
+            aria-label="Delete"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -401,7 +405,7 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
           <div className="bg-surface rounded-xl shadow-xl w-full max-w-md">
             <div className="flex items-center justify-between p-4 border-b border-outline-variant">
               <h3 className="text-[14px] font-semibold text-on-surface">Create New User</h3>
-              <button onClick={() => setShowCreateUser(false)}>
+              <button onClick={() => setShowCreateUser(false)} aria-label="Close">
                 <X className="w-5 h-5 text-on-surface-variant" />
               </button>
             </div>
@@ -412,6 +416,7 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
                   type="text"
                   value={newUser.username}
                   onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                  aria-label="Username"
                   className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
@@ -421,6 +426,7 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
                   type="email"
                   value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  aria-label="Email"
                   className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
@@ -430,6 +436,7 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
                   type="text"
                   value={newUser.name}
                   onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                  aria-label="Full Name"
                   className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
@@ -439,6 +446,7 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
                   type="password"
                   value={newUser.password}
                   onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  aria-label="Password"
                   className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
@@ -447,6 +455,7 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
                 <select
                   value={newUser.role}
                   onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                  aria-label="Select user role"
                   className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                   <option value="admin">Admin</option>
@@ -481,7 +490,7 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
           <div className="bg-surface rounded-xl shadow-xl w-full max-w-md">
             <div className="flex items-center justify-between p-4 border-b border-outline-variant">
               <h3 className="text-[14px] font-semibold text-on-surface">Edit User: {editingUser.username}</h3>
-              <button onClick={() => setEditingUser(null)}>
+              <button onClick={() => setEditingUser(null)} aria-label="Close">
                 <X className="w-5 h-5 text-on-surface-variant" />
               </button>
             </div>
@@ -492,6 +501,7 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
                   type="text"
                   value={editUserData.name}
                   onChange={(e) => setEditUserData({ ...editUserData, name: e.target.value })}
+                  aria-label="Full Name"
                   className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
@@ -501,6 +511,7 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
                   type="email"
                   value={editUserData.email}
                   onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
+                  aria-label="Email"
                   className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
@@ -509,6 +520,7 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
                 <select
                   value={editUserData.role}
                   onChange={(e) => setEditUserData({ ...editUserData, role: e.target.value })}
+                  aria-label="Select user role"
                   className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                   <option value="admin">Admin</option>

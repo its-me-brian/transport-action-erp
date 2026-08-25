@@ -47,7 +47,7 @@ export function CollaboratorFormModal({
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
           <h3 className="text-[15px] font-semibold text-on-surface">{isNew ? 'Add Provider' : 'Edit Provider'}</h3>
-          <button onClick={() => setEditCollaborator(null)} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
+          <button onClick={() => setEditCollaborator(null)} aria-label="Close modal" className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
             <X className="w-4 h-4 text-on-surface-variant" />
           </button>
         </div>
@@ -102,6 +102,7 @@ export function CollaboratorFormModal({
             <button
               type="button"
               onClick={() => setEditCollaborator({ ...editCollaborator, active: !editCollaborator.active })}
+              aria-label={editCollaborator.active ? 'Set provider inactive' : 'Set provider active'}
               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${editCollaborator.active ? 'bg-primary' : 'bg-outline-variant'}`}
             >
               <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${editCollaborator.active ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
@@ -149,6 +150,7 @@ export function CollaboratorFormModal({
                   <select
                     value=""
                     onChange={e => { if (e.target.value) handleLinkDriver(e.target.value); }}
+                    aria-label="Select driver to link"
                     className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[12px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
                   >
                     <option value="">— Asociar conductor —</option>
@@ -223,7 +225,7 @@ export function RatesModal({
               className="flex items-center gap-1 px-2.5 py-1 bg-primary text-on-primary text-[11px] font-medium rounded-lg hover:bg-primary-hover cursor-pointer">
               <Plus className="w-3 h-3" /> Add Rate
             </button>
-            <button onClick={() => { setSelectedCollaborator(null); setEditRate(null); }} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
+            <button onClick={() => { setSelectedCollaborator(null); setEditRate(null); }} aria-label="Close modal" className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
               <X className="w-4 h-4 text-on-surface-variant" />
             </button>
           </div>
@@ -247,10 +249,10 @@ export function RatesModal({
                       Incl: {r.includedKm}km / {r.includedHours}h · Notte: {formatCurrency(r.nightExtra)} · Festa: {formatCurrency(r.holidayExtra)}
                     </div>
                   </div>
-                  <button onClick={() => { setEditRate(r); setIsNewRate(false); }} className="p-1.5 hover:bg-surface-dim rounded cursor-pointer">
+                  <button onClick={() => { setEditRate(r); setIsNewRate(false); }} aria-label="Edit rate" className="p-1.5 hover:bg-surface-dim rounded cursor-pointer">
                     <Pencil className="w-3.5 h-3.5 text-on-surface-variant" />
                   </button>
-                  <button onClick={() => handleDeleteRate(r.id)} className="p-1.5 hover:bg-surface-dim rounded cursor-pointer">
+                  <button onClick={() => handleDeleteRate(r.id)} aria-label="Delete rate" className="p-1.5 hover:bg-surface-dim rounded cursor-pointer">
                     <Trash2 className="w-3.5 h-3.5 text-red-500" />
                   </button>
                 </div>

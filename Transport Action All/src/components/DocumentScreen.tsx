@@ -71,6 +71,7 @@ const DocumentCardItem = React.memo(function DocumentCardItem({ doc, deleteConfi
           href={doc.fileUrl}
           target="_blank"
           rel="noopener noreferrer"
+          aria-label="Open document"
           className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded transition-colors"
           title="Open"
         >
@@ -80,12 +81,14 @@ const DocumentCardItem = React.memo(function DocumentCardItem({ doc, deleteConfi
           <div className="flex gap-1">
             <button
               onClick={() => onDelete(doc.id)}
+              aria-label="Confirm delete document"
               className="px-2 py-1 bg-red-500 text-white text-[11px] font-medium rounded hover:bg-red-600 transition-colors cursor-pointer"
             >
               Yes
             </button>
             <button
               onClick={() => onDeleteConfirmSet(null)}
+              aria-label="Cancel delete"
               className="px-2 py-1 bg-surface-container text-on-surface-variant text-[11px] font-medium rounded hover:bg-surface-container-high transition-colors cursor-pointer"
             >
               No
@@ -94,6 +97,7 @@ const DocumentCardItem = React.memo(function DocumentCardItem({ doc, deleteConfi
         ) : (
           <button
             onClick={() => onDeleteConfirmSet(doc.id)}
+            aria-label="Delete document"
             className="p-1.5 text-on-surface-variant hover:text-red-500 hover:bg-red-50 rounded transition-colors cursor-pointer"
             title="Delete"
           >

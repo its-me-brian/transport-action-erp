@@ -47,6 +47,7 @@ const ExpenseCardItem = React.memo(function ExpenseCardItem({ exp, onConfirm, on
           const TIcon = t.icon;
           return (
             <button key={t.action} onClick={() => onConfirm(exp, t.action)}
+              aria-label={t.label}
               className={`p-1.5 rounded cursor-pointer ${t.color}`} title={t.label}>
               <TIcon className="w-3.5 h-3.5" />
             </button>
@@ -54,6 +55,7 @@ const ExpenseCardItem = React.memo(function ExpenseCardItem({ exp, onConfirm, on
         })}
         {exp.status === 'Draft' && (
           <button onClick={() => onEdit(exp)}
+            aria-label="Edit expense"
             className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer" title="Edit">
             <Edit3 className="w-3.5 h-3.5" />
           </button>
@@ -97,14 +99,17 @@ export default function ExpenseScreen({ onNavigate }: Props) {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={exportToExcel}
+            aria-label="Export to Excel"
             className="flex items-center gap-2 bg-surface border border-outline-variant text-on-surface px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-surface-container-low transition-colors cursor-pointer">
             <Download className="w-3.5 h-3.5" /><span className="hidden sm:inline">Excel</span>
           </button>
           <button onClick={exportToPDF}
+            aria-label="Export to PDF"
             className="flex items-center gap-2 bg-surface border border-outline-variant text-on-surface px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-surface-container-low transition-colors cursor-pointer">
             <FileText className="w-3.5 h-3.5" /><span className="hidden sm:inline">PDF</span>
           </button>
           <button onClick={() => setShowCreateModal(true)}
+            aria-label="Add expense"
             className="flex items-center gap-2 bg-primary text-on-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-primary-hover transition-colors cursor-pointer">
             <Plus className="w-3.5 h-3.5" /><span className="hidden sm:inline">Add Expense</span>
           </button>

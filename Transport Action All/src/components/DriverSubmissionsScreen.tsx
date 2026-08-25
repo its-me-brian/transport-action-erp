@@ -25,6 +25,7 @@ const SubmissionRow = React.memo(function SubmissionRow({ item, driverName, proj
           <button
             onClick={() => openService(item.ServiceID!)}
             className="text-primary hover:underline cursor-pointer font-medium font-mono text-xs"
+            aria-label={`Open service ${item.ServiceID}`}
           >
             {item.ServiceID}
           </button>
@@ -43,6 +44,7 @@ const SubmissionRow = React.memo(function SubmissionRow({ item, driverName, proj
           onClick={() => setSelectedItem(item)}
           className="p-1.5 hover:bg-surface-container rounded-lg transition-colors"
           title="View details"
+          aria-label="View details"
         >
           <Eye className="w-4 h-4 text-on-surface-variant" />
         </button>
@@ -186,6 +188,7 @@ export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Pro
           <select
             value={filterDriver}
             onChange={e => setFilterDriver(e.target.value)}
+            aria-label="Filter by driver"
             className="px-3 py-1.5 border border-outline-variant rounded-lg text-sm shrink-0"
           >
             <option value="">All Drivers</option>
@@ -197,6 +200,7 @@ export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Pro
         <select
           value={filterProject}
           onChange={e => setFilterProject(e.target.value)}
+          aria-label="Filter by project"
           className="px-3 py-1.5 border border-outline-variant rounded-lg text-sm shrink-0"
         >
           <option value="">All Projects</option>
@@ -293,7 +297,7 @@ export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Pro
           <div className="bg-surface rounded-xl w-full max-w-lg shadow-xl max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-outline-variant shrink-0">
               <h2 className="text-base sm:text-lg font-bold text-on-surface">Submission Details</h2>
-              <button onClick={() => setSelectedItem(null)} className="p-1 hover:bg-surface-container rounded-lg">
+              <button onClick={() => setSelectedItem(null)} className="p-1 hover:bg-surface-container rounded-lg" aria-label="Close">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -321,6 +325,7 @@ export default function DriverSubmissionsScreen({ onNavigate: _onNavigate }: Pro
                   <button
                     onClick={() => openService(selectedItem.ServiceID!)}
                     className="font-mono text-xs text-primary hover:underline cursor-pointer"
+                    aria-label={`Open service ${selectedItem.ServiceID}`}
                   >
                     {selectedItem.ServiceID}
                   </button>

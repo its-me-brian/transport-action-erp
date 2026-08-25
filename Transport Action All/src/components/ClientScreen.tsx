@@ -62,23 +62,25 @@ const ClientCardItem = React.memo(function ClientCardItem({ c, onToggleActive, o
         <button
           onClick={() => onToggleActive(c)}
           className={`p-1.5 rounded transition-colors cursor-pointer ${c.active ? 'hover:bg-amber-50 text-on-surface-variant hover:text-amber-600' : 'hover:bg-green-50 text-on-surface-variant hover:text-green-600'}`}
+          aria-label={c.active ? 'Deactivate client' : 'Activate client'}
           title={c.active ? 'Deactivate' : 'Activate'}
         >
           {c.active ? <PauseCircle className="w-3.5 h-3.5" /> : <CheckCircle className="w-3.5 h-3.5" />}
         </button>
         <button
           onClick={() => onEdit(c)}
+          aria-label="Edit client"
           className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-colors cursor-pointer"
         >
           <Pencil className="w-3.5 h-3.5" />
         </button>
         {deleteConfirm === c.id ? (
           <div className="flex gap-1">
-            <button onClick={() => onDelete(c.id)} className="px-2 py-1 bg-red-500 text-white text-[10px] font-medium rounded hover:bg-red-600 cursor-pointer">Yes</button>
-            <button onClick={() => onDeleteConfirmSet(null)} className="px-2 py-1 bg-surface-container text-on-surface-variant text-[10px] font-medium rounded cursor-pointer">No</button>
+            <button onClick={() => onDelete(c.id)} aria-label="Confirm delete client" className="px-2 py-1 bg-red-500 text-white text-[10px] font-medium rounded hover:bg-red-600 cursor-pointer">Yes</button>
+            <button onClick={() => onDeleteConfirmSet(null)} aria-label="Cancel delete" className="px-2 py-1 bg-surface-container text-on-surface-variant text-[10px] font-medium rounded cursor-pointer">No</button>
           </div>
         ) : (
-          <button onClick={() => onDeleteConfirmSet(c.id)} className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-red-500 rounded transition-colors cursor-pointer">
+          <button onClick={() => onDeleteConfirmSet(c.id)} aria-label="Delete client" className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-red-500 rounded transition-colors cursor-pointer">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         )}
@@ -201,6 +203,7 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
         </div>
         <button
           onClick={() => { setEditClient({ name: '', type: 'direct', vat: '', address: '', phone: '', email: '', paymentTerms: 30, notes: '', active: true }); setIsNew(true); }}
+          aria-label="Add client"
           className="flex items-center gap-2 bg-primary text-on-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-primary-hover transition-colors cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
@@ -266,7 +269,7 @@ export default function ClientScreen({ onNavigate }: ClientScreenProps) {
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[15px] font-semibold text-on-surface">{isNew ? 'Add Client' : 'Edit Client'}</h3>
-              <button onClick={() => setEditClient(null)} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
+              <button onClick={() => setEditClient(null)} aria-label="Close modal" className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
                 <X className="w-4 h-4 text-on-surface-variant" />
               </button>
             </div>

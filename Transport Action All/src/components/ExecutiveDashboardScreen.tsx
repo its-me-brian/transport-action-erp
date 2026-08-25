@@ -29,6 +29,7 @@ const WorklistValidationItem = React.memo(function WorklistValidationItem({ s, o
       <button
         onClick={() => openService(s.serviceId)}
         className="text-on-surface font-medium truncate hover:text-primary hover:underline cursor-pointer text-left"
+        aria-label={`Open service ${s.serviceId}`}
       >
         {s.serviceId}
       </button>
@@ -49,6 +50,7 @@ const WorklistInvoicingItem = React.memo(function WorklistInvoicingItem({ s, ope
       <button
         onClick={() => openService(s.serviceId)}
         className="text-on-surface font-medium truncate hover:text-primary hover:underline cursor-pointer text-left"
+        aria-label={`Open service ${s.serviceId}`}
       >
         {s.serviceId}
       </button>
@@ -201,6 +203,8 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
             <MotionCard 
               className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3"
               onClick={() => setShowWorklists(!showWorklists)}
+              role="button"
+              aria-label={`Toggle pending validation worklist, ${dashboardSummary.services.pendingValidation} services pending`}
             >
               <div className="flex items-center justify-between">
                 <div>
@@ -214,6 +218,8 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
             <MotionCard 
               className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3"
               onClick={() => setShowWorklists(!showWorklists)}
+              role="button"
+              aria-label={`Toggle ready to invoice worklist, ${dashboardSummary.invoicing.sent} invoices sent`}
             >
               <div className="flex items-center justify-between">
                 <div>
@@ -247,6 +253,7 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
                   <button
                     onClick={() => onNavigate('transport')}
                     className="mt-2 text-[11px] text-amber-700 font-medium hover:underline cursor-pointer"
+                    aria-label="View in Calendar"
                   >
                     View in Calendar →
                   </button>
@@ -271,6 +278,7 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
                   <button
                     onClick={() => onNavigate('accounting')}
                     className="mt-2 text-[11px] text-blue-700 font-medium hover:underline cursor-pointer"
+                    aria-label="View Accounting"
                   >
                     View Accounting →
                   </button>
@@ -297,6 +305,7 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
                     key={i}
                     onClick={() => onNavigate(link.screen)}
                     className="flex flex-col items-center gap-1.5 p-3 bg-surface-container-lowest border border-outline-variant rounded-lg hover:bg-surface-dim/50 transition-colors cursor-pointer"
+                    aria-label={`Go to ${link.label}`}
                   >
                     <Icon className={`w-5 h-5 ${link.color}`} />
                     <span className="text-[11px] text-on-surface font-medium">{link.label}</span>

@@ -45,23 +45,25 @@ const CollaboratorCardItem = React.memo(function CollaboratorCardItem({ c, onOpe
       <div className="flex items-center gap-1.5 shrink-0">
         <button
           onClick={() => onOpenRates(c)}
+          aria-label="View rates"
           className="px-2.5 py-1 bg-primary/10 hover:bg-primary/15 text-primary text-[11px] font-medium rounded transition-colors cursor-pointer"
         >
           Rates
         </button>
         <button
           onClick={() => onEdit(c)}
+          aria-label="Edit provider"
           className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-primary rounded transition-colors cursor-pointer"
         >
           <Pencil className="w-3.5 h-3.5" />
         </button>
         {deleteConfirm === c.id ? (
           <div className="flex gap-1">
-            <button onClick={() => onDelete(c.id)} className="px-2 py-1 bg-red-500 text-white text-[10px] font-medium rounded hover:bg-red-600 cursor-pointer">Yes</button>
-            <button onClick={() => onDeleteConfirmSet(null)} className="px-2 py-1 bg-surface-container text-on-surface-variant text-[10px] font-medium rounded cursor-pointer">No</button>
+            <button onClick={() => onDelete(c.id)} aria-label="Confirm delete provider" className="px-2 py-1 bg-red-500 text-white text-[10px] font-medium rounded hover:bg-red-600 cursor-pointer">Yes</button>
+            <button onClick={() => onDeleteConfirmSet(null)} aria-label="Cancel delete" className="px-2 py-1 bg-surface-container text-on-surface-variant text-[10px] font-medium rounded cursor-pointer">No</button>
           </div>
         ) : (
-          <button onClick={() => onDeleteConfirmSet(c.id)} className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-red-500 rounded transition-colors cursor-pointer">
+          <button onClick={() => onDeleteConfirmSet(c.id)} aria-label="Delete provider" className="p-1.5 hover:bg-surface-container text-on-surface-variant hover:text-red-500 rounded transition-colors cursor-pointer">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         )}
@@ -120,6 +122,7 @@ export default function CollaboratorScreen({ onNavigate }: CollaboratorScreenPro
         </div>
         <button
           onClick={() => { setEditCollaborator({ name: '', vat: '', address: '', phone: '', email: '', paymentTerms: 30, notes: '', operatingCompany: '', active: true }); setIsNew(true); }}
+          aria-label="Add provider"
           className="flex items-center gap-2 bg-primary text-on-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-primary-hover transition-colors cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />

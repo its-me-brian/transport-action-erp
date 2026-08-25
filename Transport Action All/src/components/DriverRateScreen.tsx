@@ -30,7 +30,7 @@ const RateRowItem = React.memo(function RateRowItem({ r, drivers, onEdit }: {
           {r.holidayExtra > 0 && <span>Holiday: +{fmt(r.holidayExtra)}</span>}
         </div>
       </div>
-      <button onClick={() => onEdit(r)} className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer" title="Edit">
+      <button onClick={() => onEdit(r)} aria-label="Edit driver rate" className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer" title="Edit">
         <Edit3 className="w-3.5 h-3.5" />
       </button>
     </div>
@@ -106,6 +106,7 @@ export default function DriverRateScreen({ onNavigate }: Props) {
       <div>
         <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Driver *</label>
         <select value={form.driverId} onChange={e => setForm({ ...form, driverId: e.target.value })}
+          aria-label="Select driver"
           className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">
           <option value="">Select driver...</option>
           {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -114,6 +115,7 @@ export default function DriverRateScreen({ onNavigate }: Props) {
       <div>
         <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Vehicle Type</label>
         <select value={form.vehicleType} onChange={e => setForm({ ...form, vehicleType: e.target.value })}
+          aria-label="Select vehicle type"
           className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">
           {VEHICLE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
@@ -147,6 +149,7 @@ export default function DriverRateScreen({ onNavigate }: Props) {
           <p className="text-[12px] text-on-surface-variant mt-0.5">{filtered.length} rate{filtered.length !== 1 ? 's' : ''}</p>
         </div>
         <button onClick={() => { setForm({ driverId: '', vehicleType: 'Transfer', transferRate: '', halfDayRate: '', fullDayRate: '', nightExtra: '', holidayExtra: '', waitHourRate: '' }); setShowCreateModal(true); }}
+          aria-label="Add driver rate"
           className="flex items-center gap-2 bg-primary text-on-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-primary-hover transition-colors cursor-pointer">
           <Plus className="w-3.5 h-3.5" /><span className="hidden sm:inline">Add Rate</span>
         </button>
@@ -196,7 +199,7 @@ export default function DriverRateScreen({ onNavigate }: Props) {
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[15px] font-semibold text-on-surface">New Driver Rate</h3>
-              <button onClick={() => setShowCreateModal(false)} className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
+              <button onClick={() => setShowCreateModal(false)} aria-label="Close modal" className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
             <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0"><RateForm onSubmit={handleCreate} submitLabel="Save" hideButtons /></div>
             <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">
@@ -214,7 +217,7 @@ export default function DriverRateScreen({ onNavigate }: Props) {
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[15px] font-semibold text-on-surface">Edit Rate — {drivers.find(d => d.id === editTarget.driverId)?.name}</h3>
-              <button onClick={() => setEditTarget(null)} className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
+              <button onClick={() => setEditTarget(null)} aria-label="Close modal" className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
             <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0"><RateForm onSubmit={handleEdit} submitLabel="Update" hideButtons /></div>
             <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">

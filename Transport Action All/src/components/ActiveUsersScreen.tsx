@@ -175,15 +175,15 @@ export default function ActiveUsersScreen({ onNavigate }: ActiveUsersScreenProps
       {isLoading && users.length === 0 ? (
         <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-[12px]">
+            <table className="w-full text-[12px]" aria-label="Active users loading">
               <thead className="bg-surface-container">
                 <tr>
-                  <th className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Status</th>
-                  <th className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">User</th>
-                  <th className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Role</th>
-                  <th className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Last Seen</th>
-                  <th className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Session</th>
-                  <th className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">IP</th>
+                  <th scope="col" className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Status</th>
+                  <th scope="col" className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">User</th>
+                  <th scope="col" className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Role</th>
+                  <th scope="col" className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Last Seen</th>
+                  <th scope="col" className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Session</th>
+                  <th scope="col" className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">IP</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant">
@@ -209,15 +209,15 @@ export default function ActiveUsersScreen({ onNavigate }: ActiveUsersScreenProps
       ) : (
         <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-[12px]">
+            <table className="w-full text-[12px]" aria-label="Active users">
               <thead className="bg-surface-container">
                 <tr>
-                  <th className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Status</th>
-                  <th className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">User</th>
-                  <th className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Role</th>
-                  <th className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Last Seen</th>
-                  <th className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Session</th>
-                  <th className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">IP</th>
+                  <th scope="col" className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Status</th>
+                  <th scope="col" className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">User</th>
+                  <th scope="col" className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Role</th>
+                  <th scope="col" className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Last Seen</th>
+                  <th scope="col" className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">Session</th>
+                  <th scope="col" className="text-left px-3 sm:px-4 py-3 font-medium text-on-surface-variant whitespace-nowrap">IP</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant">

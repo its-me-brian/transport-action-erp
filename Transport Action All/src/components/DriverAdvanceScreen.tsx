@@ -165,6 +165,7 @@ export default function DriverAdvanceScreen({ onNavigate }: Props) {
           </p>
         </div>
         <button onClick={() => setShowCreateModal(true)}
+          aria-label="New advance"
           className="flex items-center gap-2 bg-primary text-on-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-primary-hover transition-colors cursor-pointer">
           <Plus className="w-3.5 h-3.5" /><span className="hidden sm:inline">New Advance</span>
         </button>
@@ -178,6 +179,7 @@ export default function DriverAdvanceScreen({ onNavigate }: Props) {
             className="w-full bg-surface-container-lowest border border-outline-variant pl-8 pr-3 py-1.5 text-[12px] rounded-lg focus:outline-none focus:border-primary text-on-surface" />
         </div>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+          aria-label="Select status filter"
           className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] font-medium rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer">
           <option value="All">All statuses</option>
           <option value="Pendiente">Pendiente</option>
@@ -236,7 +238,7 @@ export default function DriverAdvanceScreen({ onNavigate }: Props) {
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[15px] font-semibold text-on-surface">New Driver Advance</h3>
-              <button onClick={() => setShowCreateModal(false)} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
+              <button onClick={() => setShowCreateModal(false)} aria-label="Close modal" className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
                 <X className="w-4 h-4 text-on-surface-variant" />
               </button>
             </div>
@@ -245,6 +247,7 @@ export default function DriverAdvanceScreen({ onNavigate }: Props) {
               <div>
                 <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Driver *</label>
                 <select value={newAdvance.driverId} onChange={e => setNewAdvance({ ...newAdvance, driverId: e.target.value })}
+                  aria-label="Select driver"
                   className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary">
                   <option value="">Select driver...</option>
                   {drivers.map(d => (
@@ -257,6 +260,7 @@ export default function DriverAdvanceScreen({ onNavigate }: Props) {
                 <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Project (optional)</label>
                 <input type="text" value={newAdvance.projectId} onChange={e => setNewAdvance({ ...newAdvance, projectId: e.target.value })}
                   placeholder="PRJ-2026-00001"
+                  aria-label="Project ID"
                   className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
               </div>
 
@@ -264,6 +268,7 @@ export default function DriverAdvanceScreen({ onNavigate }: Props) {
                 <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Amount *</label>
                 <input type="number" step="0.01" min="0" value={newAdvance.amount} onChange={e => setNewAdvance({ ...newAdvance, amount: e.target.value })}
                   placeholder="0.00"
+                  aria-label="Advance amount"
                   className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
               </div>
 
@@ -271,6 +276,7 @@ export default function DriverAdvanceScreen({ onNavigate }: Props) {
                 <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Notes</label>
                 <input type="text" value={newAdvance.notes} onChange={e => setNewAdvance({ ...newAdvance, notes: e.target.value })}
                   placeholder="Optional notes"
+                  aria-label="Notes"
                   className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
               </div>
             </div>

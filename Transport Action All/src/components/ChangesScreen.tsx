@@ -104,6 +104,7 @@ const ChangeCard = React.memo(function ChangeCard({ c, typeConfig, statusConfig,
           <button
             onClick={() => setDeleteConfirm(c.id)}
             className="p-1.5 hover:bg-red-50 text-on-surface-variant hover:text-red-500 rounded transition-colors cursor-pointer"
+            aria-label="Delete change"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -310,6 +311,7 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value as StatusFilter)}
+              aria-label="Filter by status"
               className="bg-surface-container-lowest border border-outline-variant text-on-surface text-[12px] font-medium rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer"
             >
               <option value="All">All Status</option>
@@ -379,7 +381,7 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[15px] font-semibold text-on-surface">Report Change</h3>
-              <button onClick={() => setShowAddModal(false)} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
+              <button onClick={() => setShowAddModal(false)} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer" aria-label="Close">
                 <X className="w-4 h-4 text-on-surface-variant" />
               </button>
             </div>
@@ -391,6 +393,7 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
                   <select
                     value={newChange.entityType}
                     onChange={e => setNewChange({ ...newChange, entityType: e.target.value })}
+                    aria-label="Select entity type"
                     className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
                   >
                     <option value="Service">Service</option>
@@ -408,6 +411,7 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
                     type="text"
                     value={newChange.entityId}
                     onChange={e => setNewChange({ ...newChange, entityId: e.target.value })}
+                    aria-label="Entity ID"
                     className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
                     placeholder="e.g. SVC-12345"
                   />
@@ -420,6 +424,7 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
                   <select
                     value={newChange.type}
                     onChange={e => setNewChange({ ...newChange, type: e.target.value })}
+                    aria-label="Select change type"
                     className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
                   >
                     <option value="schedule">Schedule</option>
@@ -434,6 +439,7 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
                   <select
                     value={newChange.priority}
                     onChange={e => setNewChange({ ...newChange, priority: e.target.value })}
+                    aria-label="Select priority"
                     className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"
                   >
                     <option value="Low">Low</option>
@@ -449,6 +455,7 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
                 <textarea
                   value={newChange.description}
                   onChange={e => setNewChange({ ...newChange, description: e.target.value })}
+                  aria-label="Description"
                   className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary resize-none"
                   rows={3}
                   placeholder="What changed?"
@@ -462,6 +469,7 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
                     type="date"
                     value={newChange.dueDate}
                     onChange={e => setNewChange({ ...newChange, dueDate: e.target.value })}
+                    aria-label="Due date"
                     className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
                   />
                 </div>
@@ -471,6 +479,7 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
                     type="text"
                     value={newChange.notes}
                     onChange={e => setNewChange({ ...newChange, notes: e.target.value })}
+                    aria-label="Notes"
                     className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary"
                     placeholder="Optional"
                   />
@@ -504,7 +513,7 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[15px] font-semibold text-on-surface">Resolve Change</h3>
-              <button onClick={() => setResolveTarget(null)} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
+              <button onClick={() => setResolveTarget(null)} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors cursor-pointer" aria-label="Close">
                 <X className="w-4 h-4 text-on-surface-variant" />
               </button>
             </div>
@@ -516,6 +525,7 @@ export default function ChangesScreen({ onNavigate }: ChangesScreenProps) {
                 <textarea
                   value={resolveNotes}
                   onChange={e => setResolveNotes(e.target.value)}
+                  aria-label="Resolution notes"
                   className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary resize-none"
                   rows={2}
                   placeholder="How was it resolved?"

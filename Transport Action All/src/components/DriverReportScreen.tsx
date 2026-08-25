@@ -42,11 +42,11 @@ const ReportCardItem = React.memo(function ReportCardItem({ r, isProcessing, onA
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <button onClick={() => onView(r)} className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer" title="View"><Eye className="w-3.5 h-3.5" /></button>
+        <button onClick={() => onView(r)} aria-label="View report" className="p-1.5 text-on-surface-variant hover:bg-surface-container rounded cursor-pointer" title="View"><Eye className="w-3.5 h-3.5" /></button>
         {r.status === 'Pendiente' && (
           <>
-            <button onClick={() => onApprove(r)} disabled={isProcessing} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded cursor-pointer" title="Approve"><CheckCircle className="w-3.5 h-3.5" /></button>
-            <button onClick={() => onReject(r)} className="p-1.5 text-red-500 hover:bg-red-50 rounded cursor-pointer" title="Reject"><XCircle className="w-3.5 h-3.5" /></button>
+            <button onClick={() => onApprove(r)} disabled={isProcessing} aria-label="Approve report" className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded cursor-pointer" title="Approve"><CheckCircle className="w-3.5 h-3.5" /></button>
+            <button onClick={() => onReject(r)} aria-label="Reject report" className="p-1.5 text-red-500 hover:bg-red-50 rounded cursor-pointer" title="Reject"><XCircle className="w-3.5 h-3.5" /></button>
           </>
         )}
       </div>
@@ -154,7 +154,7 @@ export default function DriverReportScreen({ onNavigate }: Props) {
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[15px] font-semibold text-on-surface">Report Detail — {viewTarget.id}</h3>
-              <button onClick={() => setViewTarget(null)} className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
+              <button onClick={() => setViewTarget(null)} aria-label="Close modal" className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
             <div className="px-5 py-4 space-y-2 text-[13px] overflow-y-auto flex-1 min-h-0">
               <div className="grid grid-cols-2 gap-2"><span className="text-on-surface-variant">Service:</span><span>{viewTarget.serviceId}</span></div>
@@ -182,7 +182,7 @@ export default function DriverReportScreen({ onNavigate }: Props) {
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-sm shadow-xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant shrink-0">
               <h3 className="text-[15px] font-semibold text-on-surface">Reject Report</h3>
-              <button onClick={() => setRejectTarget(null)} className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
+              <button onClick={() => setRejectTarget(null)} aria-label="Close modal" className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
             <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0">
               <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Reason *</label>

@@ -65,6 +65,7 @@ const ReconciliationCard = React.memo(function ReconciliationCard({ r, expandedI
             <button
               onClick={(e) => { e.stopPropagation(); openService(r.serviceId); }}
               className="font-medium text-on-surface truncate hover:text-primary hover:underline cursor-pointer text-left"
+              aria-label={`Open service ${r.serviceId}`}
             >
               {r.serviceId}
             </button>
@@ -85,6 +86,7 @@ const ReconciliationCard = React.memo(function ReconciliationCard({ r, expandedI
           <button
             onClick={(e) => { e.stopPropagation(); openResolveModal(r); }}
             className="px-3 py-1.5 text-xs font-medium bg-primary text-on-primary rounded-lg hover:bg-primary-container transition-colors"
+            aria-label="Resolve"
           >
             Resolve
           </button>
@@ -400,6 +402,7 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
               <button
                 onClick={() => setResolvingId(null)}
                 className="p-1 hover:bg-surface-container-high rounded-lg text-on-surface-variant"
+                aria-label="Close"
               >
                 ×
               </button>
@@ -412,6 +415,7 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
                     type="text"
                     value={resolution.FinalStartTime}
                     onChange={e => setResolution(prev => ({ ...prev, FinalStartTime: e.target.value }))}
+                    aria-label="Final start time"
                     className="w-full px-3 py-2 text-sm bg-surface-container border border-outline-variant rounded-lg focus:outline-none focus:border-primary"
                   />
                 </div>
@@ -421,6 +425,7 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
                     type="text"
                     value={resolution.FinalEndTime}
                     onChange={e => setResolution(prev => ({ ...prev, FinalEndTime: e.target.value }))}
+                    aria-label="Final end time"
                     className="w-full px-3 py-2 text-sm bg-surface-container border border-outline-variant rounded-lg focus:outline-none focus:border-primary"
                   />
                 </div>
@@ -430,6 +435,7 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
                     type="number"
                     value={resolution.FinalKm}
                     onChange={e => setResolution(prev => ({ ...prev, FinalKm: parseFloat(e.target.value) || 0 }))}
+                    aria-label="Final kilometers"
                     className="w-full px-3 py-2 text-sm bg-surface-container border border-outline-variant rounded-lg focus:outline-none focus:border-primary"
                   />
                 </div>
@@ -438,6 +444,7 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
                   <select
                     value={resolution.FinalDiaria}
                     onChange={e => setResolution(prev => ({ ...prev, FinalDiaria: e.target.value }))}
+                    aria-label="Select final diaria"
                     className="w-full px-3 py-2 text-sm bg-surface-container border border-outline-variant rounded-lg focus:outline-none focus:border-primary"
                   >
                     <option value="none">None</option>
@@ -451,6 +458,7 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
                     checked={resolution.FinalFestivo}
                     onChange={e => setResolution(prev => ({ ...prev, FinalFestivo: e.target.checked }))}
                     className="w-4 h-4"
+                    aria-label="Final festivo"
                   />
                   <label className="text-sm text-on-surface">Festivo</label>
                 </div>
@@ -460,6 +468,7 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
                     checked={resolution.FinalNotturno}
                     onChange={e => setResolution(prev => ({ ...prev, FinalNotturno: e.target.checked }))}
                     className="w-4 h-4"
+                    aria-label="Final notturno"
                   />
                   <label className="text-sm text-on-surface">Notturno</label>
                 </div>
@@ -470,6 +479,7 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
                   value={resolution.Notes}
                   onChange={e => setResolution(prev => ({ ...prev, Notes: e.target.value }))}
                   rows={2}
+                  aria-label="Resolution notes"
                   className="w-full px-3 py-2 text-sm bg-surface-container border border-outline-variant rounded-lg focus:outline-none focus:border-primary resize-none"
                 />
               </div>
