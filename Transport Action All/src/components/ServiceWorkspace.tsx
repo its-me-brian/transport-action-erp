@@ -22,6 +22,10 @@ export interface ServiceWorkspaceProps {
   onServiceUpdate?: (serviceId: string, updates: Partial<Service>) => void;
   onNavigate?: (screen: ScreenId) => void;
   initialTab?: TabId;
+  /** 'panel' = slide-in overlay (default), 'page' = full-page routed view */
+  mode?: 'panel' | 'page';
+  /** Called when tab changes — used by ServiceWorkspacePage to sync URL */
+  onTabChange?: (tab: TabId) => void;
 }
 
 export type TabId =
@@ -52,10 +56,17 @@ export default function ServiceWorkspace({
   onClose,
   onServiceUpdate,
   onNavigate,
-  initialTab = 'overview'
+  initialTab = 'overview',
+  mode = 'panel',
+  onTabChange
 }: ServiceWorkspaceProps) {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const relatedData = useRelatedData(service.id);
+
+  const handleTabChange = (tab: TabId) => {
+    setActiveTab(tab);
+    onTabChange?.(tab);
+  };
 
   // Build tab configs with badges
   const tabs: TabConfig[] = [
@@ -94,6 +105,69 @@ export default function ServiceWorkspace({
     { id: 'history', label: 'History', icon: <Clock className="w-4 h-4" /> },
   ];
 
+  const isPage = mode === 'page';
+
+  const content = (
+    <>
+      {/* Header */}
+      <ServiceHeader service={service} onClose={onClose} />
+
+      {/* Status Rail */}
+      <StatusRail service={service} relatedData={relatedData} />
+
+      {/* Tab Bar */}
+      <TabBar
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+      />
+
+      {/* Tab Content */}
+      <div className="flex-1 overflow-y-auto">
+        {activeTab === 'overview' && (
+          <OverviewTab service={service} />
+        )}
+        {activeTab === 'movements' && (
+          <MovementsTab service={service} />
+        )}
+        {activeTab === 'driver' && (
+          <DriverTab service={service} />
+        )}
+        {activeTab === 'driverLink' && (
+          <DriverLinkTab service={service} driverLink={relatedData.driverLink} onNavigate={onNavigate} />
+        )}
+        {activeTab === 'driverReport' && (
+          <DriverReportTab service={service} driverReport={relatedData.driverReport} onNavigate={onNavigate} />
+        )}
+        {activeTab === 'whatsapp' && (
+          <WhatsAppTab service={service} />
+        )}
+        {activeTab === 'reconciliation' && (
+          <ReconciliationTab service={service} reconciliation={relatedData.reconciliation} onNavigate={onNavigate} />
+        )}
+        {activeTab === 'rapportino' && (
+          <RapportinoTab service={service} onNavigate={onNavigate} />
+        )}
+        {activeTab === 'history' && (
+          <HistoryTab service={service} />
+        )}
+      </div>
+
+      {/* Footer — Workflow Actions */}
+      <WorkflowFooter service={service} onServiceUpdate={onServiceUpdate} onClose={onClose} />
+    </>
+  );
+
+  // Page mode: full-screen routed view (used by ServiceWorkspacePage)
+  if (isPage) {
+    return (
+      <div className="flex-1 flex flex-col h-full bg-surface-container-lowest overflow-hidden">
+        {content}
+      </div>
+    );
+  }
+
+  // Panel mode: slide-in overlay (default, used from Calendar/Dashboard)
   return (
     <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
       <div className="absolute inset-0 bg-black/20" />
@@ -101,52 +175,7 @@ export default function ServiceWorkspace({
         className="relative bg-surface-container-lowest w-full sm:w-[480px] h-full shadow-[-4px_0_24px_rgba(0,0,0,0.08)] flex flex-col animate-slide-in-right border-l border-outline-variant/30"
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
-        <ServiceHeader service={service} onClose={onClose} />
-
-        {/* Status Rail */}
-        <StatusRail service={service} relatedData={relatedData} />
-
-        {/* Tab Bar */}
-        <TabBar
-          tabs={tabs}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-        />
-
-        {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto">
-          {activeTab === 'overview' && (
-            <OverviewTab service={service} />
-          )}
-          {activeTab === 'movements' && (
-            <MovementsTab service={service} />
-          )}
-          {activeTab === 'driver' && (
-            <DriverTab service={service} />
-          )}
-          {activeTab === 'driverLink' && (
-            <DriverLinkTab service={service} driverLink={relatedData.driverLink} onNavigate={onNavigate} />
-          )}
-          {activeTab === 'driverReport' && (
-            <DriverReportTab service={service} driverReport={relatedData.driverReport} onNavigate={onNavigate} />
-          )}
-          {activeTab === 'whatsapp' && (
-            <WhatsAppTab service={service} />
-          )}
-          {activeTab === 'reconciliation' && (
-            <ReconciliationTab service={service} reconciliation={relatedData.reconciliation} onNavigate={onNavigate} />
-          )}
-          {activeTab === 'rapportino' && (
-            <RapportinoTab service={service} onNavigate={onNavigate} />
-          )}
-          {activeTab === 'history' && (
-            <HistoryTab service={service} />
-          )}
-        </div>
-
-        {/* Footer — Workflow Actions */}
-        <WorkflowFooter service={service} onServiceUpdate={onServiceUpdate} onClose={onClose} />
+        {content}
       </div>
     </div>
   );

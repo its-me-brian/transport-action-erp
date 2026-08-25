@@ -4,6 +4,7 @@ import InboxNormalizeModal from './InboxNormalizeModal';
 import InboxDetailsModal from './InboxDetailsModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useReportInbox, InboxItem } from '../hooks/useReportInbox';
+import { useOpenService } from '../hooks/useOpenService';
 
 interface ReportInboxScreenProps {
   onNavigate: (screen: string) => void;
@@ -11,6 +12,7 @@ interface ReportInboxScreenProps {
 
 export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps) {
   const { can } = useAuth();
+  const openService = useOpenService();
   const {
     items, isLoading, selectedItem, normForm, matchingServices, isSearchingServices,
     filterSource, filterStatus, filterDriver,
@@ -43,6 +45,13 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
       case 'backoffice': return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">Backoffice</span>;
       default: return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100">{source}</span>;
     }
+  };
+
+  const getServiceId = (item: InboxItem): string => {
+    try {
+      const raw = JSON.parse(item.RawData || '{}');
+      return raw.serviceId || '';
+    } catch { return ''; }
   };
 
   return (
@@ -122,10 +131,9 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
               <tr>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Source</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Driver</th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Project</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Service</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Date</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Status</th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Correlation</th>
                 <th className="text-right px-4 py-3 text-sm font-semibold text-on-surface">Actions</th>
               </tr>
             </thead>
@@ -134,10 +142,9 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
                 <tr key={i} className="animate-pulse">
                   <td className="px-4 py-3"><div className="h-5 w-16 bg-surface-dim rounded-full" /></td>
                   <td className="px-4 py-3"><div className="h-4 w-20 bg-surface-dim rounded" /></td>
-                  <td className="px-4 py-3"><div className="h-4 w-16 bg-surface-dim rounded" /></td>
+                  <td className="px-4 py-3"><div className="h-4 w-24 bg-surface-dim rounded" /></td>
                   <td className="px-4 py-3"><div className="h-4 w-24 bg-surface-dim rounded" /></td>
                   <td className="px-4 py-3"><div className="h-5 w-20 bg-surface-dim rounded-full" /></td>
-                  <td className="px-4 py-3"><div className="h-3 w-24 bg-surface-dim rounded" /></td>
                   <td className="px-4 py-3 text-right"><div className="h-7 w-7 bg-surface-dim rounded ml-auto" /></td>
                 </tr>
               ))}
@@ -158,33 +165,45 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
               <tr>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Source</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Driver</th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Project</th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Service</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Date</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Status</th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Correlation</th>
                 <th className="text-right px-4 py-3 text-sm font-semibold text-on-surface">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant">
-              {filteredItems.map(item => (
-                <tr key={item.ID} className="hover:bg-surface-container-low transition-colors">
-                  <td className="px-4 py-3">{getSourceBadge(item.Source)}</td>
-                  <td className="px-4 py-3 text-sm font-medium">{driverName(item.DriverID, item)}</td>
-                  <td className="px-4 py-3 text-sm text-on-surface-variant">{projectName(item.ProjectID, item)}</td>
-                  <td className="px-4 py-3 text-sm">{formatDisplayDate(item.ServiceDate)}</td>
-                  <td className="px-4 py-3">{getStatusBadge(item.Status)}</td>
-                  <td className="px-4 py-3 text-xs text-on-surface-variant font-mono">{item.CorrelationID?.substring(0, 12)}...</td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => handleSelectItem(item)}
-                      className="p-1.5 hover:bg-surface-container rounded-lg transition-colors"
-                      title="View details"
-                    >
-                      <Eye className="w-4 h-4 text-on-surface-variant" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {filteredItems.map(item => {
+                const svcId = getServiceId(item);
+                return (
+                  <tr key={item.ID} className="hover:bg-surface-container-low transition-colors">
+                    <td className="px-4 py-3">{getSourceBadge(item.Source)}</td>
+                    <td className="px-4 py-3 text-sm font-medium">{driverName(item.DriverID, item)}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {svcId ? (
+                        <button
+                          onClick={() => openService(svcId)}
+                          className="text-primary hover:underline cursor-pointer font-medium"
+                        >
+                          {svcId}
+                        </button>
+                      ) : (
+                        <span className="text-on-surface-variant/50">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm">{formatDisplayDate(item.ServiceDate)}</td>
+                    <td className="px-4 py-3">{getStatusBadge(item.Status)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => handleSelectItem(item)}
+                        className="p-1.5 hover:bg-surface-container rounded-lg transition-colors"
+                        title="View details"
+                      >
+                        <Eye className="w-4 h-4 text-on-surface-variant" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           </div>

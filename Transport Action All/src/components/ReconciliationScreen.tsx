@@ -19,6 +19,7 @@ import {
 } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { useOpenService } from '../hooks/useOpenService';
 
 interface ReconciliationScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -29,6 +30,7 @@ type StatusFilter = 'all' | 'Pendiente' | 'EnProceso' | 'Resuelto';
 export default function ReconciliationScreen({ onNavigate }: ReconciliationScreenProps) {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const openService = useOpenService();
   const [reconciliations, setReconciliations] = useState<ReconciliationDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -269,7 +271,12 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-on-surface truncate">{r.serviceId}</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openService(r.serviceId); }}
+                          className="font-medium text-on-surface truncate hover:text-primary hover:underline cursor-pointer text-left"
+                        >
+                          {r.serviceId}
+                        </button>
                         <span className="text-xs text-on-surface-variant">→</span>
                         <span className="text-sm text-on-surface-variant truncate">{r.projectId}</span>
                       </div>

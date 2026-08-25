@@ -15,6 +15,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import ReconciliationScreen from '../components/ReconciliationScreen';
 
 const mockGetReconciliations = vi.fn();
@@ -32,6 +33,15 @@ vi.mock('../contexts/AuthContext', () => ({
 vi.mock('../contexts/ToastContext', () => ({
   useToast: () => ({ showToast: vi.fn() }),
 }));
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => vi.fn(),
+    useLocation: () => ({ pathname: '/reconciliation' }),
+  };
+});
 
 const mockReconciliations = [
   {
