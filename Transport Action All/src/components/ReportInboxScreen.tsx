@@ -29,7 +29,7 @@ export interface InboxItem {
 }
 
 // Normalized data fields (what the user edits during normalization)
-export export interface NormalizedFields {
+export interface NormalizedFields {
   serviceId: string;
   startTime: string;
   endTime: string;
