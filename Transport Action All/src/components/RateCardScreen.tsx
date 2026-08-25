@@ -62,7 +62,7 @@ export default function RateCardScreen({ onNavigate }: Props) {
         notes: form.notes || undefined,
       });
       if (r.error) { showToast(r.error, 'error'); return; }
-      await loadCards();
+      await loadData();
     } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsSaving(false); setShowCreateModal(false); }
   };
 
@@ -82,7 +82,7 @@ export default function RateCardScreen({ onNavigate }: Props) {
         IncludedHours: parseFloat(form.includedHours) || 0,
       });
       if (r.error) { showToast(r.error, 'error'); return; }
-      await loadCards();
+      await loadData();
     } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsSaving(false); setEditTarget(null); }
   };
 

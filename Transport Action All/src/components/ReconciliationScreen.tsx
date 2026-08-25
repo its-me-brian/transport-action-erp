@@ -128,7 +128,6 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
     } catch (err) {
       console.error('Error resolving reconciliation:', err);
       showToast('Error al resolver conciliación', 'error');
-      showToast('Error resolving reconciliation', 'error');
     } finally {
       setIsResolving(false);
     }

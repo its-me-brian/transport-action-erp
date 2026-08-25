@@ -50,7 +50,7 @@ export default function DriverRateScreen({ onNavigate }: Props) {
         holidayExtra: parseFloat(form.holidayExtra) || 0, waitHourRate: parseFloat(form.waitHourRate) || 0,
       });
       if (r.error) { showToast(r.error, 'error'); return; }
-      await loadRates();
+      await loadData();
     } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsSaving(false); setShowCreateModal(false); }
   };
 
@@ -65,7 +65,7 @@ export default function DriverRateScreen({ onNavigate }: Props) {
         WaitHourRate: parseFloat(form.waitHourRate) || 0,
       });
       if (r.error) { showToast(r.error, 'error'); return; }
-      await loadRates();
+      await loadData();
     } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsSaving(false); setEditTarget(null); }
   };
 

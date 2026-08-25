@@ -105,7 +105,7 @@ export default function DriverAdvanceScreen({ onNavigate }: Props) {
         notes: newAdvance.notes || undefined,
       });
       if (r.error) { showToast(r.error, 'error'); return; }
-      await loadAdvances();
+      await loadData();
     } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsCreating(false); setShowCreateModal(false); }
   };
 

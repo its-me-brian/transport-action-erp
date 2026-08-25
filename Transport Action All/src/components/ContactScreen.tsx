@@ -44,7 +44,7 @@ export default function ContactScreen({ onNavigate }: Props) {
     try {
       const r = await createContact(form);
       if (r.error) { showToast(r.error, 'error'); return; }
-      await loadContacts();
+      await loadData();
     } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsSaving(false); setShowCreateModal(false); }
   };
 
@@ -54,7 +54,7 @@ export default function ContactScreen({ onNavigate }: Props) {
     try {
       const r = await updateContact(editTarget.id, form);
       if (r.error) { showToast(r.error, 'error'); return; }
-      await loadContacts();
+      await loadData();
     } catch (err) { showToast(getErrorMessage(err), 'error'); } finally { setIsSaving(false); setEditTarget(null); }
   };
 
