@@ -2566,6 +2566,7 @@ export interface WhatsAppParsedReport {
   rawText: string;
   matchedDriverId: string;
   serviceId?: string;
+  selectedServiceId?: string;
   driverId?: string;
 }
 

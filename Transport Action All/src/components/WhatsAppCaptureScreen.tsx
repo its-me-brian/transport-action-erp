@@ -86,7 +86,7 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
   };
 
   // Step 2: Update a single report field
-  const updateReport = (index: number, field: keyof WhatsAppParsedReport, value: any) => {
+  const updateReport = (index: number, field: keyof WhatsAppParsedReport | 'selectedServiceId', value: any) => {
     setReports(prev => prev.map((r, i) => i === index ? { ...r, [field]: value } : r));
     // When driver changes, search for their services
     if (field === 'matchedDriverId' && value) {
@@ -124,7 +124,7 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
       showToast(`Missing driver for "${missingDriver.driverName || 'unknown'}" — select from dropdown`, 'error');
       return;
     }
-    const missingService = reports.find(r => !(r as any).selectedServiceId);
+    const missingService = reports.find(r => !r.selectedServiceId);
     if (missingService) {
       showToast(`Missing service for "${missingService.driverName || 'unknown'}" — select the service this report belongs to`, 'error');
       return;
@@ -300,8 +300,8 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
                         </label>
                         {(reportServices[idx] || []).length > 0 ? (
                           <select
-                            value={(report as any).selectedServiceId || ''}
-                            onChange={e => updateReport(idx, 'selectedServiceId' as any, e.target.value)}
+                            value={report.selectedServiceId || ''}
+                            onChange={e => updateReport(idx, 'selectedServiceId', e.target.value)}
                             className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm"
                           >
                             <option value="">— Select service —</option>

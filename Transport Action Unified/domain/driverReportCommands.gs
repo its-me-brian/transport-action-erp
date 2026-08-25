@@ -13,6 +13,9 @@ const DriverReportCommands = {
    */
   createReport(serviceId, driverId, reportData) {
     return _withLock(() => {
+      if (!serviceId || serviceId === '') {
+        throw new BusinessRuleError('Cannot create report with empty serviceId', 'DR001');
+      }
       // 1. Validar servicio (reload inside lock)
       const service = ServiceRepository.getById(serviceId);
       if (!service) throw new NotFoundError('Service', serviceId);
@@ -90,6 +93,9 @@ const DriverReportCommands = {
    */
   createReportForReportedService(serviceId, driverId, reportData) {
     return _withLock(() => {
+      if (!serviceId || serviceId === '') {
+        throw new BusinessRuleError('Cannot create report with empty serviceId', 'DR001');
+      }
       const service = ServiceRepository.getById(serviceId);
       if (!service) throw new NotFoundError('Service', serviceId);
       // §33: Only allow Reportado or Revision — Realizado should use createReport()
@@ -178,6 +184,9 @@ const DriverReportCommands = {
       }
 
       const serviceId = report.ServiceID;
+      if (!serviceId || serviceId === '') {
+        throw new BusinessRuleError('Cannot approve report with empty serviceId', 'DR002');
+      }
       const driverId = report.DriverID;
       const service = ServiceRepository.getById(serviceId);
       if (!service) throw new NotFoundError('Service', serviceId);

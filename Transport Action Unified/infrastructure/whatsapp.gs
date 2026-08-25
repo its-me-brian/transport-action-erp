@@ -572,6 +572,7 @@ function captureWhatsAppReports(reports, projectId) {
 
         // Build rawData matching the DriverLink format for consistency
         // serviceId can come from parsed report or from coordinator selection
+        Logger.log('[captureWhatsAppReports] serviceId=' + r.serviceId + ', selectedServiceId=' + r.selectedServiceId);
         var rawData = {
           serviceId: r.serviceId || r.selectedServiceId || '',
           startTime: r.startTime || '',
