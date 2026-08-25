@@ -8,6 +8,9 @@ import {
 import { Service, ScreenId, formatTimeDisplay } from '../types';
 import { useRelatedData, RelatedData } from '../hooks/useRelatedData';
 import { getServiceStatusColor } from '../utils/statusColors';
+import { useToast } from '../contexts/ToastContext';
+import { assignDriver, confirmService, startService, completeService, reportService, validateService, getDrivers } from '../services/api';
+import type { DriverRecord } from '../services/api';
 import {
   OverviewTab, MovementsTab, DriverTab, DriverLinkTab,
   DriverReportTab, WhatsAppTab, ReconciliationTab, RapportinoTab, HistoryTab
@@ -111,10 +114,69 @@ export default function ServiceWorkspace({
 }: ServiceWorkspaceProps) {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const relatedData = useRelatedData(service.id);
+  const { showToast } = useToast();
 
   const handleTabChange = (tab: TabId) => {
     setActiveTab(tab);
     onTabChange?.(tab);
+  };
+
+  const [showDriverPicker, setShowDriverPicker] = useState(false);
+  const [drivers, setDrivers] = useState<DriverRecord[]>([]);
+  const [loadingDrivers, setLoadingDrivers] = useState(false);
+
+  const handleWorkflowAction = async (action: string) => {
+    if (action === 'assign') {
+      setLoadingDrivers(true);
+      try {
+        const list = await getDrivers();
+        setDrivers(list.filter(d => d.status !== 'inactive'));
+        setShowDriverPicker(true);
+      } catch (err) {
+        showToast('Error loading drivers', 'error');
+      } finally {
+        setLoadingDrivers(false);
+      }
+      return;
+    }
+
+    try {
+      let result;
+      switch (action) {
+        case 'confirm': result = await confirmService(service.id); break;
+        case 'start': result = await startService(service.id); break;
+        case 'complete': result = await completeService(service.id); break;
+        case 'report': result = await reportService(service.id); break;
+        case 'review': result = await reportService(service.id); break;
+        case 'validate': result = await validateService(service.id); break;
+        default: showToast('Unknown action: ' + action, 'error'); return;
+      }
+      if (result?.error) {
+        showToast(result.error, 'error');
+      } else {
+        showToast('Action completed successfully', 'success');
+        onServiceUpdate?.(service.id, {});
+        onClose();
+      }
+    } catch (err) {
+      showToast('Error: ' + (err instanceof Error ? err.message : String(err)), 'error');
+    }
+  };
+
+  const handleAssignDriver = async (driverId: string) => {
+    try {
+      const result = await assignDriver(service.id, driverId);
+      if (result?.error) {
+        showToast(result.error, 'error');
+      } else {
+        showToast('Driver assigned successfully', 'success');
+        setShowDriverPicker(false);
+        onServiceUpdate?.(service.id, {});
+        onClose();
+      }
+    } catch (err) {
+      showToast('Error: ' + (err instanceof Error ? err.message : String(err)), 'error');
+    }
   };
 
   const nextAction = useMemo(() => getNextAction(service, relatedData), [service, relatedData]);
@@ -217,7 +279,7 @@ export default function ServiceWorkspace({
                 <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Next Action</span>
                 <button
                   className={`mt-2 w-full flex items-center justify-center gap-2 px-3 py-2.5 text-white text-[12px] font-semibold rounded-lg transition-colors cursor-pointer ${nextAction.color}`}
-                  onClick={() => console.log('Workflow action:', nextAction.action)}
+                  onClick={() => handleWorkflowAction(nextAction.action)}
                 >
                   {nextAction.icon}
                   {nextAction.label}
@@ -296,6 +358,43 @@ export default function ServiceWorkspace({
             </button>
           ))}
         </div>
+
+        {showDriverPicker && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowDriverPicker(false)}>
+            <div className="absolute inset-0 bg-black/30" />
+            <div className="relative bg-surface rounded-xl shadow-xl w-full max-w-md max-h-[70vh] flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant/30">
+                <span className="text-[14px] font-semibold text-on-surface">Assign Driver</span>
+                <button onClick={() => setShowDriverPicker(false)} className="p-1 rounded-md hover:bg-surface-dim" aria-label="Close">
+                  <X className="w-4 h-4 text-on-surface-variant" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3 space-y-1">
+                {loadingDrivers ? (
+                  <div className="text-center py-8 text-[13px] text-on-surface-variant">Loading drivers...</div>
+                ) : drivers.length === 0 ? (
+                  <div className="text-center py-8 text-[13px] text-on-surface-variant">No drivers available</div>
+                ) : (
+                  drivers.map(d => (
+                    <button
+                      key={d.id}
+                      onClick={() => handleAssignDriver(d.id)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-container transition-colors text-left"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-[12px] font-bold text-primary shrink-0">
+                        {d.name?.charAt(0) || '?'}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13px] font-medium text-on-surface truncate">{d.name}</div>
+                        {d.phone && <div className="text-[11px] text-on-surface-variant">{d.phone}</div>}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -314,7 +413,7 @@ export default function ServiceWorkspace({
             <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Next Action</span>
             <button
               className={`mt-1.5 w-full flex items-center justify-center gap-2 px-3 py-2 text-white text-[12px] font-semibold rounded-lg transition-colors cursor-pointer ${nextAction.color}`}
-              onClick={() => console.log('Workflow action:', nextAction.action)}
+              onClick={() => handleWorkflowAction(nextAction.action)}
             >
               {nextAction.icon}
               {nextAction.label}
@@ -333,6 +432,43 @@ export default function ServiceWorkspace({
           {activeTab === 'rapportino' && <RapportinoTab service={service} onNavigate={onNavigate} />}
           {activeTab === 'history' && <HistoryTab service={service} />}
         </div>
+
+        {showDriverPicker && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowDriverPicker(false)}>
+            <div className="absolute inset-0 bg-black/30" />
+            <div className="relative bg-surface rounded-xl shadow-xl w-full max-w-md max-h-[70vh] flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant/30">
+                <span className="text-[14px] font-semibold text-on-surface">Assign Driver</span>
+                <button onClick={() => setShowDriverPicker(false)} className="p-1 rounded-md hover:bg-surface-dim" aria-label="Close">
+                  <X className="w-4 h-4 text-on-surface-variant" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3 space-y-1">
+                {loadingDrivers ? (
+                  <div className="text-center py-8 text-[13px] text-on-surface-variant">Loading drivers...</div>
+                ) : drivers.length === 0 ? (
+                  <div className="text-center py-8 text-[13px] text-on-surface-variant">No drivers available</div>
+                ) : (
+                  drivers.map(d => (
+                    <button
+                      key={d.id}
+                      onClick={() => handleAssignDriver(d.id)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-container transition-colors text-left"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-[12px] font-bold text-primary shrink-0">
+                        {d.name?.charAt(0) || '?'}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13px] font-medium text-on-surface truncate">{d.name}</div>
+                        {d.phone && <div className="text-[11px] text-on-surface-variant">{d.phone}</div>}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

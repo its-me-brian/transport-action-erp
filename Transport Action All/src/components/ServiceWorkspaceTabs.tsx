@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import {
   ChevronRight, Phone, User, Calendar,
   CheckCircle, Clock, AlertCircle, Link2, FileText,
-  ArrowLeftRight, Car
+  ArrowLeftRight, Car, MessageSquare
 } from 'lucide-react';
 import { Service, ScreenId, formatTimeDisplay, parseDateKeyToDate } from '../types';
 import { RelatedData } from '../hooks/useRelatedData';
 import { getServiceStatusColor } from '../utils/statusColors';
 import { getAuditLog, AuditEntry } from '../services/api';
 import { Skeleton } from './ui/Skeleton';
+import { useToast } from '../contexts/ToastContext';
 
 // ============================================================================
 // TAB: OVERVIEW
@@ -307,35 +308,52 @@ export function DriverReportTab({ service, driverReport, onNavigate }: {
 // ============================================================================
 
 export function WhatsAppTab({ service }: { service: Service }) {
-  const [message, setMessage] = useState('');
-  const [sending, setSending] = useState(false);
+  const message = [
+    `🚗 *Servicio — ${service.date || 'Hoy'}*`,
+    '',
+    service.startTime ? `⏰ ${formatTimeDisplay(service.startTime)}${service.endTime ? ` → ${formatTimeDisplay(service.endTime)}` : ''}` : '',
+    service.from ? `📍 ${service.from}` : '',
+    service.to ? `🏁 ${service.to}` : '',
+    service.passengers ? `👥 ${service.passengers}` : '',
+    service.vehicleType ? `🚐 ${service.vehicleType}` : '',
+    service.notes ? `📝 ${service.notes}` : '',
+    '',
+    `📋 ID: ${service.id}`,
+  ].filter(Boolean).join('\n');
 
-  const handleSend = async () => {
-    if (!message.trim()) return;
-    setSending(true);
-    // TODO: Implement WhatsApp send via backend
-    setTimeout(() => {
-      setSending(false);
-      setMessage('');
-    }, 1000);
+  const handleSend = () => {
+    const phone = service.driverPhone?.replace(/[^0-9]/g, '') || '';
+    const url = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(message);
   };
 
   return (
     <div className="px-5 py-4 space-y-4">
       <div className="space-y-2">
-        <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Send WhatsApp</span>
-        <textarea
-          value={message}
-          onChange={e => setMessage(e.target.value)}
-          placeholder="Type your message..."
-          className="w-full h-24 px-3 py-2 text-[13px] bg-surface-container rounded-lg border border-outline-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-        />
+        <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Message Preview</span>
+        <div className="w-full h-40 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40 whitespace-pre-wrap text-on-surface overflow-y-auto">
+          {message}
+        </div>
+      </div>
+      <div className="flex gap-2">
         <button
           onClick={handleSend}
-          disabled={!message.trim() || sending}
-          className="w-full py-2 bg-green-600 text-white text-[13px] font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex-1 py-2 bg-green-600 text-white text-[13px] font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
         >
-          {sending ? 'Sending...' : 'Send via WhatsApp'}
+          <MessageSquare className="w-4 h-4" />
+          Open WhatsApp
+        </button>
+        <button
+          onClick={handleCopy}
+          className="px-4 py-2 bg-surface-container text-on-surface text-[13px] font-medium rounded-lg hover:bg-surface-container-high transition-colors"
+        >
+          Copy
         </button>
       </div>
     </div>
@@ -394,20 +412,65 @@ export function RapportinoTab({ service, onNavigate }: {
   service: Service;
   onNavigate?: (screen: ScreenId) => void;
 }) {
+  const { showToast } = useToast();
+  const [rapportinos, setRapportinos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const { getRapportinoClients } = await import('../services/api');
+        const list = await getRapportinoClients({ projectId: service.backendProjectId || service.project });
+        if (!cancelled) setRapportinos(list || []);
+      } catch {
+        if (!cancelled) setRapportinos([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [service.backendProjectId, service.project]);
+
   return (
     <div className="px-5 py-4 space-y-4">
-      <div className="text-center py-8">
-        <FileText className="w-8 h-8 text-on-surface-variant/30 mx-auto mb-2" />
-        <div className="text-[13px] text-on-surface-variant">Add this service to a Rapportino</div>
-        {onNavigate && (
-          <button
-            onClick={() => onNavigate('rapportinos')}
-            className="mt-2 text-[12px] text-primary hover:underline"
-          >
-            Open Rapportinos →
-          </button>
-        )}
-      </div>
+      <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Rapportinos</span>
+      {loading ? (
+        <div className="text-center py-4 text-[12px] text-on-surface-variant">Loading...</div>
+      ) : rapportinos.length === 0 ? (
+        <div className="text-center py-8">
+          <FileText className="w-8 h-8 text-on-surface-variant/30 mx-auto mb-2" />
+          <div className="text-[13px] text-on-surface-variant">No rapportinos for this project</div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {rapportinos.map(r => (
+            <div key={r.id} className="flex items-center justify-between p-3 rounded-lg border border-outline-variant/30 bg-surface-container-lowest">
+              <div>
+                <div className="text-[13px] font-medium text-on-surface">{r.clientName || r.projectName || 'Rapportino'}</div>
+                <div className="text-[11px] text-on-surface-variant">{r.status} · {r.periodType}</div>
+              </div>
+              {onNavigate && (
+                <button
+                  onClick={() => onNavigate('rapportinos')}
+                  className="text-[12px] text-primary hover:underline"
+                >
+                  View →
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {onNavigate && (
+        <button
+          onClick={() => onNavigate('rapportinos')}
+          className="w-full py-2 bg-primary/10 text-primary text-[12px] font-medium rounded-lg hover:bg-primary/20 transition-colors"
+        >
+          Open Rapportinos →
+        </button>
+      )}
     </div>
   );
 }
