@@ -612,20 +612,34 @@ function captureWhatsAppReports(reports, projectId) {
           if (inboxResult.success && inboxResult.inboxId) {
             // Auto-advance pipeline: CAPTURED → NORMALIZED → PENDING_REVIEW → ACCEPTED → DriverReport Aceptado
             // The coordinator already reviewed the parsed data before clicking Capture
+            var inboxId = inboxResult.inboxId;
             try {
-              normalizeReport(inboxResult.inboxId, rawData);
-              submitToReview(inboxResult.inboxId);
-              var acceptResult = acceptReport(inboxResult.inboxId, 'auto-whatsapp');
-              // Auto-approve the DriverReport (creates breakdowns, reconciliation, financials)
-              if (acceptResult && acceptResult.success && acceptResult.reportId) {
-                try {
-                  DriverReportCommands.approveReport(acceptResult.reportId);
-                } catch (approveErr) {
-                  Logger.log('[captureWhatsAppReports] Auto-approve warning: ' + approveErr.message);
+              // Step 1: CAPTURED → NORMALIZED
+              var normResult = normalizeReport(inboxId, rawData);
+              if (!normResult || !normResult.success) {
+                Logger.log('[captureWhatsAppReports] normalizeReport failed: ' + (normResult ? normResult.error : 'unknown'));
+              } else {
+                // Step 2: NORMALIZED → PENDING_REVIEW
+                var submitResult = submitToReview(inboxId);
+                if (!submitResult || !submitResult.success) {
+                  Logger.log('[captureWhatsAppReports] submitToReview failed: ' + (submitResult ? submitResult.error : 'unknown'));
+                } else {
+                  // Step 3: PENDING_REVIEW → ACCEPTED (creates DriverReport in Pendiente)
+                  var acceptResult = acceptReport(inboxId, 'auto-whatsapp');
+                  if (!acceptResult || !acceptResult.success) {
+                    Logger.log('[captureWhatsAppReports] acceptReport failed: ' + (acceptResult ? acceptResult.error : 'unknown'));
+                  } else if (acceptResult.reportId) {
+                    // Step 4: Approve DriverReport (Pendiente → Aceptado + breakdowns + reconciliation)
+                    try {
+                      DriverReportCommands.approveReport(acceptResult.reportId);
+                    } catch (approveErr) {
+                      Logger.log('[captureWhatsAppReports] approveReport warning: ' + approveErr.message);
+                    }
+                  }
                 }
               }
             } catch (advanceErr) {
-              Logger.log('[captureWhatsAppReports] Auto-advance warning: ' + advanceErr.message);
+              Logger.log('[captureWhatsAppReports] Auto-advance error: ' + advanceErr.message);
             }
           }
           results.push({
