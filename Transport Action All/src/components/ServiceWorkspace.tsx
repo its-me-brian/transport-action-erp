@@ -578,7 +578,7 @@ export default function ServiceWorkspace({
                   </div>
                   {/* Sub-section content */}
                   <div className="flex-1">
-                    {(activeSubSection || 'whatsapp') === 'whatsapp' && <WhatsAppTab service={service} relatedData={relatedData} onCaptureSuccess={relatedData.refresh} />}
+                    {(activeSubSection || 'whatsapp') === 'whatsapp' && <WhatsAppTab service={service} relatedData={relatedData} onCaptureSuccess={relatedData.refresh} onServiceUpdate={relatedData.refresh} />}
                   </div>
                 </div>
               )}
@@ -605,8 +605,8 @@ export default function ServiceWorkspace({
                   </div>
                   {/* Sub-section content */}
                   <div className="flex-1">
-                    {(activeSubSection || 'rapportino') === 'rapportino' && <RapportinoTab service={service} />}
-                    {(activeSubSection || 'rapportino') === 'finance' && <FinanceTab service={service} />}
+                    {(activeSubSection || 'rapportino') === 'rapportino' && <RapportinoTab service={service} onServiceUpdate={relatedData.refresh} />}
+                    {(activeSubSection || 'rapportino') === 'finance' && <FinanceTab service={service} onServiceUpdate={relatedData.refresh} />}
                   </div>
                 </div>
               )}
@@ -909,7 +909,7 @@ export default function ServiceWorkspace({
                 </div>
               </div>
               <div className="flex-1">
-                {(activeSubSection || 'rapportino') === 'rapportino' && <RapportinoTab service={service} />}
+                {(activeSubSection || 'rapportino') === 'rapportino' && <RapportinoTab service={service} onServiceUpdate={relatedData.refresh} />}
               </div>
             </div>
           )}

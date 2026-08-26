@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   ChevronRight, Phone, User, Calendar,
   CheckCircle, Clock, AlertCircle, Link2, FileText,
-  ArrowLeftRight, Car, MessageSquare, Loader2, Check
+  ArrowLeftRight, Car, MessageSquare, Loader2, Check,
+  Send, Eye, ThumbsUp, ThumbsDown, Lock, DollarSign
 } from 'lucide-react';
 import { Service, ScreenId, formatTimeDisplay, parseDateKeyToDate } from '../types';
 import { RelatedData } from '../hooks/useRelatedData';
@@ -758,10 +759,11 @@ export function DriverReportTab({ service, driverReport }: {
 // TAB: WHATSAPP — Full integration (ERG Phase 9)
 // ============================================================================
 
-export function WhatsAppTab({ service, relatedData, onCaptureSuccess }: {
+export function WhatsAppTab({ service, relatedData, onCaptureSuccess, onServiceUpdate }: {
   service: Service;
   relatedData?: RelatedData;
   onCaptureSuccess?: () => void;
+  onServiceUpdate?: () => void;
 }) {
   const { showToast } = useToast();
   const [copied, setCopied] = useState(false);
@@ -770,6 +772,9 @@ export function WhatsAppTab({ service, relatedData, onCaptureSuccess }: {
   const [isCapturing, setIsCapturing] = useState(false);
   const [parsedReports, setParsedReports] = useState<any[]>([]);
   const [captureStep, setCaptureStep] = useState<'paste' | 'review' | 'done'>('paste');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showRejectReason, setShowRejectReason] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
   const inboxItem = relatedData?.inboxItem;
   const inboxStatus = inboxItem?.Status || null;
 
@@ -876,7 +881,80 @@ export function WhatsAppTab({ service, relatedData, onCaptureSuccess }: {
             </div>
           </div>
         </div>
+        {/* Reject/Lock actions for pending reports */}
+        {inboxItem && inboxStatus === 'PENDING_REVIEW' && (
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={() => setShowRejectReason(true)}
+              disabled={isProcessing}
+              className="flex-1 py-1.5 bg-red-50 text-red-700 text-[11px] font-medium rounded-lg hover:bg-red-100 transition-colors flex items-center justify-center gap-1 border border-red-200"
+            >
+              <ThumbsDown className="w-3 h-3" />
+              Reject
+            </button>
+            <button
+              onClick={async () => {
+                setIsProcessing(true);
+                try {
+                  const { lockReport } = await import('../services/api');
+                  await lockReport(inboxItem.id || inboxItem.Id);
+                  showToast('Report locked', 'success');
+                  onServiceUpdate?.();
+                } catch (err) {
+                  showToast(`Failed: ${err instanceof Error ? err.message : 'Lock'}`, 'error');
+                } finally {
+                  setIsProcessing(false);
+                }
+              }}
+              disabled={isProcessing}
+              className="flex-1 py-1.5 bg-amber-50 text-amber-700 text-[11px] font-medium rounded-lg hover:bg-amber-100 transition-colors flex items-center justify-center gap-1 border border-amber-200"
+            >
+              <Lock className="w-3 h-3" />
+              Lock
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Reject Reason Modal */}
+      {showRejectReason && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowRejectReason(false)}>
+          <div className="bg-surface rounded-xl p-5 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[15px] font-semibold text-on-surface mb-4">Reject Report</h3>
+            <div>
+              <label className="text-[11px] text-on-surface-variant">Reason</label>
+              <input type="text" value={rejectReason} onChange={e => setRejectReason(e.target.value)}
+                className="w-full mt-1 px-3 py-2 text-[13px] bg-surface-container rounded-lg border border-outline-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                placeholder="Why reject this report?" />
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={async () => {
+                setIsProcessing(true);
+                try {
+                  const { rejectReport } = await import('../services/api');
+                  await rejectReport(inboxItem.id || inboxItem.Id, rejectReason || 'Rejected from ServiceWorkspace');
+                  showToast('Report rejected', 'success');
+                  setShowRejectReason(false);
+                  setRejectReason('');
+                  onServiceUpdate?.();
+                } catch (err) {
+                  showToast(`Failed: ${err instanceof Error ? err.message : 'Reject'}`, 'error');
+                } finally {
+                  setIsProcessing(false);
+                }
+              }} disabled={isProcessing}
+                className="flex-1 py-2 bg-red-600 text-white text-[13px] font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-1.5">
+                {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ThumbsDown className="w-3.5 h-3.5" />}
+                Reject
+              </button>
+              <button onClick={() => { setShowRejectReason(false); setRejectReason(''); }}
+                className="px-4 py-2 bg-surface-container text-on-surface text-[13px] font-medium rounded-lg hover:bg-surface-container-high transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* INBOUND SECTION - Paste and parse driver's WhatsApp message */}
       <div className="space-y-2">
@@ -1248,24 +1326,24 @@ export function ReconciliationTab({ service, reconciliation }: {
 // TAB: RAPPORTINO — Filtered by serviceId (ERG Phase 12)
 // ============================================================================
 
-export function RapportinoTab({ service }: {
+export function RapportinoTab({ service, onServiceUpdate }: {
   service: Service;
+  onServiceUpdate?: () => void;
 }) {
   const { showToast } = useToast();
   const openService = useOpenService();
   const [rapportinos, setRapportinos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       try {
         const { getRapportinoClients } = await import('../services/api');
-        // ERG Phase 12: Filter by serviceId, not projectId
         const list = await getRapportinoClients({ serviceId: service.id });
         if (!cancelled) setRapportinos(list || []);
       } catch {
-        // Fallback to projectId if serviceId filter not supported
         try {
           const { getRapportinoClients } = await import('../services/api');
           const list = await getRapportinoClients({ projectId: service.backendProjectId || service.project });
@@ -1281,6 +1359,20 @@ export function RapportinoTab({ service }: {
     return () => { cancelled = true; };
   }, [service.id, service.backendProjectId, service.project]);
 
+  const handleRapportinoAction = async (rapportinoId: string, action: string, fn: () => Promise<any>) => {
+    setIsProcessing(`${rapportinoId}-${action}`);
+    try {
+      await fn();
+      showToast(`${action} completed`, 'success');
+      setRapportinos(prev => prev.map(r => r.id === rapportinoId ? { ...r, status: action === 'review' ? 'REVIEWED' : action === 'send' ? 'SENT' : 'ACCEPTED' } : r));
+      onServiceUpdate?.();
+    } catch (err) {
+      showToast(`Failed: ${err instanceof Error ? err.message : action}`, 'error');
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
   return (
     <div className="px-5 py-4 space-y-4">
       <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Rapportinos</span>
@@ -1294,17 +1386,60 @@ export function RapportinoTab({ service }: {
       ) : (
         <div className="space-y-2">
           {rapportinos.map(r => (
-            <div key={r.id} className="flex items-center justify-between p-3 rounded-lg border border-outline-variant/30 bg-surface-container-lowest">
-              <div>
-                <div className="text-[13px] font-medium text-on-surface">{r.clientName || r.projectName || 'Rapportino'}</div>
-                <div className="text-[11px] text-on-surface-variant">{r.status} · {r.periodType}</div>
+            <div key={r.id} className="p-3 rounded-lg border border-outline-variant/30 bg-surface-container-lowest space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-[13px] font-medium text-on-surface">{r.clientName || r.projectName || 'Rapportino'}</div>
+                  <div className="text-[11px] text-on-surface-variant">{r.status} · {r.periodType}</div>
+                </div>
               </div>
-              <button
-                onClick={() => openService(service.id, 'finance', 'rapportino')}
-                className="text-[12px] text-primary hover:underline"
-              >
-                View →
-              </button>
+              <div className="flex gap-1.5">
+                {r.status === 'DRAFT' && (
+                  <button
+                    onClick={() => handleRapportinoAction(r.id, 'review', async () => {
+                      const { reviewRapportinoClient } = await import('../services/api');
+                      return reviewRapportinoClient(r.id);
+                    })}
+                    disabled={isProcessing === `${r.id}-review`}
+                    className="flex-1 py-1.5 bg-blue-600 text-white text-[11px] font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+                  >
+                    {isProcessing === `${r.id}-review` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Eye className="w-3 h-3" />}
+                    Review
+                  </button>
+                )}
+                {r.status === 'REVIEWED' && (
+                  <button
+                    onClick={() => handleRapportinoAction(r.id, 'send', async () => {
+                      const { sendRapportinoClient } = await import('../services/api');
+                      return sendRapportinoClient(r.id);
+                    })}
+                    disabled={isProcessing === `${r.id}-send`}
+                    className="flex-1 py-1.5 bg-emerald-600 text-white text-[11px] font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1"
+                  >
+                    {isProcessing === `${r.id}-send` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                    Send
+                  </button>
+                )}
+                {r.status === 'SENT' && (
+                  <button
+                    onClick={() => handleRapportinoAction(r.id, 'accept', async () => {
+                      const { acceptRapportinoClient } = await import('../services/api');
+                      return acceptRapportinoClient(r.id);
+                    })}
+                    disabled={isProcessing === `${r.id}-accept`}
+                    className="flex-1 py-1.5 bg-green-600 text-white text-[11px] font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-1"
+                  >
+                    {isProcessing === `${r.id}-accept` ? <Loader2 className="w-3 h-3 animate-spin" /> : <ThumbsUp className="w-3 h-3" />}
+                    Accept
+                  </button>
+                )}
+                <button
+                  onClick={() => openService(service.id, 'finance', 'rapportino')}
+                  className="px-3 py-1.5 bg-surface-container text-on-surface text-[11px] font-medium rounded-lg hover:bg-surface-container-high transition-colors"
+                >
+                  View →
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -1323,11 +1458,19 @@ export function RapportinoTab({ service }: {
 // TAB: FINANCE — Revenue, Cost, Margin (ERG Phase 13)
 // ============================================================================
 
-export function FinanceTab({ service }: {
+export function FinanceTab({ service, onServiceUpdate }: {
   service: Service;
+  onServiceUpdate?: () => void;
 }) {
+  const { showToast } = useToast();
   const revenue = service.revenueBreakdown;
   const cost = service.costBreakdown;
+  const [showAdjustRevenue, setShowAdjustRevenue] = useState(false);
+  const [showAdjustCost, setShowAdjustCost] = useState(false);
+  const [adjustAmount, setAdjustAmount] = useState('');
+  const [adjustReason, setAdjustReason] = useState('');
+  const [isAdjusting, setIsAdjusting] = useState(false);
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
   const totalRevenue = (revenue?.base || 0) + (revenue?.kmOver || 0) + (revenue?.hoursOver || 0) + (revenue?.diaria || 0) + (revenue?.notturno || 0);
   const totalCost = (cost?.base || 0) + (cost?.kmOver || 0) + (cost?.hoursOver || 0) + (cost?.diaria || 0) + (cost?.notturno || 0);
@@ -1335,6 +1478,42 @@ export function FinanceTab({ service }: {
   const marginPercent = totalRevenue > 0 ? ((margin / totalRevenue) * 100).toFixed(1) : '0.0';
 
   const financialStatus = service.financialStatus || 'Pendiente';
+
+  const handleFinancialAction = async (action: string, fn: () => Promise<any>) => {
+    setIsProcessing(action);
+    try {
+      await fn();
+      showToast(`${action} completed`, 'success');
+      onServiceUpdate?.();
+    } catch (err) {
+      showToast(`Failed: ${err instanceof Error ? err.message : action}`, 'error');
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  const handleAdjust = async (type: 'revenue' | 'cost') => {
+    if (!adjustAmount || isNaN(parseFloat(adjustAmount))) {
+      showToast('Enter a valid amount', 'error');
+      return;
+    }
+    setIsAdjusting(true);
+    try {
+      const { adjustRevenue, adjustCost } = await import('../services/api');
+      const fn = type === 'revenue' ? adjustRevenue : adjustCost;
+      await fn(service.id, { amount: parseFloat(adjustAmount), reason: adjustReason || `Manual ${type} adjustment` });
+      showToast(`${type} adjusted by €${adjustAmount}`, 'success');
+      setShowAdjustRevenue(false);
+      setShowAdjustCost(false);
+      setAdjustAmount('');
+      setAdjustReason('');
+      onServiceUpdate?.();
+    } catch (err) {
+      showToast(`Failed to adjust: ${err instanceof Error ? err.message : 'Error'}`, 'error');
+    } finally {
+      setIsAdjusting(false);
+    }
+  };
 
   return (
     <div className="px-5 py-4 space-y-4">
@@ -1344,6 +1523,79 @@ export function FinanceTab({ service }: {
         <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant">
           {financialStatus}
         </span>
+      </div>
+
+      {/* Financial Actions */}
+      <div className="space-y-2">
+        <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Actions</span>
+        <div className="grid grid-cols-2 gap-2">
+          {financialStatus === 'Calculado' && (
+            <button
+              onClick={() => handleFinancialAction('Approve', async () => {
+                const { approveFinancial } = await import('../services/api');
+                return approveFinancial(service.id);
+              })}
+              disabled={isProcessing === 'Approve'}
+              className="py-2 bg-green-600 text-white text-[12px] font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-1.5"
+            >
+              {isProcessing === 'Approve' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+              Approve
+            </button>
+          )}
+          {financialStatus === 'Aprobado' && (
+            <button
+              onClick={() => handleFinancialAction('Facturar', async () => {
+                const { facturarService } = await import('../services/api');
+                return facturarService(service.id);
+              })}
+              disabled={isProcessing === 'Facturar'}
+              className="py-2 bg-blue-600 text-white text-[12px] font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5"
+            >
+              {isProcessing === 'Facturar' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+              Facturar
+            </button>
+          )}
+          {financialStatus === 'Facturado' && (
+            <button
+              onClick={() => handleFinancialAction('Cobrar', async () => {
+                const { cobrarService } = await import('../services/api');
+                return cobrarService(service.id);
+              })}
+              disabled={isProcessing === 'Cobrar'}
+              className="py-2 bg-emerald-600 text-white text-[12px] font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1.5"
+            >
+              {isProcessing === 'Cobrar' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <DollarSign className="w-3.5 h-3.5" />}
+              Cobrar
+            </button>
+          )}
+          {financialStatus === 'Cobrado' && (
+            <button
+              onClick={() => handleFinancialAction('Close', async () => {
+                const { closeService } = await import('../services/api');
+                return closeService(service.id);
+              })}
+              disabled={isProcessing === 'Close'}
+              className="py-2 bg-surface-container text-on-surface text-[12px] font-medium rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-center gap-1.5"
+            >
+              {isProcessing === 'Close' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
+              Close
+            </button>
+          )}
+          <button
+            onClick={() => setShowAdjustRevenue(true)}
+            className="py-2 bg-surface-container text-on-surface text-[12px] font-medium rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-center gap-1.5"
+          >
+            <DollarSign className="w-3.5 h-3.5" />
+            Adjust Revenue
+          </button>
+          <button
+            onClick={() => setShowAdjustCost(true)}
+            className="py-2 bg-surface-container text-on-surface text-[12px] font-medium rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-center gap-1.5"
+          >
+            <DollarSign className="w-3.5 h-3.5" />
+            Adjust Cost
+          </button>
+        </div>
       </div>
 
       {/* Revenue Breakdown */}
@@ -1453,7 +1705,73 @@ export function FinanceTab({ service }: {
         </div>
       </div>
 
-      {/* Financial Dashboard link removed — all finance data visible here */}
+      {/* Adjust Revenue Modal */}
+      {showAdjustRevenue && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAdjustRevenue(false)}>
+          <div className="bg-surface rounded-xl p-5 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[15px] font-semibold text-on-surface mb-4">Adjust Revenue</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[11px] text-on-surface-variant">Amount (€)</label>
+                <input type="number" step="0.01" value={adjustAmount} onChange={e => setAdjustAmount(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 text-[13px] bg-surface-container rounded-lg border border-outline-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder="e.g. 50.00 or -25.00" />
+              </div>
+              <div>
+                <label className="text-[11px] text-on-surface-variant">Reason</label>
+                <input type="text" value={adjustReason} onChange={e => setAdjustReason(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 text-[13px] bg-surface-container rounded-lg border border-outline-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder="Optional reason" />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => handleAdjust('revenue')} disabled={isAdjusting}
+                className="flex-1 py-2 bg-primary text-on-primary text-[13px] font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5">
+                {isAdjusting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                Apply
+              </button>
+              <button onClick={() => { setShowAdjustRevenue(false); setAdjustAmount(''); setAdjustReason(''); }}
+                className="px-4 py-2 bg-surface-container text-on-surface text-[13px] font-medium rounded-lg hover:bg-surface-container-high transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Adjust Cost Modal */}
+      {showAdjustCost && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAdjustCost(false)}>
+          <div className="bg-surface rounded-xl p-5 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[15px] font-semibold text-on-surface mb-4">Adjust Cost</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[11px] text-on-surface-variant">Amount (€)</label>
+                <input type="number" step="0.01" value={adjustAmount} onChange={e => setAdjustAmount(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 text-[13px] bg-surface-container rounded-lg border border-outline-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder="e.g. 30.00 or -15.00" />
+              </div>
+              <div>
+                <label className="text-[11px] text-on-surface-variant">Reason</label>
+                <input type="text" value={adjustReason} onChange={e => setAdjustReason(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 text-[13px] bg-surface-container rounded-lg border border-outline-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder="Optional reason" />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => handleAdjust('cost')} disabled={isAdjusting}
+                className="flex-1 py-2 bg-primary text-on-primary text-[13px] font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5">
+                {isAdjusting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                Apply
+              </button>
+              <button onClick={() => { setShowAdjustCost(false); setAdjustAmount(''); setAdjustReason(''); }}
+                className="px-4 py-2 bg-surface-container text-on-surface text-[13px] font-medium rounded-lg hover:bg-surface-container-high transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
