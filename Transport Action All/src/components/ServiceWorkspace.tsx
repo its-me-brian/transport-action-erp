@@ -739,7 +739,7 @@ export default function ServiceWorkspace({
                 </div>
               </div>
               <div className="flex-1">
-                {(activeSubSection || 'whatsapp') === 'whatsapp' && <WhatsAppTab service={service} onCaptureSuccess={relatedData.refresh} />}
+                {(activeSubSection || 'whatsapp') === 'whatsapp' && <WhatsAppTab service={service} relatedData={relatedData} onCaptureSuccess={relatedData.refresh} />}
               </div>
             </div>
           )}

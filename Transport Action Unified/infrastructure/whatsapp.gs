@@ -140,21 +140,32 @@ function parseDriverReport(text) {
     driverName = firstLine.replace(/[\d\/\-.:]/g, '').replace(/\s+/g, ' ').trim();
   }
   
-  // Extract start time - multiple patterns
+  // Extract time range first: "8:30-21:30" or "8:30/21:30" or "08:30 – 21:30"
   var startTime = '';
-  var startMatch = text.match(/inizio\s*(?:dispo\w*\s*)?(?:ore\s*)?[:\s]*(\d{1,2}[.:,]\d{2})/i) ||
-                   text.match(/inizio\s+(\d{1,2}[.:,]\d{2})/i) ||
-                   text.match(/start\s*[:\s]*(\d{1,2}[.:,]\d{2})/i) ||
-                   text.match(/in\s*[:\s]*(\d{1,2}[.:,]\d{2})/i);
-  if (startMatch) startTime = _formatSingleTime(startMatch[1]);
-  
-  // Extract end time - multiple patterns
   var endTime = '';
-  var endMatch = text.match(/fine\s*(?:dispo\w*\s*)?(?:ore\s*)?[:\s]*(\d{1,2}[.:,]\d{2})/i) ||
-                 text.match(/fine\s+(\d{1,2}[.:,]\d{2})/i) ||
-                 text.match(/end\s*[:\s]*(\d{1,2}[.:,]\d{2})/i) ||
-                 text.match(/out\s*[:\s]*(\d{1,2}[.:,]\d{2})/i);
-  if (endMatch) endTime = _formatSingleTime(endMatch[1]);
+  var timeRangeMatch = text.match(/(\d{1,2}[.:,]\d{2})\s*[-–/]\s*(\d{1,2}[.:,]\d{2})/);
+  if (timeRangeMatch) {
+    startTime = _formatSingleTime(timeRangeMatch[1]);
+    endTime = _formatSingleTime(timeRangeMatch[2]);
+  }
+
+  // Extract start time - keyword patterns (only if range didn't match)
+  if (!startTime) {
+    var startMatch = text.match(/inizio\s*(?:dispo\w*\s*)?(?:ore\s*)?[:\s]*(\d{1,2}[.:,]\d{2})/i) ||
+                     text.match(/inizio\s+(\d{1,2}[.:,]\d{2})/i) ||
+                     text.match(/start\s*[:\s]*(\d{1,2}[.:,]\d{2})/i) ||
+                     text.match(/in\s*[:\s]*(\d{1,2}[.:,]\d{2})/i);
+    if (startMatch) startTime = _formatSingleTime(startMatch[1]);
+  }
+  
+  // Extract end time - keyword patterns (only if range didn't match)
+  if (!endTime) {
+    var endMatch = text.match(/fine\s*(?:dispo\w*\s*)?(?:ore\s*)?[:\s]*(\d{1,2}[.:,]\d{2})/i) ||
+                   text.match(/fine\s+(\d{1,2}[.:,]\d{2})/i) ||
+                   text.match(/end\s*[:\s]*(\d{1,2}[.:,]\d{2})/i) ||
+                   text.match(/out\s*[:\s]*(\d{1,2}[.:,]\d{2})/i);
+    if (endMatch) endTime = _formatSingleTime(endMatch[1]);
+  }
   
   // Extract km total - multiple patterns
   var kmTotal = 0;
@@ -164,10 +175,10 @@ function parseDriverReport(text) {
                    text.match(/totale\s*km\.?\s*(\d+)/i);
   if (kmTotMatch) kmTotal = parseInt(kmTotMatch[1]);
   
-  // If just "km XXX" found (no tot/over), take it as total
+  // If just "km XXX" or "XXXkm" found (no tot/over), take it as total
   if (kmTotal === 0) {
-    var kmSimple = text.match(/\bkm\s+(\d+)/i);
-    if (kmSimple) kmTotal = parseInt(kmSimple[1]);
+    var kmSimple = text.match(/\bkm\s+(\d+)/i) || text.match(/(\d+(?:[.,]\d+)?)\s*km\b/i);
+    if (kmSimple) kmTotal = parseInt(kmSimple[1].replace(',', '.'));
   }
   
   // Extract km over (extra km) - multiple patterns
@@ -574,6 +585,7 @@ function captureWhatsAppReports(reports, projectId) {
         // serviceId can come from parsed report or from coordinator selection
         Logger.log('[captureWhatsAppReports] serviceId=' + r.serviceId + ', selectedServiceId=' + r.selectedServiceId);
         var rawData = {
+          driverName: r.driverName || '',
           serviceId: r.serviceId || r.selectedServiceId || '',
           startTime: r.startTime || '',
           endTime: r.endTime || '',
