@@ -46,6 +46,12 @@ vi.mock('../contexts/ToastContext', () => ({
   }),
 }));
 
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
+  MemoryRouter: ({ children }: any) => children,
+  BrowserRouter: ({ children }: any) => children,
+}));
+
 const mockOnNavigate = vi.fn();
 
 const sampleClientRapportinos = [

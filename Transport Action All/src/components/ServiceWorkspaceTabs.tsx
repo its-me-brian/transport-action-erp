@@ -1266,6 +1266,16 @@ function getEventColor(eventType: string): string {
     case 'started': return 'bg-cyan-500';
     case 'completed': return 'bg-teal-500';
     case 'validated': return 'bg-amber-500';
+    case 'link_created':
+    case 'link_accessed':
+    case 'link_submitted':
+    case 'link_expired':
+    case 'link_revoked': return 'bg-indigo-500';
+    case 'report_submitted':
+    case 'report_approved':
+    case 'report_rejected': return 'bg-orange-500';
+    case 'whatsapp_parsed':
+    case 'whatsapp_captured': return 'bg-emerald-600';
     default: return 'bg-gray-400';
   }
 }
@@ -1284,9 +1294,28 @@ export function HistoryTab({ service }: { service: Service }) {
       try {
         const all = await getActivityFeed(100);
         if (cancelled) return;
-        const serviceEntries = all.filter(e =>
-          e.entityType === 'Service' && e.entityId === service.id
-        );
+        const serviceEntries = all.filter(e => {
+          if (e.entityType === 'Service' && e.entityId === service.id) return true;
+          if (e.entityType === 'DriverLink' && e.metadata) {
+            try {
+              const meta = JSON.parse(e.metadata);
+              if (meta.serviceId === service.id || meta.serviceID === service.id) return true;
+            } catch {}
+          }
+          if (e.entityType === 'DriverReport' && e.metadata) {
+            try {
+              const meta = JSON.parse(e.metadata);
+              if (meta.serviceId === service.id || meta.serviceID === service.id) return true;
+            } catch {}
+          }
+          if (e.entityType === 'WhatsApp' && e.metadata) {
+            try {
+              const meta = JSON.parse(e.metadata);
+              if (meta.serviceId === service.id || meta.serviceID === service.id) return true;
+            } catch {}
+          }
+          return false;
+        });
         setEntries(serviceEntries);
       } catch {
         if (!cancelled) setEntries([]);

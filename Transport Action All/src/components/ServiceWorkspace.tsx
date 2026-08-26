@@ -27,10 +27,7 @@ import { useOpenService } from '../hooks/useOpenService';
 function getNextAction(service: Service, relatedData: RelatedData): { label: string; icon: React.ReactNode; color: string; action: string } | null {
   const status = service.operationalStatus;
   const hasDriver = !!service.driverId && service.driverName !== 'Unassigned';
-  const driverLinkActive = !!relatedData.driverLink && relatedData.driverLink?.active !== false;
   const reportStatus = relatedData.driverReport?.status || relatedData.driverReport?.Status || null;
-  const inboxStatus = relatedData.inboxItem?.Status || null;
-  const hasReconciliation = !!relatedData.reconciliation;
 
   if (status === 'Importado' && !hasDriver) {
     return { label: 'Assign Driver', icon: <User className="w-4 h-4" />, color: 'bg-blue-500 hover:bg-blue-600', action: 'assign' };
@@ -159,7 +156,7 @@ export default function ServiceWorkspace({
       } else {
         showToast('Action completed successfully', 'success');
         onServiceUpdate?.(service.id, {});
-        onRefresh?.();
+        await onRefresh?.();
       }
     } catch (err) {
       showToast('Error: ' + (err instanceof Error ? err.message : String(err)), 'error');
@@ -175,7 +172,7 @@ export default function ServiceWorkspace({
         showToast('Driver assigned successfully', 'success');
         setShowDriverPicker(false);
         onServiceUpdate?.(service.id, {});
-        onRefresh?.();
+        await onRefresh?.();
       }
     } catch (err) {
       showToast('Error: ' + (err instanceof Error ? err.message : String(err)), 'error');

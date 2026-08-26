@@ -12,12 +12,14 @@ import RapportinoFilterBar from './RapportinoFilterBar';
 import RapportinoDetailModal from './RapportinoDetailModal';
 import DriverLinkModal from './DriverLinkModal';
 import { Skeleton } from './ui/Skeleton';
+import { useOpenService } from '../hooks/useOpenService';
 
 interface RapportinoScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
 }
 
 export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) {
+  const openService = useOpenService();
   const {
     activeTab, setActiveTab,
     clientRapportinos, driverRapportinos, collaboratorRapportinos,
