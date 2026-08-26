@@ -17,6 +17,7 @@ import {
   OverviewTab, MovementsTab, DriverTab, DriverLinkTab,
   DriverReportTab, WhatsAppTab, ReconciliationTab, RapportinoTab, FinanceTab, HistoryTab
 } from './ServiceWorkspaceTabs';
+import { Skeleton } from './ui/Skeleton';
 import { SERVICE_GROUPS, type ServiceGroupId, type ServiceSubSection } from '../routes';
 import { useOpenService } from '../hooks/useOpenService';
 

@@ -609,6 +609,25 @@ function captureWhatsAppReports(reports, projectId) {
             driverId, projectId,
             serviceDate, rawData
           );
+          if (inboxResult.success && inboxResult.inboxId) {
+            // Auto-advance pipeline: CAPTURED → NORMALIZED → PENDING_REVIEW → ACCEPTED → DriverReport Aceptado
+            // The coordinator already reviewed the parsed data before clicking Capture
+            try {
+              normalizeReport(inboxResult.inboxId, rawData);
+              submitToReview(inboxResult.inboxId);
+              var acceptResult = acceptReport(inboxResult.inboxId, 'auto-whatsapp');
+              // Auto-approve the DriverReport (creates breakdowns, reconciliation, financials)
+              if (acceptResult && acceptResult.success && acceptResult.reportId) {
+                try {
+                  DriverReportCommands.approveReport(acceptResult.reportId);
+                } catch (approveErr) {
+                  Logger.log('[captureWhatsAppReports] Auto-approve warning: ' + approveErr.message);
+                }
+              }
+            } catch (advanceErr) {
+              Logger.log('[captureWhatsAppReports] Auto-advance warning: ' + advanceErr.message);
+            }
+          }
           results.push({
             success: inboxResult.success,
             inboxId: inboxResult.inboxId || null,
