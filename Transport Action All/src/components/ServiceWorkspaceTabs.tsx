@@ -736,7 +736,7 @@ export function WhatsAppTab({ service, relatedData }: {
     if (parsedReports.length === 0) return;
     setIsCapturing(true);
     try {
-      const result = await captureWhatsAppReports(parsedReports, service.projectId || '');
+      const result = await captureWhatsAppReports(parsedReports, service.backendProjectId || service.project || '');
       if (result.success) {
         showToast(`${result.captured}/${result.total} reports captured to inbox`, 'success');
         setCaptureStep('done');
