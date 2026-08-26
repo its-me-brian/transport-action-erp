@@ -1393,6 +1393,12 @@ export function RapportinoTab({ service, onServiceUpdate }: {
                   <div className="text-[11px] text-on-surface-variant">{r.status} · {r.periodType}</div>
                 </div>
               </div>
+              {/* Submission Timeline */}
+              <div className="flex items-center gap-2 text-[10px] text-on-surface-variant/60">
+                {r.createdAt && <span>Created {new Date(r.createdAt).toLocaleDateString()}</span>}
+                {r.sentAt && <span>· Sent {new Date(r.sentAt).toLocaleDateString()}</span>}
+                {r.acceptedAt && <span>· Accepted {new Date(r.acceptedAt).toLocaleDateString()}</span>}
+              </div>
               <div className="flex gap-1.5">
                 {r.status === 'DRAFT' && (
                   <button
@@ -1455,7 +1461,7 @@ export function RapportinoTab({ service, onServiceUpdate }: {
 }
 
 // ============================================================================
-// TAB: FINANCE — Revenue, Cost, Margin (ERG Phase 13)
+// TAB: FINANCE — Revenue, Cost, Margin + Invoices + Payments (ERG Phase 13)
 // ============================================================================
 
 export function FinanceTab({ service, onServiceUpdate }: {
@@ -1471,6 +1477,16 @@ export function FinanceTab({ service, onServiceUpdate }: {
   const [adjustReason, setAdjustReason] = useState('');
   const [isAdjusting, setIsAdjusting] = useState(false);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(true);
+  const [loadingPayments, setLoadingPayments] = useState(true);
+  const [showCreateInvoice, setShowCreateInvoice] = useState(false);
+  const [invoiceNotes, setInvoiceNotes] = useState('');
+  const [showVoidInvoice, setShowVoidInvoice] = useState<any>(null);
+  const [voidReason, setVoidReason] = useState('');
+  const [showVoidPayment, setShowVoidPayment] = useState<any>(null);
+  const [voidPaymentReason, setVoidPaymentReason] = useState('');
 
   const totalRevenue = (revenue?.base || 0) + (revenue?.kmOver || 0) + (revenue?.hoursOver || 0) + (revenue?.diaria || 0) + (revenue?.notturno || 0);
   const totalCost = (cost?.base || 0) + (cost?.kmOver || 0) + (cost?.hoursOver || 0) + (cost?.diaria || 0) + (cost?.notturno || 0);
@@ -1478,6 +1494,29 @@ export function FinanceTab({ service, onServiceUpdate }: {
   const marginPercent = totalRevenue > 0 ? ((margin / totalRevenue) * 100).toFixed(1) : '0.0';
 
   const financialStatus = service.financialStatus || 'Pendiente';
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const { getInvoices, getPayments } = await import('../services/api');
+        const [invList, payList] = await Promise.all([
+          getInvoices({ projectId: service.backendProjectId || service.project }),
+          getPayments({ clientId: service.clientId })
+        ]);
+        if (!cancelled) {
+          setInvoices(invList || []);
+          setPayments(payList || []);
+        }
+      } catch {
+        if (!cancelled) { setInvoices([]); setPayments([]); }
+      } finally {
+        if (!cancelled) { setLoadingInvoices(false); setLoadingPayments(false); }
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [service.backendProjectId, service.project, service.clientId]);
 
   const handleFinancialAction = async (action: string, fn: () => Promise<any>) => {
     setIsProcessing(action);
@@ -1765,6 +1804,220 @@ export function FinanceTab({ service, onServiceUpdate }: {
                 Apply
               </button>
               <button onClick={() => { setShowAdjustCost(false); setAdjustAmount(''); setAdjustReason(''); }}
+                className="px-4 py-2 bg-surface-container text-on-surface text-[13px] font-medium rounded-lg hover:bg-surface-container-high transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invoices Section */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Invoices</span>
+          {financialStatus === 'Facturable' && (
+            <button onClick={() => setShowCreateInvoice(true)}
+              className="text-[11px] text-primary hover:underline font-medium">+ Create</button>
+          )}
+        </div>
+        {loadingInvoices ? (
+          <div className="text-[11px] text-on-surface-variant py-2">Loading...</div>
+        ) : invoices.length === 0 ? (
+          <div className="text-[11px] text-on-surface-variant/50 py-2">No invoices</div>
+        ) : (
+          <div className="space-y-1.5">
+            {invoices.map(inv => (
+              <div key={inv.id} className="flex items-center justify-between p-2.5 rounded-lg border border-outline-variant/30 bg-surface-container-lowest">
+                <div>
+                  <div className="text-[12px] font-medium text-on-surface">{inv.invoiceNumber}</div>
+                  <div className="text-[10px] text-on-surface-variant">{inv.status} · €{inv.total?.toFixed(2)}</div>
+                </div>
+                <div className="flex gap-1">
+                  {inv.status === 'Borrador' && (
+                    <button onClick={async () => {
+                      setIsProcessing(`send-${inv.id}`);
+                      try {
+                        const { sendInvoice } = await import('../services/api');
+                        await sendInvoice(inv.id);
+                        showToast('Invoice sent', 'success');
+                        setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, status: 'Enviada' } : i));
+                        onServiceUpdate?.();
+                      } catch (err) { showToast(`Failed: ${err instanceof Error ? err.message : 'Send'}`, 'error'); }
+                      finally { setIsProcessing(null); }
+                    }} disabled={!!isProcessing}
+                      className="text-[10px] px-2 py-1 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 border border-blue-200">
+                      Send
+                    </button>
+                  )}
+                  {inv.status !== 'Anulada' && inv.status !== 'Paid' && (
+                    <button onClick={() => setShowVoidInvoice(inv)}
+                      className="text-[10px] px-2 py-1 bg-red-50 text-red-700 rounded hover:bg-red-100 border border-red-200">
+                      Void
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Payments Section */}
+      <div className="space-y-2">
+        <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Payments</span>
+        {loadingPayments ? (
+          <div className="text-[11px] text-on-surface-variant py-2">Loading...</div>
+        ) : payments.length === 0 ? (
+          <div className="text-[11px] text-on-surface-variant/50 py-2">No payments</div>
+        ) : (
+          <div className="space-y-1.5">
+            {payments.map(pay => (
+              <div key={pay.id} className="flex items-center justify-between p-2.5 rounded-lg border border-outline-variant/30 bg-surface-container-lowest">
+                <div>
+                  <div className="text-[12px] font-medium text-on-surface">€{pay.amount?.toFixed(2)}</div>
+                  <div className="text-[10px] text-on-surface-variant">{pay.status} · {pay.paymentMethod} · {pay.paymentDate}</div>
+                </div>
+                <div className="flex gap-1">
+                  {pay.status === 'Registrado' && (
+                    <button onClick={async () => {
+                      setIsProcessing(`confirm-${pay.id}`);
+                      try {
+                        const { confirmPayment } = await import('../services/api');
+                        await confirmPayment(pay.id);
+                        showToast('Payment confirmed', 'success');
+                        setPayments(prev => prev.map(p => p.id === pay.id ? { ...p, status: 'Confirmado' } : p));
+                        onServiceUpdate?.();
+                      } catch (err) { showToast(`Failed: ${err instanceof Error ? err.message : 'Confirm'}`, 'error'); }
+                      finally { setIsProcessing(null); }
+                    }} disabled={!!isProcessing}
+                      className="text-[10px] px-2 py-1 bg-green-50 text-green-700 rounded hover:bg-green-100 border border-green-200">
+                      Confirm
+                    </button>
+                  )}
+                  {pay.status !== 'Conciliado' && (
+                    <button onClick={() => setShowVoidPayment(pay)}
+                      className="text-[10px] px-2 py-1 bg-red-50 text-red-700 rounded hover:bg-red-100 border border-red-200">
+                      Void
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Create Invoice Modal */}
+      {showCreateInvoice && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowCreateInvoice(false)}>
+          <div className="bg-surface rounded-xl p-5 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[15px] font-semibold text-on-surface mb-4">Create Invoice</h3>
+            <div>
+              <label className="text-[11px] text-on-surface-variant">Notes (optional)</label>
+              <input type="text" value={invoiceNotes} onChange={e => setInvoiceNotes(e.target.value)}
+                className="w-full mt-1 px-3 py-2 text-[13px] bg-surface-container rounded-lg border border-outline-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                placeholder="Invoice notes" />
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={async () => {
+                setIsProcessing('create-invoice');
+                try {
+                  const { createInvoice } = await import('../services/api');
+                  const result = await createInvoice({
+                    projectId: service.backendProjectId || service.project,
+                    clientId: service.clientId || '',
+                    notes: invoiceNotes || undefined
+                  });
+                  if (result.error) throw new Error(result.error);
+                  showToast('Invoice created', 'success');
+                  setShowCreateInvoice(false);
+                  setInvoiceNotes('');
+                  onServiceUpdate?.();
+                } catch (err) { showToast(`Failed: ${err instanceof Error ? err.message : 'Create'}`, 'error'); }
+                finally { setIsProcessing(null); }
+              }} disabled={isProcessing === 'create-invoice'}
+                className="flex-1 py-2 bg-primary text-on-primary text-[13px] font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5">
+                {isProcessing === 'create-invoice' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                Create
+              </button>
+              <button onClick={() => { setShowCreateInvoice(false); setInvoiceNotes(''); }}
+                className="px-4 py-2 bg-surface-container text-on-surface text-[13px] font-medium rounded-lg hover:bg-surface-container-high transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Void Invoice Modal */}
+      {showVoidInvoice && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowVoidInvoice(null)}>
+          <div className="bg-surface rounded-xl p-5 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[15px] font-semibold text-on-surface mb-4">Void Invoice {showVoidInvoice.invoiceNumber}</h3>
+            <div>
+              <label className="text-[11px] text-on-surface-variant">Reason</label>
+              <input type="text" value={voidReason} onChange={e => setVoidReason(e.target.value)}
+                className="w-full mt-1 px-3 py-2 text-[13px] bg-surface-container rounded-lg border border-outline-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                placeholder="Why void this invoice?" />
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={async () => {
+                setIsProcessing(`void-${showVoidInvoice.id}`);
+                try {
+                  const { voidInvoice } = await import('../services/api');
+                  await voidInvoice(showVoidInvoice.id, voidReason || 'Voided from ServiceWorkspace');
+                  showToast('Invoice voided', 'success');
+                  setInvoices(prev => prev.map(i => i.id === showVoidInvoice.id ? { ...i, status: 'Anulada' } : i));
+                  setShowVoidInvoice(null);
+                  setVoidReason('');
+                  onServiceUpdate?.();
+                } catch (err) { showToast(`Failed: ${err instanceof Error ? err.message : 'Void'}`, 'error'); }
+                finally { setIsProcessing(null); }
+              }} disabled={!!isProcessing}
+                className="flex-1 py-2 bg-red-600 text-white text-[13px] font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-1.5">
+                {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                Void Invoice
+              </button>
+              <button onClick={() => { setShowVoidInvoice(null); setVoidReason(''); }}
+                className="px-4 py-2 bg-surface-container text-on-surface text-[13px] font-medium rounded-lg hover:bg-surface-container-high transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Void Payment Modal */}
+      {showVoidPayment && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowVoidPayment(null)}>
+          <div className="bg-surface rounded-xl p-5 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[15px] font-semibold text-on-surface mb-4">Void Payment</h3>
+            <div>
+              <label className="text-[11px] text-on-surface-variant">Reason</label>
+              <input type="text" value={voidPaymentReason} onChange={e => setVoidPaymentReason(e.target.value)}
+                className="w-full mt-1 px-3 py-2 text-[13px] bg-surface-container rounded-lg border border-outline-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                placeholder="Why void this payment?" />
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={async () => {
+                setIsProcessing(`voidpay-${showVoidPayment.id}`);
+                try {
+                  const { voidPayment } = await import('../services/api');
+                  await voidPayment(showVoidPayment.id, voidPaymentReason || 'Voided from ServiceWorkspace');
+                  showToast('Payment voided', 'success');
+                  setPayments(prev => prev.filter(p => p.id !== showVoidPayment.id));
+                  setShowVoidPayment(null);
+                  setVoidPaymentReason('');
+                  onServiceUpdate?.();
+                } catch (err) { showToast(`Failed: ${err instanceof Error ? err.message : 'Void'}`, 'error'); }
+                finally { setIsProcessing(null); }
+              }} disabled={!!isProcessing}
+                className="flex-1 py-2 bg-red-600 text-white text-[13px] font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-1.5">
+                {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                Void Payment
+              </button>
+              <button onClick={() => { setShowVoidPayment(null); setVoidPaymentReason(''); }}
                 className="px-4 py-2 bg-surface-container text-on-surface text-[13px] font-medium rounded-lg hover:bg-surface-container-high transition-colors">
                 Cancel
               </button>
