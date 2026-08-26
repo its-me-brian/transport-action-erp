@@ -12,6 +12,7 @@ import { getActivityFeed, ActivityFeedEntry, parseWhatsApp, captureWhatsAppRepor
 import { Skeleton } from './ui/Skeleton';
 import { useToast } from '../contexts/ToastContext';
 import { useOpenService } from '../hooks/useOpenService';
+import { useAuth } from '../contexts/AuthContext';
 
 // ============================================================================
 // TAB: OVERVIEW — Service Command Center
@@ -603,6 +604,7 @@ export function DriverReportTab({ service, driverReport, onServiceUpdate }: {
   onServiceUpdate?: () => void;
 }) {
   const { showToast } = useToast();
+  const { can } = useAuth();
   const openService = useOpenService();
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -725,7 +727,7 @@ export function DriverReportTab({ service, driverReport, onServiceUpdate }: {
           </div>
 
           {/* Action Buttons */}
-          {isPending && (
+          {isPending && can('driverReport.approve') && (
             <div className="flex gap-2">
               <button
                 onClick={handleApprove}
@@ -769,6 +771,7 @@ export function WhatsAppTab({ service, relatedData, onCaptureSuccess, onServiceU
   onServiceUpdate?: () => void;
 }) {
   const { showToast } = useToast();
+  const { can } = useAuth();
   const [copied, setCopied] = useState(false);
   const [pasteText, setPasteText] = useState('');
   const [isParsing, setIsParsing] = useState(false);
@@ -886,7 +889,7 @@ export function WhatsAppTab({ service, relatedData, onCaptureSuccess, onServiceU
           </div>
         </div>
         {/* Reject/Lock actions for pending reports */}
-        {inboxItem && inboxStatus === 'PENDING_REVIEW' && (
+        {inboxItem && inboxStatus === 'PENDING_REVIEW' && can('inbox.review') && (
           <div className="flex gap-2 mt-2">
             <button
               onClick={() => setShowRejectReason(true)}
@@ -1142,6 +1145,7 @@ export function ReconciliationTab({ service, reconciliation }: {
 }) {
   const openService = useOpenService();
   const { showToast } = useToast();
+  const { can } = useAuth();
   const [resolving, setResolving] = useState(false);
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [resolution, setResolution] = useState({
@@ -1252,7 +1256,7 @@ export function ReconciliationTab({ service, reconciliation }: {
           </div>
 
           {/* Navigate to full Reconciliation screen */}
-          {!isResolved && (
+          {!isResolved && can('reconciliation.update') && (
             <button
               onClick={openResolve}
               className="w-full py-2 bg-green-600 text-white text-[13px] font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
@@ -1344,6 +1348,7 @@ export function RapportinoTab({ service, onServiceUpdate }: {
   onServiceUpdate?: () => void;
 }) {
   const { showToast } = useToast();
+  const { can } = useAuth();
   const openService = useOpenService();
   const [rapportinos, setRapportinos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1413,7 +1418,7 @@ export function RapportinoTab({ service, onServiceUpdate }: {
                 {r.acceptedAt && <span>· Accepted {new Date(r.acceptedAt).toLocaleDateString()}</span>}
               </div>
               <div className="flex gap-1.5">
-                {r.status === 'DRAFT' && (
+                {r.status === 'DRAFT' && can('rapportinoClient.review') && (
                   <button
                     onClick={() => handleRapportinoAction(r.id, 'review', async () => {
                       const { reviewRapportinoClient } = await import('../services/api');
@@ -1426,7 +1431,7 @@ export function RapportinoTab({ service, onServiceUpdate }: {
                     Review
                   </button>
                 )}
-                {r.status === 'REVIEWED' && (
+                {r.status === 'REVIEWED' && can('rapportinoClient.send') && (
                   <button
                     onClick={() => handleRapportinoAction(r.id, 'send', async () => {
                       const { sendRapportinoClient } = await import('../services/api');
@@ -1439,7 +1444,7 @@ export function RapportinoTab({ service, onServiceUpdate }: {
                     Send
                   </button>
                 )}
-                {r.status === 'SENT' && (
+                {r.status === 'SENT' && can('rapportinoClient.accept') && (
                   <button
                     onClick={() => handleRapportinoAction(r.id, 'accept', async () => {
                       const { acceptRapportinoClient } = await import('../services/api');
@@ -1482,6 +1487,7 @@ export function FinanceTab({ service, onServiceUpdate }: {
   onServiceUpdate?: () => void;
 }) {
   const { showToast } = useToast();
+  const { can } = useAuth();
   const revenue = service.revenueBreakdown;
   const cost = service.costBreakdown;
   const [showAdjustRevenue, setShowAdjustRevenue] = useState(false);
@@ -1581,7 +1587,7 @@ export function FinanceTab({ service, onServiceUpdate }: {
       <div className="space-y-2">
         <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Actions</span>
         <div className="grid grid-cols-2 gap-2">
-          {financialStatus === 'Calculado' && (
+          {financialStatus === 'Calculado' && can('service.approveFinancial') && (
             <button
               onClick={() => handleFinancialAction('Approve', async () => {
                 const { approveFinancial } = await import('../services/api');
@@ -1594,7 +1600,7 @@ export function FinanceTab({ service, onServiceUpdate }: {
               Approve
             </button>
           )}
-          {financialStatus === 'Aprobado' && (
+          {financialStatus === 'Aprobado' && can('service.facturar') && (
             <button
               onClick={() => handleFinancialAction('Facturar', async () => {
                 const { facturarService } = await import('../services/api');
@@ -1607,7 +1613,7 @@ export function FinanceTab({ service, onServiceUpdate }: {
               Facturar
             </button>
           )}
-          {financialStatus === 'Facturado' && (
+          {financialStatus === 'Facturado' && can('service.cobrar') && (
             <button
               onClick={() => handleFinancialAction('Cobrar', async () => {
                 const { cobrarService } = await import('../services/api');
@@ -1620,7 +1626,7 @@ export function FinanceTab({ service, onServiceUpdate }: {
               Cobrar
             </button>
           )}
-          {financialStatus === 'Cobrado' && (
+          {financialStatus === 'Cobrado' && can('service.close') && (
             <button
               onClick={() => handleFinancialAction('Close', async () => {
                 const { closeService } = await import('../services/api');
@@ -1633,20 +1639,24 @@ export function FinanceTab({ service, onServiceUpdate }: {
               Close
             </button>
           )}
-          <button
-            onClick={() => setShowAdjustRevenue(true)}
-            className="py-2 bg-surface-container text-on-surface text-[12px] font-medium rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-center gap-1.5"
-          >
-            <DollarSign className="w-3.5 h-3.5" />
-            Adjust Revenue
-          </button>
-          <button
-            onClick={() => setShowAdjustCost(true)}
-            className="py-2 bg-surface-container text-on-surface text-[12px] font-medium rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-center gap-1.5"
-          >
-            <DollarSign className="w-3.5 h-3.5" />
-            Adjust Cost
-          </button>
+          {can('service.adjustRevenue') && (
+            <button
+              onClick={() => setShowAdjustRevenue(true)}
+              className="py-2 bg-surface-container text-on-surface text-[12px] font-medium rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-center gap-1.5"
+            >
+              <DollarSign className="w-3.5 h-3.5" />
+              Adjust Revenue
+            </button>
+          )}
+          {can('service.adjustCost') && (
+            <button
+              onClick={() => setShowAdjustCost(true)}
+              className="py-2 bg-surface-container text-on-surface text-[12px] font-medium rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-center gap-1.5"
+            >
+              <DollarSign className="w-3.5 h-3.5" />
+              Adjust Cost
+            </button>
+          )}
         </div>
       </div>
 
@@ -1829,7 +1839,7 @@ export function FinanceTab({ service, onServiceUpdate }: {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Invoices</span>
-          {financialStatus === 'Facturable' && (
+          {financialStatus === 'Facturable' && can('invoice.create') && (
             <button onClick={() => setShowCreateInvoice(true)}
               className="text-[11px] text-primary hover:underline font-medium">+ Create</button>
           )}
@@ -1847,7 +1857,7 @@ export function FinanceTab({ service, onServiceUpdate }: {
                   <div className="text-[10px] text-on-surface-variant">{inv.status} · €{inv.total?.toFixed(2)}</div>
                 </div>
                 <div className="flex gap-1">
-                  {inv.status === 'Borrador' && (
+                  {inv.status === 'Borrador' && can('invoice.send') && (
                     <button onClick={async () => {
                       setIsProcessing(`send-${inv.id}`);
                       try {
@@ -1863,7 +1873,7 @@ export function FinanceTab({ service, onServiceUpdate }: {
                       Send
                     </button>
                   )}
-                  {inv.status !== 'Anulada' && inv.status !== 'Paid' && (
+                  {inv.status !== 'Anulada' && inv.status !== 'Paid' && can('invoice.void') && (
                     <button onClick={() => setShowVoidInvoice(inv)}
                       className="text-[10px] px-2 py-1 bg-red-50 text-red-700 rounded hover:bg-red-100 border border-red-200">
                       Void
@@ -1892,7 +1902,7 @@ export function FinanceTab({ service, onServiceUpdate }: {
                   <div className="text-[10px] text-on-surface-variant">{pay.status} · {pay.paymentMethod} · {pay.paymentDate}</div>
                 </div>
                 <div className="flex gap-1">
-                  {pay.status === 'Registrado' && (
+                  {pay.status === 'Registrado' && can('payment.confirm') && (
                     <button onClick={async () => {
                       setIsProcessing(`confirm-${pay.id}`);
                       try {
@@ -1908,7 +1918,7 @@ export function FinanceTab({ service, onServiceUpdate }: {
                       Confirm
                     </button>
                   )}
-                  {pay.status !== 'Conciliado' && (
+                  {pay.status !== 'Conciliado' && can('payment.void') && (
                     <button onClick={() => setShowVoidPayment(pay)}
                       className="text-[10px] px-2 py-1 bg-red-50 text-red-700 rounded hover:bg-red-100 border border-red-200">
                       Void
