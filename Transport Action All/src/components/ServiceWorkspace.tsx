@@ -4,14 +4,14 @@ import {
   CheckCircle, Clock, Link2, FileText,
   ArrowLeftRight, User, Calendar,
   Play, Send, CheckSquare, Settings, DollarSign,
-  ArrowLeft, MoreVertical, ChevronRight
+  ArrowLeft, MoreVertical, ChevronRight, Loader2
 } from 'lucide-react';
 import { Service, ScreenId, formatTimeDisplay } from '../types';
 import { useRelatedData, RelatedData } from '../hooks/useRelatedData';
 import { getServiceStatusColor } from '../utils/statusColors';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
-import { assignDriver, confirmService, startService, completeService, reportService, validateService, getDrivers } from '../services/api';
+import { assignDriver, confirmService, startService, completeService, reportService, validateService, moveToReview, getDrivers } from '../services/api';
 import type { DriverRecord } from '../services/api';
 import {
   OverviewTab, MovementsTab, DriverTab, DriverLinkTab,
@@ -124,6 +124,7 @@ export default function ServiceWorkspace({
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
   const [loadingDrivers, setLoadingDrivers] = useState(false);
   const [showContextPanel, setShowContextPanel] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const handleWorkflowAction = async (action: string) => {
     if (action === 'assign') {
@@ -141,15 +142,16 @@ export default function ServiceWorkspace({
     }
 
     try {
+      setActionLoading(true);
       let result;
       switch (action) {
         case 'confirm': result = await confirmService(service.id); break;
         case 'start': result = await startService(service.id); break;
         case 'complete': result = await completeService(service.id); break;
         case 'report': result = await reportService(service.id); break;
-        case 'review': result = await reportService(service.id); break;
+        case 'review': result = await moveToReview(service.id); break;
         case 'validate': result = await validateService(service.id); break;
-        default: showToast('Unknown action: ' + action, 'error'); return;
+        default: showToast('Unknown action: ' + action, 'error'); setActionLoading(false); return;
       }
       if (result?.error) {
         showToast(result.error, 'error');
@@ -160,6 +162,8 @@ export default function ServiceWorkspace({
       }
     } catch (err) {
       showToast('Error: ' + (err instanceof Error ? err.message : String(err)), 'error');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -290,13 +294,15 @@ export default function ServiceWorkspace({
           {nextAction && (
             <button
               className={`w-full flex items-center justify-center gap-1.5 px-2 py-2 text-white text-[11px] font-semibold rounded-lg transition-colors cursor-pointer ${nextAction.color} ${
-                !can(`service.${nextAction.action}`) ? 'opacity-50 cursor-not-allowed' : ''
+                !can(`service.${nextAction.action}`) || actionLoading ? 'opacity-50 cursor-not-allowed' : ''
               }`}
               onClick={() => handleWorkflowAction(nextAction.action)}
-              disabled={!can(`service.${nextAction.action}`)}
+              disabled={!can(`service.${nextAction.action}`) || actionLoading}
             >
-              {nextAction.icon}
-              {nextAction.label}
+              {actionLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : nextAction.icon}
+              {actionLoading ? 'Processing...' : nextAction.label}
             </button>
           )}
         </div>
@@ -357,13 +363,15 @@ export default function ServiceWorkspace({
                 <span className="text-[9px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Next Action</span>
                 <button
                   className={`mt-1.5 w-full flex items-center justify-center gap-1.5 px-2 py-2 text-white text-[11px] font-semibold rounded-lg transition-colors cursor-pointer ${nextAction.color} ${
-                    !can(`service.${nextAction.action}`) ? 'opacity-50 cursor-not-allowed' : ''
+                    !can(`service.${nextAction.action}`) || actionLoading ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                   onClick={() => handleWorkflowAction(nextAction.action)}
-                  disabled={!can(`service.${nextAction.action}`)}
+                  disabled={!can(`service.${nextAction.action}`) || actionLoading}
                 >
-                  {nextAction.icon}
-                  {nextAction.label}
+                  {actionLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : nextAction.icon}
+                  {actionLoading ? 'Processing...' : nextAction.label}
                 </button>
               </div>
             )}
@@ -642,13 +650,15 @@ export default function ServiceWorkspace({
             <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Next Action</span>
             <button
               className={`mt-1.5 w-full flex items-center justify-center gap-2 px-3 py-2 text-white text-[12px] font-semibold rounded-lg transition-colors cursor-pointer ${nextAction.color} ${
-                !can(`service.${nextAction.action}`) ? 'opacity-50 cursor-not-allowed' : ''
+                !can(`service.${nextAction.action}`) || actionLoading ? 'opacity-50 cursor-not-allowed' : ''
               }`}
               onClick={() => handleWorkflowAction(nextAction.action)}
-              disabled={!can(`service.${nextAction.action}`)}
+              disabled={!can(`service.${nextAction.action}`) || actionLoading}
             >
-              {nextAction.icon}
-              {nextAction.label}
+              {actionLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : nextAction.icon}
+              {actionLoading ? 'Processing...' : nextAction.label}
             </button>
           </div>
         )}

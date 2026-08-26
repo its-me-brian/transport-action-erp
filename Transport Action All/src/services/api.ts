@@ -599,6 +599,10 @@ export async function reportService(serviceId: string): Promise<{ success?: bool
   return gasPostWithRetry('reportService', { serviceId });
 }
 
+export async function moveToReview(serviceId: string): Promise<{ success?: boolean; error?: string }> {
+  return gasPostWithRetry('moveToRevision', { serviceId });
+}
+
 export async function validateService(serviceId: string): Promise<{ success?: boolean; error?: string }> {
   return gasPostWithRetry('validateService', { serviceId });
 }
