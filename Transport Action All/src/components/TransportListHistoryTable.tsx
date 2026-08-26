@@ -1,6 +1,7 @@
 import React from 'react';
 import { FileSpreadsheet } from 'lucide-react';
 import { formatTimeDisplay } from '../types';
+import { Skeleton } from './ui/Skeleton';
 
 interface HistoryEntry {
   id?: string;
@@ -56,13 +57,13 @@ export default function TransportListHistoryTable({
                 </thead>
                 <tbody>
                   {[1, 2, 3].map(i => (
-                    <tr key={i} className="border-b border-outline-variant/50 animate-pulse">
-                      <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-20" /></td>
-                      <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-28" /></td>
-                      <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-24" /></td>
-                      <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-12" /></td>
-                      <td className="px-3 py-2"><div className="h-3 bg-surface-container-highest rounded w-12" /></td>
-                      <td className="px-3 py-2"><div className="h-5 bg-surface-container-highest rounded-full w-16" /></td>
+                    <tr key={i} className="border-b border-outline-variant/50">
+                      <td className="px-3 py-2"><Skeleton className="h-3 w-20" /></td>
+                      <td className="px-3 py-2"><Skeleton className="h-3 w-28" /></td>
+                      <td className="px-3 py-2"><Skeleton className="h-3 w-24" /></td>
+                      <td className="px-3 py-2"><Skeleton className="h-3 w-12" /></td>
+                      <td className="px-3 py-2"><Skeleton className="h-3 w-12" /></td>
+                      <td className="px-3 py-2"><Skeleton className="h-5 w-16 rounded-full" /></td>
                     </tr>
                   ))}
                 </tbody>

@@ -13,6 +13,7 @@ import { useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { screenToRoute } from './routes';
 import ErrorBoundary from './components/ErrorBoundary';
+import { Skeleton } from './components/ui/Skeleton';
 import Sidebar from './components/Sidebar';
 import AuthScreen from './components/AuthScreen';
 import DashboardScreen from './components/DashboardScreen';
@@ -152,18 +153,41 @@ export default function App() {
     return (localStorage.getItem('sidebarMode') as SidebarMode) || 'full';
   });
 
-  const hideSidebar = location.pathname === '/new-service';
+  // ERG Phase 2: Auto-collapse sidebar when entering service workspace
+  const isInServiceWorkspace = location.pathname.startsWith('/service/');
+  const previousModeRef = React.useRef<SidebarMode | null>(null);
+
+  useEffect(() => {
+    if (isInServiceWorkspace) {
+      // Save current mode before collapsing (only on first entry)
+      if (previousModeRef.current === null) {
+        previousModeRef.current = sidebarMode;
+      }
+      // Collapse to icons mode for workspace
+      if (sidebarMode !== 'icons' && sidebarMode !== 'hidden') {
+        setSidebarMode('icons');
+      }
+    } else if (previousModeRef.current !== null) {
+      // Restore previous mode when leaving workspace
+      const restoreMode = previousModeRef.current;
+      previousModeRef.current = null;
+      setSidebarMode(restoreMode);
+    }
+  }, [isInServiceWorkspace]); // Only run on route change, not on sidebarMode change
+
+  const hideSidebar = location.pathname === '/new-service' || isInServiceWorkspace;
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-full max-w-sm space-y-4 animate-pulse">
-          <div className="h-8 bg-surface-container-highest rounded w-48 mx-auto" />
-          <div className="h-4 bg-surface-container-highest rounded w-32 mx-auto" />
+      <div className="min-h-screen bg-background flex items-center justify-center" role="status">
+        <span className="sr-only">Loading...</span>
+        <div className="w-full max-w-sm space-y-4">
+          <Skeleton className="h-8 w-48 mx-auto" />
+          <Skeleton className="h-4 w-32 mx-auto" />
           <div className="space-y-3 mt-8">
-            <div className="h-10 bg-surface-container-highest rounded-lg" />
-            <div className="h-10 bg-surface-container-highest rounded-lg" />
-            <div className="h-10 bg-surface-container-highest rounded-lg" />
+            <Skeleton className="h-10 rounded-lg" />
+            <Skeleton className="h-10 rounded-lg" />
+            <Skeleton className="h-10 rounded-lg" />
           </div>
         </div>
       </div>
@@ -279,9 +303,7 @@ export default function App() {
                 <Route path="/rate_cards" element={
                   <RateCardScreen onNavigate={handleNavigate} />
                 } />
-                <Route path="/driver-submissions" element={
-                  <DriverReportsScreen onNavigate={handleNavigate} />
-                } />
+                {/* /driver-submissions removed — consolidated into /driver-reports */}
 
                 {/* Default: redirect to /dashboard */}
                 <Route path="*" element={

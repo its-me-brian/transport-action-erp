@@ -82,7 +82,7 @@ describe('FinancialDashboard', () => {
 
   it('shows loading state initially', () => {
     render(<FinancialDashboard onNavigate={mockOnNavigate} />);
-    const skeletons = document.querySelectorAll('.animate-pulse');
+    const skeletons = document.querySelectorAll('.bg-surface-container-high');
     expect(skeletons.length).toBeGreaterThan(0);
   });
 
@@ -278,7 +278,7 @@ describe('FinancialDashboard', () => {
 
     await waitFor(() => {
       // The loading state in the EvA section shows skeleton placeholders
-      const skeletons = document.querySelectorAll('.animate-pulse');
+      const skeletons = document.querySelectorAll('.bg-surface-container-high');
       expect(skeletons.length).toBeGreaterThanOrEqual(1);
     });
   });

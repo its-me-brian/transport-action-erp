@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Send, Check, AlertTriangle, Loader2, User, Edit3 } from 'lucide-react';
+import { MessageSquare, Send, Check, AlertTriangle, Loader2, User, Edit3, ExternalLink } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
+import { useOpenService } from '../hooks/useOpenService';
 import {
   parseWhatsApp, captureWhatsAppReports,
   WhatsAppParsedReport, getProjects, getDrivers, getServices
@@ -14,6 +15,7 @@ type Step = 'paste' | 'review' | 'done';
 
 export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props) {
   const { showToast } = useToast();
+  const openService = useOpenService();
   const [step, setStep] = useState<Step>('paste');
   const [messageText, setMessageText] = useState('');
   const [isParsing, setIsParsing] = useState(false);
@@ -436,9 +438,18 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
             Go to the Inbox tab to review and approve them.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            {reports.length > 0 && reports[0].selectedServiceId && (
+              <button
+                onClick={() => openService(reports[0].selectedServiceId!)}
+                className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-colors font-semibold text-sm flex items-center justify-center gap-2"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Open Service
+              </button>
+            )}
             <button
               onClick={() => _onNavigate('inbox')}
-              className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-colors font-semibold text-sm"
+              className="px-6 py-2.5 bg-surface-container text-on-surface rounded-lg hover:bg-surface-container-high transition-colors font-semibold text-sm"
             >
               Go to Inbox
             </button>

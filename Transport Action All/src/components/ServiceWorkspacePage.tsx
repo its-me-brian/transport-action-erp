@@ -1,24 +1,56 @@
 // ============================================================================
 // ServiceWorkspacePage — Routed version of ServiceWorkspace
-// Accessible at /service/:serviceId and /service/:serviceId/:section
+// Accessible at /service/:serviceId, /service/:serviceId/:group, etc.
 // ============================================================================
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Service, mapServiceDTOToService } from '../types';
 import { getServiceById } from '../services/api';
 import ServiceWorkspace from './ServiceWorkspace';
-import { routeParamToTab, tabToRouteParam } from '../routes';
+import {
+  urlParamToGroup, groupToUrlParam,
+  queryParamToSubSection, subSectionToQueryParam, legacyUrlRedirect,
+  type ServiceGroupId, type ServiceSubSection
+} from '../routes';
+import { Skeleton } from './ui/Skeleton';
+import { useToast } from '../contexts/ToastContext';
 
 export default function ServiceWorkspacePage() {
   const { serviceId, section } = useParams<{ serviceId: string; section?: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [service, setService] = useState<Service | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const activeTab = section ? (routeParamToTab[section] || 'overview') : 'overview';
+  // Parse URL → group + sub-section
+  const parseUrlState = useCallback((): { group: ServiceGroupId; subSection?: ServiceSubSection } => {
+    const rawSection = section || '';
+
+    // Check for legacy flat URL → redirect to grouped URL
+    if (rawSection && legacyUrlRedirect[rawSection]) {
+      const redirect = legacyUrlRedirect[rawSection];
+      const subParam = redirect.sub ? `?sub=${subSectionToQueryParam[redirect.sub]}` : '';
+      const newUrl = `/service/${serviceId}/${groupToUrlParam[redirect.group]}${subParam}`;
+      // Redirect in-place (replace to avoid back-button loop)
+      navigate(newUrl, { replace: true });
+      return { group: redirect.group, subSection: redirect.sub };
+    }
+
+    // Normal grouped URL
+    const group = urlParamToGroup[rawSection] || 'overview';
+
+    // Parse sub-section from query param
+    const subParam = searchParams.get('sub');
+    const subSection = subParam ? (queryParamToSubSection[subParam] || undefined) : undefined;
+
+    return { group, subSection };
+  }, [section, serviceId, searchParams, navigate]);
+
+  const { group: activeGroup, subSection: activeSubSection } = parseUrlState();
 
   useEffect(() => {
     if (!serviceId) return;
@@ -54,31 +86,49 @@ export default function ServiceWorkspacePage() {
     setService(prev => prev ? { ...prev, ...updates } : prev);
   };
 
-  const handleTabChange = (tab: string) => {
+  const handleRefresh = useCallback(() => {
     if (!serviceId) return;
-    const param = tabToRouteParam[tab as keyof typeof tabToRouteParam];
-    const path = param ? `/service/${serviceId}/${param}` : `/service/${serviceId}`;
+    getServiceById(serviceId)
+      .then((data) => {
+        if (data) {
+          setService(mapServiceDTOToService(data));
+        }
+      })
+      .catch((err) => {
+        showToast('Failed to refresh service data', 'error');
+      });
+  }, [serviceId, showToast]);
+
+  const handleGroupChange = (group: ServiceGroupId, subSection?: ServiceSubSection) => {
+    if (!serviceId) return;
+    const urlParam = groupToUrlParam[group];
+    let path = urlParam ? `/service/${serviceId}/${urlParam}` : `/service/${serviceId}`;
+    if (subSection) {
+      const queryParam = subSectionToQueryParam[subSection];
+      path += `?sub=${queryParam}`;
+    }
     navigate(path, { replace: true });
   };
 
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex-1 p-4 bg-background space-y-4 animate-pulse">
+      <div className="flex-1 p-4 bg-background space-y-4" role="status">
+        <span className="sr-only">Loading service...</span>
         <div className="flex items-center gap-3">
-          <div className="w-6 h-6 rounded bg-surface-container-highest" />
-          <div className="h-4 bg-surface-container-highest rounded w-48" />
-          <div className="h-3 bg-surface-container-highest rounded w-20 ml-auto" />
+          <Skeleton className="w-6 h-6 rounded" />
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-3 w-20 ml-auto" />
         </div>
         <div className="flex gap-4">
           <div className="w-48 space-y-2">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-9 bg-surface-container-highest rounded-lg" />
+              <Skeleton key={i} className="h-9 rounded-lg" />
             ))}
           </div>
           <div className="flex-1 space-y-3">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-24 bg-surface-container-highest rounded-xl" />
+              <Skeleton key={i} className="h-24 rounded-xl" />
             ))}
           </div>
         </div>
@@ -129,9 +179,11 @@ export default function ServiceWorkspacePage() {
           service={service}
           onClose={handleClose}
           onServiceUpdate={handleServiceUpdate}
-          initialTab={activeTab}
+          onRefresh={handleRefresh}
+          initialGroup={activeGroup}
+          initialSubSection={activeSubSection}
           mode="page"
-          onTabChange={handleTabChange}
+          onGroupChange={handleGroupChange}
         />
       </div>
     </div>

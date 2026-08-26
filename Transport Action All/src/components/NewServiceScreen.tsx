@@ -83,7 +83,10 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
           
           {/* Section: Company & Project */}
           <motion.div variants={sectionVariants} initial="hidden" animate="visible">
-            <h3 className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest mb-3">General Information</h3>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-5 h-5 rounded-full bg-primary text-on-primary text-[10px] font-bold flex items-center justify-center shrink-0">1</span>
+              <h3 className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest">General Information</h3>
+            </div>
             
             {/* Company Toggle */}
             <div className="mb-3">
@@ -150,7 +153,10 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
 
           {/* Section: Schedule */}
           <motion.div variants={sectionVariants} initial="hidden" animate="visible" transition={{ delay: 0.05 }}>
-            <h3 className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest mb-3">Schedule</h3>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-5 h-5 rounded-full bg-primary text-on-primary text-[10px] font-bold flex items-center justify-center shrink-0">2</span>
+              <h3 className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest">Schedule</h3>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="block text-[11px] text-on-surface-variant uppercase tracking-wide font-medium mb-1">
@@ -205,7 +211,10 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
 
           {/* Section: Vehicle & Details */}
           <motion.div variants={sectionVariants} initial="hidden" animate="visible" transition={{ delay: 0.08 }}>
-            <h3 className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest mb-3">Vehicle & Details</h3>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-5 h-5 rounded-full bg-primary text-on-primary text-[10px] font-bold flex items-center justify-center shrink-0">3</span>
+              <h3 className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest">Vehicle & Details</h3>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] text-on-surface-variant uppercase tracking-wide font-medium mb-1">
@@ -294,7 +303,10 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
 
           {/* Section: Assignment */}
           <motion.div variants={sectionVariants} initial="hidden" animate="visible" transition={{ delay: 0.1 }}>
-            <h3 className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest mb-3">Assignment</h3>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-5 h-5 rounded-full bg-primary text-on-primary text-[10px] font-bold flex items-center justify-center shrink-0">4</span>
+              <h3 className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest">Assignment</h3>
+            </div>
             <div>
               <label className="block text-[11px] text-on-surface-variant uppercase tracking-wide font-medium mb-1">
                 Assigned Driver
@@ -359,7 +371,10 @@ export default function NewServiceScreen({ onAddService, onNavigate }: NewServic
 
           {/* Section: Route */}
           <motion.div variants={sectionVariants} initial="hidden" animate="visible" transition={{ delay: 0.15 }}>
-            <h3 className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest mb-3">Route</h3>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-5 h-5 rounded-full bg-primary text-on-primary text-[10px] font-bold flex items-center justify-center shrink-0">5</span>
+              <h3 className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest">Route</h3>
+            </div>
             <div className="relative pl-6 border-l-2 border-dashed border-outline-variant space-y-3">
               <div className="absolute left-[-5px] top-[36px] w-2.5 h-2.5 bg-surface-container-lowest border-2 border-outline-variant rounded-full"></div>
               <div className="absolute left-[-5px] bottom-[28px] w-2.5 h-2.5 bg-primary border-2 border-surface-container-lowest rounded-full"></div>

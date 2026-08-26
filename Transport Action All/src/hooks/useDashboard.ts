@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
+import { useOpenService } from './useOpenService';
 import {
   Service, ScreenId, ViewMode,
   getWeekColumns, getMonthWeeks, getMonthName, formatDateKey,
@@ -26,6 +27,7 @@ export function useDashboard({
   services, isLoading, baseDate, onBaseDateChange, viewMode, onViewModeChange, onNavigate, onServiceUpdate
 }: UseDashboardProps) {
   const navigate = useNavigate();
+  const openServiceNav = useOpenService();
   const [activeEntity, setActiveEntity] = useState<string>('All');
   const [companies, setCompanies] = useState<OperatingCompany[]>([]);
   const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
@@ -486,7 +488,7 @@ export function useDashboard({
     adjustmentType, setAdjustmentType,
     selectedServiceIds,
     isBulkCompleting,
-    openService: (service: Service) => navigate(`/service/${service.id}`),
+    openService: (service: Service) => openServiceNav(service.id),
     expandedCards,
     dbDrivers,
     parametros,

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Users, UserCheck, UserX, Shield, Trash2, Plus, Loader2, X } from 'lucide-react';
+import { Skeleton } from './ui/Skeleton';
 
 interface UserManagementSectionProps {
   users: any[];
@@ -79,13 +80,13 @@ export default function UserManagementSection({
                 </thead>
                 <tbody>
                   {[1, 2, 3, 4, 5].map(i => (
-                    <tr key={i} className="border-b border-outline-variant/50 animate-pulse">
-                      <td className="px-4 py-3"><div className="h-3 bg-surface-container-highest rounded w-20" /></td>
-                      <td className="px-4 py-3"><div className="h-3 bg-surface-container-highest rounded w-28" /></td>
-                      <td className="px-4 py-3"><div className="h-3 bg-surface-container-highest rounded w-32" /></td>
-                      <td className="px-4 py-3"><div className="h-5 bg-surface-container-highest rounded-full w-16" /></td>
-                      <td className="px-4 py-3"><div className="h-5 bg-surface-container-highest rounded-full w-14" /></td>
-                      <td className="px-4 py-3"><div className="h-6 bg-surface-container-highest rounded w-12 ml-auto" /></td>
+                    <tr key={i} className="border-b border-outline-variant/50">
+                      <td className="px-4 py-3"><Skeleton className="h-3 w-20" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-3 w-28" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-3 w-32" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-5 w-14 rounded-full" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-6 w-12 ml-auto" /></td>
                     </tr>
                   ))}
                 </tbody>

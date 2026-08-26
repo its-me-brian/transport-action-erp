@@ -6,6 +6,7 @@ import {
   Building2, Users, ArrowRightLeft
 } from 'lucide-react';
 import { ScreenId } from '../types';
+import { Skeleton } from './ui/Skeleton';
 import { 
   getPayments, Payment,
   getExpenses, ExpenseDTO,
@@ -180,21 +181,22 @@ export default function FinancialDashboard({ onNavigate }: Props) {
       </header>
 
       {isLoading ? (
-        <div className="space-y-4">
+        <div className="space-y-4" role="status">
+          <span className="sr-only">Loading financial data...</span>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-xl border border-outline-variant/30 p-4 space-y-2 animate-pulse">
-                <div className="h-3 bg-surface-dim rounded w-1/2" />
-                <div className="h-7 bg-surface-dim rounded w-2/3" />
-                <div className="h-3 bg-surface-dim rounded w-1/3" />
+              <div key={i} className="rounded-xl border border-outline-variant/30 p-4 space-y-2">
+                <Skeleton className="h-3 w-1/2" />
+                <Skeleton className="h-7 w-2/3" />
+                <Skeleton className="h-3 w-1/3" />
               </div>
             ))}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {Array.from({ length: 2 }).map((_, i) => (
-              <div key={i} className="rounded-xl border border-outline-variant/30 p-4 space-y-3 animate-pulse">
-                <div className="h-4 bg-surface-dim rounded w-1/3" />
-                <div className="h-40 bg-surface-dim rounded-lg" />
+              <div key={i} className="rounded-xl border border-outline-variant/30 p-4 space-y-3">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-40 rounded-lg" />
               </div>
             ))}
           </div>
@@ -293,12 +295,12 @@ export default function FinancialDashboard({ onNavigate }: Props) {
             {!selectedProjectId ? (
               <p className="text-[12px] text-on-surface-variant">Select a project to compare estimated vs actual</p>
             ) : loadingEvA ? (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 animate-pulse">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[1, 2, 3].map(i => (
                   <div key={i} className="bg-surface-container rounded-lg p-3 space-y-2">
-                    <div className="h-3 bg-surface-container-highest rounded w-16" />
-                    <div className="h-4 bg-surface-container-highest rounded w-24" />
-                    <div className="h-2 bg-surface-container-highest rounded w-12" />
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-2 w-12" />
                   </div>
                 ))}
               </div>
@@ -373,11 +375,11 @@ export default function FinancialDashboard({ onNavigate }: Props) {
               <h3 className="text-[13px] font-semibold text-on-surface">Cash Flow</h3>
             </div>
             {loadingCashFlow ? (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 animate-pulse">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[1, 2, 3].map(i => (
                   <div key={i} className="bg-surface-container rounded-lg p-3 space-y-2">
-                    <div className="h-3 bg-surface-container-highest rounded w-14" />
-                    <div className="h-4 bg-surface-container-highest rounded w-20" />
+                    <Skeleton className="h-3 w-14" />
+                    <Skeleton className="h-4 w-20" />
                   </div>
                 ))}
               </div>

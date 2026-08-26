@@ -1,15 +1,17 @@
 import React from 'react';
 import { AlertCircle, ArrowRight } from 'lucide-react';
+import { Skeleton } from './ui/Skeleton';
 
 export const LoadingSkeleton = () => (
-  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 gap-3">
+  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 gap-3" role="status">
+    <span className="sr-only">Loading...</span>
     {Array.from({ length: 7 }).map((_, i) => (
-      <div key={i} className="rounded-xl border border-outline-variant/30 p-3 space-y-3 animate-pulse">
-        <div className="h-4 bg-surface-dim rounded w-2/3" />
-        <div className="h-3 bg-surface-dim rounded w-1/2" />
+      <div key={i} className="rounded-xl border border-outline-variant/30 p-3 space-y-3">
+        <Skeleton className="h-4 w-2/3" />
+        <Skeleton className="h-3 w-1/2" />
         <div className="space-y-2">
-          <div className="h-16 bg-surface-dim rounded-lg" />
-          <div className="h-16 bg-surface-dim rounded-lg" />
+          <Skeleton className="h-16 rounded-lg" />
+          <Skeleton className="h-16 rounded-lg" />
         </div>
       </div>
     ))}

@@ -149,7 +149,7 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
               { icon: BarChart3, iconColor: 'text-on-surface-variant', label: 'Total Services', value: dashboardSummary.services.total, sub: `${dashboardSummary.services.validated} validated` },
               { icon: TrendingUp, iconColor: 'text-emerald-600', label: 'Revenue', value: fmt(dashboardSummary.financials.totalRevenue), valueColor: 'text-emerald-600' },
               { icon: TrendingDown, iconColor: 'text-red-600', label: 'Cost', value: fmt(dashboardSummary.financials.totalCost), valueColor: 'text-red-600' },
-              { icon: DollarSign, iconColor: dashboardSummary.financials.profit >= 0 ? 'text-emerald-600' : 'text-red-600', label: 'Profit', value: fmt(dashboardSummary.financials.profit), valueColor: dashboardSummary.financials.profit >= 0 ? 'text-emerald-600' : 'text-red-600', sub: `${dashboardSummary.financials.margin.toFixed(1)}% margin` }
+              { icon: dashboardSummary.financials.profit >= 0 ? DollarSign : AlertCircle, iconColor: dashboardSummary.financials.profit >= 0 ? 'text-emerald-600' : 'text-red-600', label: 'Profit', value: fmt(dashboardSummary.financials.profit), valueColor: dashboardSummary.financials.profit >= 0 ? 'text-emerald-600' : 'text-red-600', sub: `${dashboardSummary.financials.margin.toFixed(1)}% margin` }
             ].map((card, i) => {
               const Icon = card.icon;
               return (
