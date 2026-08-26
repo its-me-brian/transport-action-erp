@@ -43,11 +43,23 @@ function captureReport(source, channel, driverId, projectId, serviceDate, rawDat
       Source: source,
       Channel: channel || 'unknown',
       DriverID: driverId,
-      ProjectID: projectId,
+      DriverName: rawData.driverName || '',
       ServiceDate: serviceDate,
-      RawData: JSON.stringify(rawData),
-      NormalizedData: '',
+      StartTime: rawData.startTime || '',
+      EndTime: rawData.endTime || '',
+      KmTotal: rawData.kmTotal || 0,
+      KmExtra: rawData.kmExtra || 0,
+      HoursExtra: rawData.hoursExtra || 0,
+      Diaria: rawData.diariaType || '',
+      IsFestivo: rawData.isFestivo || false,
+      IsNotturno: rawData.isNotturno || false,
+      Parking: rawData.parking || 0,
+      Tolls: rawData.tolls || 0,
+      Fuel: rawData.fuel || 0,
+      Notes: rawData.notes || '',
       Status: 'CAPTURED',
+      NormalizedData: '',
+      ServiceID: rawData.serviceId || rawData.selectedServiceId || '',
       CorrelationID: correlationId,
       ReviewedBy: '',
       ReviewedAt: '',
@@ -135,17 +147,12 @@ function acceptReport(inboxId, reviewedBy) {
       _assertValidTransition('DriverReportInbox', 'PENDING_REVIEW', 'ACCEPTED');
 
       // Parse normalized data and create DriverReport (Issue #12)
-      // BUG FIX: serviceId comes from RawData (metadata), NOT NormalizedData (user edits)
-      // FIX: Also check NormalizedData.serviceId as fallback (for WhatsApp flow where coordinator selects service)
-      // CRITICAL: If createReport fails, abort accept — don't mark ACCEPTED silently
-      var rawSource = JSON.parse(item.RawData || '{}');
+      // Read serviceId from ServiceID column first, then fall back to NormalizedData
       var normSource = JSON.parse(item.NormalizedData || '{}');
-      // Merge: prefer NormalizedData for user fields, always use RawData for serviceId
-      var dataSource = Object.assign({}, rawSource, normSource);
-      var serviceId = rawSource.serviceId || normSource.serviceId || dataSource.serviceId || '';
+      var serviceId = item.ServiceID || normSource.serviceId || '';
 
       if (!serviceId) {
-        return { success: false, error: 'No serviceId found in RawData. Cannot create DriverReport.' };
+        return { success: false, error: 'No ServiceID found on inbox item. Cannot create DriverReport.' };
       }
       if (!item.DriverID) {
         return { success: false, error: 'No DriverID on inbox item. Cannot create DriverReport.' };
@@ -159,20 +166,20 @@ function acceptReport(inboxId, reviewedBy) {
       // Coordinator must manually advance the service lifecycle via Dashboard
 
       var reportData = {
-        startTime: dataSource.startTime || '',
-        endTime: dataSource.endTime || '',
-        kmTotal: dataSource.kmTotal || 0,
-        hasDiaria: dataSource.hasDiaria || false,
-        isFestivo: dataSource.isFestivo || false,
-        isNotturno: dataSource.isNotturno || false,
-        diariaType: dataSource.diariaType || 'none',
-        kmExtra: dataSource.kmExtra || 0,
-        hoursExtra: dataSource.hoursExtra || 0,
-        parking: dataSource.parking || 0,
-        tolls: dataSource.tolls || 0,
-        fuel: dataSource.fuel || 0,
-        waitMinutes: dataSource.waitMinutes || 0,
-        notes: dataSource.notes || ''
+        startTime: item.StartTime || normSource.startTime || '',
+        endTime: item.EndTime || normSource.endTime || '',
+        kmTotal: item.KmTotal || normSource.kmTotal || 0,
+        hasDiaria: normSource.hasDiaria || false,
+        isFestivo: item.IsFestivo || normSource.isFestivo || false,
+        isNotturno: item.IsNotturno || normSource.isNotturno || false,
+        diariaType: item.Diaria || normSource.diariaType || 'none',
+        kmExtra: item.KmExtra || normSource.kmExtra || 0,
+        hoursExtra: item.HoursExtra || normSource.hoursExtra || 0,
+        parking: item.Parking || normSource.parking || 0,
+        tolls: item.Tolls || normSource.tolls || 0,
+        fuel: item.Fuel || normSource.fuel || 0,
+        waitMinutes: normSource.waitMinutes || 0,
+        notes: item.Notes || normSource.notes || ''
       };
       var created;
       if (serviceStatus === 'Realizado') {
@@ -305,11 +312,7 @@ function getInboxItems(filters) {
       if (filters.serviceId) {
         var svcId = filters.serviceId;
         items = items.filter(function(i) {
-          if (i.ServiceID === svcId) return true;
-          try {
-            var raw = JSON.parse(i.RawData || '{}');
-            return raw.serviceId === svcId;
-          } catch(e) { return false; }
+          return i.ServiceID === svcId;
         });
       }
     }
