@@ -665,9 +665,10 @@ export function DriverReportTab({ service, driverReport }: {
 // TAB: WHATSAPP — Full integration (ERG Phase 9)
 // ============================================================================
 
-export function WhatsAppTab({ service, relatedData }: {
+export function WhatsAppTab({ service, relatedData, onCaptureSuccess }: {
   service: Service;
   relatedData?: RelatedData;
+  onCaptureSuccess?: () => void;
 }) {
   const { showToast } = useToast();
   const [copied, setCopied] = useState(false);
@@ -742,6 +743,7 @@ export function WhatsAppTab({ service, relatedData }: {
         setCaptureStep('done');
         setPasteText('');
         setParsedReports([]);
+        onCaptureSuccess?.();
       } else {
         showToast('Failed to capture reports', 'error');
       }

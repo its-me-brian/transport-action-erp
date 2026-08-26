@@ -159,6 +159,7 @@ export default function ServiceWorkspace({
         showToast('Action completed successfully', 'success');
         onServiceUpdate?.(service.id, {});
         await onRefresh?.();
+        relatedData.refresh();
       }
     } catch (err) {
       showToast('Error: ' + (err instanceof Error ? err.message : String(err)), 'error');
@@ -177,6 +178,7 @@ export default function ServiceWorkspace({
         setShowDriverPicker(false);
         onServiceUpdate?.(service.id, {});
         await onRefresh?.();
+        relatedData.refresh();
       }
     } catch (err) {
       showToast('Error: ' + (err instanceof Error ? err.message : String(err)), 'error');
@@ -519,7 +521,7 @@ export default function ServiceWorkspace({
                   </div>
                   {/* Sub-section content */}
                   <div className="flex-1">
-                    {(activeSubSection || 'whatsapp') === 'whatsapp' && <WhatsAppTab service={service} relatedData={relatedData} />}
+                    {(activeSubSection || 'whatsapp') === 'whatsapp' && <WhatsAppTab service={service} relatedData={relatedData} onCaptureSuccess={relatedData.refresh} />}
                   </div>
                 </div>
               )}
@@ -737,7 +739,7 @@ export default function ServiceWorkspace({
                 </div>
               </div>
               <div className="flex-1">
-                {(activeSubSection || 'whatsapp') === 'whatsapp' && <WhatsAppTab service={service} />}
+                {(activeSubSection || 'whatsapp') === 'whatsapp' && <WhatsAppTab service={service} onCaptureSuccess={relatedData.refresh} />}
               </div>
             </div>
           )}

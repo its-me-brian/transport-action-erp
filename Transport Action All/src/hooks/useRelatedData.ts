@@ -7,22 +7,27 @@ export interface RelatedData {
   inboxItem: any | null;
   reconciliation: any | null;
   loading: boolean;
+  refresh: () => void;
 }
 
 export function useRelatedData(serviceId: string): RelatedData {
+  const [refreshKey, setRefreshKey] = useState(0);
   const [relatedData, setRelatedData] = useState<RelatedData>({
     driverReport: null,
     driverLink: null,
     inboxItem: null,
     reconciliation: null,
-    loading: false
+    loading: false,
+    refresh: () => {},
   });
+
+  const refresh = () => setRefreshKey(k => k + 1);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadRelatedData = async () => {
-      setRelatedData(prev => ({ ...prev, loading: true }));
+      setRelatedData(prev => ({ ...prev, loading: true, refresh }));
 
       try {
         const results = await Promise.allSettled([
@@ -47,11 +52,12 @@ export function useRelatedData(serviceId: string): RelatedData {
             inboxItem: results[2].status === 'fulfilled' ? results[2].value : null,
             reconciliation: results[3].status === 'fulfilled' ? results[3].value : null,
             loading: false,
+            refresh,
           });
         }
       } catch {
         if (!cancelled) {
-          setRelatedData(prev => ({ ...prev, loading: false }));
+          setRelatedData(prev => ({ ...prev, loading: false, refresh }));
         }
       }
     };
@@ -59,7 +65,7 @@ export function useRelatedData(serviceId: string): RelatedData {
     loadRelatedData();
 
     return () => { cancelled = true; };
-  }, [serviceId]);
+  }, [serviceId, refreshKey]);
 
   return relatedData;
 }
