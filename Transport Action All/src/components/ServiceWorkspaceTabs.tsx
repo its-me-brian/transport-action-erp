@@ -676,49 +676,79 @@ export function DriverReportTab({ service, driverReport, onServiceUpdate }: {
                 <span className="text-on-surface">{new Date(driverReport.createdAt).toLocaleString()}</span>
               </div>
             )}
-            {driverReport.source && (
+            {driverReport.startTime && (
               <div className="flex justify-between">
-                <span className="text-on-surface-variant">Source</span>
-                <span className="text-on-surface">{driverReport.source}</span>
+                <span className="text-on-surface-variant">Start Time</span>
+                <span className="text-on-surface">{driverReport.startTime}</span>
               </div>
             )}
-            {driverReport.kmExtra != null && (
+            {driverReport.endTime && (
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">End Time</span>
+                <span className="text-on-surface">{driverReport.endTime}</span>
+              </div>
+            )}
+            {driverReport.km != null && driverReport.km > 0 && (
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">KM Total</span>
+                <span className="text-on-surface font-medium">{driverReport.km}</span>
+              </div>
+            )}
+            {driverReport.kmExtra != null && driverReport.kmExtra > 0 && (
               <div className="flex justify-between">
                 <span className="text-on-surface-variant">KM Extra</span>
                 <span className="text-on-surface">{driverReport.kmExtra}</span>
               </div>
             )}
-            {driverReport.hoursExtra != null && (
+            {driverReport.hoursExtra != null && driverReport.hoursExtra > 0 && (
               <div className="flex justify-between">
                 <span className="text-on-surface-variant">Hours Extra</span>
                 <span className="text-on-surface">{driverReport.hoursExtra}</span>
               </div>
             )}
-            {driverReport.parking != null && (
+            {driverReport.diariaType && driverReport.diariaType !== 'none' && (
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Diaria</span>
+                <span className="text-on-surface">{driverReport.diariaType}</span>
+              </div>
+            )}
+            {driverReport.isFestivo && (
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Festivo</span>
+                <span className="text-on-surface">Yes</span>
+              </div>
+            )}
+            {driverReport.isNotturno && (
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Notturno</span>
+                <span className="text-on-surface">Yes</span>
+              </div>
+            )}
+            {driverReport.parking != null && driverReport.parking > 0 && (
               <div className="flex justify-between">
                 <span className="text-on-surface-variant">Parking</span>
                 <span className="text-on-surface">€{driverReport.parking}</span>
               </div>
             )}
-            {driverReport.tolls != null && (
+            {driverReport.tolls != null && driverReport.tolls > 0 && (
               <div className="flex justify-between">
                 <span className="text-on-surface-variant">Tolls</span>
                 <span className="text-on-surface">€{driverReport.tolls}</span>
               </div>
             )}
-            {driverReport.fuel != null && (
+            {driverReport.fuel != null && driverReport.fuel > 0 && (
               <div className="flex justify-between">
                 <span className="text-on-surface-variant">Fuel</span>
                 <span className="text-on-surface">€{driverReport.fuel}</span>
               </div>
             )}
-            {driverReport.waitMinutes != null && (
+            {driverReport.waitMinutes != null && driverReport.waitMinutes > 0 && (
               <div className="flex justify-between">
                 <span className="text-on-surface-variant">Wait</span>
                 <span className="text-on-surface">{driverReport.waitMinutes}min</span>
               </div>
             )}
-            {driverReport.totalExtras != null && (
+            {driverReport.totalExtras != null && driverReport.totalExtras > 0 && (
               <div className="flex justify-between font-medium border-t border-outline-variant/30 pt-2">
                 <span className="text-on-surface">Total Extras</span>
                 <span className="text-on-surface">€{driverReport.totalExtras}</span>

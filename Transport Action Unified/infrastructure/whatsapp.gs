@@ -91,6 +91,7 @@ function parseDriverReport(text) {
   // Extract date - try multiple patterns
   var dateRaw = '';
   var dateParsed = '';
+  // Pattern 1: DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
   var dateMatch = text.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
   if (dateMatch) {
     dateRaw = dateMatch[0];
@@ -98,6 +99,20 @@ function parseDriverReport(text) {
     var month = dateMatch[2].padStart(2, '0');
     var year = dateMatch[3].length === 2 ? '20' + dateMatch[3] : dateMatch[3];
     dateParsed = year + '-' + month + '-' + day;
+  } else {
+    // Pattern 2: DD/MM or DD-MM or DD.MM (no year) — infer current year
+    var dateMatchNoYear = text.match(/(\d{1,2})[\/\-.](\d{1,2})(?!\d)/);
+    if (dateMatchNoYear) {
+      var day = dateMatchNoYear[1].padStart(2, '0');
+      var month = dateMatchNoYear[2].padStart(2, '0');
+      // Validate month range
+      var monthNum = parseInt(month);
+      if (monthNum >= 1 && monthNum <= 12) {
+        var year = new Date().getFullYear().toString();
+        dateRaw = dateMatchNoYear[0];
+        dateParsed = year + '-' + month + '-' + day;
+      }
+    }
   }
 
   // Extract driver name - try multiple patterns
