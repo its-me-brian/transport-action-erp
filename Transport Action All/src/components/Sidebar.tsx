@@ -83,8 +83,10 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { id: 'customers', label: 'Customers', icon: Building2,  permission: 'client.list',      route: '/customers' },
       { id: 'providers', label: 'Providers', icon: Handshake,  permission: 'collaborator.list', route: '/providers' },
+      { id: 'contacts', label: 'Contacts', icon: Users,    permission: 'contact.list',     route: '/contacts' },
       { id: 'drivers',   label: 'Drivers',   icon: UserRound,  permission: 'driver.list',       route: '/drivers' },
       { id: 'vehicles',  label: 'Vehicles',  icon: Car,        permission: 'vehicle.list',      route: '/vehicles' },
+      { id: 'rate_cards', label: 'Rate Cards', icon: DollarSign, permission: 'rateCard.list',    route: '/rate_cards' },
       { id: 'projects',  label: 'Projects',  icon: FolderOpen, permission: 'project.list',      route: '/projects' },
     ],
   },

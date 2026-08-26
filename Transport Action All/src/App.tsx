@@ -37,6 +37,7 @@ import RapportinoScreen from './components/RapportinoScreen';
 import DriverReportsScreen from './components/DriverReportsScreen';
 import ReconciliationScreen from './components/ReconciliationScreen';
 import RateCardScreen from './components/RateCardScreen';
+import ContactScreen from './components/ContactScreen';
 import DocumentScreen from './components/DocumentScreen';
 import ServiceWorkspacePage from './components/ServiceWorkspacePage';
 
@@ -302,6 +303,9 @@ export default function App() {
                 } />
                 <Route path="/rate_cards" element={
                   <RateCardScreen onNavigate={handleNavigate} />
+                } />
+                <Route path="/contacts" element={
+                  <ContactScreen onNavigate={handleNavigate} />
                 } />
                 {/* /driver-submissions removed — consolidated into /driver-reports */}
 

@@ -26,6 +26,7 @@ export const routes = {
   documents: '/documents',
   reports: '/reports',
   rateCards: '/rate_cards',
+  contacts: '/contacts',
   driverSubmissions: '/driver-submissions',
 
   // === SERVICE ROUTES (grouped sections) ===
