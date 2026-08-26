@@ -11,7 +11,7 @@ import { useRelatedData, RelatedData } from '../hooks/useRelatedData';
 import { getServiceStatusColor } from '../utils/statusColors';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
-import { assignDriver, confirmService, startService, completeService, reportService, validateService, moveToReview, getDrivers } from '../services/api';
+import { assignDriver, confirmService, startService, completeService, reportService, validateService, moveToReview, getDrivers, cancelService, updateServiceField } from '../services/api';
 import type { DriverRecord } from '../services/api';
 import {
   OverviewTab, MovementsTab, DriverTab, DriverLinkTab,
@@ -186,6 +186,62 @@ export default function ServiceWorkspace({
     }
   };
 
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editField, setEditField] = useState('');
+  const [editValue, setEditValue] = useState('');
+
+  const handleCancelService = async () => {
+    if (!cancelReason.trim()) {
+      showToast('Cancellation reason is required', 'error');
+      return;
+    }
+    try {
+      setActionLoading(true);
+      const result = await cancelService(service.id, cancelReason);
+      if (result?.error) {
+        showToast(result.error, 'error');
+      } else {
+        showToast('Service cancelled', 'success');
+        setShowCancelDialog(false);
+        setCancelReason('');
+        await onRefresh?.();
+        relatedData.refresh();
+      }
+    } catch (err) {
+      showToast('Error: ' + (err instanceof Error ? err.message : String(err)), 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleEditField = async () => {
+    if (!editField || !editValue.trim()) {
+      showToast('Field and value are required', 'error');
+      return;
+    }
+    try {
+      setActionLoading(true);
+      const result = await updateServiceField(service.id, editField, editValue);
+      if (result?.error) {
+        showToast(result.error, 'error');
+      } else {
+        showToast('Field updated', 'success');
+        setShowEditDialog(false);
+        setEditField('');
+        setEditValue('');
+        await onRefresh?.();
+      }
+    } catch (err) {
+      showToast('Error: ' + (err instanceof Error ? err.message : String(err)), 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const canCancel = ['Importado', 'Asignado', 'Confirmado', 'EnRuta'].includes(service.operationalStatus);
+
   const nextAction = useMemo(() => getNextAction(service, relatedData), [service, relatedData]);
   const statusStep = getStatusStep(service.operationalStatus);
   const totalSteps = 8;
@@ -274,7 +330,7 @@ export default function ServiceWorkspace({
       <div className="flex-1 flex flex-col h-full bg-surface-container-lowest overflow-hidden">
         {/* Mobile: Compact header (visible only on small screens) */}
         <div className="md:hidden shrink-0">
-          <CompactHeader service={service} relatedData={relatedData} onClose={onClose} />
+          <CompactHeader service={service} relatedData={relatedData} onClose={onClose} onCancel={() => setShowCancelDialog(true)} onEdit={() => setShowEditDialog(true)} />
         </div>
 
         {/* Mobile: Status + Next Action (visible only on small screens) */}
@@ -445,7 +501,7 @@ export default function ServiceWorkspace({
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
             {/* Desktop: Compact Header (hidden on mobile, shown above) */}
             <div className="hidden md:block">
-              <CompactHeader service={service} relatedData={relatedData} onClose={onClose} />
+              <CompactHeader service={service} relatedData={relatedData} onClose={onClose} onCancel={() => setShowCancelDialog(true)} onEdit={() => setShowEditDialog(true)} />
             </div>
 
             {/* Tab Content */}
@@ -635,6 +691,94 @@ export default function ServiceWorkspace({
             </div>
           </div>
         )}
+
+        {/* Cancel Service Dialog */}
+        {showCancelDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowCancelDialog(false)}>
+            <div className="absolute inset-0 bg-black/30" />
+            <div className="relative bg-surface rounded-xl shadow-xl w-full max-w-md p-5" onClick={e => e.stopPropagation()}>
+              <h3 className="text-[15px] font-semibold text-on-surface mb-3">Cancel Service</h3>
+              <p className="text-[12px] text-on-surface-variant mb-3">This action cannot be undone. Please provide a reason.</p>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Reason for cancellation..."
+                className="w-full h-24 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40 resize-none focus:outline-none focus:ring-2 focus:ring-error/30"
+              />
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={handleCancelService}
+                  disabled={actionLoading || !cancelReason.trim()}
+                  className="flex-1 py-2 bg-error text-white text-[13px] font-medium rounded-lg hover:bg-error/90 transition-colors disabled:opacity-50"
+                >
+                  {actionLoading ? 'Cancelling...' : 'Cancel Service'}
+                </button>
+                <button
+                  onClick={() => { setShowCancelDialog(false); setCancelReason(''); }}
+                  className="px-4 py-2 bg-surface-container text-on-surface text-[13px] font-medium rounded-lg hover:bg-surface-container-high"
+                >
+                  Back
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Field Dialog */}
+        {showEditDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowEditDialog(false)}>
+            <div className="absolute inset-0 bg-black/30" />
+            <div className="relative bg-surface rounded-xl shadow-xl w-full max-w-md p-5" onClick={e => e.stopPropagation()}>
+              <h3 className="text-[15px] font-semibold text-on-surface mb-3">Edit Service Field</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[11px] font-medium text-on-surface-variant">Field</label>
+                  <select
+                    value={editField}
+                    onChange={(e) => { setEditField(e.target.value); setEditValue(''); }}
+                    className="w-full mt-1 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40"
+                  >
+                    <option value="">Select field...</option>
+                    <option value="PassengerName">Passenger Name</option>
+                    <option value="FlightInfo">Flight Info</option>
+                    <option value="Notes">Notes</option>
+                    <option value="From">From (Origin)</option>
+                    <option value="To">To (Destination)</option>
+                    <option value="VehicleType">Vehicle Type</option>
+                    <option value="VehiclePlate">Vehicle Plate</option>
+                  </select>
+                </div>
+                {editField && (
+                  <div>
+                    <label className="text-[11px] font-medium text-on-surface-variant">Value</label>
+                    <input
+                      type="text"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      placeholder={`Enter ${editField}...`}
+                      className="w-full mt-1 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={handleEditField}
+                  disabled={actionLoading || !editField || !editValue.trim()}
+                  className="flex-1 py-2 bg-primary text-on-primary text-[13px] font-medium rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {actionLoading ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button
+                  onClick={() => { setShowEditDialog(false); setEditField(''); setEditValue(''); }}
+                  className="px-4 py-2 bg-surface-container text-on-surface text-[13px] font-medium rounded-lg hover:bg-surface-container-high"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -808,6 +952,94 @@ export default function ServiceWorkspace({
             </div>
           </div>
         )}
+
+        {/* Cancel Service Dialog (Panel Mode) */}
+        {showCancelDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowCancelDialog(false)}>
+            <div className="absolute inset-0 bg-black/30" />
+            <div className="relative bg-surface rounded-xl shadow-xl w-full max-w-md p-5" onClick={e => e.stopPropagation()}>
+              <h3 className="text-[15px] font-semibold text-on-surface mb-3">Cancel Service</h3>
+              <p className="text-[12px] text-on-surface-variant mb-3">This action cannot be undone. Please provide a reason.</p>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Reason for cancellation..."
+                className="w-full h-24 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40 resize-none focus:outline-none focus:ring-2 focus:ring-error/30"
+              />
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={handleCancelService}
+                  disabled={actionLoading || !cancelReason.trim()}
+                  className="flex-1 py-2 bg-error text-white text-[13px] font-medium rounded-lg hover:bg-error/90 transition-colors disabled:opacity-50"
+                >
+                  {actionLoading ? 'Cancelling...' : 'Cancel Service'}
+                </button>
+                <button
+                  onClick={() => { setShowCancelDialog(false); setCancelReason(''); }}
+                  className="px-4 py-2 bg-surface-container text-on-surface text-[13px] font-medium rounded-lg hover:bg-surface-container-high"
+                >
+                  Back
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Field Dialog (Panel Mode) */}
+        {showEditDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowEditDialog(false)}>
+            <div className="absolute inset-0 bg-black/30" />
+            <div className="relative bg-surface rounded-xl shadow-xl w-full max-w-md p-5" onClick={e => e.stopPropagation()}>
+              <h3 className="text-[15px] font-semibold text-on-surface mb-3">Edit Service Field</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[11px] font-medium text-on-surface-variant">Field</label>
+                  <select
+                    value={editField}
+                    onChange={(e) => { setEditField(e.target.value); setEditValue(''); }}
+                    className="w-full mt-1 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40"
+                  >
+                    <option value="">Select field...</option>
+                    <option value="PassengerName">Passenger Name</option>
+                    <option value="FlightInfo">Flight Info</option>
+                    <option value="Notes">Notes</option>
+                    <option value="From">From (Origin)</option>
+                    <option value="To">To (Destination)</option>
+                    <option value="VehicleType">Vehicle Type</option>
+                    <option value="VehiclePlate">Vehicle Plate</option>
+                  </select>
+                </div>
+                {editField && (
+                  <div>
+                    <label className="text-[11px] font-medium text-on-surface-variant">Value</label>
+                    <input
+                      type="text"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      placeholder={`Enter ${editField}...`}
+                      className="w-full mt-1 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={handleEditField}
+                  disabled={actionLoading || !editField || !editValue.trim()}
+                  className="flex-1 py-2 bg-primary text-on-primary text-[13px] font-medium rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {actionLoading ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button
+                  onClick={() => { setShowEditDialog(false); setEditField(''); setEditValue(''); }}
+                  className="px-4 py-2 bg-surface-container text-on-surface text-[13px] font-medium rounded-lg hover:bg-surface-container-high"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -817,10 +1049,12 @@ export default function ServiceWorkspace({
 // COMPACT HEADER — For page mode
 // ============================================================================
 
-function CompactHeader({ service, relatedData, onClose }: {
+function CompactHeader({ service, relatedData, onClose, onCancel, onEdit }: {
   service: Service;
   relatedData: RelatedData;
   onClose: () => void;
+  onCancel?: () => void;
+  onEdit?: () => void;
 }) {
   const statusColor = getServiceStatusColor(service);
   const hasDriverLink = !!relatedData.driverLink;
@@ -830,6 +1064,8 @@ function CompactHeader({ service, relatedData, onClose }: {
   const hasInboxItem = !!relatedData.inboxItem;
   const inboxStatus = relatedData.inboxItem?.Status || null;
   const hasReconciliation = !!relatedData.reconciliation;
+  const canCancel = ['Importado', 'Asignado', 'Confirmado', 'EnRuta'].includes(service.operationalStatus);
+  const [showMenu, setShowMenu] = useState(false);
 
   return (
     <div className="px-4 md:px-5 py-3 shrink-0 border-b border-outline-variant/40 bg-surface">
@@ -871,10 +1107,39 @@ function CompactHeader({ service, relatedData, onClose }: {
           <StatusDot active={hasReconciliation} has={hasReconciliation} label="Reconcil." />
         </div>
 
-        {/* Mobile: Menu button */}
-        <button className="md:hidden p-1 rounded-md hover:bg-surface-dim" aria-label="Menu">
-          <MoreVertical className="w-4 h-4 text-on-surface-variant" />
-        </button>
+        {/* More Actions Menu */}
+        <div className="relative">
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            className="p-1 rounded-md hover:bg-surface-dim"
+            aria-label="More actions"
+          >
+            <MoreVertical className="w-4 h-4 text-on-surface-variant" />
+          </button>
+          {showMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+              <div className="absolute right-0 top-full mt-1 z-50 bg-surface rounded-lg shadow-lg border border-outline-variant/40 py-1 min-w-[160px]">
+                <button
+                  onClick={() => { setShowMenu(false); onEdit?.(); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-on-surface hover:bg-surface-container transition-colors"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  Edit Fields
+                </button>
+                {canCancel && (
+                  <button
+                    onClick={() => { setShowMenu(false); onCancel?.(); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-error hover:bg-error/5 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Cancel Service
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

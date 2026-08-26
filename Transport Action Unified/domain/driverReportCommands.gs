@@ -101,12 +101,14 @@ const DriverReportCommands = {
       // §33: Only allow Reportado or Revision — Realizado should use createReport()
       const ALLOWED = ['Reportado', 'Revision'];
       if (!ALLOWED.includes(service.OperationalStatus)) {
+        Logger.log('[createReportForReportedService] REJECTED: status=' + service.OperationalStatus + ' serviceId=' + serviceId);
         throw new BusinessRuleError(
           `Service must be in Reportado/Revision state. Current: ${service.OperationalStatus}`,
           'DR001'
         );
       }
       if (service.DriverID !== driverId) {
+        Logger.log('[createReportForReportedService] REJECTED: driver mismatch service.DriverID=' + service.DriverID + ' requestDriverId=' + driverId + ' serviceId=' + serviceId);
         throw new BusinessRuleError(
           'DriverID does not match service assigned driver',
           'DR001'
@@ -116,6 +118,7 @@ const DriverReportCommands = {
       // Check no active report exists
       const existingActive = DriverReportRepository.getActiveByService(serviceId);
       if (existingActive) {
+        Logger.log('[createReportForReportedService] REJECTED: active report exists ' + existingActive.ID + ' status=' + existingActive.Status + ' serviceId=' + serviceId);
         throw new BusinessRuleError(
           'A report already exists for this service. Submit or reject it first.',
           'DR001'

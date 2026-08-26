@@ -182,12 +182,32 @@ function acceptReport(inboxId, reviewedBy) {
         notes: item.Notes || normSource.notes || ''
       };
       var created;
-      if (serviceStatus === 'Realizado') {
-        // Normal flow: createReport transitions Realizado → Reportado
-        created = DriverReportCommands.createReport(serviceId, item.DriverID, reportData);
-      } else {
-        // Service already in Reportado/Revision: link report without changing service status
-        created = DriverReportCommands.createReportForReportedService(serviceId, item.DriverID, reportData);
+      try {
+        if (serviceStatus === 'Realizado') {
+          // Normal flow: createReport transitions Realizado → Reportado
+          created = DriverReportCommands.createReport(serviceId, item.DriverID, reportData);
+        } else {
+          // Service already in Reportado/Revision: link report without changing service status
+          created = DriverReportCommands.createReportForReportedService(serviceId, item.DriverID, reportData);
+        }
+      } catch (createErr) {
+        // §33: If DriverReport creation fails, REJECT the inbox item so it doesn't stay stuck
+        var errMsg = '[acceptReport] DriverReport creation failed for service ' + serviceId + ': ' + createErr.message;
+        Logger.log(errMsg);
+        _update(SHEETS.DriverReportInbox, inboxId, {
+          Status: 'REJECTED',
+          ReviewedBy: reviewedBy || _getActiveUser(),
+          ReviewedAt: new Date().toISOString(),
+          RejectionReason: createErr.message,
+          UpdatedAt: new Date().toISOString()
+        });
+        _dispatchEvent({
+          type: 'inbox.rejected',
+          entity: 'DriverReportInbox',
+          entityId: inboxId,
+          payload: { correlationId: item.CorrelationID, reason: createErr.message }
+        });
+        return { success: false, error: createErr.message };
       }
       var reportId = created ? created.ID : null;
 

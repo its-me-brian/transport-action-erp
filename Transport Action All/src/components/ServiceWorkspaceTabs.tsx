@@ -388,6 +388,10 @@ export function DriverLinkTab({ service, driverLink }: {
   const { showToast } = useToast();
   const openService = useOpenService();
   const [copied, setCopied] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [revoking, setRevoking] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [linkDuration, setLinkDuration] = useState(7);
 
   const handleCopyLink = () => {
     if (driverLink?.linkUrl) {
@@ -404,6 +408,55 @@ export function DriverLinkTab({ service, driverLink }: {
     }
   };
 
+  const handleCreateLink = async () => {
+    if (!service.driverId || service.driverId === '' || service.driverName === 'Unassigned') {
+      showToast('Assign a driver first before creating a link', 'error');
+      return;
+    }
+    setCreating(true);
+    try {
+      const { generateDriverLink } = await import('../services/api');
+      const result = await generateDriverLink(
+        service.driverId,
+        service.backendProjectId || service.project || '',
+        service.date || new Date().toISOString().split('T')[0],
+        service.date || new Date().toISOString().split('T')[0],
+        { linkDurationDays: linkDuration }
+      );
+      if (result?.error) {
+        showToast(result.error, 'error');
+      } else {
+        showToast('Driver link created', 'success');
+        setShowCreateModal(false);
+        // Refresh will happen via parent
+      }
+    } catch (err) {
+      showToast('Error creating link', 'error');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleRevoke = async () => {
+    if (!driverLink?.linkToken) return;
+    if (!confirm('Are you sure you want to revoke this link?')) return;
+    setRevoking(true);
+    try {
+      const { deactivateDriverLink } = await import('../services/api');
+      const result = await deactivateDriverLink(driverLink.linkToken);
+      if (result?.error) {
+        showToast(result.error, 'error');
+      } else {
+        showToast('Link revoked', 'success');
+        // Refresh will happen via parent
+      }
+    } catch (err) {
+      showToast('Error revoking link', 'error');
+    } finally {
+      setRevoking(false);
+    }
+  };
+
   // Derive status from link data
   const getStatus = (): { label: string; color: string; dotColor: string } => {
     if (!driverLink) return { label: 'Not Created', color: 'bg-surface-container text-on-surface-variant/50', dotColor: 'bg-gray-300' };
@@ -414,6 +467,7 @@ export function DriverLinkTab({ service, driverLink }: {
   };
 
   const status = getStatus();
+  const isActive = driverLink && driverLink.active !== false && !driverLink.submittedAt;
 
   return (
     <div className="px-5 py-4 space-y-4">
@@ -477,9 +531,16 @@ export function DriverLinkTab({ service, driverLink }: {
             >
               Open Link
             </button>
+            {isActive && (
+              <button
+                onClick={handleRevoke}
+                disabled={revoking}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-red-50 text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50"
+              >
+                {revoking ? 'Revoking...' : 'Revoke Link'}
+              </button>
+            )}
           </div>
-
-          {/* Navigate to full Driver Links screen */}
         </>
       ) : (
         <div className="text-center py-8">
@@ -487,12 +548,44 @@ export function DriverLinkTab({ service, driverLink }: {
           <div className="text-[13px] text-on-surface-variant">No Driver Link for this service</div>
           <div className="text-[11px] text-on-surface-variant/60 mt-1">Create one to let the driver submit their report</div>
           <button
-            onClick={() => openService(service.id, 'operations', 'driverLink')}
+            onClick={() => setShowCreateModal(true)}
             className="mt-3 flex items-center gap-1.5 px-4 py-2 mx-auto rounded-lg text-[12px] font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors"
           >
             <Link2 className="w-3.5 h-3.5" />
             Create Driver Link
           </button>
+        </div>
+      )}
+
+      {/* Create Link Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowCreateModal(false)}>
+          <div className="absolute inset-0 bg-black/30" />
+          <div className="relative bg-surface rounded-xl shadow-xl w-full max-w-md p-5" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[15px] font-semibold text-on-surface mb-3">Create Driver Link</h3>
+            <div className="space-y-3">
+              <div className="text-[12px] text-on-surface-variant">
+                <p>Driver: <span className="font-medium text-on-surface">{service.driverName || 'Unassigned'}</span></p>
+                <p>Date: <span className="font-medium text-on-surface">{service.date || 'Today'}</span></p>
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-on-surface-variant">Link Duration (days)</label>
+                <input type="number" value={linkDuration} onChange={(e) => setLinkDuration(parseInt(e.target.value) || 7)}
+                  min={1} max={30}
+                  className="w-full mt-1 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40" />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={handleCreateLink} disabled={creating}
+                className="flex-1 py-2 bg-primary text-on-primary text-[13px] font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                {creating ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : <><Link2 className="w-4 h-4" /> Create Link</>}
+              </button>
+              <button onClick={() => setShowCreateModal(false)}
+                className="px-4 py-2 bg-surface-container text-on-surface text-[13px] font-medium rounded-lg hover:bg-surface-container-high">
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -966,9 +1059,67 @@ export function ReconciliationTab({ service, reconciliation }: {
   reconciliation: any | null;
 }) {
   const openService = useOpenService();
+  const { showToast } = useToast();
+  const [resolving, setResolving] = useState(false);
+  const [showResolveModal, setShowResolveModal] = useState(false);
+  const [resolution, setResolution] = useState({
+    startTime: '',
+    endTime: '',
+    km: '',
+    diaria: '',
+    festivo: '',
+    notturno: '',
+    notes: ''
+  });
   const status = reconciliation?.status || null;
   const isResolved = status === 'Resuelto' || status === 'Resolved';
   const isInProgress = status === 'EnProgreso' || status === 'In Progress';
+
+  const handleResolve = async () => {
+    if (!reconciliation?.id) return;
+    setResolving(true);
+    try {
+      const { resolveReconciliation } = await import('../services/api');
+      const result = await resolveReconciliation(reconciliation.id, {
+        finalValues: {
+          startTime: resolution.startTime || undefined,
+          endTime: resolution.endTime || undefined,
+          km: resolution.km ? parseFloat(resolution.km) : undefined,
+          diaria: resolution.diaria || undefined,
+          isFestivo: resolution.festivo === 'true',
+          isNotturno: resolution.notturno === 'true',
+        },
+        resolution: resolution.notes || 'Resolved from Service'
+      });
+      if (result?.error) {
+        showToast(result.error, 'error');
+      } else {
+        showToast('Reconciliation resolved', 'success');
+        setShowResolveModal(false);
+        setResolution({ startTime: '', endTime: '', km: '', diaria: '', festivo: '', notturno: '', notes: '' });
+      }
+    } catch (err) {
+      showToast('Error resolving reconciliation', 'error');
+    } finally {
+      setResolving(false);
+    }
+  };
+
+  const openResolve = () => {
+    // Pre-fill with driver values if available
+    if (reconciliation?.driver) {
+      setResolution({
+        startTime: reconciliation.driver.startTime || '',
+        endTime: reconciliation.driver.endTime || '',
+        km: reconciliation.driver.km?.toString() || '',
+        diaria: reconciliation.driver.diaria || '',
+        festivo: reconciliation.driver.isFestivo?.toString() || 'false',
+        notturno: reconciliation.driver.isNotturno?.toString() || 'false',
+        notes: ''
+      });
+    }
+    setShowResolveModal(true);
+  };
 
   return (
     <div className="px-5 py-4 space-y-4">
@@ -1021,6 +1172,15 @@ export function ReconciliationTab({ service, reconciliation }: {
           </div>
 
           {/* Navigate to full Reconciliation screen */}
+          {!isResolved && (
+            <button
+              onClick={openResolve}
+              className="w-full py-2 bg-green-600 text-white text-[13px] font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <CheckCircle className="w-4 h-4" />
+              Resolve Reconciliation
+            </button>
+          )}
         </>
       ) : (
         <div className="text-center py-8">
@@ -1034,6 +1194,50 @@ export function ReconciliationTab({ service, reconciliation }: {
             <ArrowLeftRight className="w-3.5 h-3.5" />
             Create Reconciliation
           </button>
+        </div>
+      )}
+
+      {/* Resolve Modal */}
+      {showResolveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowResolveModal(false)}>
+          <div className="absolute inset-0 bg-black/30" />
+          <div className="relative bg-surface rounded-xl shadow-xl w-full max-w-md p-5" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[15px] font-semibold text-on-surface mb-3">Resolve Reconciliation</h3>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-medium text-on-surface-variant">Start Time</label>
+                  <input type="text" value={resolution.startTime} onChange={(e) => setResolution(r => ({ ...r, startTime: e.target.value }))}
+                    placeholder="08:30" className="w-full mt-1 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-on-surface-variant">End Time</label>
+                  <input type="text" value={resolution.endTime} onChange={(e) => setResolution(r => ({ ...r, endTime: e.target.value }))}
+                    placeholder="21:30" className="w-full mt-1 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40" />
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-on-surface-variant">KM</label>
+                <input type="number" value={resolution.km} onChange={(e) => setResolution(r => ({ ...r, km: e.target.value }))}
+                  placeholder="73" className="w-full mt-1 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40" />
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-on-surface-variant">Notes</label>
+                <textarea value={resolution.notes} onChange={(e) => setResolution(r => ({ ...r, notes: e.target.value }))}
+                  placeholder="Resolution notes..." className="w-full mt-1 h-16 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40 resize-none" />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={handleResolve} disabled={resolving}
+                className="flex-1 py-2 bg-green-600 text-white text-[13px] font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                {resolving ? <><Loader2 className="w-4 h-4 animate-spin" /> Resolving...</> : <><CheckCircle className="w-4 h-4" /> Resolve</>}
+              </button>
+              <button onClick={() => setShowResolveModal(false)}
+                className="px-4 py-2 bg-surface-container text-on-surface text-[13px] font-medium rounded-lg hover:bg-surface-container-high">
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
