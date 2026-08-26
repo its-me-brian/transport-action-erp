@@ -2646,7 +2646,11 @@ export async function resolveReconciliation(id: string, resolution: {
   FinalNotturno?: boolean;
   Notes?: string;
 }): Promise<ReconciliationDTO> {
-  return gasPost('resolveReconciliation', { id, resolution });
+  return gasPost('resolveReconciliation', { reconciliationId: id, resolution });
+}
+
+export async function createReconciliation(serviceId: string): Promise<ReconciliationDTO> {
+  return gasPost('createReconciliation', { serviceId });
 }
 
 // ============================================================================

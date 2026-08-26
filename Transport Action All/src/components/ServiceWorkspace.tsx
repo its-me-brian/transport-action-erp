@@ -548,7 +548,7 @@ export default function ServiceWorkspace({
                       <>
                         {(activeSubSection || 'driver') === 'driver' && <DriverTab service={service} relatedData={relatedData} />}
                         {(activeSubSection || 'driver') === 'driverLink' && <DriverLinkTab service={service} driverLink={relatedData.driverLink} />}
-                        {(activeSubSection || 'driver') === 'driverReport' && <DriverReportTab service={service} driverReport={relatedData.driverReport} />}
+                        {(activeSubSection || 'driver') === 'driverReport' && <DriverReportTab service={service} driverReport={relatedData.driverReport} onServiceUpdate={relatedData.refresh} />}
                         {(activeSubSection || 'driver') === 'reconciliation' && <ReconciliationTab service={service} reconciliation={relatedData.reconciliation} />}
                       </>
                     )}
@@ -856,7 +856,7 @@ export default function ServiceWorkspace({
                   <>
                     {(activeSubSection || 'driver') === 'driver' && <DriverTab service={service} />}
                     {(activeSubSection || 'driver') === 'driverLink' && <DriverLinkTab service={service} driverLink={relatedData.driverLink} />}
-                    {(activeSubSection || 'driver') === 'driverReport' && <DriverReportTab service={service} driverReport={relatedData.driverReport} />}
+                    {(activeSubSection || 'driver') === 'driverReport' && <DriverReportTab service={service} driverReport={relatedData.driverReport} onServiceUpdate={relatedData.refresh} />}
                     {(activeSubSection || 'driver') === 'reconciliation' && <ReconciliationTab service={service} reconciliation={relatedData.reconciliation} />}
                   </>
                 )}

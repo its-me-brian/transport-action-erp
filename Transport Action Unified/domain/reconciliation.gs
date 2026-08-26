@@ -349,6 +349,10 @@ function apiAutoResolveReconciliation(serviceId) {
   return ReconciliationCommands.autoResolveIfMatch(serviceId);
 }
 
+function apiCreateReconciliation(serviceId) {
+  return ReconciliationCommands.createOrUpdate(serviceId);
+}
+
 function apiGetPendingReconciliations(company) {
   return ReconciliationRepository.getPending(company).map(ReconciliationRepository.toDTO);
 }

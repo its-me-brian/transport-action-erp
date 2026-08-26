@@ -848,6 +848,10 @@ function _handleRoute(params, data) {
         _checkPermission(data, 'reconciliation.update');
         result = apiAutoResolveReconciliation(data.serviceId);
         break;
+      case 'createReconciliation':
+        _checkPermission(data, 'reconciliation.update');
+        result = apiCreateReconciliation(data.serviceId);
+        break;
 
       // =====================================================================
       // COLLABORATORS (proveedores/subcontratación)

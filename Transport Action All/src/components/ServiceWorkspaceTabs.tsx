@@ -597,9 +597,10 @@ export function DriverLinkTab({ service, driverLink }: {
 // TAB: DRIVER REPORT — Full flow (ERG Phase 10)
 // ============================================================================
 
-export function DriverReportTab({ service, driverReport }: {
+export function DriverReportTab({ service, driverReport, onServiceUpdate }: {
   service: Service;
   driverReport: any | null;
+  onServiceUpdate?: () => void;
 }) {
   const { showToast } = useToast();
   const openService = useOpenService();
@@ -615,6 +616,7 @@ export function DriverReportTab({ service, driverReport }: {
         showToast(result.error, 'error');
       } else {
         showToast('Report approved', 'success');
+        onServiceUpdate?.();
       }
     } catch {
       showToast('Error approving report', 'error');
@@ -635,6 +637,7 @@ export function DriverReportTab({ service, driverReport }: {
         showToast(result.error, 'error');
       } else {
         showToast('Report rejected', 'success');
+        onServiceUpdate?.();
       }
     } catch {
       showToast('Error rejecting report', 'error');
@@ -842,6 +845,7 @@ export function WhatsAppTab({ service, relatedData, onCaptureSuccess, onServiceU
         setPasteText('');
         setParsedReports([]);
         onCaptureSuccess?.();
+        onServiceUpdate?.();
       } else {
         showToast('Failed to capture reports', 'error');
       }
@@ -1159,15 +1163,13 @@ export function ReconciliationTab({ service, reconciliation }: {
     try {
       const { resolveReconciliation } = await import('../services/api');
       const result = await resolveReconciliation(reconciliation.id, {
-        finalValues: {
-          startTime: resolution.startTime || undefined,
-          endTime: resolution.endTime || undefined,
-          km: resolution.km ? parseFloat(resolution.km) : undefined,
-          diaria: resolution.diaria || undefined,
-          isFestivo: resolution.festivo === 'true',
-          isNotturno: resolution.notturno === 'true',
-        },
-        resolution: resolution.notes || 'Resolved from Service'
+        FinalStartTime: resolution.startTime || undefined,
+        FinalEndTime: resolution.endTime || undefined,
+        FinalKm: resolution.km ? parseFloat(resolution.km) : undefined,
+        FinalDiaria: resolution.diaria || undefined,
+        FinalFestivo: resolution.festivo === 'true',
+        FinalNotturno: resolution.notturno === 'true',
+        Notes: resolution.notes || 'Resolved from Service'
       });
       if (result?.error) {
         showToast(result.error, 'error');
@@ -1191,8 +1193,8 @@ export function ReconciliationTab({ service, reconciliation }: {
         endTime: reconciliation.driver.endTime || '',
         km: reconciliation.driver.km?.toString() || '',
         diaria: reconciliation.driver.diaria || '',
-        festivo: reconciliation.driver.isFestivo?.toString() || 'false',
-        notturno: reconciliation.driver.isNotturno?.toString() || 'false',
+        festivo: reconciliation.driver.festivo?.toString() || 'false',
+        notturno: reconciliation.driver.notturno?.toString() || 'false',
         notes: ''
       });
     }
@@ -1264,9 +1266,20 @@ export function ReconciliationTab({ service, reconciliation }: {
         <div className="text-center py-8">
           <ArrowLeftRight className="w-8 h-8 text-on-surface-variant/30 mx-auto mb-2" />
           <div className="text-[13px] text-on-surface-variant">No reconciliation yet</div>
-          <div className="text-[11px] text-on-surface-variant/60 mt-1">Reconciliation will be created after driver report</div>
+          <div className="text-[11px] text-on-surface-variant/60 mt-1">Reconciliation will be created after driver report approval</div>
           <button
-            onClick={() => openService(service.id, 'operations', 'reconciliation')}
+            onClick={async () => {
+              try {
+                const { createReconciliation } = await import('../services/api');
+                const result = await createReconciliation(service.id);
+                if (result?.id) {
+                  showToast('Reconciliation created', 'success');
+                  onServiceUpdate?.();
+                }
+              } catch (err) {
+                showToast(`Failed: ${err instanceof Error ? err.message : 'Create'}`, 'error');
+              }
+            }}
             className="mt-3 flex items-center gap-1.5 px-4 py-2 mx-auto rounded-lg text-[12px] font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors"
           >
             <ArrowLeftRight className="w-3.5 h-3.5" />
