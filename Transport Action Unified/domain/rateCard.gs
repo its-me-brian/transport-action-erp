@@ -105,7 +105,6 @@ function apiGetRateCards(clientId) {
 }
 
 function apiCreateRateCard(data) {
-  if (!data.ClientID) throw new ValidationError('ClientID is required');
   if (!data.VehicleType) throw new ValidationError('VehicleType is required');
   if (!data.ServiceType) data.ServiceType = 'Dispo';
   const entity = RateCardRepository.create(data);

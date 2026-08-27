@@ -38,6 +38,72 @@ const ContactCardItem = React.memo(function ContactCardItem({ c, clients, onEdit
   );
 });
 
+// §35: ContactForm extracted outside parent to prevent cursor loss on re-render.
+const ContactForm = React.memo(function ContactForm({ form, setForm, clients, onSubmit, submitLabel, isSaving, onCancel }: {
+  form: any;
+  setForm: (fn: any) => void;
+  clients: { id: string; name: string }[];
+  onSubmit: () => void;
+  submitLabel: string;
+  isSaving: boolean;
+  onCancel: () => void;
+}) {
+  const update = (patch: any) => setForm((prev: any) => ({ ...prev, ...patch }));
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Client *</label>
+        <select value={form.clientId} onChange={e => update({ clientId: e.target.value })}
+          className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">
+          <option value="">Select client...</option>
+          {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Name *</label>
+          <input type="text" value={form.name} onChange={e => update({ name: e.target.value })}
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
+        </div>
+        <div>
+          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Role</label>
+          <input type="text" value={form.role} onChange={e => update({ role: e.target.value })}
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="e.g. Production Manager" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div>
+          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Phone</label>
+          <input type="text" value={form.phone} onChange={e => update({ phone: e.target.value })}
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
+        </div>
+        <div>
+          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Email</label>
+          <input type="email" value={form.email} onChange={e => update({ email: e.target.value })}
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
+        </div>
+        <div>
+          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">WhatsApp</label>
+          <input type="text" value={form.whatsapp} onChange={e => update({ whatsapp: e.target.value })}
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
+        </div>
+      </div>
+      <div>
+        <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Notes</label>
+        <textarea value={form.notes} onChange={e => update({ notes: e.target.value })}
+          className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary resize-none" rows={2} />
+      </div>
+      <div className="flex items-center justify-end gap-2 pt-2">
+        <button onClick={onCancel} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
+        <button onClick={onSubmit} disabled={isSaving || !form.clientId || !form.name.trim()}
+          className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
+          {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} {submitLabel}
+        </button>
+      </div>
+    </div>
+  );
+});
+
 export default function ContactScreen({ onNavigate }: Props) {
   const { showToast } = useToast();
   const [contacts, setContacts] = useState<ContactDTO[]>([]);
@@ -91,60 +157,6 @@ export default function ContactScreen({ onNavigate }: Props) {
     setForm({ clientId: c.clientId, name: c.name, role: c.role, phone: c.phone, email: c.email, whatsapp: c.whatsapp, notes: c.notes });
     setEditTarget(c);
   };
-
-  const ContactForm = ({ onSubmit, submitLabel }: { onSubmit: () => void; submitLabel: string }) => (
-    <div className="space-y-3">
-      <div>
-        <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Client *</label>
-        <select value={form.clientId} onChange={e => setForm({ ...form, clientId: e.target.value })}
-          className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">
-          <option value="">Select client...</option>
-          {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Name *</label>
-          <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
-        </div>
-        <div>
-          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Role</label>
-          <input type="text" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="e.g. Production Manager" />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <div>
-          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Phone</label>
-          <input type="text" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
-        </div>
-        <div>
-          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Email</label>
-          <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
-        </div>
-        <div>
-          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">WhatsApp</label>
-          <input type="text" value={form.whatsapp} onChange={e => setForm({ ...form, whatsapp: e.target.value })}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
-        </div>
-      </div>
-      <div>
-        <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Notes</label>
-        <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
-          className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary resize-none" rows={2} />
-      </div>
-      <div className="flex items-center justify-end gap-2 pt-2">
-        <button onClick={() => { setShowCreateModal(false); setEditTarget(null); }} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
-        <button onClick={onSubmit} disabled={isSaving || !form.clientId || !form.name.trim()}
-          className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
-          {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} {submitLabel}
-        </button>
-      </div>
-    </div>
-  );
 
   return (
     <div className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-24">
@@ -219,7 +231,9 @@ export default function ContactScreen({ onNavigate }: Props) {
               <h3 className="text-[15px] font-semibold text-on-surface">New Contact</h3>
               <button onClick={() => setShowCreateModal(false)} aria-label="Close modal" className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
-            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0"><ContactForm onSubmit={handleCreate} submitLabel="Save" /></div>
+            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0">
+              <ContactForm form={form} setForm={setForm} clients={clients} onSubmit={handleCreate} submitLabel="Save" isSaving={isSaving} onCancel={() => setShowCreateModal(false)} />
+            </div>
           </div>
         </div>
       )}
@@ -231,7 +245,9 @@ export default function ContactScreen({ onNavigate }: Props) {
               <h3 className="text-[15px] font-semibold text-on-surface">Edit Contact — {editTarget.name}</h3>
               <button onClick={() => setEditTarget(null)} aria-label="Close modal" className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
-            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0"><ContactForm onSubmit={handleEdit} submitLabel="Update" /></div>
+            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0">
+              <ContactForm form={form} setForm={setForm} clients={clients} onSubmit={handleEdit} submitLabel="Update" isSaving={isSaving} onCancel={() => setEditTarget(null)} />
+            </div>
           </div>
         </div>
       )}

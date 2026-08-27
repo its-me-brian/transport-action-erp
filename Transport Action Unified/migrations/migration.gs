@@ -38,6 +38,7 @@ function runMigrations() {
     { version: 8, fn: migrate_008_soft_delete_all_entities },
     { version: 9, fn: migrate_009_soft_delete_remaining_entities },
     { version: 10, fn: migrate_010_fix_schema_gaps },
+    { version: 11, fn: migrate_011_driversource_column },
   ];
 
   const pending = migrations
@@ -677,5 +678,39 @@ function migrate_010_fix_schema_gaps() {
     _ensureColumn(shRD, hm, 'RejectedAt', 'PaidAt', '#7B1FA2');
     hm = _headerMap(shRD);
     _ensureColumn(shRD, hm, 'RejectedReason', 'RejectedAt', '#7B1FA2');
+  }
+}
+
+/**
+ * Migration 011: Add Source column to DriverReports.
+ * Tracks where the report came from: whatsapp, driverlink, backoffice.
+ */
+function migrate_011_driversource_column() {
+  const ss = SpreadsheetApp.openById(CONFIG.DB_SHEET_ID);
+
+  function _headerMap(sh) {
+    const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+    const map = {};
+    headers.forEach((h, i) => { map[h] = i + 1; });
+    return map;
+  }
+
+  function _ensureColumn(sh, headerMap, colName, after, color) {
+    if (headerMap[colName]) return false;
+    const afterCol = headerMap[after] || sh.getLastColumn();
+    sh.insertColumnAfter(afterCol);
+    sh.getRange(1, afterCol + 1)
+      .setValue(colName)
+      .setFontWeight('bold')
+      .setBackground(color || '#455A64')
+      .setFontColor('#fff');
+    Logger.log('Migration 011: Added ' + colName + ' column to ' + sh.getName());
+    return true;
+  }
+
+  var shDR = ss.getSheetByName('DriverReports');
+  if (shDR) {
+    var hm = _headerMap(shDR);
+    _ensureColumn(shDR, hm, 'Source', 'ServiceID', '#FF8F00');
   }
 }

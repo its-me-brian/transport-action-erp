@@ -37,6 +37,58 @@ const RateCardItem = React.memo(function RateCardItem({ c, clients, onEdit }: {
   );
 });
 
+// §35: CardForm extracted outside parent to prevent cursor loss on re-render.
+// Defining a component inside another causes React to unmount/remount on every render.
+const CardForm = React.memo(function CardForm({ form, setForm, vehicleTypes, serviceTypes, clients, onSubmit, submitLabel, isSaving, onCancel }: {
+  form: any;
+  setForm: (fn: any) => void;
+  vehicleTypes: string[];
+  serviceTypes: string[];
+  clients: { id: string; name: string }[];
+  onSubmit: () => void;
+  submitLabel: string;
+  isSaving: boolean;
+  onCancel: () => void;
+}) {
+  const update = (patch: any) => setForm((prev: any) => ({ ...prev, ...patch }));
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Name *</label><input type="text" value={form.name} onChange={e => update({ name: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Vehicle Type</label><select value={form.vehicleType} onChange={e => update({ vehicleType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">{vehicleTypes.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Category</label><input type="text" value={form.category} onChange={e => update({ category: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="e.g. Airport Transfer" /></div>
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Service Type</label><select value={form.serviceType} onChange={e => update({ serviceType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">{serviceTypes.map(st => <option key={st} value={st}>{st}</option>)}</select></div>
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Client</label><select value={form.clientId} onChange={e => update({ clientId: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"><option value="">Global</option>{clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Base Price (EUR)</label><input type="number" step="0.01" value={form.basePrice} onChange={e => update({ basePrice: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Included Km</label><input type="number" step="1" value={form.includedKm} onChange={e => update({ includedKm: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="0" /></div>
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Included Hours</label><input type="number" step="0.5" value={form.includedHours} onChange={e => update({ includedHours: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="0" /></div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Half Day (EUR)</label><input type="number" step="0.01" value={form.halfDayPrice} onChange={e => update({ halfDayPrice: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Full Day (EUR)</label><input type="number" step="0.01" value={form.fullDayPrice} onChange={e => update({ fullDayPrice: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Airport Surcharge (EUR)</label><input type="number" step="0.01" value={form.airportSurcharge} onChange={e => update({ airportSurcharge: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Extra Km (EUR)</label><input type="number" step="0.01" value={form.extraKmRate} onChange={e => update({ extraKmRate: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Extra Hour (EUR)</label><input type="number" step="0.01" value={form.extraHourRate} onChange={e => update({ extraHourRate: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Night Fee (EUR)</label><input type="number" step="0.01" value={form.nightFee} onChange={e => update({ nightFee: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
+        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Holiday (EUR)</label><input type="number" step="0.01" value={form.holidayFee} onChange={e => update({ holidayFee: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
+      </div>
+      <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Notes</label><input type="text" value={form.notes} onChange={e => update({ notes: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="Optional notes" /></div>
+      <div className="flex items-center justify-end gap-2 pt-2">
+        <button onClick={onCancel} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
+        <button onClick={onSubmit} disabled={isSaving || !form.name.trim()} className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
+          {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} {submitLabel}
+        </button>
+      </div>
+    </div>
+  );
+});
+
 export default function RateCardScreen({ onNavigate }: Props) {
   const { showToast } = useToast();
   const [cards, setCards] = useState<RateCardDTO[]>([]);
@@ -119,43 +171,6 @@ export default function RateCardScreen({ onNavigate }: Props) {
     setEditTarget(c);
   };
 
-  const CardForm = ({ onSubmit, submitLabel }: { onSubmit: () => void; submitLabel: string }) => (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Name *</label><input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
-        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Vehicle Type</label><select value={form.vehicleType} onChange={e => setForm({ ...form, vehicleType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">{vehicleTypes.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Category</label><input type="text" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="e.g. Airport Transfer" /></div>
-        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Service Type</label><select value={form.serviceType} onChange={e => setForm({ ...form, serviceType: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">{serviceTypes.map(st => <option key={st} value={st}>{st}</option>)}</select></div>
-        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Client</label><select value={form.clientId} onChange={e => setForm({ ...form, clientId: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer"><option value="">Global</option>{clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Base Price (EUR)</label><input type="number" step="0.01" value={form.basePrice} onChange={e => setForm({ ...form, basePrice: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
-        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Included Km</label><input type="number" step="1" value={form.includedKm} onChange={e => setForm({ ...form, includedKm: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="0" /></div>
-        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Included Hours</label><input type="number" step="0.5" value={form.includedHours} onChange={e => setForm({ ...form, includedHours: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="0" /></div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Half Day (EUR)</label><input type="number" step="0.01" value={form.halfDayPrice} onChange={e => setForm({ ...form, halfDayPrice: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
-        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Full Day (EUR)</label><input type="number" step="0.01" value={form.fullDayPrice} onChange={e => setForm({ ...form, fullDayPrice: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
-        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Airport Surcharge (EUR)</label><input type="number" step="0.01" value={form.airportSurcharge} onChange={e => setForm({ ...form, airportSurcharge: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Extra Km (EUR)</label><input type="number" step="0.01" value={form.extraKmRate} onChange={e => setForm({ ...form, extraKmRate: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
-        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Extra Hour (EUR)</label><input type="number" step="0.01" value={form.extraHourRate} onChange={e => setForm({ ...form, extraHourRate: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
-        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Night Fee (EUR)</label><input type="number" step="0.01" value={form.nightFee} onChange={e => setForm({ ...form, nightFee: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
-        <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Holiday (EUR)</label><input type="number" step="0.01" value={form.holidayFee} onChange={e => setForm({ ...form, holidayFee: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" /></div>
-      </div>
-      <div><label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Notes</label><input type="text" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="Optional notes" /></div>
-      <div className="flex items-center justify-end gap-2 pt-2">
-        <button onClick={() => { setShowCreateModal(false); setEditTarget(null); }} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
-        <button onClick={onSubmit} disabled={isSaving || !form.name.trim()} className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
-          {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} {submitLabel}
-        </button>
-      </div>
-    </div>
-  );
-
   return (
     <div className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-24">
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0 sticky top-0 py-2 z-30 bg-background/90 backdrop-blur-md">
@@ -163,7 +178,7 @@ export default function RateCardScreen({ onNavigate }: Props) {
           <h2 className="font-headline-lg-mobile md:font-headline-lg text-on-surface">Rate Cards</h2>
           <p className="text-[12px] text-on-surface-variant mt-0.5">{filtered.length} card{filtered.length !== 1 ? 's' : ''}</p>
         </div>
-        <button onClick={() => { setForm({ name: '', category: '', vehicleType: 'Van', basePrice: '', extraKmRate: '', extraHourRate: '', waitRate: '', nightFee: '', holidayFee: '', halfDayPrice: '', fullDayPrice: '', airportSurcharge: '', clientId: '', notes: '' }); setShowCreateModal(true); }}
+        <button onClick={() => { setForm({ name: '', category: '', vehicleType: 'Van', basePrice: '', extraKmRate: '', extraHourRate: '', waitRate: '', nightFee: '', holidayFee: '', halfDayPrice: '', fullDayPrice: '', airportSurcharge: '', clientId: '', notes: '', serviceType: 'Dispo', includedKm: '', includedHours: '' }); setShowCreateModal(true); }}
           aria-label="Add rate card"
           className="flex items-center gap-2 bg-primary text-on-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-primary-hover transition-colors cursor-pointer">
           <Plus className="w-3.5 h-3.5" /><span className="hidden sm:inline">Add Card</span>
@@ -211,7 +226,9 @@ export default function RateCardScreen({ onNavigate }: Props) {
               <h3 className="text-[15px] font-semibold text-on-surface">New Rate Card</h3>
               <button onClick={() => setShowCreateModal(false)} aria-label="Close modal" className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
-            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0"><CardForm onSubmit={handleCreate} submitLabel="Save" /></div>
+            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0">
+              <CardForm form={form} setForm={setForm} vehicleTypes={vehicleTypes} serviceTypes={serviceTypes} clients={clients} onSubmit={handleCreate} submitLabel="Save" isSaving={isSaving} onCancel={() => setShowCreateModal(false)} />
+            </div>
           </div>
         </div>
       )}
@@ -223,7 +240,9 @@ export default function RateCardScreen({ onNavigate }: Props) {
               <h3 className="text-[15px] font-semibold text-on-surface">Edit Rate Card — {editTarget.name}</h3>
               <button onClick={() => setEditTarget(null)} aria-label="Close modal" className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
-            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0"><CardForm onSubmit={handleEdit} submitLabel="Update" /></div>
+            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0">
+              <CardForm form={form} setForm={setForm} vehicleTypes={vehicleTypes} serviceTypes={serviceTypes} clients={clients} onSubmit={handleEdit} submitLabel="Update" isSaving={isSaving} onCancel={() => setEditTarget(null)} />
+            </div>
           </div>
         </div>
       )}

@@ -48,6 +48,7 @@ const DriverReportRepository = {
     const version = data.Version || this.getNextVersion(data.ServiceID);
     return _create(this.SHEET, {
       ID: '',
+      Source: data.Source || '',
       ServiceID: data.ServiceID || '',
       DriverID: data.DriverID || '',
       Version: version,
@@ -85,6 +86,7 @@ const DriverReportRepository = {
   toDTO(entity) {
     return {
       id: entity.ID,
+      source: entity.Source || '',
       serviceId: entity.ServiceID,
       driverId: entity.DriverID,
       version: parseInt(entity.Version) || 1,

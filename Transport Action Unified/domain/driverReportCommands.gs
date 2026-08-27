@@ -50,6 +50,7 @@ const DriverReportCommands = {
       const report = DriverReportRepository.create({
         ServiceID: serviceId,
         DriverID: driverId,
+        Source: reportData.source || '',
         Version: version,
         PreviousReportID: previousReport ? previousReport.ID : '',
         // Datos reales del conductor (actuals)
@@ -132,6 +133,7 @@ const DriverReportCommands = {
       const report = DriverReportRepository.create({
         ServiceID: serviceId,
         DriverID: driverId,
+        Source: reportData.source || '',
         Version: version,
         PreviousReportID: previousReport ? previousReport.ID : '',
         StartTime: reportData.startTime || '',
@@ -209,17 +211,35 @@ const DriverReportCommands = {
         waitMinutes: parseFloat(report.WaitMinutes) || 0
       };
 
-      // 2. CALCULAR REVENUE BREAKDOWN — abort on failure (atomic)
-      ServiceEconomics.applyRevenueBreakdown(serviceId, driverReportData);
+      // 2. CALCULAR REVENUE BREAKDOWN — graceful if no RateCard
+      try {
+        ServiceEconomics.applyRevenueBreakdown(serviceId, driverReportData);
+      } catch (e) {
+        Logger.log('[approveReport] Revenue breakdown skipped: ' + e.message + ' (serviceId=' + serviceId + ')');
+      }
 
-      // 3. CALCULAR COST BREAKDOWN — abort on failure (atomic)
-      ServiceEconomics.applyCostBreakdown(serviceId, driverReportData);
+      // 3. CALCULAR COST BREAKDOWN — graceful if no SupplierRate
+      try {
+        ServiceEconomics.applyCostBreakdown(serviceId, driverReportData);
+      } catch (e) {
+        Logger.log('[approveReport] Cost breakdown skipped: ' + e.message + ' (serviceId=' + serviceId + ')');
+      }
 
-      // 4. CREAR/ACTUALIZAR RECONCILIATION — abort on failure (atomic)
-      let reconciliation = ReconciliationCommands.createOrUpdate(serviceId);
+      // 4. CREAR/ACTUALIZAR RECONCILIATION
+      let reconciliation = null;
+      try {
+        reconciliation = ReconciliationCommands.createOrUpdate(serviceId);
+      } catch (e) {
+        Logger.log('[approveReport] Reconciliation skipped: ' + e.message + ' (serviceId=' + serviceId + ')');
+      }
 
       // 5. AUTO-RESOLVER si producción y conductor coinciden
-      const autoResolved = ReconciliationCommands.autoResolveIfMatch(serviceId);
+      var autoResolved = null;
+      try {
+        autoResolved = ReconciliationCommands.autoResolveIfMatch(serviceId);
+      } catch (e) {
+        Logger.log('[approveReport] AutoResolve skipped: ' + e.message);
+      }
       if (autoResolved) {
         reconciliation = autoResolved;
       }

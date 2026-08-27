@@ -47,6 +47,109 @@ const VehicleCardItem = React.memo(function VehicleCardItem({ v, onEdit }: {
   );
 });
 
+// §35: VehicleForm extracted outside parent to prevent cursor loss on re-render.
+const VehicleForm = React.memo(function VehicleForm({ form, setForm, vehicleTypes, onSubmit, submitLabel, isSaving, onCancel, hideButtons }: {
+  form: any;
+  setForm: (fn: any) => void;
+  vehicleTypes: string[];
+  onSubmit: () => void;
+  submitLabel: string;
+  isSaving: boolean;
+  onCancel: () => void;
+  hideButtons?: boolean;
+}) {
+  const update = (patch: any) => setForm((prev: any) => ({ ...prev, ...patch }));
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Plate *</label>
+          <input type="text" value={form.plate} onChange={e => update({ plate: e.target.value.toUpperCase() })}
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="ABC 123" />
+        </div>
+        <div>
+          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Type</label>
+          <select value={form.type} onChange={e => update({ type: e.target.value })}
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">
+            {vehicleTypes.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Brand</label>
+          <input type="text" value={form.brand} onChange={e => update({ brand: e.target.value })}
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
+        </div>
+        <div>
+          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Model</label>
+          <input type="text" value={form.model} onChange={e => update({ model: e.target.value })}
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Ownership</label>
+          <select value={form.ownership} onChange={e => update({ ownership: e.target.value })}
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">
+            {OWNERSHIP_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Capacity</label>
+          <input type="number" min="0" value={form.capacity} onChange={e => update({ capacity: e.target.value })}
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
+        </div>
+        <div>
+          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Oper. Company</label>
+          <input type="text" value={form.operatingCompany} onChange={e => update({ operatingCompany: e.target.value })}
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Status</label>
+          <select value={form.status} onChange={e => update({ status: e.target.value })}
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">
+            {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Default Driver</label>
+          <input type="text" value={form.driverDefault} onChange={e => update({ driverDefault: e.target.value })}
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="Driver name or ID" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Insurance Expiry</label>
+          <input type="date" value={form.insuranceExpiry} onChange={e => update({ insuranceExpiry: e.target.value })}
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
+        </div>
+        <div>
+          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Inspection Expiry</label>
+          <input type="date" value={form.inspectionExpiry} onChange={e => update({ inspectionExpiry: e.target.value })}
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
+        </div>
+      </div>
+      <div>
+        <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Notes</label>
+        <textarea value={form.notes} onChange={e => update({ notes: e.target.value })}
+          className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary resize-none" rows={2} />
+      </div>
+      {!hideButtons && (
+        <div className="flex items-center justify-end gap-2 pt-2">
+          <button onClick={onCancel} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
+          <button onClick={onSubmit} disabled={isSaving || !form.plate.trim()}
+            className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
+            {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} {submitLabel}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+});
+
 export default function VehicleScreen({ onNavigate }: Props) {
   const { showToast } = useToast();
   const [vehicles, setVehicles] = useState<VehicleDTO[]>([]);
@@ -112,96 +215,6 @@ export default function VehicleScreen({ onNavigate }: Props) {
     setForm({ plate: v.plate, brand: v.brand, model: v.model, type: v.type, ownership: v.ownership, capacity: String(v.capacity), status: v.status || 'Disponible', driverDefault: v.driverDefault || '', insuranceExpiry: v.insuranceExpiry, inspectionExpiry: v.inspectionExpiry, operatingCompany: v.operatingCompany, notes: v.notes });
     setEditTarget(v);
   };
-
-  const VehicleForm = ({ onSubmit, submitLabel, hideButtons }: { onSubmit: () => void; submitLabel: string; hideButtons?: boolean }) => (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Plate *</label>
-          <input type="text" value={form.plate} onChange={e => setForm({ ...form, plate: e.target.value.toUpperCase() })}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="ABC 123" />
-        </div>
-        <div>
-          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Type</label>
-          <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">
-            {vehicleTypes.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Brand</label>
-          <input type="text" value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value })}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
-        </div>
-        <div>
-          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Model</label>
-          <input type="text" value={form.model} onChange={e => setForm({ ...form, model: e.target.value })}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div>
-          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Ownership</label>
-          <select value={form.ownership} onChange={e => setForm({ ...form, ownership: e.target.value })}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">
-            {OWNERSHIP_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Capacity</label>
-          <input type="number" min="0" value={form.capacity} onChange={e => setForm({ ...form, capacity: e.target.value })}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
-        </div>
-        <div>
-          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Oper. Company</label>
-          <input type="text" value={form.operatingCompany} onChange={e => setForm({ ...form, operatingCompany: e.target.value })}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Status</label>
-          <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary cursor-pointer">
-            {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Default Driver</label>
-          <input type="text" value={form.driverDefault} onChange={e => setForm({ ...form, driverDefault: e.target.value })}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" placeholder="Driver name or ID" />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Insurance Expiry</label>
-          <input type="date" value={form.insuranceExpiry} onChange={e => setForm({ ...form, insuranceExpiry: e.target.value })}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
-        </div>
-        <div>
-          <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Inspection Expiry</label>
-          <input type="date" value={form.inspectionExpiry} onChange={e => setForm({ ...form, inspectionExpiry: e.target.value })}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary" />
-        </div>
-      </div>
-      <div>
-        <label className="text-[11px] text-on-surface-variant uppercase tracking-wide block mb-1">Notes</label>
-        <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
-          className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary resize-none" rows={2} />
-      </div>
-      {!hideButtons && (
-        <div className="flex items-center justify-end gap-2 pt-2">
-          <button onClick={() => { setShowCreateModal(false); setEditTarget(null); }} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
-          <button onClick={onSubmit} disabled={isSaving || !form.plate.trim()}
-            className="px-4 py-1.5 bg-primary text-on-primary text-[12px] font-medium rounded-lg hover:bg-primary-hover flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
-            {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} {submitLabel}
-          </button>
-        </div>
-      )}
-    </div>
-  );
 
   return (
     <div className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-24">
@@ -272,7 +285,9 @@ export default function VehicleScreen({ onNavigate }: Props) {
               <h3 className="text-[15px] font-semibold text-on-surface">New Vehicle</h3>
               <button onClick={() => setShowCreateModal(false)} aria-label="Close modal" className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
-            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0"><VehicleForm onSubmit={handleCreate} submitLabel="Save" hideButtons /></div>
+            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0">
+              <VehicleForm form={form} setForm={setForm} vehicleTypes={vehicleTypes} onSubmit={handleCreate} submitLabel="Save" isSaving={isSaving} onCancel={() => setShowCreateModal(false)} hideButtons />
+            </div>
             <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">
               <button onClick={() => setShowCreateModal(false)} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
               <button onClick={handleCreate} disabled={isSaving || !form.plate.trim()}
@@ -291,7 +306,9 @@ export default function VehicleScreen({ onNavigate }: Props) {
               <h3 className="text-[15px] font-semibold text-on-surface">Edit Vehicle — {editTarget.plate}</h3>
               <button onClick={() => setEditTarget(null)} aria-label="Close modal" className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
-            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0"><VehicleForm onSubmit={handleEdit} submitLabel="Update" hideButtons /></div>
+            <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0">
+              <VehicleForm form={form} setForm={setForm} vehicleTypes={vehicleTypes} onSubmit={handleEdit} submitLabel="Update" isSaving={isSaving} onCancel={() => setEditTarget(null)} hideButtons />
+            </div>
             <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-outline-variant shrink-0">
               <button onClick={() => setEditTarget(null)} className="px-4 py-1.5 text-[12px] font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
               <button onClick={handleEdit} disabled={isSaving || !form.plate.trim()}

@@ -165,21 +165,24 @@ function acceptReport(inboxId, reviewedBy) {
       // §12: Auto-advance lifecycle STOPPED — driver's report ≠ service completion
       // Coordinator must manually advance the service lifecycle via Dashboard
 
+      // §34: Read from NormalizedData JSON (normSource) as PRIMARY source.
+      // Sheet columns (item.*) may be empty for auto-advance pipeline.
       var reportData = {
-        startTime: item.StartTime || normSource.startTime || '',
-        endTime: item.EndTime || normSource.endTime || '',
-        kmTotal: item.KmTotal || normSource.kmTotal || 0,
+        source: item.Source || '',
+        startTime: normSource.startTime || item.StartTime || '',
+        endTime: normSource.endTime || item.EndTime || '',
+        kmTotal: normSource.kmTotal || parseFloat(item.KmTotal) || 0,
         hasDiaria: normSource.hasDiaria || false,
-        isFestivo: item.IsFestivo || normSource.isFestivo || false,
-        isNotturno: item.IsNotturno || normSource.isNotturno || false,
-        diariaType: item.Diaria || normSource.diariaType || 'none',
-        kmExtra: item.KmExtra || normSource.kmExtra || 0,
-        hoursExtra: item.HoursExtra || normSource.hoursExtra || 0,
-        parking: item.Parking || normSource.parking || 0,
-        tolls: item.Tolls || normSource.tolls || 0,
-        fuel: item.Fuel || normSource.fuel || 0,
+        isFestivo: normSource.isFestivo || item.IsFestivo || false,
+        isNotturno: normSource.isNotturno || item.IsNotturno || false,
+        diariaType: normSource.diariaType || item.Diaria || 'none',
+        kmExtra: normSource.kmExtra || parseFloat(item.KmExtra) || 0,
+        hoursExtra: normSource.hoursExtra || parseFloat(item.HoursExtra) || 0,
+        parking: normSource.parking || parseFloat(item.Parking) || 0,
+        tolls: normSource.tolls || parseFloat(item.Tolls) || 0,
+        fuel: normSource.fuel || parseFloat(item.Fuel) || 0,
         waitMinutes: normSource.waitMinutes || 0,
-        notes: item.Notes || normSource.notes || ''
+        notes: normSource.notes || item.Notes || ''
       };
       var created;
       try {

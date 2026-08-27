@@ -2120,7 +2120,7 @@ export async function getVehicles(): Promise<VehicleDTO[]> {
   }));
 }
 
-export async function createVehicle(data: { plate: string; brand?: string; model?: string; type?: string; ownership?: string; capacity?: number; operatingCompany?: string; notes?: string }): Promise<{ success?: boolean; id?: string; error?: string }> {
+export async function createVehicle(data: { plate: string; brand?: string; model?: string; type?: string; ownership?: string; capacity?: number; status?: string; driverDefault?: string; insuranceExpiry?: string; inspectionExpiry?: string; operatingCompany?: string; notes?: string }): Promise<{ success?: boolean; id?: string; error?: string }> {
   return gasPostWithRetry('apiCreateVehicle', data);
 }
 
