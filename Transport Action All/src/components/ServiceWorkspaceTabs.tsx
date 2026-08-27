@@ -1166,15 +1166,27 @@ export function WhatsAppTab({ service, relatedData, onCaptureSuccess, onServiceU
 }
 
 // ============================================================================
-// TAB: RECONCILIATION — Full flow (ERG Phase 11)
+// TAB: RECONCILIATION — Production vs Driver confrontation (ERG Phase 11)
+// DTO: { id, serviceId, projectId, production, driver, final, status,
+//        resolvedBy, resolvedAt, resolutionNotes, createdAt, updatedAt }
 // ============================================================================
+
+function ReconRow({ label, prod, driver, resolved }: { label: string; prod: string | number; driver: string | number; resolved?: string | number }) {
+  const match = String(prod) === String(driver);
+  return (
+    <div className="grid grid-cols-[1fr_1fr_1fr] gap-2 text-[11px] py-1.5 border-b border-outline-variant/20 last:border-0">
+      <span className="text-on-surface-variant font-medium">{label}</span>
+      <span className={`text-center ${match ? 'text-green-600' : 'text-amber-600'}`}>{prod || '—'}</span>
+      <span className={`text-center ${match ? 'text-green-600' : 'text-amber-600'}`}>{driver || '—'}</span>
+    </div>
+  );
+}
 
 export function ReconciliationTab({ service, reconciliation, onServiceUpdate }: {
   service: Service;
   reconciliation: any | null;
   onServiceUpdate?: () => void;
 }) {
-  const openService = useOpenService();
   const { showToast } = useToast();
   const { can } = useAuth();
   const [resolving, setResolving] = useState(false);
@@ -1189,8 +1201,12 @@ export function ReconciliationTab({ service, reconciliation, onServiceUpdate }: 
     notes: ''
   });
   const status = reconciliation?.status || null;
-  const isResolved = status === 'Resuelto' || status === 'Resolved';
-  const isInProgress = status === 'EnProgreso' || status === 'In Progress';
+  const isResolved = status === 'Resuelto';
+  const isInProgress = status === 'EnProceso';
+
+  const prod = reconciliation?.production || {};
+  const drv = reconciliation?.driver || {};
+  const fin = reconciliation?.final || {};
 
   const handleResolve = async () => {
     if (!reconciliation?.id) return;
@@ -1212,6 +1228,7 @@ export function ReconciliationTab({ service, reconciliation, onServiceUpdate }: 
         showToast('Reconciliation resolved', 'success');
         setShowResolveModal(false);
         setResolution({ startTime: '', endTime: '', km: '', diaria: '', festivo: '', notturno: '', notes: '' });
+        onServiceUpdate?.();
       }
     } catch (err) {
       showToast('Error resolving reconciliation', 'error');
@@ -1221,7 +1238,6 @@ export function ReconciliationTab({ service, reconciliation, onServiceUpdate }: 
   };
 
   const openResolve = () => {
-    // Pre-fill with driver values if available
     if (reconciliation?.driver) {
       setResolution({
         startTime: reconciliation.driver.startTime || '',
@@ -1252,41 +1268,44 @@ export function ReconciliationTab({ service, reconciliation, onServiceUpdate }: 
             </span>
           </div>
 
-          {/* Reconciliation Details */}
-          <div className="space-y-2 text-[12px]">
-            {reconciliation.expected != null && (
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Expected</span>
-                <span className="text-on-surface">€{reconciliation.expected}</span>
-              </div>
-            )}
-            {reconciliation.actual != null && (
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Actual</span>
-                <span className="text-on-surface">€{reconciliation.actual}</span>
-              </div>
-            )}
-            {reconciliation.difference != null && (
-              <div className={`flex justify-between font-medium ${reconciliation.difference === 0 ? 'text-green-600' : 'text-red-600'}`}>
-                <span>Difference</span>
-                <span>{reconciliation.difference >= 0 ? '+' : ''}€{reconciliation.difference}</span>
-              </div>
-            )}
-            {reconciliation.reason && (
-              <div className="space-y-1">
-                <span className="text-on-surface-variant">Reason</span>
-                <div className="text-on-surface bg-surface-container rounded-lg px-3 py-2">{reconciliation.reason}</div>
-              </div>
-            )}
-            {reconciliation.resolution && (
-              <div className="space-y-1">
-                <span className="text-on-surface-variant">Resolution</span>
-                <div className="text-on-surface bg-surface-container rounded-lg px-3 py-2">{reconciliation.resolution}</div>
-              </div>
-            )}
+          {/* Confrontation Table: Production vs Driver */}
+          <div className="bg-surface-container rounded-lg px-3 py-2">
+            <div className="grid grid-cols-[1fr_1fr_1fr] gap-2 text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider pb-1 border-b border-outline-variant/30">
+              <span>Field</span>
+              <span className="text-center">Production</span>
+              <span className="text-center">Driver</span>
+            </div>
+            <ReconRow label="Start Time" prod={prod.startTime} driver={drv.startTime} />
+            <ReconRow label="End Time" prod={prod.endTime} driver={drv.endTime} />
+            <ReconRow label="KM" prod={prod.km} driver={drv.km} />
+            <ReconRow label="Diaria" prod={prod.diaria} driver={drv.diaria} />
+            <ReconRow label="Festivo" prod={prod.festivo ? 'Yes' : 'No'} driver={drv.festivo ? 'Yes' : 'No'} />
+            <ReconRow label="Notturno" prod={prod.notturno ? 'Yes' : 'No'} driver={drv.notturno ? 'Yes' : 'No'} />
           </div>
 
-          {/* Navigate to full Reconciliation screen */}
+          {/* Resolved values */}
+          {isResolved && fin.startTime && (
+            <div className="bg-green-50 rounded-lg px-3 py-2 space-y-1">
+              <span className="text-[10px] font-semibold text-green-700 uppercase tracking-wider">Resolved Values</span>
+              <div className="grid grid-cols-2 gap-1 text-[11px]">
+                {fin.startTime && <div><span className="text-on-surface-variant">Start:</span> <span className="text-green-700 font-medium">{fin.startTime}</span></div>}
+                {fin.endTime && <div><span className="text-on-surface-variant">End:</span> <span className="text-green-700 font-medium">{fin.endTime}</span></div>}
+                {fin.km > 0 && <div><span className="text-on-surface-variant">KM:</span> <span className="text-green-700 font-medium">{fin.km}</span></div>}
+                {fin.diaria !== 'none' && <div><span className="text-on-surface-variant">Diaria:</span> <span className="text-green-700 font-medium">{fin.diaria}</span></div>}
+              </div>
+            </div>
+          )}
+
+          {/* Resolution info */}
+          {isResolved && reconciliation.resolvedBy && (
+            <div className="text-[11px] text-on-surface-variant">
+              Resolved by <span className="font-medium text-on-surface">{reconciliation.resolvedBy}</span>
+              {reconciliation.resolvedAt && <> on {new Date(reconciliation.resolvedAt).toLocaleString()}</>}
+              {reconciliation.resolutionNotes && <div className="mt-1 italic">"{reconciliation.resolutionNotes}"</div>}
+            </div>
+          )}
+
+          {/* Resolve button */}
           {!isResolved && can('reconciliation.update') && (
             <button
               onClick={openResolve}
@@ -1328,7 +1347,8 @@ export function ReconciliationTab({ service, reconciliation, onServiceUpdate }: 
         <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowResolveModal(false)}>
           <div className="absolute inset-0 bg-black/30" />
           <div className="relative bg-surface rounded-xl shadow-xl w-full max-w-md p-5" onClick={e => e.stopPropagation()}>
-            <h3 className="text-[15px] font-semibold text-on-surface mb-3">Resolve Reconciliation</h3>
+            <h3 className="text-[15px] font-semibold text-on-surface mb-1">Resolve Reconciliation</h3>
+            <p className="text-[11px] text-on-surface-variant mb-3">Confirm final values for this service</p>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1342,10 +1362,41 @@ export function ReconciliationTab({ service, reconciliation, onServiceUpdate }: 
                     placeholder="21:30" className="w-full mt-1 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40" />
                 </div>
               </div>
-              <div>
-                <label className="text-[11px] font-medium text-on-surface-variant">KM</label>
-                <input type="number" value={resolution.km} onChange={(e) => setResolution(r => ({ ...r, km: e.target.value }))}
-                  placeholder="73" className="w-full mt-1 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-medium text-on-surface-variant">KM</label>
+                  <input type="number" value={resolution.km} onChange={(e) => setResolution(r => ({ ...r, km: e.target.value }))}
+                    placeholder="73" className="w-full mt-1 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-on-surface-variant">Diaria</label>
+                  <select value={resolution.diaria} onChange={(e) => setResolution(r => ({ ...r, diaria: e.target.value }))}
+                    className="w-full mt-1 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40">
+                    <option value="">—</option>
+                    <option value="none">None</option>
+                    <option value="pastoral">Pastoral</option>
+                    <option value="sommerextra">Summer Extra</option>
+                    <option value="extra">Extra</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-medium text-on-surface-variant">Festivo</label>
+                  <select value={resolution.festivo} onChange={(e) => setResolution(r => ({ ...r, festivo: e.target.value }))}
+                    className="w-full mt-1 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40">
+                    <option value="false">No</option>
+                    <option value="true">Yes</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-on-surface-variant">Notturno</label>
+                  <select value={resolution.notturno} onChange={(e) => setResolution(r => ({ ...r, notturno: e.target.value }))}
+                    className="w-full mt-1 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40">
+                    <option value="false">No</option>
+                    <option value="true">Yes</option>
+                  </select>
+                </div>
               </div>
               <div>
                 <label className="text-[11px] font-medium text-on-surface-variant">Notes</label>
