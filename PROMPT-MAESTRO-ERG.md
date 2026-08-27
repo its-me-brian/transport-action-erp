@@ -1,2456 +1,2008 @@
-# PROMPT MAESTRO — REDISEÑO Y CERTIFICACIÓN COMPLETA DEL ERP
+# PROMPT MAESTRO — CIERRE OPERATIVO Y VALIDACIÓN E2E DEL ERP
 
 > **Autor:** Usuario del proyecto Transport Action ERP
-> **Fecha:** 2026-08-25
-> **Propósito:** Entregar a una IA de programación junto con el proyecto para audit y redesign completo
+> **Fecha:** 2026-08-27
+> **Propósito:** Dejar el proyecto funcional, coherente y listo para empezar a usarse
 
 ---
 
-## ACTÚA COMO:
+ACTÚA COMO CTO + SENIOR FULL-STACK ENGINEER + QA LEAD + UX ENGINEER DEL PROYECTO.
 
-- Senior Full-Stack Engineer
-- Senior Frontend Architect
-- UX/UI Designer especializado en ERP
-- Backend/API Architect
-- QA Engineer
-- Security/Permissions Engineer
-- Mobile/Responsive UX Engineer
+Voy a proporcionarte el proyecto completo de la web app ERP existente.
+
+TU OBJETIVO NO ES PROPONER CAMBIOS.
+
+TU OBJETIVO ES DEJAR EL PROYECTO FUNCIONAL, COHERENTE Y LISTO PARA EMPEZAR A USARSE.
 
 Debes trabajar sobre EL PROYECTO EXISTENTE.
 
-NO debes crear una aplicación paralela.
-NO debes rehacer funcionalidades que ya funcionan sin necesidad.
-NO debes romper contratos existentes.
-NO debes eliminar funcionalidades existentes simplemente porque no estén visibles.
-NO debes asumir que una certificación anterior significa que el código actual está correcto.
+NO debes crear un ERP paralelo.
+NO debes rehacer funcionalidades que ya funcionan correctamente.
+NO debes eliminar funcionalidades existentes sin justificarlo.
+NO debes limitarte a corregir el frontend.
+NO debes limitarte a corregir el backend.
 
-============================================================
-OBJETIVO PRINCIPAL
-============================================================
-
-El objetivo es transformar el frontend actual en un ERP profesional, moderno, denso, ergonómico y extremadamente fácil de utilizar para un COORDINATOR.
-
-La unidad central de trabajo debe ser:
-
-                    SERVICE
-
-Todo lo relacionado con un servicio debe poder gestionarse desde:
-
-                    /service/:serviceId
-
-El usuario debe poder llegar al Service desde:
-
-- Calendar
-- Dashboard
-- Transport List
-- Driver Reports
-- Driver Link
-- WhatsApp Inbox
-- Reconciliation
-- Rapportino
-- cualquier otra pantalla relacionada
-
-y, una vez dentro del Service, NO debe perder el contexto del servicio.
-
-El Service debe convertirse en el verdadero:
-
-                    SERVICE WORKSPACE
-                    / SERVICE COMMAND CENTER
-
-Desde allí debe ser posible consultar y gestionar de forma coherente:
-
-- información general
-- lifecycle operativo
-- lifecycle financiero
-- movimientos
-- driver
-- driver link
-- driver report
-- WhatsApp
-- inbox
-- reconciliation
-- rapportino
-- costes
-- ingresos
-- facturación
-- actividad
-- historial
-- incidencias
-- acciones pendientes
-- permisos
-- trazabilidad
-
-sin obligar al coordinador a saltar innecesariamente entre pantallas.
-
-============================================================
-REGLA CRÍTICA — NO CONFÍES EN DOCUMENTACIÓN ANTERIOR
-============================================================
-
-El proyecto puede contener documentos como:
-
-- FINAL-CERTIFICATION
-- audit reports
-- implementation reports
-- completion reports
-- QA reports
-- previous prompts
-- changelogs
-
-NO asumir que esos documentos representan el estado actual.
-
-El código actual es la fuente de verdad.
-
-Cada afirmación de esos documentos debe volver a verificarse contra:
-
-frontend
-backend
-API
-permissions
-routes
-tests
-
-Si existe una discrepancia:
-
-CÓDIGO ACTUAL
->
-DOCUMENTACIÓN ANTIGUA
-
-Debes actualizar la documentación al final.
-
-============================================================
-PROHIBIDO HACER UN REDISEÑO SOLAMENTE VISUAL
-============================================================
-
-NO limitar el trabajo a:
-
-- CSS
-- colores
-- spacing
-- borders
-- shadows
-- typography
-- responsive CSS
-
-Antes de modificar visualmente una pantalla debes determinar:
-
-1. qué información representa
-2. qué backend la alimenta
-3. qué acciones permite
-4. qué rol puede ejecutar cada acción
-5. qué estado del Service representa
-6. qué otras pantallas duplican esa función
-7. qué URL debe representar
-8. qué eventos/logs genera
-9. qué sucede después de una mutation
-10. cómo funciona en mobile
-
-El rediseño visual debe ser consecuencia de la arquitectura funcional.
-
-============================================================
-SERVICE WORKSPACE GOLDEN RULE
-============================================================
-
-SI UNA FUNCIÓN ESTÁ RELACIONADA CON UN SERVICE:
-
-DEBE SER POSIBLE LLEGAR A ELLA DESDE EL SERVICE.
-
-Y SI EL USUARIO LLEGA A ESA FUNCIÓN DESDE OTRA PARTE DEL ERP:
-
-DEBE PODER VOLVER AL SERVICE CON UN SOLO CLICK.
-
-Ejemplo:
-
-Calendar
-→ Service
-
-WhatsApp Inbox
-→ Service / WhatsApp
-
-Driver Report Inbox
-→ Service / Driver Report
-
-Reconciliation
-→ Service / Reconciliation
-
-Rapportino
-→ Service / Finance / Rapportino
-
-Driver Link
-→ Service / Communication / Driver Link
-
-Nunca perder:
-
-Service ID
-Driver ID
-Project ID
-Correlation ID
-
-============================================================
-REGLA ABSOLUTA DE EJECUCIÓN
-============================================================
-
-NO empieces directamente a modificar código.
-
-PRIMERO debes realizar una AUDITORÍA COMPLETA.
-
-Debes recorrer:
-
-1. frontend
-2. backend
-3. API
-4. routing
-5. modelos
-6. stores
-7. permisos
-8. roles
-9. logs
-10. Service lifecycle
-11. Driver Link
-12. WhatsApp
-13. Driver Reports
-14. Reconciliation
-15. Rapportino
-16. responsive/mobile
-17. navegación
-18. estados loading/error/empty
-19. componentes duplicados
-20. pantallas duplicadas
-21. rutas duplicadas
-22. contratos frontend/backend
-
-NO declares terminado ningún punto simplemente porque exista el archivo correspondiente.
-
-Debes verificar que:
+Debes comprobar y corregir:
 
 FRONTEND
-       ↓
+↓
 API
-       ↓
+↓
 BACKEND
-       ↓
-DATABASE / STORAGE
-       ↓
-EVENTS / LOGS
+↓
+REPOSITORIES
+↓
+BASE DE DATOS / GOOGLE SHEETS / PERSISTENCIA
+↓
+RESPUESTA
+↓
+FRONTEND
+↓
+ESTADO VISUAL
 
-se corresponden realmente.
+y posteriormente comprobar el flujo completo mediante pruebas.
 
-============================================================
-REGLA DE NO-OMISIÓN
-============================================================
+===========================================================
+0. REGLA PRINCIPAL: NO DEJAR NADA "PENDIENTE"
+===========================================================
 
-Debes mantener una CHECKLIST MAESTRA.
+No quiero una lista de recomendaciones.
 
-Cada tarea tendrá:
+Quiero IMPLEMENTACIÓN + VERIFICACIÓN.
 
-[ ] PENDIENTE
-[~] EN PROGRESO
-[x] IMPLEMENTADO
-[✓] VERIFICADO
+Cada problema encontrado debe pasar por:
 
-No puedes marcar:
+1. DETECTAR
+2. DOCUMENTAR
+3. CORREGIR
+4. PROBAR
+5. VERIFICAR PERSISTENCIA
+6. VERIFICAR READ-BACK
+7. VERIFICAR UI
+8. VERIFICAR PERMISOS
+9. VERIFICAR LOGS
+10. VERIFICAR REGRESIÓN
 
-[x] IMPLEMENTADO
+No marques una tarea como terminada porque:
 
-sin haber comprobado el código.
+- compila
+- el botón funciona
+- la API responde 200
+- el frontend muestra un mensaje de éxito
 
-No puedes marcar:
+Debe comprobarse que:
 
-[✓] VERIFICADO
+FRONTEND
+→ API
+→ BACKEND
+→ BD
+→ READ-BACK
+→ FRONTEND
 
-sin haber comprobado:
+produce exactamente el resultado esperado.
 
-- frontend
-- backend
-- API
-- permisos
-- responsive
-- estados
-- errores
-- navegación
+===========================================================
+1. PRIMERA FASE — AUDITORÍA COMPLETA DEL PROYECTO
+===========================================================
 
-Cuando termines debes entregar:
+ANTES DE MODIFICAR CÓDIGO:
 
-MASTER IMPLEMENTATION CHECKLIST
+analiza TODO el proyecto.
 
-con TODOS los puntos.
+Revisa:
 
-NO debes decir simplemente:
-"todo está listo".
-
-Debes demostrarlo.
-
-============================================================
-FASE 0 — AUDITORÍA INICIAL
-============================================================
-
-Antes de modificar nada:
-
-1. Analiza estructura completa del proyecto.
-
-2. Identifica:
-
-- entry points
-- router
-- layouts
-- screens
-- pages
-- components
-- hooks
-- contexts
-- stores
+- estructura frontend
+- estructura backend
+- APIs
 - services
-- API clients
-- backend endpoints
 - repositories
 - models
-- permissions
-- roles
+- types
+- stores
+- hooks
+- componentes
+- páginas
+- routing
+- autenticación
+- autorización
+- state machines
+- Google Sheets / BD
+- migraciones
 - logs
+- audit logs
+- activity feed
 - tests
+- E2E
+- fixtures
+- documentación
 
-3. Construye un mapa:
+Construye internamente una matriz:
 
-ROUTE
-→ SCREEN
-→ COMPONENTS
+ENTIDAD
+→ FRONTEND
 → API
-→ BACKEND FUNCTION
-→ DATABASE/STORAGE
-→ PERMISSION
+→ BACKEND
+→ REPOSITORY
+→ PERSISTENCIA
+→ READ
+→ UPDATE
+→ DELETE
+→ PERMISSIONS
+→ LOGGING
+→ TEST
 
-4. Detecta:
+Entidades mínimas:
 
-- duplicaciones
-- código muerto
-- rutas duplicadas
-- componentes equivalentes
-- navegación antigua
-- modals innecesarios
-- drawers innecesarios
-- lógica duplicada
-- permisos inconsistentes
-- nombres inconsistentes
+- Service
+- Driver
+- Project
+- Client
+- Movement
+- DriverLink
+- DriverLinkResponse
+- WhatsApp message
+- DriverReportInbox
+- DriverReport
+- Reconciliation
+- RateCard
+- SupplierRate
+- ServiceRevenueBreakdown
+- ServiceCostBreakdown
+- Rapportino
+- Invoice
+- InvoiceItem
+- Payment
+- User
+- Role
+- Permission
+- AuditLog
+- ActivityLog
 
-5. NO elimines nada todavía.
+NO empieces el rediseño visual hasta haber entendido estos contratos.
 
-Primero presenta:
+===========================================================
+2. SEGUNDA FASE — SERVICE COMO UNIDAD CENTRAL
+===========================================================
 
-ARCHITECTURE AUDIT
+El concepto principal del ERP debe ser:
 
-============================================================
-FASE 1 — ROUTING Y NAVEGACIÓN
-============================================================
+SERVICE = unidad central de operación.
 
-El router debe ser la fuente de verdad.
+El Service debe permitir gestionar TODO lo que corresponde a ese servicio.
 
-El Service debe utilizar URLs profundas.
+Desde un Service concreto se debe poder acceder y operar sobre:
 
-Ejemplo:
+- información básica
+- cliente
+- proyecto
+- driver
+- vehículo
+- movimientos
+- horarios
+- DriverLink
+- WhatsApp
+- DriverReport
+- Reconciliation
+- RateCard
+- SupplierRate
+- revenue
+- costs
+- economics
+- Rapportino
+- Invoice / InvoiceItems
+- Payments relacionados
+- historial
+- audit trail
 
-/service/:serviceId
+No significa duplicar las pantallas globales.
 
-Y:
+Debe existir:
 
-/service/:serviceId/overview
-/service/:serviceId/movements
-/service/:serviceId/operations
-/service/:serviceId/communication
-/service/:serviceId/finance
-/service/:serviceId/history
+GLOBAL WORKSPACE
+para trabajar con muchos servicios
 
-Si se decide utilizar tabs internas, deben seguir siendo deep-linkable.
-
-Ejemplo:
-
-/service/123/communication/whatsapp
-
-debe abrir directamente:
-
-Service 123
-→ Communication
-→ WhatsApp
-
-NO:
-
-URL dice WhatsApp
-pero UI muestra Overview.
-
-============================================================
-IMPORTANTE
-============================================================
-
-NO utilizar:
-
-initialTab
-
-como única fuente de verdad.
-
-La URL debe controlar el estado de navegación.
-
-La navegación debe ser:
-
-URL
- ↓
-route params
- ↓
-active section
- ↓
-render
-
-No:
-
-URL
- ↓
-initial state
- ↓
-estado independiente
-
-============================================================
-FASE 2 — ELIMINAR DOBLE NAVEGACIÓN
-============================================================
-
-Actualmente existe:
-
-GLOBAL NAVIGATION
-+
-SERVICE NAVIGATION
-
-Esto genera demasiado consumo horizontal.
-
-Cuando el usuario entra en:
-
-/service/:serviceId
-
-debe activarse:
-
-SERVICE WORKSPACE MODE
-
-La navegación global debe:
-
-- minimizarse
-- convertirse en icon/menu
-- poder abrirse como overlay
-- no ocupar innecesariamente espacio
-
-El Service debe utilizar prácticamente todo el viewport.
-
-Desktop:
-
-GLOBAL NAV
-→ COLLAPSIBLE
+y:
 
 SERVICE WORKSPACE
-→ FULL WIDTH
+para resolver un servicio concreto.
 
-Mobile:
+===========================================================
+3. SERVICE WORKSPACE — REDISEÑO
+===========================================================
 
-GLOBAL NAV
-→ DRAWER
+Rediseña el Service Workspace para convertirlo en un verdadero:
 
-============================================================
-FASE 3 — NUEVO SERVICE WORKSPACE
-============================================================
+"SINGLE SERVICE OPERATIONAL COCKPIT"
 
-Rediseñar completamente:
+No utilizar un enorme panel lateral permanente si desperdicia espacio.
 
-ServiceWorkspace
+Prioriza:
 
-No tratarlo como un simple modal.
-
-Debe convertirse en una página/record workspace real.
-
-Estructura:
-
-------------------------------------------------------------
 HEADER
-------------------------------------------------------------
-
-←
-
-SVC-TA-2026-00001
-
-Driver Name
-
+-------------------------
+Service ID
 Date
-
-Service Type
-
-Vehicle
-
-Operational Status
-
+Client
+Project
+Driver
+Status
 Financial Status
+Next Action
+-------------------------
 
-[PRIMARY ACTION]
+TABS / SECTIONS
 
-------------------------------------------------------------
-LIFECYCLE
-------------------------------------------------------------
-
-OPERATIONAL
-
-Imported
-→ Assigned
-→ Confirmed
-→ En Route
-→ Completed
-→ Reported
-→ Review
-→ Validated
-
-FINANCIAL
-
-Pending
-→ Calculated
-→ Reconciliation
-→ Approved
-→ Billable
-→ Invoiced
-→ Paid
-→ Closed
-
-Ambos deben poder visualizarse.
-
-NO mostrar únicamente:
-
-"In Review"
-
-si existe información financiera adicional.
-
-------------------------------------------------------------
-NAVIGATION
-------------------------------------------------------------
-
-Reducir las pestañas actuales.
-
-Propuesta:
-
-Overview
-Movements
-Operations
-Communication
-Finance
-History
-
-============================================================
+OVERVIEW
 OPERATIONS
-============================================================
-
-Agrupar:
-
-- Driver
-- Driver Report
-- Reconciliation
-
-============================================================
 COMMUNICATION
-============================================================
-
-Agrupar:
-
-- Driver Link
-- WhatsApp
-- Inbox
-
-============================================================
+DRIVER REPORT
+RECONCILIATION
 FINANCE
-============================================================
-
-Agrupar:
-
-- Rapportino
-- Revenue
-- Cost
-- Invoice
-- Payment
-
-============================================================
 HISTORY
-============================================================
 
-Activity Feed contextual.
+Cada sección debe tener información accionable.
 
-============================================================
-FASE 4 — SERVICE OVERVIEW
-============================================================
+No mostrar únicamente datos.
 
-Overview NO debe ser simplemente una ficha.
+Debe permitir ejecutar las acciones correspondientes.
 
-Debe convertirse en:
+===========================================================
+4. OVERVIEW
+===========================================================
 
-SERVICE COMMAND CENTER.
+Mostrar de forma compacta:
 
-Debe mostrar simultáneamente:
+- Service ID
+- fecha
+- cliente
+- proyecto
+- service type
+- vehicle type
+- driver
+- vehicle plate
+- passengers
+- pickup
+- dropoff
+- status
+- next action
 
-1. Service identity
-2. Next Action
-3. Operational lifecycle
-4. Financial lifecycle
-5. Driver
-6. Movements
-7. Driver Link status
-8. Driver Report status
-9. WhatsApp status
-10. Reconciliation status
-11. Financial status
-12. Alerts
-13. Recent Activity
+Mostrar también:
 
-Diseñar una estructura de alta densidad.
+OPERATIONAL STATUS
+FINANCIAL STATUS
 
-No utilizar grandes espacios vacíos.
+y cualquier bloqueo:
 
-No crear tarjetas gigantes sin información.
+⚠ Missing Driver
+⚠ Missing Driver Report
+⚠ RateCard Missing
+⚠ SupplierRate Missing
+⚠ Reconciliation Pending
+⚠ Financial Approval Required
 
-Priorizar:
+Cada warning debe llevar a la acción correspondiente.
 
-- tablas compactas
-- filas
-- badges
-- status indicators
-- action buttons
-- agrupaciones
+===========================================================
+5. MOVEMENTS / OPERATIONS
+===========================================================
 
-============================================================
-FASE 5 — ACTION CENTER
-============================================================
+Desde Service:
 
-El Service debe calcular una:
+- ver movimientos
+- crear movimiento
+- editar movimiento
+- eliminar movimiento si corresponde
+- modificar horarios
+- modificar pickup/dropoff
+- pasajeros
+- flight info
+- notas
+- vehicle
+- driver
 
-NEXT ACTION
+Cada modificación debe comprobar:
 
-basándose en:
+UI
+→ API
+→ BACKEND
+→ DB
+→ READ-BACK
 
-- OperationalStatus
-- FinancialStatus
-- Driver
-- Driver Link
-- Driver Report
-- Inbox
-- WhatsApp
-- Reconciliation
-- Permissions
+No permitas campos aparentemente editables que no tengan persistencia real.
 
-Ejemplos:
+IMPORTANTE:
 
-Assign Driver
-Confirm Service
-Start Service
-Complete Service
-Request Driver Report
-Review Driver Report
-Resolve Reconciliation
-Validate Service
-Approve Financial Data
-Mark Billable
+audita TODOS los campos de:
 
-No mostrar una acción que el usuario no pueda ejecutar.
+EditService
+EditServiceSections
+formularios
+modales
+inputs
 
-No esperar a que backend devuelva ACCESS_DENIED para ocultarla.
+Para cada campo comprobar:
 
-============================================================
-FASE 6 — NO CERRAR EL SERVICE DESPUÉS DE ACCIONES
-============================================================
+campo UI
+→ nombre enviado
+→ parámetro API
+→ campo backend
+→ columna BD
+→ lectura posterior
 
-Actualmente una acción puede provocar:
+Si un campo no puede guardarse correctamente:
 
-ACTION
-→ update
-→ close workspace
+O CONECTARLO CORRECTAMENTE
+O ELIMINARLO DE LA UI.
 
-ESTO DEBE CORREGIRSE.
+Nunca dejar un campo "falso editable".
 
-Debe ser:
+===========================================================
+6. DRIVER
+===========================================================
 
-ACTION
-→ backend mutation
-→ updated Service
-→ refetch/returned DTO
-→ update UI
-→ workspace permanece abierto
+Desde Service debe poder gestionarse:
 
-Ejemplo:
+- driver
+- teléfono
+- vehículo
+- plate
+- DriverLink
+- estado del driver
 
-Validate
+Comprobar relación:
+
+Service.DriverID
+→ Driver.ID
+
+Nunca duplicar información del Driver en Service si la fuente de verdad es Driver.
+
+Si el usuario añade/modifica teléfono del Driver:
+
+UI
+→ Driver API
+→ Driver repository
+→ DB
+→ read-back
+
+===========================================================
+7. DRIVER LINK — FLUJO COMPLETO
+===========================================================
+
+Auditar:
+
+CREACIÓN
+EDICIÓN
+ENVÍO
+APERTURA
+RESPUESTA
+RECEPCIÓN
+CAPTURA
+NORMALIZACIÓN
+CORRELACIÓN
+DRIVER REPORT
+
+Flujo esperado:
+
+SERVICE
 ↓
-backend
+CREATE DRIVER LINK
 ↓
-Service = Validated
+LINK
 ↓
-Lifecycle actualizado
+DRIVER
 ↓
-Next Action actualizado
+SUBMISSION
 ↓
-Activity agregada
+DriverLinkResponse
 ↓
-Workspace sigue abierto
+DriverReportInbox
+↓
+Normalization
+↓
+Correlation
+↓
+Review
+↓
+DriverReport
+↓
+Reconciliation
 
-============================================================
-FASE 7 — DRIVER
-============================================================
+DriverLink debe utilizar la MISMA pipeline de normalización/captura que WhatsApp.
 
-Dentro de:
+No permitir que:
 
-Operations → Driver
+DriverLink
+→ Inbox
+
+y quede abandonado.
+
+Debe llegar hasta:
+
+DriverReport
+
+cuando los datos sean suficientes.
+
+Si necesita revisión humana:
 
 mostrar:
 
-- driver
-- phone
-- vehicle
-- assignment
-- driver status
-- driver link
-- report status
-- WhatsApp status
-- last activity
+PENDING REVIEW
 
-Permitir:
+y no:
 
-- cambiar driver
-- crear driver si corresponde
-- actualizar teléfono cuando esté permitido
-- abrir comunicación
-- abrir Driver Link
-- abrir Driver Report
+SUCCESS.
 
-Toda modificación debe respetar permissions.
+===========================================================
+8. WHATSAPP — FLUJO COMPLETO
+===========================================================
 
-============================================================
-FASE 8 — DRIVER LINK
-============================================================
+Este flujo es PRIORIDAD MÁXIMA.
 
-Driver Link debe integrarse completamente con Service.
-
-Mostrar:
-
-LINK STATUS
-
-Created
-Opened
-Submitted
-Expired
-Revoked
-Updated
-
-Mostrar:
-
-- creation time
-- expiry
-- access
-- last access
-- submission
-- driver
-- service
-- events
-
-Utilizar:
-
-DriverLinkEvents
-
-para Activity.
-
-El Service debe poder abrir:
-
-/service/:id/communication/driver-link
-
-y nunca perder contexto.
-
-Acciones:
-
-Create
-Regenerate
-Copy
-Open
-Revoke
-
-según permisos.
-
-No mostrar acciones no autorizadas.
-
-============================================================
-FASE 9 — WHATSAPP
-============================================================
-
-NO tratar WhatsApp únicamente como:
-
-"Open WhatsApp".
-
-Integrar:
+Debe funcionar:
 
 WhatsApp
-→ capture
-→ parser
-→ inbox
-→ normalize
-→ correlation
-→ review
-→ accept/reject
-→ DriverReport
+↓
+Parser
+↓
+Reports
+↓
+Candidate Services
+↓
+Correlation
+↓
+Inbox
+↓
+Normalization
+↓
+Review
+↓
+DriverReport
+↓
+Reconciliation
 
-Dentro del Service mostrar:
+MUY IMPORTANTE:
 
-- último mensaje
-- estado
-- driver
-- service match
-- parsing status
-- correlation
-- discrepancies
-- report result
+NO mostrar:
+
+"Report captured successfully"
+
+si únicamente se creó DriverReportInbox.
+
+El resultado debe distinguir:
+
+captured
+normalized
+reviewReady
+driverReportCreated
+driverReportApproved
+reconciliationCreated
+rateCardApplied
 
 Ejemplo:
 
-WhatsApp received
-✓ Parsed
-✓ Driver matched
-✓ Service matched
-⚠ Difference detected
+{
+  captured: true,
+  normalized: true,
+  reviewReady: true,
+  driverReportCreated: true,
+  driverReportApproved: false,
+  reconciliationCreated: false,
+  errors: []
+}
+
+Si falla:
+
+{
+  captured: true,
+  normalized: true,
+  reviewReady: true,
+  driverReportCreated: false,
+  errors: [
+    {
+      code: "...",
+      message: "..."
+    }
+  ]
+}
+
+Nunca ocultar errores de etapas posteriores.
+
+===========================================================
+9. WHATSAPP MULTI-SERVICE
+===========================================================
+
+Debe existir la posibilidad de pegar varios mensajes de WhatsApp.
+
+Ejemplo:
+
+MESSAGE 1
+MESSAGE 2
+MESSAGE 3
+MESSAGE 4
+MESSAGE 5
+
+Parser:
+
+REPORT 1
+REPORT 2
+REPORT 3
+REPORT 4
+REPORT 5
+
+Cada report debe generar:
+
+serviceCandidates
+
+con:
+
+- serviceId
+- driverId
+- date
+- time
+- project
+- client
+- serviceType
+- confidence
+
+IMPORTANTE:
+
+NO asumir que todos pertenecen al Service actualmente abierto.
+
+Si hay varios candidatos:
+
+mostrar:
+
+REPORT
+→ candidate Service
+→ confidence
+→ reason
+
+Ejemplo:
+
+REPORT #1
+SVC-00001
+96%
+Driver + date + time match
+
+REPORT #2
+SVC-00018
+91%
+
+REPORT #3
+SVC-00022
+84%
 
 Permitir:
 
-Review
-Accept
-Reject
-Open WhatsApp
+CONFIRM
 
-según permisos.
+o:
 
-No duplicar:
+CHANGE SERVICE
 
-WhatsAppCaptureScreen
-WhatsAppParser
-WhatsAppTab
-WhatsAppParserSection
+o:
 
-sin una justificación arquitectónica clara.
+REVIEW
 
-Consolidar la lógica.
+No realizar asociaciones incorrectas automáticamente.
 
-============================================================
-FASE 10 — DRIVER REPORT
-============================================================
+===========================================================
+10. CORRELATION
+===========================================================
 
-El flujo debe ser:
+Crear/usar un:
 
-Driver
-→ Driver Link / WhatsApp
-→ Submission
-→ Inbox
-→ Normalization
-→ Review
-→ Accept
-→ DriverReport
-→ Service
-→ Reconciliation
-→ Validation
+CorrelationID
 
-Debe poder seguirse desde el Service.
+que permita seguir:
 
-Mostrar:
-
-- status
-- received at
-- source
-- driver
-- correlation ID
-- parsed values
-- expected values
-- discrepancies
-- accepted/rejected
-- reviewer
-- review time
-
-============================================================
-FASE 11 — RECONCILIATION
-============================================================
-
-NO convertir:
-
-reconciliation exists
-
-en:
-
-Completed.
-
-Respetar estados reales del backend.
-
-Ejemplo:
-
-Pending
-In Progress
-Resolved
-
-Mostrar:
-
-- expected
-- actual
-- difference
-- status
-- reason
-- resolution
-- user
-- timestamp
-
-Debe estar relacionado con:
-
-Service
-Movement
+WhatsApp
+↓
+Inbox
+↓
 DriverReport
+↓
+Reconciliation
+↓
+Revenue
+↓
+Cost
+↓
+Rapportino
+↓
+Invoice
+↓
+Payment
+
+El mismo principio debe aplicarse a DriverLink.
+
+El coordinador debe poder ver el correlation ID en History/Audit cuando sea necesario.
+
+===========================================================
+11. DRIVER REPORT
+===========================================================
+
+El DriverReport debe tener una relación inequívoca con:
+
+- Service
+- Driver
+- Project
+- Client
+- Date
+- source
+- channel
+- correlation ID
+
+Comprobar que:
+
+DriverReport.ServiceID === Service.ID
+
+DriverReport.DriverID === Service.DriverID
 
 cuando corresponda.
 
-============================================================
-FASE 12 — RAPPORTINO
-============================================================
+Nunca confiar únicamente en valores enviados por frontend.
 
-MUY IMPORTANTE.
+El backend debe validar estas relaciones.
 
-El Rapportino dentro de Service debe corresponder REALMENTE al Service.
+===========================================================
+12. DRIVER REPORT LIST
+===========================================================
 
-NO traer todos los rapportini del Project y mostrarlos dentro del Service.
+Revisar cualquier código del tipo:
 
-Debe existir una relación inequívoca:
+reports[0]
 
-Rapportino
-→ ServiceID
+No asumir que el primer report es el correcto.
 
-Si backend actualmente no ofrece:
+Implementar una selección determinista:
 
-getRapportinoByService(serviceId)
+- latest
+- active
+- approved
+- current
 
-crear/ajustar el endpoint necesario sin romper APIs existentes.
+según reglas de negocio.
 
-Frontend:
+El frontend debe recibir del backend el report correcto.
 
-Service
-→ Finance
-→ Rapportino
+===========================================================
+13. RECONCILIATION
+===========================================================
 
-debe mostrar exclusivamente la información correspondiente.
+Flujo:
 
-============================================================
-FASE 13 — FINANCE
-============================================================
+DriverReport
+↓
+Reconciliation
+↓
+Compare planned vs actual
+↓
+Differences
+↓
+Resolve
+↓
+Approve
+↓
+Financial processing
 
-El Service debe poder mostrar:
+Desde Service debe poder:
+
+- ver reconciliation
+- resolver diferencias
+- aprobar
+- volver a revisar
+- ver resultado
+
+Si existe diferencia:
+
+mostrarla claramente.
+
+No esconderla.
+
+===========================================================
+14. RATECARD — PRIORIDAD MÁXIMA
+===========================================================
+
+Revisar completamente RateCard.
+
+La selección debe considerar realmente los criterios definidos por negocio.
+
+Como mínimo comprobar:
+
+Project
+Client
+ServiceType
+VehicleType
+validity
+active
+
+No aceptar que el comentario del código diga:
+
+"Project + ServiceType + VehicleType"
+
+si la implementación realmente busca:
+
+"Client + VehicleType + ServiceType"
+
+La implementación real debe coincidir con el modelo de negocio.
+
+Una vez seleccionado:
+
+guardar:
+
+RateCardID
+
+y snapshot de los valores utilizados cuando corresponda.
+
+El Service debe mostrar:
+
+RATE CARD
+----------------
+RateCard ID
+Project
+Service Type
+Vehicle Type
+Base
+Included KM
+Extra KM
+Extra Hour
+Night
+Holiday
+Diaria
+----------------
+
+Si falta RateCard:
+
+NO ocultar el error.
+
+Mostrar:
+
+⚠ RATECARD REQUIRED
+
+y bloquear únicamente las etapas que realmente dependan de él.
+
+===========================================================
+15. NIGHT / NOTTURNO
+===========================================================
+
+Revisar la lógica de:
+
+isNotturno
+
+No tratar:
+
+false
+
+como equivalente automático a:
+
+"night disabled"
+
+si el valor realmente significa:
+
+"not yet determined".
+
+Separar:
+
+AUTO
+FORCED TRUE
+FORCED FALSE
+
+si el modelo de negocio lo requiere.
+
+La nocturnidad debe calcularse correctamente a partir de los horarios cuando corresponda.
+
+===========================================================
+16. SUPPLIER RATE / COST
+===========================================================
+
+Auditar:
+
+SupplierRate
+↓
+ServiceCostBreakdown
+
+Debe quedar trazabilidad:
+
+SupplierRateID
+
+y fuente:
+
+supplier_rate
+
+Si falta:
+
+mostrar:
+
+⚠ SUPPLIER RATE REQUIRED
+
+No ocultar errores.
+
+===========================================================
+17. ECONOMICS
+===========================================================
+
+Debe existir una cadena clara:
+
+Revenue
+-
+Cost
+=
+Margin
+
+Mostrar:
 
 Revenue
 Cost
 Margin
-Rapportino
-Invoice
-Payment
 
-Respetando:
+y fuentes:
 
-FinancialStatus
+RateCard
+SupplierRate
 
-y permisos.
+Cada número debe poder explicarse.
+
+Si:
+
+Revenue = 0
+
+porque falta RateCard:
+
+mostrar el motivo.
+
+No simplemente:
+
+€0.
+
+===========================================================
+18. FINANCIAL STATUS
+===========================================================
+
+Revisar completamente la state machine.
+
+Debe existir claramente:
+
+Operational Status
+
+y:
+
+Financial Status
+
+No mezclar ambas.
+
+Validar:
+
+Importato
+→ Assegnato
+→ Confermato
+→ InCorso
+→ Realizzato
+→ Reportato
+→ Revision
+→ Approvato
+→ ...
+
+y la correspondiente transición financiera:
+
+Calculated
+→ Approved
+→ Facturable
+→ Invoiced
+→ Paid
+
+La UI debe reflejar EXACTAMENTE las transiciones permitidas por backend.
+
+Nunca ofrecer una acción que provoque:
+
+INVALID_TRANSITION.
+
+===========================================================
+19. NEXT ACTION
+===========================================================
+
+Next Action debe derivarse del estado real del backend.
+
+No hardcodear:
+
+Importato + driver
+→ Confirm
+
+si la state machine realmente requiere:
+
+Importato
+→ Assegnato
+→ Confermato
+
+La UI debe mostrar exactamente la siguiente transición válida.
 
 Ejemplo:
 
-Operational:
-VALIDATED
+Status:
+Importato
 
-Financial:
-PENDING
+Next Action:
+ASSEGNA DRIVER
 
-Debe ser perfectamente visible.
+Después:
 
-============================================================
-FASE 14 — HISTORY
-============================================================
+Status:
+Assegnato
 
-NO utilizar:
+Next Action:
+CONFERMA SERVICE
 
-getAuditLog(200)
+etc.
 
-y filtrar en frontend.
+===========================================================
+20. RAPPORTINO
+===========================================================
 
-Eso NO garantiza que el histórico esté completo.
+Revisar completamente el vínculo:
 
-Crear/utilizar:
+Service
+→ Rapportino
 
-getServiceActivity(serviceId)
+No utilizar únicamente:
 
-o equivalente.
+projectId
 
-El Service debe mostrar:
+si se necesita:
 
-Activity Feed
+serviceId.
 
-Ejemplo:
+El backend debe devolver únicamente los Rapportinos que contienen realmente ese Service.
 
-10:15 Service assigned
-10:22 Driver Link created
-10:28 Driver opened link
-10:47 Driver submitted report
-10:48 Inbox captured report
-10:50 WhatsApp received
-10:55 Discrepancy detected
-11:03 Coordinator reviewed
-11:10 Service validated
+Auditar:
+
+- filtros
+- fechas
+- driver
+- collaborator
+- service
+- project
+- client
+
+Debe funcionar desde:
+
+GLOBAL RAPPORTINI
+
+y:
+
+SERVICE → RAPPORTINO
+
+sin mezclar scopes.
+
+===========================================================
+21. INVOICE
+===========================================================
 
 Separar:
 
-ACTIVITY FEED
+Project Invoice
 
 de:
 
-AUDIT LOG
+Service Invoice Item.
 
-Audit Log debe ser técnico/inmutable.
+Una Invoice puede pertenecer al:
 
-Activity Feed debe ser legible para usuarios.
+Client / Project
 
-============================================================
-FASE 15 — DRIVER LINK EVENTS
-============================================================
+pero sus:
 
-Integrar:
+InvoiceItems
 
-DriverLinkEvents
+deben poder estar vinculados a:
 
-en Activity.
+ServiceID.
 
-Eventos:
+Desde Service mostrar únicamente:
 
-CREATED
-ACCESSED
-SUBMITTED
-EXPIRED
-REVOKED
-UPDATED
+InvoiceItems relacionados con el Service.
 
-Relacionarlos con:
+No mostrar todas las facturas del proyecto como si fueran del Service.
 
-ServiceID
-DriverID
-CorrelationID
+===========================================================
+22. PAYMENTS
+===========================================================
 
-============================================================
-FASE 16 — PERMISSIONS
-============================================================
+Revisar igualmente:
 
-AUDITAR COMPLETAMENTE:
+Payment
+→ Invoice
+→ InvoiceItem
+→ Service
+
+No mostrar todos los pagos del cliente como si pertenecieran al Service.
+
+Mostrar únicamente el contexto relacionado.
+
+===========================================================
+23. FINANCIAL WORKFLOW
+===========================================================
+
+Debe quedar:
+
+Service
+↓
+Actuals confirmed
+↓
+Financial approval
+↓
+Facturable
+↓
+Invoice
+↓
+Payment
+
+La UI debe impedir intentar:
+
+Facturar
+
+antes de:
+
+Facturable.
+
+Si el backend exige:
+
+approveFinancial()
+
+antes de:
+
+markFacturable()
+
+la UI debe reflejarlo.
+
+Nunca mostrar un botón que el backend rechazará.
+
+===========================================================
+24. ROLES Y PERMISSIONS
+===========================================================
+
+Auditar TODOS los permisos.
+
+Crear una única fuente de verdad.
+
+Comparar:
 
 Frontend permissions
-Backend permissions
-Permission Matrix
-Roles
-Route guards
-Component guards
-Mutation guards
+vs
+Backend permissions.
 
-No confiar únicamente en frontend.
+No permitir:
 
-Backend debe seguir siendo autoridad.
+frontend = permission exists
 
-Frontend debe anticipar permisos para UX.
+backend = permission doesn't exist.
 
-============================================================
-CREAR MATRIZ
-============================================================
+Revisar especialmente:
 
-Para cada rol:
+- admin
+- coordinator
+- accounting
+- driver
+
+Driver:
+
+debe poder ver/modificar únicamente lo que corresponde a sus propios Services / Reports / Links.
+
+Nunca confiar únicamente en:
+
+"ocultar botón"
+
+El backend debe impedir acceso.
+
+===========================================================
+25. DRIVER OWNERSHIP
+===========================================================
+
+Para cualquier:
+
+getService
+getDriverReport
+DriverLink
+DriverReport
+submission
+
+comprobar server-side:
+
+current user
+→ driver ID
+→ service driver ID.
+
+Si no coincide:
+
+403.
+
+No depender del frontend.
+
+===========================================================
+26. LOCKING / CONCURRENCY
+===========================================================
+
+Revisar TODAS las operaciones de escritura.
+
+Cualquier escritura en Sheets/BD que requiera locking debe utilizar el mecanismo definido por la arquitectura.
+
+Auditar:
+
+- updateService
+- updateServiceField
+- deleteService
+- captureReport
+- approveReport
+- DriverLink
+- WhatsApp
+- invoices
+- payments
+- reconciliation
+
+Objetivo:
+
+evitar corrupción por dos coordinadores trabajando simultáneamente.
+
+===========================================================
+27. LOGGING / AUDIT
+===========================================================
+
+Toda acción importante debe registrar:
+
+actor
+timestamp
+serviceId
+entityId
+action
+source
+channel
+correlationId
+oldValue
+newValue
+
+Ejemplo:
+
+SERVICE_UPDATED
+
+actor:
+user@example.com
+
+serviceId:
+SVC-001
+
+field:
+driverId
+
+old:
+DR-001
+
+new:
+DR-004
+
+source:
+BACKOFFICE
+
+correlationId:
+COR-123
+
+===========================================================
+28. ACTIVITY FEED
+===========================================================
+
+Revisar:
+
+_buildActivityDescription()
+
+y asegurar que los eventos importantes tengan descripción clara.
+
+Especialmente:
+
+- inbox.captured
+- inbox.normalized
+- inbox.pending_review
+- driver_report.created
+- driver_report.approved
+- reconciliation.created
+- reconciliation.approved
+- ratecard.applied
+- service.updated
+- invoice.created
+- payment.created
+
+No utilizar siempre una descripción genérica.
+
+===========================================================
+29. GLOBAL WORKSPACES
+===========================================================
+
+Mantener pantallas globales para operaciones masivas.
+
+Ejemplos:
+
+Dashboard
+Calendar
+Services
+Driver Reports
+WhatsApp Inbox
+Reconciliation
+Rapportini
+Accounting
+Management
+
+Estas pantallas deben permitir:
+
+- búsqueda
+- filtros
+- selección múltiple
+- acciones batch cuando sean seguras
+
+===========================================================
+30. MULTI-SERVICE OPERATIONS
+===========================================================
+
+Implementar correctamente:
+
+WhatsApp:
+
+10 messages
+↓
+10 reports
+↓
+10 candidate services
+↓
+review
+↓
+confirm
+↓
+10 services updated.
+
+Driver Reports:
+
+select multiple
+↓
+bulk review / approve cuando sea permitido.
+
+Reconciliation:
+
+select multiple
+↓
+bulk operation cuando sea segura.
+
+Nunca hacer bulk actions que puedan mezclar Services incorrectamente.
+
+===========================================================
+31. ROUTING
+===========================================================
+
+Cada Service debe tener URL propia.
+
+Ejemplo:
+
+/services/:serviceId
+
+o la estructura equivalente ya utilizada por el proyecto.
+
+Debe poder:
+
+- abrir directamente
+- refrescar
+- copiar URL
+- volver atrás
+- abrir en nueva pestaña
+- deep-link
+
+La navegación no debe depender de que previamente se haya abierto el Service desde Calendar.
+
+===========================================================
+32. SERVICE SUBSECTIONS
+===========================================================
+
+Permitir deep links cuando tenga sentido:
+
+/services/:id/overview
+/services/:id/operations
+/services/:id/driver
+/services/:id/whatsapp
+/services/:id/report
+/services/:id/reconciliation
+/services/:id/finance
+/services/:id/history
+
+No crear rutas innecesarias si el router actual puede resolverlo mediante estado/tab.
+
+Priorizar URLs útiles y estables.
+
+===========================================================
+33. UI / UX
+===========================================================
+
+El diseño debe ser:
+
+- moderno
+- formal
+- profesional
+- limpio
+- rápido de entender
+- orientado a operaciones
+
+Evitar:
+
+- exceso de modales
+- paneles duplicados
+- sidebars gigantes
+- información repetida
+- botones ambiguos
+- acciones escondidas
+- scroll innecesario
+
+Prioridad:
+
+INFORMATION DENSITY
+sin perder legibilidad.
+
+===========================================================
+34. DESKTOP
+===========================================================
+
+Optimizar especialmente pantallas grandes.
+
+Eliminar espacios desperdiciados.
+
+El Service Workspace debe utilizar eficientemente el ancho disponible.
+
+No utilizar:
+
+Left Sidebar
++
+Right Sidebar
++
+Main Content
+
+si el resultado es que el contenido útil queda reducido.
+
+===========================================================
+35. MOBILE
+===========================================================
+
+Auditar TODAS las pantallas.
+
+No simplemente:
+
+"añadir responsive CSS".
+
+Comprobar físicamente cada flujo.
+
+Pantallas mínimas:
+
+- Login
+- Dashboard
+- Calendar
+- Services
+- Service Detail
+- Driver
+- DriverLink
+- WhatsApp
+- Driver Reports
+- Reconciliation
+- Rapportini
+- Accounting
+- Invoice
+- Payment
+- Settings
+- Users / Roles
+
+Comprobar:
+
+320px
+375px
+390px
+430px
+768px
+
+según corresponda.
+
+No permitir:
+
+- overflow horizontal accidental
+- botones fuera de pantalla
+- tablas imposibles de usar
+- modales más grandes que viewport
+- formularios ilegibles
+- tabs imposibles de navegar
+- headers que ocupen demasiado espacio.
+
+En mobile priorizar:
+
+STATUS
+NEXT ACTION
+CURRENT TASK
+KEY DATA
+ACTIONS
+
+===========================================================
+36. FORMULARIOS
+===========================================================
+
+Auditar TODOS los formularios.
+
+Para cada formulario:
+
+1. abrir
+2. introducir datos
+3. submit
+4. observar request
+5. observar backend
+6. comprobar DB
+7. recargar
+8. comprobar persistencia
+9. comprobar error handling
+10. comprobar permisos
+
+No aceptar:
+
+"se actualiza visualmente"
+
+como evidencia de persistencia.
+
+===========================================================
+37. ERRORES
+===========================================================
+
+Todos los errores backend deben llegar al frontend de forma comprensible.
+
+Nunca:
+
+success=true
+
+si una etapa posterior falló.
+
+Crear errores estructurados:
+
+code
+message
+stage
+entity
+serviceId
+correlationId
+
+Ejemplo:
+
+{
+  code: "RATECARD_NOT_FOUND",
+  stage: "ECONOMICS",
+  serviceId: "...",
+  correlationId: "..."
+}
+
+===========================================================
+38. TEST E2E
+===========================================================
+
+Revisar primero los tests existentes.
+
+No eliminarlos para conseguir verde.
+
+Actualizar selectores únicamente si el nuevo diseño cambia correctamente el DOM.
+
+Corregir:
+
+- login
+- application container
+- main body
+- service creation
+- driver assignment
+- DriverLink
+- WhatsApp
+- DriverReport
+- reconciliation
+- ratecard
+- financial workflow
+- invoice
+- payment
+
+===========================================================
+39. TEST CRÍTICO — CICLO COMPLETO DEL SERVICE
+===========================================================
+
+Crear/usar un Service de prueba.
+
+Ejecutar:
+
+1. Create Service
+2. Assign Client
+3. Assign Project
+4. Assign Driver
+5. Assign Vehicle
+6. Create DriverLink
+7. Open DriverLink
+8. Submit Driver response
+9. Capture response
+10. Create DriverReport
+11. Validate DriverReport
+12. Reconciliation
+13. Apply RateCard
+14. Apply SupplierRate
+15. Calculate Revenue
+16. Calculate Cost
+17. Calculate Margin
+18. Confirm actuals
+19. Approve financials
+20. Mark Facturable
+21. Create Rapportino
+22. Create InvoiceItem
+23. Create Invoice
+24. Register Payment
+25. Close service
+
+Después de CADA PASO:
+
+comprobar DB.
+
+===========================================================
+40. TEST CRÍTICO — WHATSAPP
+===========================================================
+
+Ejecutar:
+
+Service A
+Driver A
+Date A
+
+pegar mensaje WhatsApp.
+
+Comprobar:
+
+Parser
+↓
+Candidate
+↓
+Inbox
+↓
+Normalization
+↓
+Review
+↓
+DriverReport
+↓
+Reconciliation
+↓
+RateCard
+↓
+Economics
+
+El resultado final debe poder verse desde:
+
+SERVICE A
+
+sin tener que navegar por otras pantallas para saber qué ocurrió.
+
+===========================================================
+41. TEST CRÍTICO — WHATSAPP MULTIPLE
+===========================================================
+
+Pegar al menos:
+
+5 mensajes
+
+correspondientes a:
+
+5 Services diferentes.
+
+Comprobar:
+
+no se mezclan.
+
+Cada uno termina asociado al Service correcto.
+
+Los que tengan baja confianza:
+
+PENDING REVIEW.
+
+===========================================================
+42. TEST CRÍTICO — DRIVERLINK
+===========================================================
+
+Repetir el ciclo completo usando DriverLink en lugar de WhatsApp.
+
+Resultado esperado:
+
+DriverLink
+→ Inbox
+→ DriverReport
+→ Reconciliation
+→ Economics.
+
+===========================================================
+43. TEST DE ERROR
+===========================================================
+
+Probar deliberadamente:
+
+- Service inexistente
+- Driver inexistente
+- Driver incorrecto
+- RateCard inexistente
+- SupplierRate inexistente
+- mensaje WhatsApp ambiguo
+- dos Services candidatos
+- DriverLink duplicado
+- DriverReport duplicado
+- transición inválida
+- usuario sin permiso
+- Driver intentando acceder a Service ajeno
+
+Cada caso debe:
+
+1. fallar correctamente
+2. explicar el error
+3. no dejar datos corruptos
+4. generar log
+5. mantener integridad de BD.
+
+===========================================================
+44. TEST DE PERSISTENCIA
+===========================================================
+
+Para cada operación:
+
+WRITE
+↓
+RELOAD
+↓
+READ
+
+El resultado debe permanecer.
+
+Especialmente:
+
+- driver
+- phone
+- vehicle
+- times
+- passengers
+- notes
+- status
+- ratecard
+- supplier rate
+- report
+- reconciliation
+- invoice
+- payment.
+
+===========================================================
+45. TEST DE ROLES
+===========================================================
+
+Ejecutar el flujo completo como:
 
 ADMIN
 COORDINATOR
 ACCOUNTING
 DRIVER
-VIEWER
-u otros existentes
 
-comprobar:
+Comprobar:
 
-Dashboard
-Calendar
-Service
-Driver
-Driver Link
-Driver Reports
-WhatsApp
-Inbox
-Reconciliation
-Rapportino
-Finance
-Users
-Settings
-Audit
-Logs
+qué puede ver
+qué puede crear
+qué puede editar
+qué puede aprobar
+qué puede eliminar
 
-Para cada acción:
+y verificar que el backend lo impide cuando corresponde.
 
-VIEW
-CREATE
-EDIT
-DELETE
-ASSIGN
-CONFIRM
-START
-COMPLETE
-REPORT
-REVIEW
-VALIDATE
-APPROVE
-RECONCILE
-INVOICE
-etc.
-
-Comparar:
+===========================================================
+46. TEST DE CONCURRENCIA
+===========================================================
 
-FRONTEND
-vs
-BACKEND
+Simular:
 
-Si existe una diferencia:
-
-DOCUMENTAR
-→ CORREGIR
-→ TESTEAR
-
-============================================================
-FASE 17 — DRIVER ROLE
-============================================================
-
-Verificar específicamente que Driver pueda:
+Coordinator A
+y
+Coordinator B
 
-- ver sus propios servicios
-- acceder a sus servicios
-- abrir su Driver Link
-- enviar report
-- consultar lo que corresponda
-- NO ver servicios ajenos
-- NO ejecutar acciones de coordinator
-- NO acceder a información financiera restringida
-
-Si backend actualmente exige:
-
-service.list
-
-para getService
-
-y Driver sólo tiene:
-
-service.list_own
-
-corregir el diseño de autorización.
-
-Nunca resolverlo simplemente quitando seguridad.
-
-============================================================
-FASE 18 — ACTION VISIBILITY
-============================================================
-
-Toda acción UI debe pasar por:
-
-can(permission)
-
-Ejemplo conceptual:
-
-if (can("service.validate")) {
-    show Validate
-}
-
-Pero backend debe verificar nuevamente.
-
-Nunca:
-
-frontend = seguridad
-
-Frontend = UX
-
-Backend = seguridad real
-
-============================================================
-FASE 19 — MOBILE
-============================================================
-
-NO hacer simplemente:
-
-desktop width: 100%
-
-Debe diseñarse una composición mobile específica.
-
-Verificar TODAS las pantallas:
-
-1. Login
-2. Dashboard
-3. Calendar
-4. Services
-5. Service Workspace
-6. Service Overview
-7. Movements
-8. Driver
-9. Driver Link
-10. Driver Report
-11. WhatsApp
-12. Inbox
-13. Reconciliation
-14. Rapportino
-15. Finance
-16. History
-17. Driver Reports
-18. Settings
-19. Users
-20. Roles
-21. Audit
-22. Logs
-23. cualquier pantalla adicional
+trabajando simultáneamente sobre el mismo Service.
 
-Para cada pantalla verificar:
+Comprobar:
 
-- 320px
-- 360px
-- 375px
-- 390px
-- 414px
-- 768px
-- desktop
+- locking
+- conflictos
+- estado final
+- audit log.
 
-============================================================
-MOBILE SERVICE
-============================================================
+===========================================================
+47. MATRIZ FINAL DE VALIDACIÓN
+===========================================================
 
-Debe tener:
+Crear una tabla interna:
 
-Header compacto
-↓
-Status
-↓
-Next Action
-↓
-Important information
-↓
-Sections
-↓
-Activity
+| FLOW | FRONTEND | API | BACKEND | DB | READBACK | ROLE | LOG | E2E |
+|------|----------|-----|---------|----|----------|------|-----|-----|
 
-No utilizar sidebars permanentes.
+Debe estar TODO:
 
-Utilizar:
+PASS
 
-drawer
-bottom sheet
-collapsible sections
-horizontal tabs
-sticky actions
+o:
 
-según necesidad.
+FAIL
 
-============================================================
-FASE 20 — RESPONSIVE SERVICE HEADER
-============================================================
+No usar:
 
-Desktop:
+PARTIAL
 
-Service ID
-Driver
-Date
-Status
-Primary Action
+como estado final.
 
-Tablet:
+Si algo no está listo:
 
-Service ID
-Status
-Primary Action
-More
+FAIL.
 
-Mobile:
+Y continuar corrigiéndolo.
 
-←
-Service ID
-Status
+===========================================================
+48. DEFINITION OF DONE
+===========================================================
 
-[⋮]
+El proyecto solamente puede considerarse terminado cuando:
 
-El resto en panel.
+[ ] npm/build correcto
+[ ] TypeScript correcto
+[ ] no errores críticos frontend
+[ ] no errores críticos backend
+[ ] todos los endpoints utilizados existen
+[ ] todos los formularios persisten
+[ ] Service funciona
+[ ] Driver funciona
+[ ] DriverLink funciona
+[ ] WhatsApp funciona
+[ ] DriverReport funciona
+[ ] Reconciliation funciona
+[ ] RateCard funciona
+[ ] SupplierRate funciona
+[ ] Economics funciona
+[ ] Rapportino funciona
+[ ] Invoice funciona
+[ ] Payment funciona
+[ ] roles funcionan
+[ ] ownership funciona
+[ ] audit logs funcionan
+[ ] activity logs funcionan
+[ ] routing funciona
+[ ] deep links funcionan
+[ ] mobile funciona
+[ ] E2E pasa
+[ ] errores están correctamente gestionados
+[ ] no existen acciones UI que backend rechace
+[ ] no existen campos editables que no persistan
+[ ] no existen datos de otras entidades mostrados como propios
+[ ] no existen asociaciones incorrectas Service/Driver/Report
+[ ] no existen operaciones financieras fuera de orden.
 
-============================================================
-FASE 21 — SPACING / DENSITY
-============================================================
+===========================================================
+49. REGLA DE NO REGRESIÓN
+===========================================================
 
-Optimizar:
+Cada modificación debe comprobar:
 
-padding
-margin
-line-height
-card heights
-header heights
-sidebar width
-table density
+¿He roto otra pantalla?
 
-Objetivo:
+¿He roto otro endpoint?
 
-ERP de alta densidad informativa.
+¿He roto otro rol?
 
-No dashboard de marketing.
+¿He roto otra transición?
 
-Eliminar:
+¿He roto mobile?
 
-espacios vacíos
-cards enormes
-secciones innecesariamente altas
+¿He roto deep links?
 
-Pero NO sacrificar legibilidad.
+¿He roto tests?
 
-============================================================
-FASE 22 — SERVICE CONTEXT PANEL
-============================================================
+¿He roto otra relación de BD?
 
-En desktop debe existir un panel contextual opcional.
+Antes de finalizar:
 
-Ejemplo:
+ejecutar nuevamente todos los tests relevantes.
 
-MAIN CONTENT 75%
-CONTEXT PANEL 25%
+===========================================================
+50. FORMA DE TRABAJO
+===========================================================
 
-Panel:
+NO hagas primero un informe enorme y después esperes.
 
-NEXT ACTION
-Driver
-Driver Link
-Report
-WhatsApp
-Reconciliation
-Alerts
+Trabaja por fases.
 
-Debe poder:
+FASE 1
+Auditoría.
 
-collapse
-expand
+FASE 2
+Corrección de contratos críticos.
 
-Cuando está cerrado:
+FASE 3
+WhatsApp / DriverLink / DriverReport.
 
-MAIN CONTENT = 100%
+FASE 4
+Reconciliation / RateCard / Economics.
 
-Esto evita desperdicio de espacio.
+FASE 5
+Rapportino / Invoice / Payment.
 
-============================================================
-FASE 23 — CALENDAR / GLOBAL ENTRY
-============================================================
+FASE 6
+Roles / Security / Logs.
 
-Desde Calendar:
-
-click Service
-
-debe abrir:
-
-/service/:id
-
-No un modal antiguo.
-
-Si existe un modal de Service:
-
-eliminarlo progresivamente.
-
-Debe existir un único concepto de:
-
+FASE 7
 Service Workspace.
 
-============================================================
-FASE 24 — DASHBOARD ENTRY
-============================================================
+FASE 8
+Global Workspaces / Multi-Service.
 
-Desde Dashboard:
+FASE 9
+Mobile.
 
-Service
-→ /service/:id
+FASE 10
+E2E.
 
-Mantener contexto.
+FASE 11
+Regression.
 
-============================================================
-FASE 25 — DRIVER REPORT ENTRY
-============================================================
+Después de cada fase:
 
-Desde Driver Reports:
+- indicar qué se encontró
+- qué se modificó
+- qué archivos se modificaron
+- qué endpoints se modificaron
+- qué tablas/Sheets se afectan
+- qué tests se ejecutaron
+- qué pasó
+- qué queda pendiente
 
-Report
-→ Service
+PERO NO AVANCES DE FASE SI EXISTEN FALLOS BLOQUEANTES.
 
-debe navegar a:
+===========================================================
+51. PRIORIDAD ABSOLUTA
+===========================================================
 
-/service/:id/operations/report
+Si encuentras conflicto entre:
 
-No abrir una pantalla aislada que duplique el Service.
+UX
+y
+integridad de datos
 
-============================================================
-FASE 26 — WHATSAPP ENTRY
-============================================================
+prioriza integridad.
 
-Desde WhatsApp Inbox:
+Si encuentras conflicto entre:
 
-Message
-→ correlated Service
+frontend
+y
+backend
 
-navegar a:
+no ocultes el problema.
 
-/service/:id/communication/whatsapp
+Corrige el contrato.
 
-con el mensaje seleccionado.
+Si encuentras una funcionalidad que parece funcionar pero no persiste:
 
-============================================================
-FASE 27 — RECONCILIATION ENTRY
-============================================================
+considerarla FALLIDA.
 
-Desde Reconciliation:
+Si encuentras una operación que devuelve success pero falla posteriormente:
 
-record
-→ Service
+considerarla FALLIDA.
 
-navegar a:
+Si encuentras un botón que el backend rechaza:
 
-/service/:id/operations/reconciliation
+considerarlo FALLIDO.
 
-============================================================
-FASE 28 — RAPPORTINO ENTRY
-============================================================
+Si encuentras información que pertenece a otro Service:
 
-Desde Rapportino:
+considerarlo FALLIDO.
 
-record
-→ Service
+===========================================================
+52. OBJETIVO FINAL
+===========================================================
 
-navegar a:
+Al finalizar quiero poder utilizar el ERP de esta forma:
 
-/service/:id/finance/rapportino
-
-============================================================
-FASE 29 — NO DUPLICATE SCREENS
-============================================================
-
-Buscar y detectar:
-
-DriverReportsScreen
-DriverSubmissionsScreen
-ReportInboxScreen
-WhatsAppCaptureScreen
-WhatsAppParserSection
-WhatsAppTab
-ReportsScreen
-HistoryScreen
-etc.
-
-Para cada uno determinar:
-
-- necesario
-- duplicado
-- wrapper
-- legacy
-- reemplazar
-- eliminar
-
-NO eliminar inmediatamente.
-
-Primero mapear dependencias.
-
-Después consolidar.
-
-============================================================
-FASE 30 — LOADING STATES
-============================================================
-
-Cada pantalla debe tener:
-
-Skeleton
-Loading
-Loaded
-Empty
-Error
-Permission denied
-
-No utilizar simplemente:
-
-"Loading..."
-
-en todo.
-
-Service Workspace debe mantener layout estable durante loading.
-
-============================================================
-FASE 31 — ERROR STATES
-============================================================
-
-Cada API debe manejar:
-
-401
-403
-404
-409
-422
-500
-network error
-
-Especialmente:
-
-409 Conflict
-
-para:
-
-- locks
-- concurrent modifications
-- status transitions
-
-Mostrar mensajes humanos.
-
-Ejemplo:
-
-"Another coordinator modified this service. Reload to continue."
-
-============================================================
-FASE 32 — OPTIMISTIC VS SERVER STATE
-============================================================
-
-No actualizar visualmente un Service como definitivo antes de confirmar backend.
-
-Mutation:
-
-UI
-→ request
-→ backend
-→ response
-→ state update
-
-Si falla:
-
-rollback
-+
-error message
-
-============================================================
-FASE 33 — DATA REFRESH
-============================================================
-
-Después de cualquier mutation:
-
-Assign
-Confirm
-Start
-Complete
-Report
-Review
-Validate
-Reconciliation
-Driver Link
-etc.
-
-Actualizar:
-
-Service
-Lifecycle
-Next Action
-Activity
-Related sections
-
-sin cerrar workspace.
-
-============================================================
-FASE 34 — LOGGING
-============================================================
-
-Verificar que acciones importantes generan trazabilidad.
-
-Ejemplos:
-
-Service assigned
-Driver changed
-Driver Link created
-Driver Link opened
-Driver Link revoked
-Report received
-Report accepted
-Report rejected
-WhatsApp captured
-WhatsApp parsed
-Reconciliation changed
-Service validated
-Financial status changed
-
-Cada evento debe tener cuando corresponda:
-
-actor
-timestamp
-serviceId
-driverId
-source
-correlationId
-
-============================================================
-FASE 35 — AUDIT LOG
-============================================================
-
-Verificar:
-
-who
-when
-entity
-entityId
-action
-field
-oldValue
-newValue
-source
-correlationId
-
-NO permitir modificaciones al audit log.
-
-============================================================
-FASE 36 — CORRELATION
-============================================================
-
-Revisar que:
-
-ServiceID
-DriverID
-DriverReportID
-DriverLinkID
-InboxID
-ReconciliationID
-RapportinoID
-CorrelationID
-
-estén correctamente relacionados.
-
-Especial atención:
-
-WhatsApp
-Driver Link
-Driver Report
-
-No permitir correlaciones ambiguas.
-
-============================================================
-FASE 37 — SERVICE LIFECYCLE COMPLETO
-============================================================
-
-Ejecutar mentalmente y/o mediante tests:
-
-IMPORT
+ABRO CALENDAR
 ↓
-ASSIGN DRIVER
+VEO SERVICES
 ↓
-CONFIRM
+ABRO SERVICE
 ↓
-START
+SERVICE WORKSPACE
 ↓
-COMPLETE
+GESTIONO TODO EL SERVICIO
+↓
+DRIVER
+↓
+DRIVERLINK / WHATSAPP
 ↓
 DRIVER REPORT
 ↓
-INBOX
-↓
-REVIEW
-↓
 RECONCILIATION
 ↓
-VALIDATE
+RATECARD
 ↓
-FINANCIAL CALCULATION
+SUPPLIER RATE
 ↓
-APPROVAL
+ECONOMICS
 ↓
-BILLABLE
+RAPPORТINO
 ↓
 INVOICE
 ↓
 PAYMENT
 ↓
-CLOSED
+CLOSE
 
-Verificar cada transición:
+Y si necesito trabajar con muchos servicios:
 
-- UI
-- backend
-- permissions
-- logs
-- activity
-- next action
-- URL
-- mobile
-
-============================================================
-FASE 38 — DRIVER FLOW
-============================================================
-
-Verificar:
-
-Service assigned
+GLOBAL WORKSPACE
 ↓
-Driver receives link
+FILTER
 ↓
-Driver opens link
+SELECT MULTIPLE
 ↓
-Driver submits
+BULK ACTION
 ↓
-Backend receives
-↓
-Inbox
-↓
-Correlation
-↓
-Driver Report
-↓
-Coordinator review
-↓
-Reconciliation
-↓
-Validation
-
-Verificar también:
-
-- expired link
-- revoked link
-- duplicate submission
-- invalid token
-- wrong driver
-- wrong service
-- malformed submission
-
-============================================================
-FASE 39 — WHATSAPP FLOW
-============================================================
-
-Verificar:
-
-WhatsApp
-↓
-capture
-↓
-parse
-↓
-normalize
-↓
-driver matching
-↓
-service matching
-↓
-inbox
-↓
-review
-↓
-accept
-↓
-report
-↓
-reconciliation
-↓
-service
-
-Verificar:
-
-- unknown driver
-- unknown service
-- ambiguous service
-- malformed message
-- duplicate message
-- partial data
-- conflicting data
-
-============================================================
-FASE 40 — CALENDAR FLOW
-============================================================
-
-Calendar
-↓
-Service
-↓
-Service Workspace
-↓
-Action
-↓
-Backend
-↓
-updated Service
-↓
-Calendar refresh
-
-No perder estado.
-
-============================================================
-FASE 41 — TABLET
-============================================================
-
-Verificar específicamente:
-
-768
-820
-834
-1024
-1280
-
-Evitar:
-
-horizontal overflow
-double sidebar
-tiny buttons
-unusable tables
-hidden primary actions
+SERVICES ACTUALIZADOS
 
-============================================================
-FASE 42 — ACCESSIBILITY
-============================================================
+La información debe ser consistente en todas las pantallas.
 
-Verificar:
+===========================================================
+53. INFORME FINAL OBLIGATORIO
+===========================================================
 
-keyboard navigation
-focus
-aria-label
-contrast
-button labels
-tooltips
-screen readers
-focus trap en drawers
-focus trap en modals que permanezcan
+Al terminar NO me digas simplemente:
 
-No depender solamente del color.
+"he terminado".
 
-============================================================
-FASE 43 — VISUAL DESIGN
-============================================================
+Entrega:
 
-Diseñar:
+1. RESUMEN DE CAMBIOS
 
-moderno
-formal
-enterprise
-limpio
-profesional
+2. ARCHIVOS MODIFICADOS
 
-Evitar:
+3. ENDPOINTS MODIFICADOS
 
-- exceso de colores
-- cards gigantes
-- gradients innecesarios
-- sombras excesivas
-- apariencia de dashboard genérico
-- iconos sin significado
-- botones ambiguos
+4. CAMBIOS DE BD / SHEETS
 
-Usar:
+5. FLUJOS CORREGIDOS
 
-- typography consistente
-- spacing system
-- status badges
-- compact tables
-- clear hierarchy
-- restrained colors
-- strong primary action
+6. TESTS EJECUTADOS
 
-============================================================
-FASE 44 — SERVICE ACTION BAR
-============================================================
+7. RESULTADO DE CADA TEST
 
-Primary action:
+8. MATRIZ FRONTEND/BACKEND/DB
 
-una sola acción principal.
+9. MATRIZ DE ROLES
 
-Secondary:
+10. MATRIZ DE PERMISOS
 
-More / ⋮
+11. MATRIZ DE STATE MACHINE
 
-Ejemplo:
+12. MATRIZ DE SERVICE WORKSPACE
 
-[Validate] [⋮]
+13. MATRIZ MOBILE
 
-Menu:
+14. PROBLEMAS ENCONTRADOS Y CORREGIDOS
 
-Assign
-Confirm
-Start
-Complete
-Request Report
-Review
-Reconciliation
-etc.
+15. ERRORES QUE PERMANECEN
 
-No llenar header con 8 botones.
+IMPORTANTE:
 
-============================================================
-FASE 45 — MOBILE ACTION BAR
-============================================================
+Si quedan errores:
 
-Mobile:
+NO decir "todo está listo".
 
-[Primary Action]
-
-[⋮]
-
-Primary action debe ser sticky cuando sea necesario.
-
-============================================================
-FASE 46 — TESTING
-============================================================
-
-Crear/verificar tests para:
-
-routing
-service loading
-service mutation
-permissions
-driver
-driver link
-whatsapp
-driver reports
-reconciliation
-rapportino
-history
-financial
-mobile states
-
-============================================================
-FASE 47 — E2E
-============================================================
-
-Crear escenarios:
-
-TEST 01
-Coordinator opens Service from Calendar.
-
-TEST 02
-Coordinator assigns Driver.
-
-TEST 03
-Coordinator confirms.
-
-TEST 04
-Driver Link created.
-
-TEST 05
-Driver opens link.
-
-TEST 06
-Driver submits report.
-
-TEST 07
-Inbox receives report.
-
-TEST 08
-Coordinator reviews.
-
-TEST 09
-Reconciliation created.
-
-TEST 10
-Coordinator resolves.
-
-TEST 11
-Coordinator validates.
-
-TEST 12
-Financial status progresses.
-
-TEST 13
-Accounting accesses financial data.
-
-TEST 14
-Driver cannot access unauthorized Service.
-
-TEST 15
-User without permission cannot validate.
-
-TEST 16
-WhatsApp message correlated.
-
-TEST 17
-WhatsApp discrepancy appears.
-
-TEST 18
-Activity log updated.
-
-TEST 19
-Audit log updated.
-
-TEST 20
-Service remains open after mutation.
-
-TEST 21
-Deep link opens correct section.
-
-TEST 22
-Mobile Service usable.
-
-============================================================
-FASE 48 — PERMISSION MATRIX TEST
-============================================================
-
-Para cada role ejecutar:
-
-VIEW
-CREATE
-EDIT
-DELETE
-ACTION
-
-y registrar:
-
-EXPECTED
-ACTUAL
-
-Cualquier diferencia:
+Indicar exactamente:
 
 FAIL
-
-============================================================
-FASE 49 — RESPONSIVE CERTIFICATION
-============================================================
-
-Para cada pantalla crear matriz:
-
-SCREEN
-320
-360
-375
-390
-414
-768
-1024
-1280
-1440+
-
-Resultado:
-
-PASS
-FAIL
-
-Con observaciones.
-
-============================================================
-FASE 50 — PERFORMANCE
-============================================================
-
-Evitar:
-
-- llamadas API duplicadas
-- renders innecesarios
-- fetch global de logs
-- fetch de todos los rapportini para un Service
-- datos duplicados
-- listeners sin cleanup
-
-Service Workspace debe cargar solamente:
-
-- Service
-- información necesaria
-- relaciones necesarias
-
-No cargar todo el ERP.
-
-============================================================
-FASE 51 — CLEANUP
-============================================================
-
-Una vez verificado el nuevo flujo:
-
-eliminar o deprecar:
-
-- navegación antigua
-- modals duplicados
-- screens duplicadas
-- hooks obsoletos
-- contexts obsoletos
-- rutas duplicadas
-- código muerto
-
-PERO solamente después de verificar dependencias.
-
-============================================================
-FASE 52 — DOCUMENTACIÓN
-============================================================
-
-Actualizar:
-
-routes
-architecture
-permissions
-service lifecycle
-driver flow
-whatsapp flow
-driver link flow
-reconciliation flow
-logging
-mobile behavior
-
-============================================================
-FASE 53 — CERTIFICACIÓN FINAL
-============================================================
-
-Crear una nueva:
-
-FINAL-CERTIFICATION-MATRIX
-
-NO reutilizar ciegamente una certificación anterior.
-
-La certificación anterior es solamente referencia.
-
-El código actual debe ser auditado nuevamente.
-
-La matriz debe incluir:
-
-1. Frontend
-2. Backend
-3. API
-4. Database
-5. Routing
-6. Permissions
-7. Roles
-8. Service lifecycle
-9. Driver
-10. Driver Link
-11. Driver Report
-12. WhatsApp
-13. Inbox
-14. Reconciliation
-15. Rapportino
-16. Finance
-17. Activity
-18. Audit
-19. Desktop
-20. Tablet
-21. Mobile
-22. Accessibility
-23. Error handling
-24. Loading states
-25. Security
-26. Performance
-
-============================================================
-FORMATO FINAL OBLIGATORIO
-============================================================
-
-Al finalizar debes entregar:
-
-------------------------------------------------------------
-1. EXECUTIVE SUMMARY
-------------------------------------------------------------
-
-Qué se cambió.
-
-------------------------------------------------------------
-2. ARCHITECTURE CHANGES
-------------------------------------------------------------
-
-Antes:
-...
-
-Después:
-...
-
-------------------------------------------------------------
-3. SERVICE WORKSPACE
-------------------------------------------------------------
-
-Lista completa de cambios.
-
-------------------------------------------------------------
-4. ROUTING
-------------------------------------------------------------
-
-Todas las rutas.
-
-------------------------------------------------------------
-5. SCREEN AUDIT
-------------------------------------------------------------
-
-Cada pantalla:
-
-PASS / FAIL
-
-------------------------------------------------------------
-6. MOBILE AUDIT
-------------------------------------------------------------
-
-Cada pantalla:
-
-320
-360
-375
-390
-414
-768
-1024
-desktop
-
-------------------------------------------------------------
-7. ROLE/PERMISSION MATRIX
-------------------------------------------------------------
-
-Role
-Permission
-Frontend
-Backend
-Result
-
-------------------------------------------------------------
-8. SERVICE LIFECYCLE TEST
-------------------------------------------------------------
-
-Cada transición.
-
-------------------------------------------------------------
-9. DRIVER FLOW
-------------------------------------------------------------
-
-PASS / FAIL
-
-------------------------------------------------------------
-10. DRIVER LINK FLOW
-------------------------------------------------------------
-
-PASS / FAIL
-
-------------------------------------------------------------
-11. WHATSAPP FLOW
-------------------------------------------------------------
-
-PASS / FAIL
-
-------------------------------------------------------------
-12. DRIVER REPORT FLOW
-------------------------------------------------------------
-
-PASS / FAIL
-
-------------------------------------------------------------
-13. RECONCILIATION FLOW
-------------------------------------------------------------
-
-PASS / FAIL
-
-------------------------------------------------------------
-14. FINANCIAL FLOW
-------------------------------------------------------------
-
-PASS / FAIL
-
-------------------------------------------------------------
-15. LOGGING
-------------------------------------------------------------
-
-Activity
-Audit
-DriverLinkEvents
-Inbox
-
-------------------------------------------------------------
-16. DUPLICATES REMOVED
-------------------------------------------------------------
-
-Lista.
-
-------------------------------------------------------------
-17. BACKEND/FRONTEND MISMATCHES
-------------------------------------------------------------
-
-Lista de todos los encontrados y corregidos.
-
-------------------------------------------------------------
-18. TEST RESULTS
-------------------------------------------------------------
-
-Build
-Unit
-Integration
-E2E
-Responsive
-
-------------------------------------------------------------
-19. REMAINING ISSUES
-------------------------------------------------------------
-
-ESTA SECCIÓN ES OBLIGATORIA.
-
-Si existe cualquier cosa pendiente:
-
-PENDIENTE
-→ describir exactamente qué
+→ componente
 → archivo
-→ componente
-→ backend
-→ motivo
+→ causa
+→ impacto
+→ qué falta.
 
-No ocultar pendientes.
+El objetivo es que el ERP quede REALMENTE UTILIZABLE.
 
-------------------------------------------------------------
-20. FINAL CERTIFICATION
-------------------------------------------------------------
+NO quiero una auditoría teórica.
 
-Debe ser:
-
-CERTIFIED
-
-solamente si:
-
-TODOS los puntos están:
-
-[✓] IMPLEMENTED
-[✓] VERIFIED
-
-Si existe uno solo:
-
-[ ] PENDING
-
-entonces el proyecto NO puede declararse completamente certificado.
-
-============================================================
-REGLA FINAL
-============================================================
-
-NO QUIERO UNA RESPUESTA GENÉRICA.
-
-NO QUIERO:
-
-"he mejorado la interfaz"
-
-"responsive optimizado"
-
-"roles revisados"
-
-"todo funciona"
-
-Quiero:
-
-archivo
-→ componente
-→ cambio
-→ motivo
-→ backend relacionado
-→ permission relacionada
-→ test
-→ resultado
-
-Trabaja de manera incremental.
-
-FASE 0
-→ auditar
-
-FASE 1
-→ corregir routing
-
-FASE 2
-→ corregir Service Workspace
-
-FASE 3
-→ corregir lifecycle
-
-FASE 4
-→ corregir Driver
-
-FASE 5
-→ corregir Driver Link
-
-FASE 6
-→ corregir WhatsApp
-
-FASE 7
-→ corregir Driver Report
-
-FASE 8
-→ corregir Reconciliation
-
-FASE 9
-→ corregir Rapportino/Finance
-
-FASE 10
-→ corregir Activity/Audit
-
-FASE 11
-→ permisos/roles
-
-FASE 12
-→ responsive/mobile
-
-FASE 13
-→ duplicaciones/cleanup
-
-FASE 14
-→ tests
-
-FASE 15
-→ certificación
-
-NO SALTAR FASES.
-
-NO MARCAR UNA FASE COMO COMPLETA SI EXISTEN SUBTAREAS PENDIENTES.
-
-============================================================
-PRINCIPIO DE DISEÑO MÁS IMPORTANTE
-============================================================
-
-El coordinador debe pensar:
-
-"Estoy trabajando sobre este Service."
-
-NO:
-
-"Tengo que ir a Driver Reports."
-
-"Tengo que ir a WhatsApp."
-
-"Tengo que ir a Reconciliation."
-
-"Tengo que volver al Calendar."
-
-"Tengo que buscar el Rapportino."
-
-La aplicación debe pensar:
-
-SERVICE
-↓
-Driver
-↓
-Driver Link
-↓
-Driver Report
-↓
-WhatsApp
-↓
-Reconciliation
-↓
-Rapportino
-↓
-Finance
-↓
-History
-
-TODO debe permanecer conectado al Service.
-
-El Service es la unidad central del ERP.
-
-La aplicación debe optimizarse alrededor de ese concepto.
-
-============================================================
-ARQUITECTURA OBJETIVO
-============================================================
-
-                         ERP
-                          │
-       ┌──────────────────┼──────────────────┐
-       ↓                  ↓                  ↓
-   Calendar           WhatsApp          Driver Reports
-       │                  │                  │
-       └──────────────────┼──────────────────┘
-                          ↓
-                    SERVICE #123
-                          │
-          ┌───────────────┼────────────────┐
-          │               │                │
-       Overview       Operations      Communication
-          │               │                │
-          │          ┌────┼────┐       ┌───┴────┐
-          │          │    │    │       │        │
-          │        Driver Report Recon  Link   WhatsApp
-          │
-          └───────────────┬────────────────┘
-                          ↓
-                       Finance
-                          │
-                  Rapportino / Cost
-                  Revenue / Invoice
-                          │
-                          ↓
-                       History
-                          │
-                 Activity + Audit
-```
+QUIERO UN PROYECTO FUNCIONAL Y VERIFICADO DE EXTREMO A EXTREMO.

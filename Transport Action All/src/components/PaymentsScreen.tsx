@@ -145,6 +145,7 @@ export default function PaymentsScreen({ onNavigate }: PaymentsScreenProps) {
           .status-registrado { color: #d97706; font-weight: 600; }
           .status-confirmado { color: #059669; font-weight: 600; }
           .status-conciliado { color: #2563eb; font-weight: 600; }
+          .status-anulado { color: #dc2626; font-weight: 600; text-decoration: line-through; }
           .footer { margin-top: 20px; font-size: 11px; color: #9ca3af; }
           @media print { body { padding: 0; } }
         </style>

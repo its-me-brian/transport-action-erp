@@ -521,8 +521,8 @@ function _createServicesFromImport(ss, services, importId, projectId, operatingC
       ServiceTypeConfirmed: svc.serviceTypeConfirmed || false,
       IsWalking: svc.isWalking || false,
       VehicleType: svc.vehicleType || 'Van',
-      ProviderType: '',
-      ProviderID: ''
+      ProviderType: driverId ? 'internal_driver' : '',
+      ProviderID: driverId || ''
     });
     
     created++;

@@ -279,13 +279,21 @@ const ReconciliationCommands = {
     const reconciliation = this.getByService(serviceId);
     if (!reconciliation || reconciliation.Status === 'Resuelto') return null;
 
-    const prod = reconciliation.ProductionStartTime || '';
-    const driv = reconciliation.DriverStartTime || '';
+    // Normalize time strings for comparison (handles "8:30" vs "08:30" vs "8.30")
+    function _normTime(t) {
+      if (!t) return '';
+      var str = String(t).trim();
+      var m = str.match(/(\d{1,2})[.:,](\d{1,2})/);
+      if (m) return (m[1].length === 1 ? '0' : '') + m[1] + ':' + (m[2].length === 1 ? '0' : '') + m[2];
+      var h = str.match(/^(\d{1,2})$/);
+      if (h) return (h[1].length === 1 ? '0' : '') + h[1] + ':00';
+      return str;
+    }
     
     // Comparar campos clave
     const match = 
-      reconciliation.ProductionStartTime === reconciliation.DriverStartTime &&
-      reconciliation.ProductionEndTime === reconciliation.DriverEndTime &&
+      _normTime(reconciliation.ProductionStartTime) === _normTime(reconciliation.DriverStartTime) &&
+      _normTime(reconciliation.ProductionEndTime) === _normTime(reconciliation.DriverEndTime) &&
       parseFloat(reconciliation.ProductionKm) === parseFloat(reconciliation.DriverKm) &&
       reconciliation.ProductionDiaria === reconciliation.DriverDiaria &&
       reconciliation.ProductionFestivo === reconciliation.DriverFestivo &&

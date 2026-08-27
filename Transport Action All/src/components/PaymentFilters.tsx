@@ -2,7 +2,7 @@ import React from 'react';
 import { Search } from 'lucide-react';
 import { statusConfig } from './paymentsShared';
 
-const statuses = ['Registrado', 'Confirmado', 'Conciliado'];
+const statuses = ['Registrado', 'Confirmado', 'Conciliado', 'Anulado'];
 
 interface PaymentFiltersProps {
   searchQuery: string;

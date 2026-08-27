@@ -33,15 +33,17 @@ const ServiceEconomics = {
     const serviceType = service.ServiceType || 'Dispo';
 
     const rateCard = RateCardRepository.getByClientAndType(
-      client.ID, 
-      vehicleType, 
+      client.ID,
+      service.ProjectID,
+      vehicleType,
       serviceType
     );
 
     if (!rateCard) {
       throw new BusinessRuleError(
-        'No RateCard found for client ' + client.Name + 
-        ', vehicleType ' + vehicleType + 
+        'No RateCard found for client ' + client.Name +
+        ', project ' + service.ProjectID +
+        ', vehicleType ' + vehicleType +
         ', serviceType ' + serviceType,
         'NO_RATECARD'
       );
@@ -221,6 +223,7 @@ const ServiceEconomics = {
     }
 
     const items = [];
+    const srId = supplierRate ? supplierRate.ID : '';
 
     // 1. BASE
     if (supplierRate.BaseRate > 0) {
@@ -229,7 +232,8 @@ const ServiceEconomics = {
         'Servicio base ' + serviceType + ' (proveedor)',
         supplierRate.BaseRate,
         driverId,
-        'driver_rate'
+        'driver_rate',
+        srId
       ));
     }
 
@@ -243,7 +247,8 @@ const ServiceEconomics = {
           'Km extra proveedor (' + extraKm + ' km @ €' + supplierRate.ExtraKmRate + '/km)',
           extraKm * supplierRate.ExtraKmRate,
           driverId,
-          'driver_rate'
+          'driver_rate',
+          srId
         ));
       }
     }
@@ -259,7 +264,8 @@ const ServiceEconomics = {
           'Horas extra proveedor (' + extraHours + ' h @ €' + supplierRate.ExtraHourRate + '/h)',
           extraHours * supplierRate.ExtraHourRate,
           driverId,
-          'driver_rate'
+          'driver_rate',
+          srId
         ));
       }
     }
@@ -276,7 +282,8 @@ const ServiceEconomics = {
           'Nocturnidad proveedor (' + nightHours + 'h @ €' + nightRate + '/h)',
           nightHours * nightRate,
           driverId,
-          'driver_rate'
+          'driver_rate',
+          srId
         ));
       }
     }
@@ -291,7 +298,8 @@ const ServiceEconomics = {
           : 'Festivo proveedor (50% de €' + supplierRate.BaseRate + ')',
         holidayRate,
         driverId,
-        'driver_rate'
+        'driver_rate',
+        srId
       ));
     }
 
@@ -304,7 +312,8 @@ const ServiceEconomics = {
           'Diaria proveedor ' + driverReport.diariaType,
           diariaCost,
           driverId,
-          'driver_rate'
+          'driver_rate',
+          srId
         ));
       }
     }
@@ -317,7 +326,8 @@ const ServiceEconomics = {
         'Tiempo de espera proveedor (' + waitHours + ' h @ €' + supplierRate.WaitHourRate + '/h)',
         waitHours * supplierRate.WaitHourRate,
         driverId,
-        'driver_rate'
+        'driver_rate',
+        srId
       ));
     }
 
@@ -329,7 +339,8 @@ const ServiceEconomics = {
           'Parking',
           driverReport.parking,
           driverId,
-          'driver_report'
+          'driver_report',
+          ''
         ));
       }
       if (driverReport.tolls > 0) {
@@ -338,7 +349,8 @@ const ServiceEconomics = {
           'Peajes',
           driverReport.tolls,
           driverId,
-          'driver_report'
+          'driver_report',
+          ''
         ));
       }
       if (driverReport.fuel > 0) {
@@ -347,7 +359,8 @@ const ServiceEconomics = {
           'Combustible',
           driverReport.fuel,
           driverId,
-          'driver_report'
+          'driver_report',
+          ''
         ));
       }
     }
@@ -412,7 +425,8 @@ const ServiceEconomics = {
         Description: item.description,
         Amount: item.amount,
         DriverID: item.driverId,
-        Source: item.source
+        Source: item.source,
+        SupplierRateID: item.supplierRateId || ''
       });
       created.push(entity);
     });
@@ -501,7 +515,8 @@ const ServiceEconomics = {
 
   /**
    * Calculate night hours (21:30 - 06:30) within a service window.
-   * Night window: 9:30pm (1350 min) to 6:30am (390 min) — crosses midnight.
+   * Night window: 21:30 (1290 min) to 06:30 (390 min) — crosses midnight.
+   * Service is always < 24h (single-day), so we compute direct overlap.
    */
   _calculateNightHours(startTime, endTime) {
     if (!startTime || !endTime) return 0;
@@ -510,41 +525,34 @@ const ServiceEconomics = {
     const startMin = sh * 60 + sm;
     const endMin = eh * 60 + em;
 
-    // Night window in minutes from midnight
     const NIGHT_START = 21 * 60 + 30; // 21:30 = 1290
     const NIGHT_END = 6 * 60 + 30;    // 06:30 = 390
 
     let totalNightMinutes = 0;
-    let current = startMin;
 
-    // Handle services that span midnight
-    const serviceMinutes = endMin > startMin ? endMin - startMin : (24 * 60 - startMin + endMin);
-
-    for (let i = 0; i < Math.ceil(serviceMinutes / (24 * 60)); i++) {
-      const dayStart = current;
-      const dayEnd = current + Math.min(serviceMinutes - i * (24 * 60), 24 * 60);
-
-      // Check overlap with night window (same day: 21:30-24:00, next day: 00:00-06:30)
-      // Night part 1: 21:30 to midnight (1290 to 1440)
-      const nightStart1 = Math.max(dayStart, NIGHT_START);
-      const nightEnd1 = Math.min(dayEnd, 1440);
-      if (nightEnd1 > nightStart1) {
-        totalNightMinutes += nightEnd1 - nightStart1;
-      }
-
-      // Night part 2: midnight to 06:30 (0 to 390) — only if service started before 21:30
-      if (dayStart < NIGHT_START) {
-        const nightStart2 = Math.max(dayStart, 0);
-        const nightEnd2 = Math.min(dayEnd, NIGHT_END);
-        if (nightEnd2 > nightStart2) {
-          totalNightMinutes += nightEnd2 - nightStart2;
-        }
-      }
-
-      current += 24 * 60;
+    if (endMin > startMin) {
+      // Same-day service (e.g., 08:00 → 18:00)
+      // Check overlap with 21:30-24:00
+      const o1Start = Math.max(startMin, NIGHT_START);
+      const o1End = Math.min(endMin, 24 * 60);
+      if (o1End > o1Start) totalNightMinutes += o1End - o1Start;
+      // Check overlap with 00:00-06:30
+      const o2Start = Math.max(startMin, 0);
+      const o2End = Math.min(endMin, NIGHT_END);
+      if (o2End > o2Start) totalNightMinutes += o2End - o2Start;
+    } else {
+      // Overnight service (e.g., 22:00 → 02:00) — endMin <= startMin
+      // Service wraps midnight. Count overlap with 21:30-24:00 on day 1
+      const o1Start = Math.max(startMin, NIGHT_START);
+      const o1End = 24 * 60;
+      if (o1End > o1Start) totalNightMinutes += o1End - o1Start;
+      // Count overlap with 00:00-06:30 on day 2
+      const o2Start = 0;
+      const o2End = Math.min(endMin, NIGHT_END);
+      if (o2End > o2Start) totalNightMinutes += o2End - o2Start;
     }
 
-    return Math.round((totalNightMinutes / 60) * 10) / 10; // round to 1 decimal
+    return Math.round((totalNightMinutes / 60) * 10) / 10;
   },
 
   _createBreakdownItem(itemType, description, quantity, unitPrice, rateCardId, source) {
@@ -559,13 +567,14 @@ const ServiceEconomics = {
     };
   },
 
-  _createCostItem(itemType, description, amount, driverId, source) {
+  _createCostItem(itemType, description, amount, driverId, source, supplierRateId) {
     return {
       itemType: itemType,
       description: description,
       amount: amount,
       driverId: driverId,
-      source: source
+      source: source,
+      supplierRateId: supplierRateId || ''
     };
   }
 };

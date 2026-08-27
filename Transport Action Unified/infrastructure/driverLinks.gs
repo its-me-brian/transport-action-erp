@@ -667,6 +667,19 @@ function submitDriverLinkResponse(token, services) {
                 rawData
               );
               results.push({ serviceId: svc.serviceId, inboxId: inboxResult.inboxId || null });
+
+              // Auto-advance: CAPTURED → NORMALIZED → PENDING_REVIEW → ACCEPTED
+              // Same pipeline as WhatsApp flow — so inbox items are ready for coordinator
+              if (inboxResult.success && inboxResult.inboxId) {
+                try {
+                  normalizeReport(inboxResult.inboxId, rawData);
+                  submitToReview(inboxResult.inboxId);
+                  acceptReport(inboxResult.inboxId, 'auto_driverlink');
+                  Logger.log('[DriverLink] Auto-advanced inbox ' + inboxResult.inboxId + ' to ACCEPTED');
+                } catch (advanceErr) {
+                  Logger.log('[DriverLink] Auto-advance warning for ' + inboxResult.inboxId + ': ' + advanceErr.message);
+                }
+              }
           } catch (e) {
             Logger.log('Error processing service ' + svc.serviceId + ': ' + e.message);
           }

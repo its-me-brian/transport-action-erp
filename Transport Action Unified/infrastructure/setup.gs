@@ -177,7 +177,7 @@ function _setupServiceRevenueBreakdown(ss) {
 
 function _setupServiceCostBreakdown(ss) {
   _safeInsertSheet(ss, 'ServiceCostBreakdown', '#B71C1C',
-    ['ID', 'ServiceID', 'ItemType', 'Description', 'Amount', 'DriverID', 'Source', 'ReferenceLineID', 'Locked', 'CreatedAt']);
+    ['ID', 'ServiceID', 'ItemType', 'Description', 'Amount', 'DriverID', 'Source', 'SupplierRateID', 'ReferenceLineID', 'Locked', 'CreatedAt']);
 }
 
 function _setupDriverReports(ss) {
@@ -278,7 +278,7 @@ function _setupDriverLinkEvents(ss) {
 function _setupDriverReportInbox(ss) {
   // Aligned with migration 001: includes ServiceID column
   _safeInsertSheet(ss, 'DriverReportInbox', '#BF360C',
-    ['ID', 'Source', 'Channel', 'DriverID', 'DriverName', 'ServiceDate', 'StartTime', 'EndTime', 'KmTotal', 'KmExtra', 'HoursExtra', 'Diaria', 'IsFestivo', 'IsNotturno', 'Parking', 'Tolls', 'Fuel', 'Notes', 'Status', 'NormalizedData', 'ServiceID', 'CorrelationID', 'ReviewedBy', 'ReviewedAt', 'RejectionReason', 'CreatedAt', 'UpdatedAt']);
+    ['ID', 'Source', 'Channel', 'DriverID', 'DriverName', 'ServiceDate', 'StartTime', 'EndTime', 'KmTotal', 'KmExtra', 'HoursExtra', 'Diaria', 'IsFestivo', 'IsNotturno', 'Parking', 'Tolls', 'Fuel', 'Notes', 'Status', 'NormalizedData', 'ServiceID', 'ProjectID', 'CorrelationID', 'ReviewedBy', 'ReviewedAt', 'RejectionReason', 'CreatedAt', 'UpdatedAt']);
 }
 
 function _setupPresence(ss) {

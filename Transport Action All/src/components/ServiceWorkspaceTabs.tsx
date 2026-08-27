@@ -1169,9 +1169,10 @@ export function WhatsAppTab({ service, relatedData, onCaptureSuccess, onServiceU
 // TAB: RECONCILIATION — Full flow (ERG Phase 11)
 // ============================================================================
 
-export function ReconciliationTab({ service, reconciliation }: {
+export function ReconciliationTab({ service, reconciliation, onServiceUpdate }: {
   service: Service;
   reconciliation: any | null;
+  onServiceUpdate?: () => void;
 }) {
   const openService = useOpenService();
   const { showToast } = useToast();
@@ -1926,9 +1927,9 @@ export function FinanceTab({ service, onServiceUpdate }: {
         ) : (
           <div className="space-y-1.5">
             {payments.map(pay => (
-              <div key={pay.id} className="flex items-center justify-between p-2.5 rounded-lg border border-outline-variant/30 bg-surface-container-lowest">
+              <div key={pay.id} className={`flex items-center justify-between p-2.5 rounded-lg border border-outline-variant/30 bg-surface-container-lowest ${pay.status === 'Anulado' ? 'opacity-50' : ''}`}>
                 <div>
-                  <div className="text-[12px] font-medium text-on-surface">€{pay.amount?.toFixed(2)}</div>
+                  <div className={`text-[12px] font-medium text-on-surface ${pay.status === 'Anulado' ? 'line-through' : ''}`}>€{pay.amount?.toFixed(2)}</div>
                   <div className="text-[10px] text-on-surface-variant">{pay.status} · {pay.paymentMethod} · {pay.paymentDate}</div>
                 </div>
                 <div className="flex gap-1">
@@ -1948,7 +1949,7 @@ export function FinanceTab({ service, onServiceUpdate }: {
                       Confirm
                     </button>
                   )}
-                  {pay.status !== 'Conciliado' && can('payment.void') && (
+                  {pay.status !== 'Conciliado' && pay.status !== 'Anulado' && can('payment.void') && (
                     <button onClick={() => setShowVoidPayment(pay)}
                       className="text-[10px] px-2 py-1 bg-red-50 text-red-700 rounded hover:bg-red-100 border border-red-200">
                       Void
@@ -2058,8 +2059,8 @@ export function FinanceTab({ service, onServiceUpdate }: {
                 try {
                   const { voidPayment } = await import('../services/api');
                   await voidPayment(showVoidPayment.id, voidPaymentReason || 'Voided from ServiceWorkspace');
-                  showToast('Payment voided', 'success');
-                  setPayments(prev => prev.filter(p => p.id !== showVoidPayment.id));
+                   showToast('Payment voided', 'success');
+                   setPayments(prev => prev.map(p => p.id === showVoidPayment.id ? { ...p, status: 'Anulado' } : p));
                   setShowVoidPayment(null);
                   setVoidPaymentReason('');
                   onServiceUpdate?.();

@@ -17,9 +17,21 @@ const RateCardRepository = {
     return _find(this.SHEET, row => row.ClientID === clientId);
   },
 
-  getByClientAndType(clientId, vehicleType, serviceType) {
+  getByClientAndType(clientId, projectId, vehicleType, serviceType) {
     const cards = this.getByClient(clientId);
-    return cards.find(c => c.VehicleType === vehicleType && c.ServiceType === (serviceType || 'Dispo') && (c.Active === 'true' || c.Active === true));
+    const matches = cards.filter(c =>
+      c.VehicleType === vehicleType &&
+      c.ServiceType === (serviceType || 'Dispo') &&
+      (c.Active === 'true' || c.Active === true)
+    );
+    // Prefer project-specific rate card, then GLOBAL, then first match
+    if (projectId) {
+      const projectMatch = matches.find(c => c.ProjectID === projectId);
+      if (projectMatch) return projectMatch;
+    }
+    const globalMatch = matches.find(c => !c.ProjectID || c.ProjectID === 'GLOBAL');
+    if (globalMatch) return globalMatch;
+    return matches[0] || undefined;
   },
 
   getActive() {

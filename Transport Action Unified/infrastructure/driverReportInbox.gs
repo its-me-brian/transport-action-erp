@@ -60,6 +60,7 @@ function captureReport(source, channel, driverId, projectId, serviceDate, rawDat
       Status: 'CAPTURED',
       NormalizedData: '',
       ServiceID: rawData.serviceId || rawData.selectedServiceId || '',
+      ProjectID: projectId,
       CorrelationID: correlationId,
       ReviewedBy: '',
       ReviewedAt: '',

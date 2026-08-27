@@ -14,7 +14,8 @@ const ENUMS = {
     'Realizado',
     'Reportado',
     'Revision',
-    'Validado'
+    'Validado',
+    'Cancelado'
   ],
 
   ServiceFinancialStatus: [

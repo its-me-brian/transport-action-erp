@@ -549,7 +549,7 @@ export default function ServiceWorkspace({
                         {(activeSubSection || 'driver') === 'driver' && <DriverTab service={service} relatedData={relatedData} />}
                         {(activeSubSection || 'driver') === 'driverLink' && <DriverLinkTab service={service} driverLink={relatedData.driverLink} />}
                         {(activeSubSection || 'driver') === 'driverReport' && <DriverReportTab service={service} driverReport={relatedData.driverReport} onServiceUpdate={relatedData.refresh} />}
-                        {(activeSubSection || 'driver') === 'reconciliation' && <ReconciliationTab service={service} reconciliation={relatedData.reconciliation} />}
+                        {(activeSubSection || 'driver') === 'reconciliation' && <ReconciliationTab service={service} reconciliation={relatedData.reconciliation} onServiceUpdate={relatedData.refresh} />}
                       </>
                     )}
                   </div>
@@ -857,7 +857,7 @@ export default function ServiceWorkspace({
                     {(activeSubSection || 'driver') === 'driver' && <DriverTab service={service} />}
                     {(activeSubSection || 'driver') === 'driverLink' && <DriverLinkTab service={service} driverLink={relatedData.driverLink} />}
                     {(activeSubSection || 'driver') === 'driverReport' && <DriverReportTab service={service} driverReport={relatedData.driverReport} onServiceUpdate={relatedData.refresh} />}
-                    {(activeSubSection || 'driver') === 'reconciliation' && <ReconciliationTab service={service} reconciliation={relatedData.reconciliation} />}
+                    {(activeSubSection || 'driver') === 'reconciliation' && <ReconciliationTab service={service} reconciliation={relatedData.reconciliation} onServiceUpdate={relatedData.refresh} />}
                   </>
                 )}
               </div>
@@ -910,6 +910,7 @@ export default function ServiceWorkspace({
               </div>
               <div className="flex-1">
                 {(activeSubSection || 'rapportino') === 'rapportino' && <RapportinoTab service={service} onServiceUpdate={relatedData.refresh} />}
+                {(activeSubSection || 'rapportino') === 'finance' && <FinanceTab service={service} onServiceUpdate={relatedData.refresh} />}
               </div>
             </div>
           )}

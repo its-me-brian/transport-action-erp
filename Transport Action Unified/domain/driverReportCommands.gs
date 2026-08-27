@@ -211,18 +211,21 @@ const DriverReportCommands = {
         waitMinutes: parseFloat(report.WaitMinutes) || 0
       };
 
-      // 2. CALCULAR REVENUE BREAKDOWN — graceful if no RateCard
+      // 2. CALCULAR REVENUE BREAKDOWN — graceful if no RateCard, but track warning
+      var warnings = [];
       try {
         ServiceEconomics.applyRevenueBreakdown(serviceId, driverReportData);
       } catch (e) {
         Logger.log('[approveReport] Revenue breakdown skipped: ' + e.message + ' (serviceId=' + serviceId + ')');
+        warnings.push('Revenue breakdown not calculated: ' + e.message);
       }
 
-      // 3. CALCULAR COST BREAKDOWN — graceful if no SupplierRate
+      // 3. CALCULAR COST BREAKDOWN — graceful if no SupplierRate, but track warning
       try {
         ServiceEconomics.applyCostBreakdown(serviceId, driverReportData);
       } catch (e) {
         Logger.log('[approveReport] Cost breakdown skipped: ' + e.message + ' (serviceId=' + serviceId + ')');
+        warnings.push('Cost breakdown not calculated: ' + e.message);
       }
 
       // 4. CREAR/ACTUALIZAR RECONCILIATION
@@ -231,6 +234,7 @@ const DriverReportCommands = {
         reconciliation = ReconciliationCommands.createOrUpdate(serviceId);
       } catch (e) {
         Logger.log('[approveReport] Reconciliation skipped: ' + e.message + ' (serviceId=' + serviceId + ')');
+        warnings.push('Reconciliation not created: ' + e.message);
       }
 
       // 5. AUTO-RESOLVER si producción y conductor coinciden
@@ -288,7 +292,9 @@ const DriverReportCommands = {
         payload: { serviceId, driverId }
       });
 
-      return DriverReportRepository.toDTO(DriverReportRepository.getById(reportId));
+      var dto = DriverReportRepository.toDTO(DriverReportRepository.getById(reportId));
+      dto.warnings = warnings;
+      return dto;
     });
   },
 

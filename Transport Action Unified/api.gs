@@ -111,6 +111,20 @@ var FIELD_MAPS = {
   driverAdvance: {
     driverId: 'DriverID', projectId: 'ProjectID', serviceId: 'ServiceID',
     amount: 'Amount', notes: 'Notes', status: 'Status', deductedIn: 'DeductedIn'
+  },
+  service: {
+    projectId: 'ProjectID', date: 'Date', operationalStatus: 'OperationalStatus',
+    financialStatus: 'FinancialStatus', driverId: 'DriverID', vehicleId: 'VehicleID',
+    vehicleType: 'VehicleType', serviceType: 'ServiceType', operatingCompany: 'OperatingCompany',
+    passengerName: 'PassengerName', passengerRole: 'PassengerRole',
+    passengerPhone: 'PassengerPhone', passengerDepartment: 'PassengerDepartment',
+    flightInfo: 'FlightInfo', time: 'Time', section: 'Section', production: 'Production',
+    pickupLines: 'PickupLines', dropoffLines: 'DropoffLines',
+    estimatedRevenue: 'EstimatedRevenue', estimatedCost: 'EstimatedCost',
+    notes: 'Notes', providerType: 'ProviderType', providerId: 'ProviderID',
+    pickupMapsUrl: 'PickupMapsUrl', dropoffMapsUrl: 'DropoffMapsUrl',
+    passengersList: 'PassengersList', originalTransportDate: 'OriginalTransportDate',
+    movements: 'Movements', isWalking: 'IsWalking'
   }
 };
 
@@ -631,7 +645,7 @@ function _handleRoute(params, data) {
         break;
       case 'createService':
         _checkPermission(data, 'service.import');
-        result = apiCreateService(data);
+        result = apiCreateService(_normalizeToPascal(data, FIELD_MAPS.service));
         break;
       case 'migrateImportedServicesWithDriver':
         _checkPermission(data, 'service.import');
@@ -1410,10 +1424,6 @@ function _handleRoute(params, data) {
       // =====================================================================
       // WHATSAPP PARSERS — AUTHENTICATED (utility)
       // =====================================================================
-      case 'parseWhatsApp':
-        _checkPermission(data, 'service.list');
-        result = parseWhatsAppText(data.text);
-        break;
       case 'parseDriverReport':
         _checkPermission(data, 'service.list');
         result = parseDriverReport(data.text);

@@ -1358,7 +1358,7 @@ export interface Payment {
   paymentDate: string;
   reference: string;
   notes: string;
-  status: 'Registrado' | 'Confirmado' | 'Conciliado';
+  status: 'Registrado' | 'Confirmado' | 'Conciliado' | 'Anulado';
   createdBy: string;
   createdAt: string;
   confirmedAt: string;
@@ -2572,6 +2572,14 @@ export interface WhatsAppParsedReport {
   serviceId?: string;
   selectedServiceId?: string;
   driverId?: string;
+  overtimeHours?: number;
+  parking?: number;
+  tolls?: number;
+  fuel?: number;
+  waitMinutes?: number;
+  isFestivo?: boolean;
+  isNotturno?: boolean;
+  notes?: string;
 }
 
 export interface WhatsAppParseResult {

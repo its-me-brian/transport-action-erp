@@ -39,6 +39,7 @@ function runMigrations() {
     { version: 9, fn: migrate_009_soft_delete_remaining_entities },
     { version: 10, fn: migrate_010_fix_schema_gaps },
     { version: 11, fn: migrate_011_driversource_column },
+    { version: 12, fn: migrate_012_inbox_projectid_costbreakdown_supplierrateid },
   ];
 
   const pending = migrations
@@ -712,5 +713,51 @@ function migrate_011_driversource_column() {
   if (shDR) {
     var hm = _headerMap(shDR);
     _ensureColumn(shDR, hm, 'Source', 'ServiceID', '#FF8F00');
+  }
+}
+
+// ============================================================================
+// MIGRATION 012 — Add ProjectID to DriverReportInbox + SupplierRateID to CostBreakdown
+// ============================================================================
+
+/**
+ * Migration 012: Adds ProjectID column to DriverReportInbox (for project-based filtering)
+ * and SupplierRateID column to ServiceCostBreakdown (for audit traceability).
+ */
+function migrate_012_inbox_projectid_costbreakdown_supplierrateid() {
+  const ss = SpreadsheetApp.openById(CONFIG.DB_SHEET_ID);
+
+  function _headerMap(sh) {
+    const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+    const map = {};
+    headers.forEach((h, i) => { map[h] = i + 1; });
+    return map;
+  }
+
+  function _ensureColumn(sh, headerMap, colName, after, color) {
+    if (headerMap[colName]) return false;
+    const afterCol = headerMap[after] || sh.getLastColumn();
+    sh.insertColumnAfter(afterCol);
+    sh.getRange(1, afterCol + 1)
+      .setValue(colName)
+      .setFontWeight('bold')
+      .setBackground(color || '#455A64')
+      .setFontColor('#fff');
+    Logger.log('Migration 012: Added ' + colName + ' column to ' + sh.getName());
+    return true;
+  }
+
+  // Add ProjectID to DriverReportInbox (after ServiceID)
+  var shInbox = ss.getSheetByName('DriverReportInbox');
+  if (shInbox) {
+    var hmInbox = _headerMap(shInbox);
+    _ensureColumn(shInbox, hmInbox, 'ProjectID', 'ServiceID', '#BF360C');
+  }
+
+  // Add SupplierRateID to ServiceCostBreakdown (after Source)
+  var shCost = ss.getSheetByName('ServiceCostBreakdown');
+  if (shCost) {
+    var hmCost = _headerMap(shCost);
+    _ensureColumn(shCost, hmCost, 'SupplierRateID', 'Source', '#B71C1C');
   }
 }
