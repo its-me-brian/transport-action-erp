@@ -256,36 +256,12 @@ const DriverReportCommands = {
         }
       });
 
-      // 7. Actualizar Service via ServiceCommands (state machine + lock + events)
-      const resolved = reconciliation && reconciliation.Status === 'Resuelto';
-
-      // 7a. Financial transitions via ServiceCommands
-      // Only transition if not already in target state (handles multiple report approvals)
+      // 7. Financial: Pendiente → Calculado (breakdowns were just calculated)
+      //    Operational + remaining financial transitions are handled by
+      //    ReconciliationCommands.resolve() (called by autoResolveIfMatch or manual resolution).
+      //    approveReport only registers data and creates/updates reconciliation.
       if (service.FinancialStatus === 'Pendiente') {
         ServiceCommands.calculateService(serviceId); // Pendiente → Calculado
-      }
-      if (resolved) {
-        if (service.FinancialStatus !== 'ActualsConfirmados' && service.FinancialStatus !== 'Aprobado') {
-          ServiceCommands.confirmActuals(serviceId); // Calculado/Confrontacion → ActualsConfirmados
-        }
-      } else {
-        if (service.FinancialStatus === 'Calculado') {
-          ServiceCommands.moveToConfrontacion(serviceId); // Calculado → Confrontacion
-        }
-        // If already in Confrontacion, do nothing — waiting for reconciliation
-      }
-
-      // 7b. Operational transitions via ServiceCommands
-      // Only transition if not already in target state (handles multiple report approvals)
-      if (resolved) {
-        if (service.OperationalStatus !== 'Validado') {
-          ServiceCommands.validateService(serviceId); // Reportado/Revision → Validado + freeze breakdowns
-        }
-      } else {
-        if (service.OperationalStatus === 'Reportado') {
-          ServiceCommands.moveToRevision(serviceId); // Reportado → Revision
-        }
-        // If already in Revision, do nothing — waiting for reconciliation to resolve
       }
 
       // 8. Actualizar reporte — COMMITTED LAST (after all dependents succeed)
