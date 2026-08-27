@@ -2258,10 +2258,18 @@ export async function updateRateCard(id: string, changes: Record<string, any>): 
 
 export interface DriverReportDTO {
   id: string;
+  source: string;
   serviceId: string;
   driverId: string;
   version: number;
   previousReportId: string;
+  startTime: string;
+  endTime: string;
+  km: number;
+  hasDiaria: boolean;
+  isFestivo: boolean;
+  isNotturno: boolean;
+  diariaType: string;
   kmExtra: number;
   hoursExtra: number;
   parking: number;
@@ -2286,25 +2294,33 @@ export async function getDriverReports(serviceId?: string): Promise<DriverReport
   if (!Array.isArray(raw)) return [];
   return raw.map(row => ({
     id: row.ID || row.id || '',
+    source: row.Source || '',
     serviceId: row.ServiceID || row.serviceId || '',
     driverId: row.DriverID || row.driverId || '',
     version: parseInt(row.Version) || 1,
     previousReportId: row.PreviousReportID || row.previousReportId || '',
-    kmExtra: parseFloat(row.KmExtra) || 0,
-    hoursExtra: parseFloat(row.HoursExtra) || 0,
-    parking: parseFloat(row.Parking) || 0,
-    tolls: parseFloat(row.Tolls) || 0,
-    fuel: parseFloat(row.Fuel) || 0,
-    waitMinutes: parseFloat(row.WaitMinutes) || 0,
-    notes: row.Notes || row.notes || '',
-    status: row.Status || row.status || '',
-    approvedBy: row.ApprovedBy || row.approvedBy || '',
-    approvedDate: row.ApprovedDate || row.approvedDate || '',
-    rejectedReason: row.RejectedReason || row.rejectedReason || '',
-    locked: row.Locked === true || row.Locked === 'true',
-    submittedAt: row.SubmittedAt || row.submittedAt || '',
-    createdAt: row.CreatedAt || row.createdAt || '',
-    totalExtras: (parseFloat(row.KmExtra) || 0) + (parseFloat(row.HoursExtra) || 0) + (parseFloat(row.Parking) || 0) + (parseFloat(row.Tolls) || 0) + (parseFloat(row.Fuel) || 0),
+    startTime: row.startTime || row.StartTime || '',
+    endTime: row.endTime || row.EndTime || '',
+    km: parseFloat(row.km) || parseFloat(row.KmTotal) || 0,
+    hasDiaria: row.hasDiaria === true || row.hasDiaria === 'true' || row.HasDiaria === true || row.HasDiaria === 'true',
+    isFestivo: row.isFestivo === true || row.isFestivo === 'true' || row.IsFestivo === true || row.IsFestivo === 'true',
+    isNotturno: row.isNotturno === true || row.isNotturno === 'true' || row.IsNotturno === true || row.IsNotturno === 'true',
+    diariaType: row.diariaType || row.DiariaType || 'none',
+    kmExtra: parseFloat(row.kmExtra) || parseFloat(row.KmExtra) || 0,
+    hoursExtra: parseFloat(row.hoursExtra) || parseFloat(row.HoursExtra) || 0,
+    parking: parseFloat(row.parking) || parseFloat(row.Parking) || 0,
+    tolls: parseFloat(row.tolls) || parseFloat(row.Tolls) || 0,
+    fuel: parseFloat(row.fuel) || parseFloat(row.Fuel) || 0,
+    waitMinutes: parseFloat(row.waitMinutes) || parseFloat(row.WaitMinutes) || 0,
+    notes: row.notes || row.Notes || '',
+    status: row.status || row.Status || '',
+    approvedBy: row.approvedBy || row.ApprovedBy || '',
+    approvedDate: row.approvedDate || row.ApprovedDate || '',
+    rejectedReason: row.rejectedReason || row.RejectedReason || '',
+    locked: row.locked === true || row.locked === 'true' || row.Locked === true || row.Locked === 'true',
+    submittedAt: row.submittedAt || row.SubmittedAt || '',
+    createdAt: row.createdAt || row.CreatedAt || '',
+    totalExtras: (parseFloat(row.kmExtra) || parseFloat(row.KmExtra) || 0) + (parseFloat(row.hoursExtra) || parseFloat(row.HoursExtra) || 0) + (parseFloat(row.parking) || parseFloat(row.Parking) || 0) + (parseFloat(row.tolls) || parseFloat(row.Tolls) || 0) + (parseFloat(row.fuel) || parseFloat(row.Fuel) || 0),
   }));
 }
 
@@ -2313,25 +2329,33 @@ export async function getDriverReport(id: string): Promise<DriverReportDTO | nul
   if (!raw || raw.error) return null;
   return {
     id: raw.ID || raw.id || '',
+    source: raw.Source || raw.source || '',
     serviceId: raw.ServiceID || '',
     driverId: raw.DriverID || '',
     version: parseInt(raw.Version) || 1,
     previousReportId: raw.PreviousReportID || '',
-    kmExtra: parseFloat(raw.KmExtra) || 0,
-    hoursExtra: parseFloat(raw.HoursExtra) || 0,
-    parking: parseFloat(raw.Parking) || 0,
-    tolls: parseFloat(raw.Tolls) || 0,
-    fuel: parseFloat(raw.Fuel) || 0,
-    waitMinutes: parseFloat(raw.WaitMinutes) || 0,
-    notes: raw.Notes || '',
-    status: raw.Status || '',
-    approvedBy: raw.ApprovedBy || '',
-    approvedDate: raw.ApprovedDate || '',
-    rejectedReason: raw.RejectedReason || '',
-    locked: raw.Locked === true || raw.Locked === 'true',
-    submittedAt: raw.SubmittedAt || '',
-    createdAt: raw.CreatedAt || '',
-    totalExtras: (parseFloat(raw.KmExtra) || 0) + (parseFloat(raw.HoursExtra) || 0) + (parseFloat(raw.Parking) || 0) + (parseFloat(raw.Tolls) || 0) + (parseFloat(raw.Fuel) || 0),
+    startTime: raw.startTime || raw.StartTime || '',
+    endTime: raw.endTime || raw.EndTime || '',
+    km: parseFloat(raw.km) || parseFloat(raw.KmTotal) || 0,
+    hasDiaria: raw.hasDiaria === true || raw.hasDiaria === 'true' || raw.HasDiaria === true || raw.HasDiaria === 'true',
+    isFestivo: raw.isFestivo === true || raw.isFestivo === 'true' || raw.IsFestivo === true || raw.IsFestivo === 'true',
+    isNotturno: raw.isNotturno === true || raw.isNotturno === 'true' || raw.IsNotturno === true || raw.IsNotturno === 'true',
+    diariaType: raw.diariaType || raw.DiariaType || 'none',
+    kmExtra: parseFloat(raw.kmExtra) || parseFloat(raw.KmExtra) || 0,
+    hoursExtra: parseFloat(raw.hoursExtra) || parseFloat(raw.HoursExtra) || 0,
+    parking: parseFloat(raw.parking) || parseFloat(raw.Parking) || 0,
+    tolls: parseFloat(raw.tolls) || parseFloat(raw.Tolls) || 0,
+    fuel: parseFloat(raw.fuel) || parseFloat(raw.Fuel) || 0,
+    waitMinutes: parseFloat(raw.waitMinutes) || parseFloat(raw.WaitMinutes) || 0,
+    notes: raw.notes || raw.Notes || '',
+    status: raw.status || raw.Status || '',
+    approvedBy: raw.approvedBy || raw.ApprovedBy || '',
+    approvedDate: raw.approvedDate || raw.ApprovedDate || '',
+    rejectedReason: raw.rejectedReason || raw.RejectedReason || '',
+    locked: raw.locked === true || raw.locked === 'true' || raw.Locked === true || raw.Locked === 'true',
+    submittedAt: raw.submittedAt || raw.SubmittedAt || '',
+    createdAt: raw.createdAt || raw.CreatedAt || '',
+    totalExtras: (parseFloat(raw.kmExtra) || parseFloat(raw.KmExtra) || 0) + (parseFloat(raw.hoursExtra) || parseFloat(raw.HoursExtra) || 0) + (parseFloat(raw.parking) || parseFloat(raw.Parking) || 0) + (parseFloat(raw.tolls) || parseFloat(raw.Tolls) || 0) + (parseFloat(raw.fuel) || parseFloat(raw.Fuel) || 0),
   };
 }
 
