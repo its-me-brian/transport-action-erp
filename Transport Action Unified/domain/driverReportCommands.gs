@@ -260,20 +260,32 @@ const DriverReportCommands = {
       const resolved = reconciliation && reconciliation.Status === 'Resuelto';
 
       // 7a. Financial transitions via ServiceCommands
+      // Only transition if not already in target state (handles multiple report approvals)
       if (service.FinancialStatus === 'Pendiente') {
         ServiceCommands.calculateService(serviceId); // Pendiente → Calculado
       }
       if (resolved) {
-        ServiceCommands.confirmActuals(serviceId); // Calculado/Confrontacion → ActualsConfirmados
+        if (service.FinancialStatus !== 'ActualsConfirmados' && service.FinancialStatus !== 'Aprobado') {
+          ServiceCommands.confirmActuals(serviceId); // Calculado/Confrontacion → ActualsConfirmados
+        }
       } else {
-        ServiceCommands.moveToConfrontacion(serviceId); // Calculado → Confrontacion
+        if (service.FinancialStatus === 'Calculado') {
+          ServiceCommands.moveToConfrontacion(serviceId); // Calculado → Confrontacion
+        }
+        // If already in Confrontacion, do nothing — waiting for reconciliation
       }
 
       // 7b. Operational transitions via ServiceCommands
+      // Only transition if not already in target state (handles multiple report approvals)
       if (resolved) {
-        ServiceCommands.validateService(serviceId); // Reportado → Validado + freeze breakdowns
+        if (service.OperationalStatus !== 'Validado') {
+          ServiceCommands.validateService(serviceId); // Reportado/Revision → Validado + freeze breakdowns
+        }
       } else {
-        ServiceCommands.moveToRevision(serviceId); // Reportado → Revision
+        if (service.OperationalStatus === 'Reportado') {
+          ServiceCommands.moveToRevision(serviceId); // Reportado → Revision
+        }
+        // If already in Revision, do nothing — waiting for reconciliation to resolve
       }
 
       // 8. Actualizar reporte — COMMITTED LAST (after all dependents succeed)
