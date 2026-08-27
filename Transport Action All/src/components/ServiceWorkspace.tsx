@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   X, Phone, MessageSquare,
   CheckCircle, Clock, Link2, FileText,
@@ -114,6 +114,14 @@ export default function ServiceWorkspace({
   const { showToast } = useToast();
   const relatedLoading = relatedData.loading;
   const { can } = useAuth();
+
+  // Sync internal state when URL-driven props change (e.g. Quick Actions navigation)
+  useEffect(() => {
+    setActiveGroup(initialGroup);
+  }, [initialGroup]);
+  useEffect(() => {
+    setActiveSubSection(initialSubSection);
+  }, [initialSubSection]);
 
   const handleGroupChange = (group: ServiceGroupId, subSection?: ServiceSubSection) => {
     setActiveGroup(group);

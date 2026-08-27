@@ -181,7 +181,7 @@ const ReconciliationCommands = {
     }
 
     // Verificar si ya existe reconciliation
-    let reconciliation = this.getByService(serviceId);
+    let reconciliation = ReconciliationRepository.getByService(serviceId);
     const data = {
       ServiceID: serviceId,
       ProjectID: service.ProjectID,
