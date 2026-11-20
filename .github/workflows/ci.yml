@@ -1,0 +1,117 @@
+# ============================================================================
+# ci.yml — Verificación obligatoria en cada push/PR
+# ============================================================================
+#
+# Dos jobs independientes:
+#
+#   1. frontend  → Transport Action All/  (TypeScript + Vitest)
+#                  · tsc --noEmit  (script "lint")
+#                  · vitest run    (script "test")
+#
+#   2. apps-script → Transport Action Unified/  (sintaxis)
+#                  · node --check sobre cada archivo .gs
+#                    (se copia a .js porque Node no reconoce la extensión .gs;
+#                     los 71 archivos pasan este chequeo localmente)
+#
+# No requiere secretos: los tests corren con mocks, sin tocar Google Sheets.
+#
+# ============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend (tsc + vitest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: Transport Action All
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: Transport Action All/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck (tsc --noEmit)
+        run: npm run lint
+
+      - name: Unit tests (vitest run)
+        run: npm test
+
+  apps-script:
+    name: Apps Script (syntax)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: Transport Action Unified
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Syntax check (.gs)
+        shell: bash
+        run: |
+          set -uo pipefail
+          work="$(mktemp -d)"
+          failed=0
+          checked=0
+
+          while IFS= read -r -d '' file; do
+            base="$(basename "${file%.gs}")"
+            target="$work/${base// /_}.js"
+            cp "$file" "$target"
+            checked=$((checked + 1))
+            if ! node --check "$target" 2>/tmp/err.txt; then
+              echo "::error file=$file::Syntax error in $file"
+              cat /tmp/err.txt
+              failed=1
+            fi
+          done < <(find . -name '*.gs' -print0)
+
+          echo "Checked $checked .gs files"
+          if [ "$checked" -eq 0 ]; then
+            echo "::error::No .gs files found - check working-directory"
+            exit 1
+          fi
+          exit "$failed"
+
+      - name: Validate JSON manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in *.json; do
+            node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))"
+            echo "ok: $f"
+          done

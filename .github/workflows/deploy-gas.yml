@@ -25,7 +25,7 @@
 #
 # - clasp push SOLO sincroniza archivos .gs/.js/.html/.json
 # - NO ejecuta tests de GAS (no hay framework de testing en GAS)
-# - Los tests del frontend (vitest) se ejecutan en un workflow separado
+# - Los tests del frontend (tsc + vitest) se ejecutan en ci.yml (workflow CI)
 # - Si clasp falla, el push NO se hace (fail-safe)
 #
 # ============================================================================
