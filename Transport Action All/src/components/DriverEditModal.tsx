@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Save, Loader2, DollarSign } from 'lucide-react';
 import { getDriverAvatar } from '../types';
-import { EditModalDriver } from './DriverPanelScreen';
+import { EditModalDriver } from '../hooks/useDriverPanel';
 
 interface DriverEditModalProps {
   driver: EditModalDriver;

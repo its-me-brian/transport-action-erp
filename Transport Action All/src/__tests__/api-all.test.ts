@@ -674,7 +674,7 @@ describe('W. WhatsApp Messages', () => {
   it('buildDriverWhatsAppMessage builds message', () => {
     const msg = api.buildDriverWhatsAppMessage(
       'Marco',
-      [{ id: '1', date: '2026-07-22', production: 'Movie Motion', vehicle: 'Van', driver: 'Marco', driverPhone: '', time: '09:00', from: 'Airport', to: 'Hotel', passengers: [], pickupLines: [], dropoffLines: [], flightInfo: '', notes: '', status: '', normalized: '', importId: '' }],
+      [{ id: '1', date: '2026-07-22', production: 'Movie Motion', vehicle: 'Van', driver: 'Marco', driverPhone: '', time: '09:00', from: 'Airport', to: 'Hotel', passengers: [], pickupLines: [], dropoffLines: [], flightInfo: '', notes: '', status: '', normalized: '', importId: '', pickupMapsUrl: '', dropoffMapsUrl: '', originalTransportDate: '', passengersList: '' }],
       'Jul 22'
     );
     expect(msg).toBeTruthy();
@@ -684,7 +684,7 @@ describe('W. WhatsApp Messages', () => {
 
   it('buildGroupWhatsAppMessage builds message', () => {
     const msg = api.buildGroupWhatsAppMessage(
-      [{ id: '1', date: '2026-07-22', production: 'Movie Motion', vehicle: 'Van', driver: 'Marco', driverPhone: '', time: '09:00', from: 'Airport', to: 'Hotel', passengers: [], pickupLines: [], dropoffLines: [], flightInfo: '', notes: '', status: '', normalized: '', importId: '' }],
+      [{ id: '1', date: '2026-07-22', production: 'Movie Motion', vehicle: 'Van', driver: 'Marco', driverPhone: '', time: '09:00', from: 'Airport', to: 'Hotel', passengers: [], pickupLines: [], dropoffLines: [], flightInfo: '', notes: '', status: '', normalized: '', importId: '', pickupMapsUrl: '', dropoffMapsUrl: '', originalTransportDate: '', passengersList: '' }],
       'Jul 22',
       'Movie Motion'
     );

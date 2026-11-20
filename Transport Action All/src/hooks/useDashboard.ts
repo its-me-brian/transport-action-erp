@@ -218,7 +218,8 @@ export function useDashboard({
     const config = actionConfig[action];
     if (!config) return;
     const allSvcs = [...services];
-    const eligibleIds = Array.from(selectedServiceIds).filter(id => {
+    const selectedArray = [...selectedServiceIds];
+    const eligibleIds: string[] = selectedArray.filter(id => {
       const svc = allSvcs.find(s => s.id === id);
       if (!svc) return false;
       if (config.validStatuses.includes(svc.operationalStatus)) return true;
@@ -232,7 +233,7 @@ export function useDashboard({
     }
     setIsBulkCompleting(true);
     try {
-      const results = await Promise.all(eligibleIds.map(id => config.fn(id)));
+      const results = await Promise.all(eligibleIds.map(id => config.fn(id))) as { error?: string; id?: string }[];
       const failures = results.filter(r => r?.error);
       const successCount = eligibleIds.length - failures.length;
       if (failures.length > 0) {
@@ -266,9 +267,10 @@ export function useDashboard({
     if (!driver) return;
     setIsBulkCompleting(true);
     try {
+      const serviceIds: string[] = Array.from(selectedServiceIds);
       const results = await Promise.all(
-        Array.from(selectedServiceIds).map(id => assignDriver(id, driver.id, driver.vehiclePreferred || ''))
-      );
+        serviceIds.map(id => assignDriver(id, driver.id, driver.vehiclePreferred || ''))
+      ) as { error?: string; id?: string }[];
       const failures = results.filter(r => r?.error);
       const successCount = selectedServiceIds.size - failures.length;
       if (failures.length > 0) showToast(`${failures.length} failed`, 'error');
@@ -299,7 +301,6 @@ export function useDashboard({
   const handleWorkflowAction = useCallback(async (service: Service, action: string) => {
     if (action === 'assign') {
       setEditingService(service);
-      setSidePanelService(null);
       return;
     }
     const apiMap: Record<string, () => Promise<any>> = {
@@ -337,7 +338,12 @@ export function useDashboard({
       if (parts.length === 2) {
         const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
         const monthIdx = monthNames.indexOf(parts[0]);
-        if (monthIdx === month) return true;
+        if (monthIdx !== month) return false;
+        // Also check year: parse the full date using baseDate year
+        const day = parseInt(parts[1], 10);
+        if (isNaN(day)) return false;
+        const parsed = new Date(year, monthIdx, day);
+        return parsed.getFullYear() === year && parsed.getMonth() === monthIdx;
       }
       return false;
     });
@@ -366,7 +372,7 @@ export function useDashboard({
 
   const handleDeleteCancelConfirm = (serviceId: string, mode: 'delete' | 'cancel') => {
     if (mode === 'cancel') onServiceUpdate?.(serviceId, { operationalStatus: 'Cancelado' });
-    else onServiceUpdate?.(serviceId, { status: 'Deleted' });
+    else       onServiceUpdate?.(serviceId, {});
     setDeleteCancelService(null);
   };
 

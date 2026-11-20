@@ -262,9 +262,9 @@ const ServiceCommands = {
       }
       // §37: VehicleID is NOT required — services can be created without one
 
-      // Validar breakdowns
-      const revenueItems = ServiceRevenueBreakdownRepository.getUnlockedByService(serviceId);
-      const costItems = ServiceCostBreakdownRepository.getUnlockedByService(serviceId);
+      // §S006: Validate breakdowns EXIST (locked or unlocked — financial pipeline may have already frozen them)
+      const revenueItems = ServiceRevenueBreakdownRepository.getByService(serviceId);
+      const costItems = ServiceCostBreakdownRepository.getByService(serviceId);
       if (revenueItems.length === 0) {
         throw new BusinessRuleError('Service must have at least 1 RevenueBreakdown', 'S006');
       }

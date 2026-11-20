@@ -85,7 +85,7 @@ const ReconciliationRepository = {
       FinalStartTime: resolution.FinalStartTime || '',
       FinalEndTime: resolution.FinalEndTime || '',
       FinalKm: resolution.FinalKm || 0,
-      FinalDiaria: resolution.FinalDiaria || 'none',
+      FinalDiaria: _normalizeDiariaType(resolution.FinalDiaria),
       FinalFestivo: resolution.FinalFestivo || false,
       FinalNotturno: resolution.FinalNotturno || false,
       ResolvedBy: resolvedBy || _getActiveUser() || 'system',
@@ -99,26 +99,26 @@ const ReconciliationRepository = {
       serviceId: entity.ServiceID,
       projectId: entity.ProjectID,
       production: {
-        startTime: entity.ProductionStartTime || '',
-        endTime: entity.ProductionEndTime || '',
+        startTime: _normalizeTimeToHHMM(entity.ProductionStartTime),
+        endTime: _normalizeTimeToHHMM(entity.ProductionEndTime),
         km: parseFloat(entity.ProductionKm) || 0,
-        diaria: entity.ProductionDiaria || 'none',
+        diaria: _normalizeDiariaType(entity.ProductionDiaria),
         festivo: entity.ProductionFestivo === 'true' || entity.ProductionFestivo === true,
         notturno: entity.ProductionNotturno === 'true' || entity.ProductionNotturno === true
       },
       driver: {
-        startTime: entity.DriverStartTime || '',
-        endTime: entity.DriverEndTime || '',
+        startTime: _normalizeTimeToHHMM(entity.DriverStartTime),
+        endTime: _normalizeTimeToHHMM(entity.DriverEndTime),
         km: parseFloat(entity.DriverKm) || 0,
-        diaria: entity.DriverDiaria || 'none',
+        diaria: _normalizeDiariaType(entity.DriverDiaria),
         festivo: entity.DriverFestivo === 'true' || entity.DriverFestivo === true,
         notturno: entity.DriverNotturno === 'true' || entity.DriverNotturno === true
       },
       final: {
-        startTime: entity.FinalStartTime || '',
-        endTime: entity.FinalEndTime || '',
+        startTime: _normalizeTimeToHHMM(entity.FinalStartTime),
+        endTime: _normalizeTimeToHHMM(entity.FinalEndTime),
         km: parseFloat(entity.FinalKm) || 0,
-        diaria: entity.FinalDiaria || 'none',
+        diaria: _normalizeDiariaType(entity.FinalDiaria),
         festivo: entity.FinalFestivo === 'true' || entity.FinalFestivo === true,
         notturno: entity.FinalNotturno === 'true' || entity.FinalNotturno === true
       },
@@ -153,7 +153,7 @@ const ReconciliationCommands = {
       ProductionStartTime: service.Time || '',
       ProductionEndTime: '',
       ProductionKm: 0,
-      ProductionDiaria: service.DiariaType || 'none',
+      ProductionDiaria: _normalizeDiariaType(service.DiariaType),
       ProductionFestivo: service.IsFestivo === 'true' || service.IsFestivo === true,
       ProductionNotturno: service.IsNotturno === 'true' || service.IsNotturno === true
     };
@@ -223,7 +223,7 @@ const ReconciliationCommands = {
         if (resolution.FinalStartTime) updates.StartTime = resolution.FinalStartTime;
         if (resolution.FinalEndTime) updates.EndTime = resolution.FinalEndTime;
         if (resolution.FinalKm) updates.KmTotal = resolution.FinalKm;
-        if (resolution.FinalDiaria) updates.DiariaType = resolution.FinalDiaria;
+        if (resolution.FinalDiaria) updates.DiariaType = _normalizeDiariaType(resolution.FinalDiaria);
         if (resolution.FinalFestivo !== undefined) updates.IsFestivo = resolution.FinalFestivo;
         if (resolution.FinalNotturno !== undefined) updates.IsNotturno = resolution.FinalNotturno;
 
@@ -253,11 +253,19 @@ const ReconciliationCommands = {
         
         // Use ServiceCommands for state transitions (validation + lock + events)
         // OperationalStatus: Revision → Validado (freeze breakdowns)
-        ServiceCommands.validateService(service.ID);
+        try {
+          ServiceCommands.validateService(service.ID);
+        } catch (e) {
+          Logger.log('[resolve] validateService skipped: ' + e.message + ' (service may not be in Revision state)');
+        }
         
         // FinancialStatus: Confrontacion → ActualsConfirmados
         if (service.FinancialStatus === 'Confrontacion') {
-          ServiceCommands.confirmActuals(service.ID);
+          try {
+            ServiceCommands.confirmActuals(service.ID);
+          } catch (e) {
+            Logger.log('[resolve] confirmActuals skipped: ' + e.message);
+          }
         }
       }
 
@@ -273,13 +281,27 @@ const ReconciliationCommands = {
   },
 
   /**
-   * Auto-resolver si no hay diferencias (match perfecto)
+   * Auto-resolver reconciliation — always resolves when driverData is provided (from approveReport),
+   * or falls back to matching logic when called without driverData.
    */
-  autoResolveIfMatch(serviceId) {
-    const reconciliation = this.getByService(serviceId);
+  autoResolveIfMatch(serviceId, driverData) {
+    const reconciliation = ReconciliationRepository.getByService(serviceId);
     if (!reconciliation || reconciliation.Status === 'Resuelto') return null;
 
-    // Normalize time strings for comparison (handles "8:30" vs "08:30" vs "8.30")
+    // If driverData is provided (from approveReport), ALWAYS resolve with driver values as final
+    if (driverData) {
+      return this.resolve(reconciliation.ID, {
+        FinalStartTime: driverData.startTime || reconciliation.DriverStartTime,
+        FinalEndTime: driverData.endTime || reconciliation.DriverEndTime,
+        FinalKm: driverData.kmTotal !== undefined ? driverData.kmTotal : reconciliation.DriverKm,
+        FinalDiaria: driverData.diariaType || reconciliation.DriverDiaria || 'none',
+        FinalFestivo: driverData.isFestivo !== undefined ? driverData.isFestivo : reconciliation.DriverFestivo,
+        FinalNotturno: driverData.isNotturno !== undefined ? driverData.isNotturno : reconciliation.DriverNotturno,
+        Notes: 'Auto-resolved: driver data loaded'
+      });
+    }
+
+    // Fallback: match production vs driver values (when called without driverData)
     function _normTime(t) {
       if (!t) return '';
       var str = String(t).trim();
@@ -290,7 +312,6 @@ const ReconciliationCommands = {
       return str;
     }
     
-    // Comparar campos clave
     const match = 
       _normTime(reconciliation.ProductionStartTime) === _normTime(reconciliation.DriverStartTime) &&
       _normTime(reconciliation.ProductionEndTime) === _normTime(reconciliation.DriverEndTime) &&

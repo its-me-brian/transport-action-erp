@@ -1,6 +1,6 @@
 import React from 'react';
 import { Send, Edit3, X } from 'lucide-react';
-import { NormalizedFields } from './ReportInboxScreen';
+import { NormalizedFields } from '../hooks/useReportInbox';
 
 const getSourceBadge = (source: string) => {
   switch (source) {

@@ -309,19 +309,15 @@ const RapportinoClientCommands = {
     }
 
     // Verificar rapportini de proveedores (Driver/Collaborator) aceptados
+    // Only check drivers for services IN THIS rapportino (not all project services)
     const project = ProjectRepository.getById(rapportino.ProjectID);
     if (project) {
       const periodStart = rapportino.PeriodStart || rapportino.WeekStart;
       const periodEnd = rapportino.PeriodEnd || rapportino.WeekEnd;
-
-      const services = ServiceRepository.getAllByProject(rapportino.ProjectID)
-        .filter(s => {
-          if (!s.Date) return false;
-          const d = new Date(s.Date);
-          return d >= new Date(periodStart) && d <= new Date(periodEnd);
-        });
+      const rapportinoServiceIds = items.filter(i => i.ServiceID).map(i => i.ServiceID);
+      const rapportinoServices = rapportinoServiceIds.map(sid => ServiceRepository.getById(sid)).filter(Boolean);
       
-      const driverIds = [...new Set(services.map(s => s.DriverID).filter(Boolean))];
+      const driverIds = [...new Set(rapportinoServices.map(s => s.DriverID).filter(Boolean))];
       driverIds.forEach(driverId => {
         const driver = DriverRepository.getById(driverId);
         const isCollaborator = driver && driver.CollaboratorID;

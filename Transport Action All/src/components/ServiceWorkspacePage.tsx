@@ -123,12 +123,12 @@ export default function ServiceWorkspacePage() {
         <div className="flex gap-4">
           <div className="w-48 space-y-2">
             {[1, 2, 3, 4].map(i => (
-              <Skeleton key={i} className="h-9 rounded-lg" />
+              <div key={i}><Skeleton className="h-9 rounded-lg" /></div>
             ))}
           </div>
           <div className="flex-1 space-y-3">
             {[1, 2, 3].map(i => (
-              <Skeleton key={i} className="h-24 rounded-xl" />
+              <div key={i}><Skeleton className="h-24 rounded-xl" /></div>
             ))}
           </div>
         </div>

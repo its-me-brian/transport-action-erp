@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Send, Check, AlertTriangle, Loader2, User, Edit3, ExternalLink } from 'lucide-react';
+import { MessageSquare, Send, Check, AlertTriangle, Loader2, User, ExternalLink, X } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useOpenService } from '../hooks/useOpenService';
 import {
@@ -12,6 +12,13 @@ interface Props {
 }
 
 type Step = 'paste' | 'review' | 'done';
+
+interface CaptureResultItem {
+  success: boolean;
+  inboxId?: string | null;
+  driverName: string;
+  error?: string | null;
+}
 
 export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props) {
   const { showToast } = useToast();
@@ -28,6 +35,15 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
   // Services per report (keyed by index)
   const [reportServices, setReportServices] = useState<Record<number, any[]>>({});
   const [loadingServices, setLoadingServices] = useState<Record<number, boolean>>({});
+
+  // Batch capture progress
+  const [captureProgress, setCaptureProgress] = useState({
+    total: 0,
+    completed: 0,
+    failed: 0,
+    current: -1,
+    results: [] as CaptureResultItem[]
+  });
 
   // Projects list
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
@@ -66,13 +82,28 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
     try {
       const result = await parseWhatsApp(messageText);
       if (result.success && result.reports && result.reports.length > 0) {
-        setReports(result.reports);
+        // Auto-populate service selection from backend confidence scoring
+        const enriched = result.reports.map((r: WhatsAppParsedReport) => {
+          const enrichedReport = { ...r };
+          // Use backend-computed serviceCandidates if available
+          if (r.serviceCandidates && r.serviceCandidates.length > 0) {
+            // Auto-select highest confidence candidate (≥ 0.7)
+            const best = r.serviceCandidates[0];
+            if (best.confidence >= 0.7) {
+              enrichedReport.selectedServiceId = best.id;
+            }
+            // Set the services list for the dropdown
+            enrichedReport._serviceCandidates = r.serviceCandidates;
+          }
+          return enrichedReport;
+        });
+        setReports(enriched);
         if (result.drivers) setAvailableDrivers(result.drivers);
         setStep('review');
         showToast(`${result.reportCount} report(s) parsed successfully`, 'success');
-        // Search services for auto-matched drivers
-        result.reports.forEach((r: WhatsAppParsedReport, idx: number) => {
-          if (r.matchedDriverId) {
+        // Also fetch full service details for dropdown (for candidates not auto-selected)
+        enriched.forEach((r: WhatsAppParsedReport, idx: number) => {
+          if (r.matchedDriverId && !r._serviceCandidates) {
             searchServices(idx, r.matchedDriverId);
           }
         });
@@ -114,7 +145,7 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
     }
   };
 
-  // Step 3: Capture all reports into inbox
+  // Step 3: Capture reports sequentially with progress
   const handleCapture = async () => {
     if (!selectedProject) {
       showToast('Select a project first', 'error');
@@ -131,28 +162,41 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
       showToast(`Missing service for "${missingService.driverName || 'unknown'}" — select the service this report belongs to`, 'error');
       return;
     }
+
     setIsCapturing(true);
-    try {
-      const result = await captureWhatsAppReports(reports, selectedProject);
-      if (result.success) {
-        showToast(`${result.captured}/${result.total} reports captured to inbox`, 'success');
-        setStep('done');
-      } else {
-        // Show per-report errors
-        const errors = result.results.filter(r => !r.success);
-        if (errors.length > 0) {
-          showToast(`${errors.length} reports failed: ${errors[0].error}`, 'error');
+    setCaptureProgress({ total: reports.length, completed: 0, failed: 0, current: 0, results: [] });
+
+    const results: CaptureResultItem[] = [];
+    let completed = 0;
+    let failed = 0;
+
+    for (let i = 0; i < reports.length; i++) {
+      setCaptureProgress(prev => ({ ...prev, current: i }));
+      try {
+        const result = await captureWhatsAppReports([reports[i]], selectedProject);
+        if (result.success && result.results && result.results[0]) {
+          const r = result.results[0];
+          results.push({ success: r.success, inboxId: r.inboxId, driverName: r.driverName, error: r.error });
+          if (r.success) completed++; else failed++;
+        } else {
+          results.push({ success: false, driverName: reports[i].driverName || 'Unknown', error: 'Capture failed' });
+          failed++;
         }
-        if (result.captured > 0) {
-          showToast(`${result.captured}/${result.total} captured (some failed)`, 'success');
-          setStep('done');
-        }
+      } catch (err) {
+        results.push({ success: false, driverName: reports[i].driverName || 'Unknown', error: 'Network error' });
+        failed++;
       }
-    } catch (err) {
-      console.error('Capture failed:', err);
-      showToast('Error capturing reports', 'error');
-    } finally {
-      setIsCapturing(false);
+      setCaptureProgress(prev => ({ ...prev, completed, failed, results: [...results] }));
+    }
+
+    setIsCapturing(false);
+    setStep('done');
+    if (failed === 0) {
+      showToast(`${completed}/${reports.length} reports captured to inbox`, 'success');
+    } else if (completed > 0) {
+      showToast(`${completed}/${reports.length} captured (${failed} failed)`, 'success');
+    } else {
+      showToast(`All ${reports.length} reports failed to capture`, 'error');
     }
   };
 
@@ -162,6 +206,7 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
     setMessageText('');
     setReports([]);
     setSelectedProject('');
+    setCaptureProgress({ total: 0, completed: 0, failed: 0, current: -1, results: [] });
   };
 
   const getStatusLabel = (r: WhatsAppParsedReport) => {
@@ -300,28 +345,40 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
                         <label className="block text-[11px] text-on-surface-variant mb-1">
                           Service {loadingServices[idx] && <span className="text-primary">(searching...)</span>}
                         </label>
-                        {(reportServices[idx] || []).length > 0 ? (
-                          <select
-                            value={report.selectedServiceId || ''}
-                            onChange={e => updateReport(idx, 'selectedServiceId', e.target.value)}
-                            className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm"
-                          >
-                            <option value="">— Select service —</option>
-                            {(reportServices[idx] || []).map((s: any) => {
-                              const dateLabel = s.date ? new Date(s.date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '?';
-                              const st = s.operationalStatus || s.status || '';
-                              return (
-                                <option key={s.id} value={s.id}>
-                                  {dateLabel} | {s.time || '—'} | {st} | {s.production || ''}
-                                </option>
-                              );
-                            })}
-                          </select>
-                        ) : (
-                          <div className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm text-on-surface-variant bg-surface-container">
-                            {report.matchedDriverId ? 'No services found' : 'Select driver first'}
-                          </div>
-                        )}
+                        {(() => {
+                          // Merge backend candidates with frontend-fetched services
+                          const backendCandidates = (report as any)._serviceCandidates || [];
+                          const frontendServices = reportServices[idx] || [];
+                          const allServices = backendCandidates.length > 0 ? backendCandidates : frontendServices;
+                          return allServices.length > 0 ? (
+                            <select
+                              value={report.selectedServiceId || ''}
+                              onChange={e => updateReport(idx, 'selectedServiceId', e.target.value)}
+                              className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm"
+                            >
+                              <option value="">— Select service —</option>
+                              {allServices.map((s: any) => {
+                                const confidence = s.confidence ? ` [${Math.round(s.confidence * 100)}%]` : '';
+                                const dateLabel = s.date ? new Date(s.date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
+                                const timeLabel = s.time || '';
+                                const st = s.status || s.operationalStatus || '';
+                                const production = s.production || '';
+                                const label = backendCandidates.length > 0
+                                  ? `${timeLabel} | ${st} | ${production}${confidence}`
+                                  : `${dateLabel} | ${timeLabel} | ${st} | ${production}`;
+                                return (
+                                  <option key={s.id} value={s.id}>
+                                    {label}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          ) : (
+                            <div className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm text-on-surface-variant bg-surface-container">
+                              {report.matchedDriverId ? 'No services found' : 'Select driver first'}
+                            </div>
+                          );
+                        })()}
                       </div>
                       {/* Date */}
                       <div>
@@ -394,6 +451,54 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
             })}
           </div>
 
+          {/* Capture progress — shown during sequential capture */}
+          {isCapturing && (
+            <div className="bg-surface rounded-xl border border-primary/30 p-4 mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-on-surface">Capturing reports...</span>
+                <span className="text-xs text-on-surface-variant">
+                  {captureProgress.completed + captureProgress.failed} / {captureProgress.total}
+                </span>
+              </div>
+              {/* Progress bar */}
+              <div className="w-full bg-surface-container rounded-full h-2 mb-3">
+                <div
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${((captureProgress.completed + captureProgress.failed) / captureProgress.total) * 100}%` }}
+                />
+              </div>
+              {/* Per-report status */}
+              <div className="space-y-1">
+                {reports.map((r, idx) => {
+                  const result = captureProgress.results[idx];
+                  const isCurrent = idx === captureProgress.current;
+                  let icon = <span className="w-4 h-4 inline-block" />; // empty placeholder
+                  let label = '';
+                  if (result) {
+                    if (result.success) {
+                      icon = <Check className="w-4 h-4 text-green-600" />;
+                      label = result.driverName;
+                    } else {
+                      icon = <X className="w-4 h-4 text-red-600" />;
+                      label = `${result.driverName} — ${result.error || 'failed'}`;
+                    }
+                  } else if (isCurrent) {
+                    icon = <Loader2 className="w-4 h-4 text-primary animate-spin" />;
+                    label = r.driverName || 'Unknown';
+                  } else {
+                    label = r.driverName || 'Unknown';
+                  }
+                  return (
+                    <div key={idx} className={`flex items-center gap-2 text-xs px-2 py-1 rounded ${isCurrent ? 'bg-primary/5 font-medium' : ''}`}>
+                      {icon}
+                      <span className="truncate">{label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-3 mt-6">
             <button
@@ -404,7 +509,7 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
               {isCapturing ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Capturing...
+                  Capturing {captureProgress.completed + captureProgress.failed}/{captureProgress.total}...
                 </>
               ) : (
                 <>
@@ -428,23 +533,47 @@ export default function WhatsAppCaptureScreen({ onNavigate: _onNavigate }: Props
           STEP 3: Done
           ============================================================================ */}
       {step === 'done' && (
-        <div className="bg-surface rounded-xl border border-outline-variant p-6 sm:p-8 text-center">
-          <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Check className="w-8 h-8 text-green-600" />
+        <div className="bg-surface rounded-xl border border-outline-variant p-6 sm:p-8">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Check className="w-8 h-8 text-green-600" />
+            </div>
+            <h2 className="text-xl font-bold text-on-surface mb-2">Capture Complete</h2>
+            <p className="text-sm text-on-surface-variant">
+              {captureProgress.completed} of {captureProgress.total} report(s) captured successfully.
+            </p>
           </div>
-          <h2 className="text-xl font-bold text-on-surface mb-2">Reports Captured!</h2>
-          <p className="text-sm text-on-surface-variant mb-6">
-            {reports.length} report(s) have been captured to the inbox.
-            Go to the Inbox tab to review and approve them.
-          </p>
+
+          {/* Per-report results */}
+          {captureProgress.results.length > 0 && (
+            <div className="space-y-2 mb-6">
+              {captureProgress.results.map((r, idx) => (
+                <div key={idx} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm ${r.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+                  {r.success ? (
+                    <Check className="w-4 h-4 flex-shrink-0" />
+                  ) : (
+                    <X className="w-4 h-4 flex-shrink-0" />
+                  )}
+                  <span className="font-medium">{r.driverName}</span>
+                  {r.success && r.inboxId && (
+                    <span className="text-xs opacity-70 ml-auto">{r.inboxId}</span>
+                  )}
+                  {!r.success && r.error && (
+                    <span className="text-xs ml-auto">{r.error}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            {reports.length > 0 && reports[0].selectedServiceId && (
+            {captureProgress.results.length > 0 && captureProgress.results[0].success && reports[0]?.selectedServiceId && (
               <button
                 onClick={() => openService(reports[0].selectedServiceId!)}
                 className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-colors font-semibold text-sm flex items-center justify-center gap-2"
               >
                 <ExternalLink className="w-4 h-4" />
-                Open Service
+                Open First Service
               </button>
             )}
             <button

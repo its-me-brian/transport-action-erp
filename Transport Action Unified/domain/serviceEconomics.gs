@@ -504,8 +504,11 @@ const ServiceEconomics = {
 
   _calculateHours(startTime, endTime) {
     if (!startTime || !endTime) return 0;
-    const [sh, sm] = startTime.split(':').map(Number);
-    const [eh, em] = endTime.split(':').map(Number);
+    // Handle Date objects — extract HH:MM
+    var s = typeof startTime === 'string' ? startTime : (startTime instanceof Date ? String(startTime.getHours()).padStart(2,'0') + ':' + String(startTime.getMinutes()).padStart(2,'0') : String(startTime));
+    var e = typeof endTime === 'string' ? endTime : (endTime instanceof Date ? String(endTime.getHours()).padStart(2,'0') + ':' + String(endTime.getMinutes()).padStart(2,'0') : String(endTime));
+    const [sh, sm] = s.split(':').map(Number);
+    const [eh, em] = e.split(':').map(Number);
     const start = sh * 60 + sm;
     const end = eh * 60 + em;
     let diff = end - start;
@@ -520,8 +523,11 @@ const ServiceEconomics = {
    */
   _calculateNightHours(startTime, endTime) {
     if (!startTime || !endTime) return 0;
-    const [sh, sm] = startTime.split(':').map(Number);
-    const [eh, em] = endTime.split(':').map(Number);
+    // Handle Date objects — extract HH:MM
+    var s = typeof startTime === 'string' ? startTime : (startTime instanceof Date ? String(startTime.getHours()).padStart(2,'0') + ':' + String(startTime.getMinutes()).padStart(2,'0') : String(startTime));
+    var e = typeof endTime === 'string' ? endTime : (endTime instanceof Date ? String(endTime.getHours()).padStart(2,'0') + ':' + String(endTime.getMinutes()).padStart(2,'0') : String(endTime));
+    const [sh, sm] = s.split(':').map(Number);
+    const [eh, em] = e.split(':').map(Number);
     const startMin = sh * 60 + sm;
     const endMin = eh * 60 + em;
 
@@ -576,6 +582,62 @@ const ServiceEconomics = {
       source: source,
       supplierRateId: supplierRateId || ''
     };
+  },
+
+  /**
+   * Build legacy revenue breakdown format from ServiceRevenueBreakdown items.
+   * Maps ItemType → { base, kmOver, hoursOver, diaria, notturno, holiday, wait, airport }
+   * Used by ServiceRepository.toDTO() to populate the frontend revenueBreakdown field.
+   */
+  _buildLegacyBreakdown(items, amountField) {
+    var result = { base: 0, kmOver: 0, hoursOver: 0, diaria: 0, notturno: 0, holiday: 0, wait: 0, airport: 0 };
+    if (!items || !items.length) return result;
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var val = parseFloat(item[amountField]) || 0;
+      switch (item.ItemType) {
+        case 'Base': result.base += val; break;
+        case 'ExtraKm': result.kmOver += val; break;
+        case 'ExtraHours': result.hoursOver += val; break;
+        case 'Diaria': result.diaria += val; break;
+        case 'Night': result.notturno += val; break;
+        case 'Holiday': result.holiday += val; break;
+        case 'Wait': result.wait += val; break;
+        case 'AirportSurcharge': result.airport += val; break;
+        // Manual/adjustment items with ItemType not in the list → add to base
+        default: result.base += val; break;
+      }
+    }
+    return result;
+  },
+
+  /**
+   * Build legacy cost breakdown format from ServiceCostBreakdown items.
+   * Maps ItemType → { base, kmOver, hoursOver, diaria, notturno, holiday, wait, extras }
+   * Used by ServiceRepository.toDTO() to populate the frontend costBreakdown field.
+   */
+  _buildLegacyCostBreakdown(items) {
+    var result = { base: 0, kmOver: 0, hoursOver: 0, diaria: 0, notturno: 0, holiday: 0, wait: 0, extras: 0 };
+    if (!items || !items.length) return result;
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var val = parseFloat(item.Amount) || 0;
+      switch (item.ItemType) {
+        case 'Base': result.base += val; break;
+        case 'ExtraKm': result.kmOver += val; break;
+        case 'ExtraHours': result.hoursOver += val; break;
+        case 'Diaria': result.diaria += val; break;
+        case 'Night': result.notturno += val; break;
+        case 'Holiday': result.holiday += val; break;
+        case 'Wait': result.wait += val; break;
+        // Parking, Tolls, Fuel → extras
+        case 'Parking': result.extras += val; break;
+        case 'Tolls': result.extras += val; break;
+        case 'Fuel': result.extras += val; break;
+        default: result.base += val; break;
+      }
+    }
+    return result;
   }
 };
 
@@ -593,4 +655,141 @@ function apiApplyRevenueBreakdown(serviceId, driverReport) {
 
 function apiApplyCostBreakdown(serviceId, driverReport) {
   return ServiceEconomics.applyCostBreakdown(serviceId, driverReport);
+}
+
+/**
+ * Recalculate both revenue and cost breakdowns for a service.
+ * Reads the active DriverReport and rebuilds all breakdown items.
+ * Used by the FinanceTab "Recalculate" button.
+ */
+function apiRecalculateServiceEconomics(serviceId) {
+  var service = ServiceRepository.getById(serviceId);
+  if (!service) throw new NotFoundError('Service', serviceId);
+  
+  var report = DriverReportRepository.getActiveByService(serviceId);
+  if (!report) throw new BusinessRuleError('No active DriverReport for service ' + serviceId, 'NO_REPORT');
+  
+  var driverReportData = {
+    startTime: report.StartTime,
+    endTime: report.EndTime,
+    kmTotal: parseFloat(report.KmTotal) || 0,
+    hasDiaria: report.HasDiaria === 'true' || report.HasDiaria === true,
+    isFestivo: report.IsFestivo === 'true' || report.IsFestivo === true,
+    isNotturno: report.IsNotturno === 'true' || report.IsNotturno === true,
+    diariaType: report.DiariaType || 'none',
+    parking: parseFloat(report.Parking) || 0,
+    tolls: parseFloat(report.Tolls) || 0,
+    fuel: parseFloat(report.Fuel) || 0,
+    waitMinutes: parseFloat(report.WaitMinutes) || 0
+  };
+  
+  var warnings = [];
+  var revenueItems = [];
+  var costItems = [];
+  
+  try {
+    revenueItems = ServiceEconomics.applyRevenueBreakdown(serviceId, driverReportData);
+  } catch (e) {
+    warnings.push('Revenue: ' + e.message);
+  }
+  
+  try {
+    costItems = ServiceEconomics.applyCostBreakdown(serviceId, driverReportData);
+  } catch (e) {
+    warnings.push('Cost: ' + e.message);
+  }
+  
+  return {
+    serviceId: serviceId,
+    revenueItems: revenueItems.length,
+    costItems: costItems.length,
+    warnings: warnings
+  };
+}
+
+/**
+ * Diagnostic: trace the full chain from Service → Project → Client → RateCard → SupplierRate
+ * Returns all intermediate data so we can see exactly where the lookup fails.
+ */
+function apiDebugServiceEconomicsChain(serviceId) {
+  var result = { serviceId: serviceId };
+  
+  // 1. Service
+  var service = ServiceRepository.getById(serviceId);
+  if (!service) { result.error = 'Service not found'; return result; }
+  result.service = {
+    id: service.ID,
+    projectId: service.ProjectID,
+    driverId: service.DriverID,
+    vehicleType: service.VehicleType,
+    vehicleId: service.VehicleID,
+    serviceType: service.ServiceType,
+    providerType: service.ProviderType,
+    providerId: service.ProviderID,
+    operationalStatus: service.OperationalStatus,
+    financialStatus: service.FinancialStatus
+  };
+  
+  // 2. Project
+  var project = ProjectRepository.getById(service.ProjectID);
+  if (!project) { result.error = 'Project not found: ' + service.ProjectID; return result; }
+  result.project = { id: project.ID, name: project.Name, clientId: project.ClientID };
+  
+  // 3. Client
+  var client = ClientRepository.getById(project.ClientID);
+  if (!client) { result.error = 'Client not found: ' + project.ClientID; return result; }
+  result.client = { id: client.ID, name: client.Name, active: client.Active };
+  
+  // 4. VehicleType resolution
+  var vehicleType = service.VehicleType || '';
+  if (service.VehicleID) {
+    var vehicle = VehicleRepository.getById(service.VehicleID);
+    if (vehicle) vehicleType = vehicle.Type || '';
+  }
+  result.resolvedVehicleType = vehicleType;
+  result.resolvedServiceType = service.ServiceType || 'Dispo';
+  
+  // 5. All RateCards for this client
+  var allCards = RateCardRepository.getByClient(client.ID);
+  result.allClientRateCards = allCards.map(function(c) {
+    return {
+      id: c.ID, name: c.Name, vehicleType: c.VehicleType, serviceType: c.ServiceType,
+      active: c.Active, activeType: typeof c.Active, projectId: c.ProjectID,
+      basePrice: c.BasePrice, fullDayPrice: c.FullDayPrice, halfDayPrice: c.HalfDayPrice
+    };
+  });
+  
+  // 6. Try the lookup
+  var matchedCard = RateCardRepository.getByClientAndType(
+    client.ID, service.ProjectID, vehicleType, service.ServiceType || 'Dispo'
+  );
+  result.matchedRateCard = matchedCard ? {
+    id: matchedCard.ID, name: matchedCard.Name, basePrice: matchedCard.BasePrice
+  } : null;
+  
+  // 7. SupplierRate lookup
+  var providerType = service.ProviderType || 'internal_driver';
+  var providerId = service.ProviderID || service.DriverID;
+  if (providerId) {
+    var sr = SupplierRateRepository.getByCriteria(
+      providerType, providerId, service.ProjectID || 'GLOBAL',
+      service.ServiceType || 'Dispo', vehicleType
+    );
+    result.matchedSupplierRate = sr ? {
+      id: sr.ID, baseRate: sr.BaseRate, providerType: sr.ProviderType, providerId: sr.ProviderID
+    } : null;
+  }
+  
+  // 8. Existing breakdowns
+  result.existingRevenueItems = ServiceRevenueBreakdownRepository.getByService(serviceId).length;
+  result.existingCostItems = ServiceCostBreakdownRepository.getByService(serviceId).length;
+  
+  // 9. Active DriverReport
+  var report = DriverReportRepository.getActiveByService(serviceId);
+  result.activeDriverReport = report ? {
+    id: report.ID, status: report.Status, locked: report.Locked,
+    startTime: report.StartTime, endTime: report.EndTime, kmTotal: report.KmTotal
+  } : null;
+  
+  return result;
 }

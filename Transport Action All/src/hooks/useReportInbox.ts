@@ -174,6 +174,7 @@ export function useReportInbox({ onNavigate, onServiceUpdate }: UseReportInboxPr
         return String(v);
       };
       return {
+        serviceId: '',
         startTime: toTime(raw.startTime || raw.start || raw.orarioInizio || ''),
         endTime: toTime(raw.endTime || raw.end || raw.orarioFine || ''),
         kmTotal: parseFloat(raw.kmTotal || raw.km || raw.kmTotali) || 0,

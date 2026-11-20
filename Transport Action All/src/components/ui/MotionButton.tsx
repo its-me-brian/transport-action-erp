@@ -1,9 +1,13 @@
 import React from 'react';
 import { motion } from 'motion/react';
 
-interface MotionButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface MotionButtonProps {
   children: React.ReactNode;
   variant?: 'primary' | 'secondary' | 'ghost';
+  className?: string;
+  disabled?: boolean;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
+  type?: 'button' | 'submit' | 'reset';
 }
 
 const variantClasses = {

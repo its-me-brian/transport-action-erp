@@ -55,7 +55,7 @@ export default function TransportListAgencyModal({
               <div className="space-y-2" role="status">
                 <span className="sr-only">Loading...</span>
                 {[1, 2, 3].map(i => (
-                  <Skeleton key={i} className="h-9 w-full rounded-lg" />
+                  <div key={i}><Skeleton className="h-9 w-full rounded-lg" /></div>
                 ))}
               </div>
             ) : agencies.length === 0 ? (

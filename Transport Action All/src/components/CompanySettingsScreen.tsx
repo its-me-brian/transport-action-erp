@@ -33,7 +33,7 @@ export default function CompanySettingsScreen({ onNavigate }: CompanySettingsScr
     setLogFilter, setShowCreateUser, setNewUser,
     setEditingUser, setEditUserData,
     setTempEmail, setTempAddress, setTempVat, setTempPhone, setTempCurrency, setTempTaxRate,
-    setTempWhatsApp, setTempEmailTemplate, setEditingEmailTemplate,
+    setTempWhatsApp, setTempEmailTemplate, setEditingEmailTemplate, setEditingWhatsApp,
     setNewVehicleType, setNewServiceType, setVehicleTypes, setServiceTypes,
     loadUsers, loadAuditLogs,
     handleApproveUser, handleRejectUser, handleToggleRole, handleDeleteUser,

@@ -6,7 +6,7 @@ import { Service, formatTimeDisplay, getServiceStatusColor } from '../types';
 import type { DriverRecord } from '../services/api';
 
 interface EditForm extends Partial<Service> {
-  _costsFromParametros?: Record<string, boolean>;
+  _costsFromParametros?: Record<string, number>;
 }
 
 interface SectionProps {

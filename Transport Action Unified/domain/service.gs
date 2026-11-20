@@ -165,7 +165,7 @@ const ServiceRepository = {
       clientName: clientName,
       transportListId: entity.TransportListID,
       date: entity.Date,
-      time: entity.Time,
+      time: _normalizeTimeToHHMM(entity.Time),
       production: entity.Production,
       section: entity.Section,
       passenger: {
@@ -205,15 +205,21 @@ const ServiceRepository = {
       sourceType: entity.SourceType || 'transport_list',
       sourceReference: entity.SourceReference || '',
       // Cost fields from DriverReport (populated on report approval)
-      startTime: entity.StartTime || '',
-      endTime: entity.EndTime || '',
+      startTime: _normalizeTimeToHHMM(entity.StartTime),
+      endTime: _normalizeTimeToHHMM(entity.EndTime),
       km: parseFloat(entity.KmTotal) || 0,
       hasDiaria: entity.HasDiaria === 'true' || entity.HasDiaria === true,
       isFestivo: entity.IsFestivo === 'true' || entity.IsFestivo === true,
       isNotturno: entity.IsNotturno === 'true' || entity.IsNotturno === true,
-      diariaType: entity.DiariaType || 'none',
+      diariaType: _normalizeDiariaType(entity.DiariaType),
       createdAt: entity.CreatedAt,
-      updatedAt: entity.UpdatedAt
+      updatedAt: entity.UpdatedAt,
+      // Revenue breakdown from ServiceRevenueBreakdown sheet
+      revenueBreakdown: ServiceEconomics._buildLegacyBreakdown(
+        ServiceRevenueBreakdownRepository.getByService(entity.ID), 'Total'),
+      // Cost breakdown from ServiceCostBreakdown sheet
+      costBreakdown: ServiceEconomics._buildLegacyCostBreakdown(
+        ServiceCostBreakdownRepository.getByService(entity.ID))
     };
   }
 };

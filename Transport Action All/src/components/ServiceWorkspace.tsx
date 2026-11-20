@@ -11,7 +11,7 @@ import { useRelatedData, RelatedData } from '../hooks/useRelatedData';
 import { getServiceStatusColor } from '../utils/statusColors';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
-import { assignDriver, confirmService, startService, completeService, reportService, validateService, moveToReview, getDrivers, cancelService, updateServiceField } from '../services/api';
+import { assignDriver, confirmService, startService, completeService, reportService, validateService, moveToRevision, getDrivers, cancelService, updateServiceField } from '../services/api';
 import type { DriverRecord } from '../services/api';
 import {
   OverviewTab, MovementsTab, DriverTab, DriverLinkTab,
@@ -158,7 +158,7 @@ export default function ServiceWorkspace({
         case 'start': result = await startService(service.id); break;
         case 'complete': result = await completeService(service.id); break;
         case 'report': result = await reportService(service.id); break;
-        case 'review': result = await moveToReview(service.id); break;
+        case 'review': result = await moveToRevision(service.id); break;
         case 'validate': result = await validateService(service.id); break;
         default: showToast('Unknown action: ' + action, 'error'); setActionLoading(false); return;
       }
@@ -307,11 +307,11 @@ export default function ServiceWorkspace({
     },
   ];
 
-  const communicationSubTabs: { id: ServiceSubSection; label: string; icon: React.ReactNode }[] = [
+  const communicationSubTabs: { id: ServiceSubSection; label: string; icon: React.ReactNode; badge?: string; badgeColor?: string }[] = [
     { id: 'whatsapp', label: 'WhatsApp', icon: <MessageSquare className="w-3.5 h-3.5" /> },
   ];
 
-  const financeSubTabs: { id: ServiceSubSection; label: string; icon: React.ReactNode }[] = [
+  const financeSubTabs: { id: ServiceSubSection; label: string; icon: React.ReactNode; badge?: string; badgeColor?: string }[] = [
     { id: 'rapportino', label: 'Rapportino', icon: <FileText className="w-3.5 h-3.5" /> },
     { id: 'finance', label: 'Finance', icon: <DollarSign className="w-3.5 h-3.5" /> },
   ];
@@ -862,7 +862,7 @@ export default function ServiceWorkspace({
                   </div>
                 ) : (
                   <>
-                    {(activeSubSection || 'driver') === 'driver' && <DriverTab service={service} />}
+                    {(activeSubSection || 'driver') === 'driver' && <DriverTab service={service} relatedData={relatedData} />}
                     {(activeSubSection || 'driver') === 'driverLink' && <DriverLinkTab service={service} driverLink={relatedData.driverLink} />}
                     {(activeSubSection || 'driver') === 'driverReport' && <DriverReportTab service={service} driverReport={relatedData.driverReport} onServiceUpdate={relatedData.refresh} />}
                     {(activeSubSection || 'driver') === 'reconciliation' && <ReconciliationTab service={service} reconciliation={relatedData.reconciliation} onServiceUpdate={relatedData.refresh} />}
@@ -892,7 +892,7 @@ export default function ServiceWorkspace({
                 </div>
               </div>
               <div className="flex-1">
-                {(activeSubSection || 'whatsapp') === 'whatsapp' && <WhatsAppTab service={service} relatedData={relatedData} onCaptureSuccess={relatedData.refresh} />}
+                {(activeSubSection || 'whatsapp') === 'whatsapp' && <WhatsAppTab service={service} relatedData={relatedData} onCaptureSuccess={relatedData.refresh} onServiceUpdate={relatedData.refresh} />}
               </div>
             </div>
           )}

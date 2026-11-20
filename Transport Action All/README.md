@@ -17,12 +17,12 @@ Google Sheets (base de datos, 38 hojas)
 - **Componentes**: 39 componentes UI
 - **Screens**: 33 pantallas
 - **API Client**: 195 funciones en `services/api.ts`
-- **Tests**: 569 tests (29 archivos, vitest + @testing-library/react)
+- **Tests**: 774 tests (31 archivos, vitest + @testing-library/react)
 - **Build**: Vite + TypeScript + Tailwind CSS v4
 
 ### Backend (`Transport Action Unified/`)
 
-- **API Layer**: `api.gs` — 209 acciones registradas
+- **API Layer**: `api.gs` — 238 acciones registradas
 - **Domain**: 20 archivos de dominio (commands, repositories, economics)
 - **Infrastructure**: 12 archivos (auth, state machine, locks, events, audit, etc.)
 - **Commands**: 57 comandos con `_withLock` + `_dispatchEvent` + `_assertValidTransition`
@@ -89,21 +89,19 @@ Las migraciones están en `Transport Action Unified/migrations/`. Se ejecutan au
 ## Desarrollo
 
 ```bash
-# Instalar dependencias
-cd "Transport Action All" && npm install
+cd "Transport Action All"
+npm ci            # instalar dependencias
 
-# Ejecutar tests
-cd test && npm test
-
-# Desarrollo
-cd "Transport Action All" && npm run dev
-
-# Build
-cd "Transport Action All" && npm run build
-
-# Lint (TypeScript)
-cd test && npx tsc --noEmit
+npm run lint      # tsc --noEmit
+npm test          # vitest run (774 tests)
+npm run test:e2e  # Playwright (escribe datos reales)
+npm run dev       # http://localhost:3001
+npm run build     # build de produccion
 ```
+
+Guía completa de prueba local: `docs/18-LOCAL-TESTING.md`.
+
+Guía completa de prueba local: `docs/18-LOCAL-TESTING.md`.
 
 ## Deploy
 
@@ -149,8 +147,8 @@ cd "test/Transport Action Unified" && npx clasp push
 ```bash
 cd test && npx vitest run
 ```
-- 569 tests pasando
-- 29 archivos de test
+- 774 tests pasando
+- 31 archivos de test
 - Cobertura: state machines, API contracts, screens, DTOs
 
 ### Backend (GAS)

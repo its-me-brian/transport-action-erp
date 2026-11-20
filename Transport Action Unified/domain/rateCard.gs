@@ -19,11 +19,31 @@ const RateCardRepository = {
 
   getByClientAndType(clientId, projectId, vehicleType, serviceType) {
     const cards = this.getByClient(clientId);
-    const matches = cards.filter(c =>
-      c.VehicleType === vehicleType &&
-      c.ServiceType === (serviceType || 'Dispo') &&
-      (c.Active === 'true' || c.Active === true)
-    );
+    const st = serviceType || 'Dispo';
+    const vt = (vehicleType || 'Van').trim();
+    
+    // Normalize Active field — Google Sheets may store as boolean, number, string, or "TRUE"/"FALSE"
+    const isActive = (val) => {
+      if (val === true || val === 1) return true;
+      if (typeof val === 'string') {
+        var lower = val.toLowerCase().trim();
+        return lower === 'true' || lower === '1' || lower === 'yes' || lower === 'si';
+      }
+      return false;
+    };
+    
+    const matches = cards.filter(c => {
+      const vtMatch = (c.VehicleType || '').trim().toLowerCase() === vt.toLowerCase();
+      const stMatch = (c.ServiceType || 'Dispo').trim().toLowerCase() === st.toLowerCase();
+      const activeMatch = isActive(c.Active);
+      Logger.log('[getByClientAndType] Card ' + c.ID + ': VehicleType=' + c.VehicleType + ' vs ' + vt + ' => ' + vtMatch +
+        ', ServiceType=' + c.ServiceType + ' vs ' + st + ' => ' + stMatch +
+        ', Active=' + c.Active + ' (type=' + typeof c.Active + ') => ' + activeMatch);
+      return vtMatch && stMatch && activeMatch;
+    });
+    
+    Logger.log('[getByClientAndType] clientId=' + clientId + ', projectId=' + projectId + ', vehicleType=' + vt + ', serviceType=' + st + ' => ' + matches.length + ' matches');
+    
     // Prefer project-specific rate card, then GLOBAL, then first match
     if (projectId) {
       const projectMatch = matches.find(c => c.ProjectID === projectId);
@@ -136,4 +156,82 @@ function apiDeleteRateCard(id) {
   _softDelete(RateCardRepository.SHEET, id);
   _dispatchEvent({ type: 'ratecard.deleted', entity: 'RateCard', entityId: id });
   return { success: true };
+}
+
+/**
+ * Diagnostic: trace why a RateCard lookup fails for a given service.
+ * Returns detailed info about the service, client, project, and all matching/failing RateCards.
+ */
+function apiDebugRateCardLookup(serviceId) {
+  const service = ServiceRepository.getById(serviceId);
+  if (!service) return { error: 'Service not found: ' + serviceId };
+
+  const project = ProjectRepository.getById(service.ProjectID);
+  const client = project ? ClientRepository.getById(project.ClientID) : null;
+
+  const vehicleType = service.VehicleType || (() => {
+    if (service.VehicleID) {
+      const v = VehicleRepository.getById(service.VehicleID);
+      return v ? v.Type : 'Van';
+    }
+    return 'Van';
+  })();
+  const serviceType = service.ServiceType || 'Dispo';
+
+  // Get ALL rate cards for this client (regardless of Active/VehicleType/ServiceType)
+  const allCardsForClient = client ? RateCardRepository.getByClient(client.ID) : [];
+
+  // Also get ALL rate cards globally
+  const allCards = RateCardRepository.getAll();
+
+  // Detailed filter breakdown for each card
+  const cardDiagnostics = allCardsForClient.map(c => {
+    const isActive = c.Active === true || c.Active === 'true' || c.Active === 'TRUE' || c.Active === 'True';
+    const vtMatch = c.VehicleType === vehicleType;
+    const stMatch = c.ServiceType === serviceType;
+    return {
+      id: c.ID,
+      name: c.Name,
+      ClientID: c.ClientID,
+      ProjectID: c.ProjectID,
+      VehicleType: c.VehicleType,
+      ServiceType: c.ServiceType,
+      Active: c.Active,
+      ActiveType: typeof c.Active,
+      isActive: isActive,
+      VehicleTypeMatch: vtMatch,
+      ServiceTypeMatch: stMatch,
+      BasePrice: c.BasePrice,
+      FullDayPrice: c.FullDayPrice,
+      HalfDayPrice: c.HalfDayPrice,
+      IncludedKm: c.IncludedKm,
+      IncludedHours: c.IncludedHours
+    };
+  });
+
+  return {
+    service: {
+      id: service.ID,
+      ProjectID: service.ProjectID,
+      VehicleType: service.VehicleType,
+      VehicleID: service.VehicleID,
+      ServiceType: service.ServiceType,
+      resolvedVehicleType: vehicleType,
+      resolvedServiceType: serviceType
+    },
+    project: project ? { id: project.ID, ClientID: project.ClientID, Name: project.Name } : null,
+    client: client ? { id: client.ID, Name: client.Name } : null,
+    totalRateCardsInSheet: allCards.length,
+    rateCardsForClient: allCardsForClient.length,
+    cardDiagnostics: cardDiagnostics,
+    // Also try the actual lookup
+    lookupResult: (() => {
+      try {
+        const found = RateCardRepository.getByClientAndType(client ? client.ID : '', service.ProjectID, vehicleType, serviceType);
+        return found ? { found: true, id: found.ID } : { found: false };
+      } catch (e) {
+        return { found: false, error: e.message };
+      }
+    })()
+  };
 }

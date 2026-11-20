@@ -3,7 +3,7 @@ import {
   ChevronRight, Phone, User, Calendar,
   CheckCircle, Clock, AlertCircle, Link2, FileText,
   ArrowLeftRight, Car, MessageSquare, Loader2, Check,
-  Send, Eye, ThumbsUp, ThumbsDown, Lock, DollarSign
+  Send, Eye, ThumbsUp, ThumbsDown, Lock, DollarSign, RefreshCw, Calculator
 } from 'lucide-react';
 import { Service, ScreenId, formatTimeDisplay, parseDateKeyToDate } from '../types';
 import { RelatedData } from '../hooks/useRelatedData';
@@ -668,92 +668,139 @@ export function DriverReportTab({ service, driverReport, onServiceUpdate }: {
             </span>
           </div>
 
-          {/* Report Details */}
-          <div className="space-y-2 text-[12px]">
-            {driverReport.createdAt && (
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Received</span>
-                <span className="text-on-surface">{new Date(driverReport.createdAt).toLocaleString()}</span>
+          {/* Report Details — improved layout */}
+          <div className="bg-surface-container rounded-lg overflow-hidden text-[11px]">
+
+            {/* Driver header bar */}
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-container-high border-b border-outline-variant/20">
+              <User className="w-3.5 h-3.5 text-on-surface-variant/60" />
+              <span className="text-on-surface font-medium">{driverReport.driverId || 'Unknown driver'}</span>
+              {driverReport.source && (
+                <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-primary-container text-primary font-medium uppercase tracking-wider">{driverReport.source}</span>
+              )}
+              {driverReport.version > 1 && <span className="text-[9px] text-on-surface-variant/40">v{driverReport.version}</span>}
+            </div>
+
+            {/* Time block — prominent */}
+            <div className="px-3 py-2.5 border-b border-outline-variant/20">
+              <div className="grid grid-cols-[auto_1fr_1fr] gap-x-3 gap-y-1 items-center">
+                <Clock className="w-3.5 h-3.5 text-on-surface-variant/40" />
+                <div>
+                  <div className="text-[9px] text-on-surface-variant/50 uppercase tracking-wider">Start</div>
+                  <div className={`text-[13px] font-semibold ${driverReport.startTime ? 'text-on-surface' : 'text-on-surface-variant/30'}`}>
+                    {formatTimeDisplay(driverReport.startTime) || '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[9px] text-on-surface-variant/50 uppercase tracking-wider">End</div>
+                  <div className={`text-[13px] font-semibold ${driverReport.endTime ? 'text-on-surface' : 'text-on-surface-variant/30'}`}>
+                    {formatTimeDisplay(driverReport.endTime) || '—'}
+                  </div>
+                </div>
+              </div>
+              {/* Duration */}
+              {driverReport.startTime && driverReport.endTime && (
+                <div className="mt-1 text-[10px] text-on-surface-variant/60">
+                  Duration: {(() => {
+                    const dur = (() => {
+                      const s = formatTimeDisplay(driverReport.startTime);
+                      const e = formatTimeDisplay(driverReport.endTime);
+                      if (!s || !e) return null;
+                      const [sh, sm] = s.split(':').map(Number);
+                      const [eh, em] = e.split(':').map(Number);
+                      let diff = (eh * 60 + em) - (sh * 60 + sm);
+                      if (diff < 0) diff += 1440;
+                      const h = Math.floor(diff / 60);
+                      const m = diff % 60;
+                      return `${h}h ${m > 0 ? m + 'm' : ''}`;
+                    })();
+                    return dur || '—';
+                  })()}
+                </div>
+              )}
+            </div>
+
+            {/* KM block */}
+            <div className="px-3 py-2 border-b border-outline-variant/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Car className="w-3.5 h-3.5 text-on-surface-variant/40" />
+                  <span className="text-on-surface-variant">Total KM</span>
+                </div>
+                <span className={`text-[13px] font-semibold ${driverReport.km > 0 ? 'text-on-surface' : 'text-on-surface-variant/30'}`}>
+                  {driverReport.km > 0 ? `${driverReport.km} km` : '—'}
+                </span>
+              </div>
+              {(driverReport.kmExtra > 0 || driverReport.hoursExtra > 0) && (
+                <div className="flex items-center gap-3 mt-1 text-[10px]">
+                  {driverReport.kmExtra > 0 && <span className="text-amber-600">+{driverReport.kmExtra} km extra</span>}
+                  {driverReport.hoursExtra > 0 && <span className="text-amber-600">+{driverReport.hoursExtra}h extra</span>}
+                </div>
+              )}
+            </div>
+
+            {/* Service flags — visual chips */}
+            <div className="px-3 py-2 border-b border-outline-variant/20">
+              <div className="flex flex-wrap gap-1.5">
+                {driverReport.diariaType && driverReport.diariaType !== 'none' && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-medium">
+                    🍽 Diaria {driverReport.diariaType}
+                  </span>
+                )}
+                {driverReport.isFestivo && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-medium">
+                    🎉 Festivo
+                  </span>
+                )}
+                {driverReport.isNotturno && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-medium">
+                    🌙 Notturno
+                  </span>
+                )}
+                {!driverReport.diariaType && !driverReport.isFestivo && !driverReport.isNotturno && (
+                  <span className="text-[10px] text-on-surface-variant/40">No flags</span>
+                )}
+              </div>
+            </div>
+
+            {/* Extra costs — only show if any */}
+            {driverReport.totalExtras > 0 && (
+              <div className="px-3 py-2 border-b border-outline-variant/20">
+                <div className="text-[9px] text-on-surface-variant/50 uppercase tracking-wider mb-1">Extra Costs</div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { label: 'Parking', value: driverReport.parking, icon: '🅿️' },
+                    { label: 'Tolls', value: driverReport.tolls, icon: '🛣' },
+                    { label: 'Fuel', value: driverReport.fuel, icon: '⛽' },
+                    { label: 'Wait', value: driverReport.waitMinutes > 0 ? `${driverReport.waitMinutes}m` : null, icon: '⏳' },
+                  ].filter(x => x.value).map(c => (
+                    <div key={c.label} className="text-center">
+                      <div className="text-[10px]">{c.icon}</div>
+                      <div className="text-[10px] font-medium text-on-surface">{typeof c.value === 'number' ? `€${c.value}` : c.value}</div>
+                      <div className="text-[8px] text-on-surface-variant/50">{c.label}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-between mt-1.5 pt-1 border-t border-outline-variant/20 font-medium">
+                  <span className="text-on-surface-variant">Total Extras</span>
+                  <span className="text-amber-600">€{driverReport.totalExtras}</span>
+                </div>
               </div>
             )}
-            {driverReport.startTime && (
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Start Time</span>
-                <span className="text-on-surface">{driverReport.startTime}</span>
+
+            {/* Notes */}
+            {driverReport.notes && (
+              <div className="px-3 py-2 border-b border-outline-variant/20">
+                <div className="text-[9px] text-on-surface-variant/50 uppercase tracking-wider mb-0.5">Notes</div>
+                <div className="text-on-surface text-[11px] italic">"{driverReport.notes}"</div>
               </div>
             )}
-            {driverReport.endTime && (
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">End Time</span>
-                <span className="text-on-surface">{driverReport.endTime}</span>
-              </div>
-            )}
-            {driverReport.km != null && driverReport.km > 0 && (
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">KM Total</span>
-                <span className="text-on-surface font-medium">{driverReport.km}</span>
-              </div>
-            )}
-            {driverReport.kmExtra != null && driverReport.kmExtra > 0 && (
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">KM Extra</span>
-                <span className="text-on-surface">{driverReport.kmExtra}</span>
-              </div>
-            )}
-            {driverReport.hoursExtra != null && driverReport.hoursExtra > 0 && (
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Hours Extra</span>
-                <span className="text-on-surface">{driverReport.hoursExtra}</span>
-              </div>
-            )}
-            {driverReport.diariaType && driverReport.diariaType !== 'none' && (
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Diaria</span>
-                <span className="text-on-surface">{driverReport.diariaType}</span>
-              </div>
-            )}
-            {driverReport.isFestivo && (
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Festivo</span>
-                <span className="text-on-surface">Yes</span>
-              </div>
-            )}
-            {driverReport.isNotturno && (
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Notturno</span>
-                <span className="text-on-surface">Yes</span>
-              </div>
-            )}
-            {driverReport.parking != null && driverReport.parking > 0 && (
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Parking</span>
-                <span className="text-on-surface">€{driverReport.parking}</span>
-              </div>
-            )}
-            {driverReport.tolls != null && driverReport.tolls > 0 && (
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Tolls</span>
-                <span className="text-on-surface">€{driverReport.tolls}</span>
-              </div>
-            )}
-            {driverReport.fuel != null && driverReport.fuel > 0 && (
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Fuel</span>
-                <span className="text-on-surface">€{driverReport.fuel}</span>
-              </div>
-            )}
-            {driverReport.waitMinutes != null && driverReport.waitMinutes > 0 && (
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Wait</span>
-                <span className="text-on-surface">{driverReport.waitMinutes}min</span>
-              </div>
-            )}
-            {driverReport.totalExtras != null && driverReport.totalExtras > 0 && (
-              <div className="flex justify-between font-medium border-t border-outline-variant/30 pt-2">
-                <span className="text-on-surface">Total Extras</span>
-                <span className="text-on-surface">€{driverReport.totalExtras}</span>
-              </div>
-            )}
+
+            {/* Timestamps footer */}
+            <div className="px-3 py-1.5 bg-surface-container-high/50 flex items-center gap-3 text-[9px] text-on-surface-variant/50">
+              {driverReport.createdAt && <span>📥 {new Date(driverReport.createdAt).toLocaleString('it-IT')}</span>}
+              {driverReport.approvedDate && <span>✅ {new Date(driverReport.approvedDate).toLocaleString('it-IT')}</span>}
+            </div>
           </div>
 
           {/* Action Buttons */}
@@ -770,7 +817,7 @@ export function DriverReportTab({ service, driverReport, onServiceUpdate }: {
               <button
                 onClick={handleReject}
                 disabled={actionLoading}
-                className="px-4 py-2 bg-red-50 text-red-700 text-[13px] font-medium rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-red-50 text-red-700 text-[13px] font-medium rounded-lg hover:bg-red-100 disabled:opacity-50"
               >
                 Reject
               </button>
@@ -896,6 +943,10 @@ export function WhatsAppTab({ service, relatedData, onCaptureSuccess, onServiceU
     setParsedReports([]);
   };
 
+  const driverReport = relatedData?.driverReport;
+  const hasReport = !!driverReport;
+  const reportStatus = driverReport?.status || null;
+
   return (
     <div className="px-5 py-4 space-y-4">
       {/* Inbox Status */}
@@ -952,6 +1003,120 @@ export function WhatsAppTab({ service, relatedData, onCaptureSuccess, onServiceU
           </div>
         )}
       </div>
+
+      {/* Current Report — data received from driver */}
+      {hasReport && (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Driver Data</span>
+            <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full ${
+              reportStatus === 'Aceptado' ? 'bg-green-100 text-green-700' :
+              reportStatus === 'Pendiente' ? 'bg-amber-100 text-amber-700' :
+              'bg-gray-100 text-gray-500'
+            }`}>{reportStatus}</span>
+          </div>
+          <div className="p-3 bg-surface-container rounded-lg border border-outline-variant/30 space-y-2">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px]">
+              {driverReport.createdAt && (
+                <div className="col-span-2">
+                  <span className="text-on-surface-variant/60">Received:</span>
+                  <span className="ml-1 text-on-surface">{new Date(driverReport.createdAt).toLocaleString()}</span>
+                </div>
+              )}
+              {driverReport.source && (
+                <div className="col-span-2">
+                  <span className="text-on-surface-variant/60">Source:</span>
+                  <span className="ml-1 text-on-surface font-medium">{driverReport.source}</span>
+                </div>
+              )}
+              {driverReport.startTime && (
+                <div>
+                  <span className="text-on-surface-variant/60">Start:</span>
+                  <span className="ml-1 text-on-surface">{formatTimeDisplay(driverReport.startTime)}</span>
+                </div>
+              )}
+              {driverReport.endTime && (
+                <div>
+                  <span className="text-on-surface-variant/60">End:</span>
+                  <span className="ml-1 text-on-surface">{formatTimeDisplay(driverReport.endTime)}</span>
+                </div>
+              )}
+              {driverReport.km > 0 && (
+                <div>
+                  <span className="text-on-surface-variant/60">KM:</span>
+                  <span className="ml-1 text-on-surface font-medium">{driverReport.km}</span>
+                </div>
+              )}
+              {driverReport.diariaType && driverReport.diariaType !== 'none' && (
+                <div>
+                  <span className="text-on-surface-variant/60">Diaria:</span>
+                  <span className="ml-1 text-on-surface">{driverReport.diariaType}</span>
+                </div>
+              )}
+              {driverReport.isFestivo && (
+                <div>
+                  <span className="text-on-surface-variant/60">Festivo:</span>
+                  <span className="ml-1 text-amber-600 font-medium">Yes</span>
+                </div>
+              )}
+              {driverReport.isNotturno && (
+                <div>
+                  <span className="text-on-surface-variant/60">Notturno:</span>
+                  <span className="ml-1 text-amber-600 font-medium">Yes</span>
+                </div>
+              )}
+              {driverReport.kmExtra > 0 && (
+                <div>
+                  <span className="text-on-surface-variant/60">KM Extra:</span>
+                  <span className="ml-1 text-on-surface">{driverReport.kmExtra}</span>
+                </div>
+              )}
+              {driverReport.hoursExtra > 0 && (
+                <div>
+                  <span className="text-on-surface-variant/60">Hours Extra:</span>
+                  <span className="ml-1 text-on-surface">{driverReport.hoursExtra}</span>
+                </div>
+              )}
+              {driverReport.parking > 0 && (
+                <div>
+                  <span className="text-on-surface-variant/60">Parking:</span>
+                  <span className="ml-1 text-on-surface">€{driverReport.parking}</span>
+                </div>
+              )}
+              {driverReport.tolls > 0 && (
+                <div>
+                  <span className="text-on-surface-variant/60">Tolls:</span>
+                  <span className="ml-1 text-on-surface">€{driverReport.tolls}</span>
+                </div>
+              )}
+              {driverReport.fuel > 0 && (
+                <div>
+                  <span className="text-on-surface-variant/60">Fuel:</span>
+                  <span className="ml-1 text-on-surface">€{driverReport.fuel}</span>
+                </div>
+              )}
+              {driverReport.waitMinutes > 0 && (
+                <div>
+                  <span className="text-on-surface-variant/60">Wait:</span>
+                  <span className="ml-1 text-on-surface">{driverReport.waitMinutes} min</span>
+                </div>
+              )}
+            </div>
+            {driverReport.notes && (
+              <div className="pt-1 border-t border-outline-variant/20">
+                <span className="text-[10px] text-on-surface-variant/60">Notes:</span>
+                <div className="text-[11px] text-on-surface mt-0.5">{driverReport.notes}</div>
+              </div>
+            )}
+            {driverReport.totalExtras > 0 && (
+              <div className="pt-1 border-t border-outline-variant/20 flex justify-between text-[11px]">
+                <span className="text-on-surface-variant/60">Total Extras:</span>
+                <span className="font-medium text-on-surface">€{driverReport.totalExtras}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Reject Reason Modal */}
       {showRejectReason && (
@@ -1123,13 +1288,25 @@ export function WhatsAppTab({ service, relatedData, onCaptureSuccess, onServiceU
         )}
 
         {captureStep === 'done' && (
-          <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center">
-            <Check className="w-6 h-6 text-green-600 mx-auto mb-2" />
-            <div className="text-[12px] font-semibold text-green-800">Report captured successfully!</div>
-            <div className="text-[11px] text-green-600 mt-1">The report is now in the inbox for review.</div>
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
+            <div className="flex items-center gap-2">
+              <Check className="w-5 h-5 text-green-600" />
+              <div>
+                <div className="text-[12px] font-semibold text-green-800">Report captured and approved!</div>
+                <div className="text-[11px] text-green-600">Data from driver is now in the report.</div>
+              </div>
+            </div>
+            {parsedReports.length > 0 && parsedReports[0] && (
+              <div className="grid grid-cols-2 gap-1 text-[11px] bg-white/50 rounded p-2">
+                {parsedReports[0].startTime && <div><span className="text-green-600/70">Start:</span> {formatTimeDisplay(parsedReports[0].startTime)}</div>}
+                {parsedReports[0].endTime && <div><span className="text-green-600/70">End:</span> {formatTimeDisplay(parsedReports[0].endTime)}</div>}
+                {parsedReports[0].kmTotal && <div><span className="text-green-600/70">KM:</span> {parsedReports[0].kmTotal}</div>}
+                {parsedReports[0].diariaType && parsedReports[0].diariaType !== 'none' && <div><span className="text-green-600/70">Diaria:</span> {parsedReports[0].diariaType}</div>}
+              </div>
+            )}
             <button
               onClick={handleReset}
-              className="mt-3 px-4 py-1.5 bg-green-600 text-white text-[12px] font-medium rounded-lg hover:bg-green-700 transition-colors"
+              className="w-full px-4 py-1.5 bg-green-600 text-white text-[12px] font-medium rounded-lg hover:bg-green-700"
             >
               Paste Another Message
             </button>
@@ -1172,12 +1349,15 @@ export function WhatsAppTab({ service, relatedData, onCaptureSuccess, onServiceU
 // ============================================================================
 
 function ReconRow({ label, prod, driver, resolved }: { label: string; prod: string | number; driver: string | number; resolved?: string | number }) {
+  const isTimeField = label === 'Start Time' || label === 'End Time';
+  const displayProd = isTimeField ? (formatTimeDisplay(prod as string | Date) || '—') : (prod || '—');
+  const displayDriver = isTimeField ? (formatTimeDisplay(driver as string | Date) || '—') : (driver || '—');
   const match = String(prod) === String(driver);
   return (
     <div className="grid grid-cols-[1fr_1fr_1fr] gap-2 text-[11px] py-1.5 border-b border-outline-variant/20 last:border-0">
       <span className="text-on-surface-variant font-medium">{label}</span>
-      <span className={`text-center ${match ? 'text-green-600' : 'text-amber-600'}`}>{prod || '—'}</span>
-      <span className={`text-center ${match ? 'text-green-600' : 'text-amber-600'}`}>{driver || '—'}</span>
+      <span className={`text-center ${match ? 'text-green-600' : 'text-amber-600'}`}>{displayProd}</span>
+      <span className={`text-center ${match ? 'text-green-600' : 'text-amber-600'}`}>{displayDriver}</span>
     </div>
   );
 }
@@ -1188,7 +1368,7 @@ export function ReconciliationTab({ service, reconciliation, onServiceUpdate }: 
   onServiceUpdate?: () => void;
 }) {
   const { showToast } = useToast();
-  const { can } = useAuth();
+  const { can, user } = useAuth();
   const [resolving, setResolving] = useState(false);
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [resolution, setResolution] = useState({
@@ -1203,6 +1383,7 @@ export function ReconciliationTab({ service, reconciliation, onServiceUpdate }: 
   const status = reconciliation?.status || null;
   const isResolved = status === 'Resuelto';
   const isInProgress = status === 'EnProceso';
+  const isAdmin = user?.role === 'admin';
 
   const prod = reconciliation?.production || {};
   const drv = reconciliation?.driver || {};
@@ -1264,9 +1445,15 @@ export function ReconciliationTab({ service, reconciliation, onServiceUpdate }: 
               isInProgress ? 'bg-amber-100 text-amber-700' :
               'bg-blue-100 text-blue-700'
             }`}>
-              {status || 'Pending'}
+              {isResolved && <Lock className="w-3 h-3" />}
+              {isResolved ? 'Frozen' : (status || 'Pending')}
             </span>
           </div>
+          {isResolved && (
+            <div className="text-[10px] text-on-surface-variant/60 italic">
+              {isAdmin ? 'Admin — you can refresh data' : 'Read-only — resolved by coordinator'}
+            </div>
+          )}
 
           {/* Confrontation Table: Production vs Driver */}
           <div className="bg-surface-container rounded-lg px-3 py-2">
@@ -1288,8 +1475,8 @@ export function ReconciliationTab({ service, reconciliation, onServiceUpdate }: 
             <div className="bg-green-50 rounded-lg px-3 py-2 space-y-1">
               <span className="text-[10px] font-semibold text-green-700 uppercase tracking-wider">Resolved Values</span>
               <div className="grid grid-cols-2 gap-1 text-[11px]">
-                {fin.startTime && <div><span className="text-on-surface-variant">Start:</span> <span className="text-green-700 font-medium">{fin.startTime}</span></div>}
-                {fin.endTime && <div><span className="text-on-surface-variant">End:</span> <span className="text-green-700 font-medium">{fin.endTime}</span></div>}
+                {fin.startTime && <div><span className="text-on-surface-variant">Start:</span> <span className="text-green-700 font-medium">{formatTimeDisplay(fin.startTime)}</span></div>}
+                {fin.endTime && <div><span className="text-on-surface-variant">End:</span> <span className="text-green-700 font-medium">{formatTimeDisplay(fin.endTime)}</span></div>}
                 {fin.km > 0 && <div><span className="text-on-surface-variant">KM:</span> <span className="text-green-700 font-medium">{fin.km}</span></div>}
                 {fin.diaria !== 'none' && <div><span className="text-on-surface-variant">Diaria:</span> <span className="text-green-700 font-medium">{fin.diaria}</span></div>}
               </div>
@@ -1303,6 +1490,27 @@ export function ReconciliationTab({ service, reconciliation, onServiceUpdate }: 
               {reconciliation.resolvedAt && <> on {new Date(reconciliation.resolvedAt).toLocaleString()}</>}
               {reconciliation.resolutionNotes && <div className="mt-1 italic">"{reconciliation.resolutionNotes}"</div>}
             </div>
+          )}
+
+          {/* Refresh button — re-sync driver report data into reconciliation (admin only when frozen) */}
+          {isResolved && isAdmin && (
+            <button
+              onClick={async () => {
+                try {
+                  const { createReconciliation } = await import('../services/api');
+                  const result = await createReconciliation(service.id);
+                  if (result?.id) {
+                    showToast('Reconciliation refreshed from report', 'success');
+                    onServiceUpdate?.();
+                  }
+                } catch (err) {
+                  showToast(`Refresh failed: ${err instanceof Error ? err.message : 'Update'}`, 'error');
+                }
+              }}
+              className="w-full py-1.5 border border-outline-variant text-[11px] text-on-surface-variant rounded-lg hover:bg-surface-container transition-colors"
+            >
+              ↻ Refresh from Report
+            </button>
           )}
 
           {/* Resolve button */}
@@ -1435,6 +1643,12 @@ export function RapportinoTab({ service, onServiceUpdate }: {
   const [rapportinos, setRapportinos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [newPeriodType, setNewPeriodType] = useState('weekly');
+  const [newWeekStart, setNewWeekStart] = useState('');
+  const [newWeekEnd, setNewWeekEnd] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -1468,6 +1682,71 @@ export function RapportinoTab({ service, onServiceUpdate }: {
       onServiceUpdate?.();
     } catch (err) {
       showToast(`Failed: ${err instanceof Error ? err.message : action}`, 'error');
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!newWeekStart || !newWeekEnd) {
+      showToast('Select start and end dates', 'error');
+      return;
+    }
+    setIsProcessing('create');
+    try {
+      const { createRapportinoClient } = await import('../services/api');
+      const result = await createRapportinoClient(
+        service.backendProjectId || service.project,
+        service.clientId || '',
+        newWeekStart,
+        newWeekEnd,
+        newPeriodType
+      );
+      showToast('Rapportino created', 'success');
+      setShowCreateModal(false);
+      // Reload list
+      const { getRapportinoClients } = await import('../services/api');
+      const list = await getRapportinoClients({ serviceId: service.id });
+      setRapportinos(list || []);
+      onServiceUpdate?.();
+    } catch (err) {
+      showToast(`Failed: ${err instanceof Error ? err.message : 'Create'}`, 'error');
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  const handleReject = async (rapportinoId: string) => {
+    if (!rejectReason.trim()) {
+      showToast('Enter a rejection reason', 'error');
+      return;
+    }
+    setIsProcessing(`${rapportinoId}-reject`);
+    try {
+      const { rejectRapportinoClient } = await import('../services/api');
+      await rejectRapportinoClient(rapportinoId, rejectReason);
+      showToast('Rapportino rejected', 'success');
+      setShowRejectModal(null);
+      setRejectReason('');
+      setRapportinos(prev => prev.map(r => r.id === rapportinoId ? { ...r, status: 'REJECTED' } : r));
+      onServiceUpdate?.();
+    } catch (err) {
+      showToast(`Failed: ${err instanceof Error ? err.message : 'Reject'}`, 'error');
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  const handleFacturar = async (rapportinoId: string) => {
+    setIsProcessing(`${rapportinoId}-facturar`);
+    try {
+      const { facturarRapportino } = await import('../services/api');
+      await facturarRapportino(rapportinoId);
+      showToast('Rapportino facturado — invoice created', 'success');
+      setRapportinos(prev => prev.map(r => r.id === rapportinoId ? { ...r, status: 'FACTURADO' } : r));
+      onServiceUpdate?.();
+    } catch (err) {
+      showToast(`Failed: ${err instanceof Error ? err.message : 'Facturar'}`, 'error');
     } finally {
       setIsProcessing(null);
     }
@@ -1539,6 +1818,26 @@ export function RapportinoTab({ service, onServiceUpdate }: {
                     Accept
                   </button>
                 )}
+                {r.status === 'SENT' && can('rapportinoClient.accept') && (
+                  <button
+                    onClick={() => { setShowRejectModal(r.id); setRejectReason(''); }}
+                    disabled={isProcessing === `${r.id}-reject`}
+                    className="py-1.5 bg-red-50 text-red-700 text-[11px] font-medium rounded-lg hover:bg-red-100 border border-red-200 transition-colors flex items-center justify-center gap-1"
+                  >
+                    <ThumbsDown className="w-3 h-3" />
+                    Reject
+                  </button>
+                )}
+                {r.status === 'ACCEPTED' && can('rapportinoClient.send') && (
+                  <button
+                    onClick={() => handleFacturar(r.id)}
+                    disabled={isProcessing === `${r.id}-facturar`}
+                    className="flex-1 py-1.5 bg-blue-600 text-white text-[11px] font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+                  >
+                    {isProcessing === `${r.id}-facturar` ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />}
+                    Facturar
+                  </button>
+                )}
                 <button
                   onClick={() => openService(service.id, 'finance', 'rapportino')}
                   className="px-3 py-1.5 bg-surface-container text-on-surface text-[11px] font-medium rounded-lg hover:bg-surface-container-high transition-colors"
@@ -1556,6 +1855,96 @@ export function RapportinoTab({ service, onServiceUpdate }: {
       >
         Open Rapportinos →
       </button>
+
+      {/* Create Rapportino Button */}
+      {can('rapportinoClient.create') && (
+        <button
+          onClick={() => {
+            // Default to current week
+            const now = new Date();
+            const monday = new Date(now);
+            monday.setDate(now.getDate() - now.getDay() + 1);
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            setNewWeekStart(monday.toISOString().split('T')[0]);
+            setNewWeekEnd(sunday.toISOString().split('T')[0]);
+            setShowCreateModal(true);
+          }}
+          className="w-full py-2 bg-surface-container text-on-surface text-[12px] font-medium rounded-lg hover:bg-surface-container-high transition-colors"
+        >
+          + Create Rapportino
+        </button>
+      )}
+
+      {/* Create Rapportino Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowCreateModal(false)}>
+          <div className="absolute inset-0 bg-black/30" />
+          <div className="relative bg-surface rounded-xl shadow-xl w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[15px] font-semibold text-on-surface mb-4">Create Rapportino</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[11px] font-medium text-on-surface-variant">Period Type</label>
+                <select value={newPeriodType} onChange={e => setNewPeriodType(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40">
+                  <option value="weekly">Weekly</option>
+                  <option value="biweekly">Biweekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-medium text-on-surface-variant">Start Date</label>
+                  <input type="date" value={newWeekStart} onChange={e => setNewWeekStart(e.target.value)}
+                    className="w-full mt-1 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-on-surface-variant">End Date</label>
+                  <input type="date" value={newWeekEnd} onChange={e => setNewWeekEnd(e.target.value)}
+                    className="w-full mt-1 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40" />
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={handleCreate} disabled={isProcessing === 'create'}
+                className="flex-1 py-2 bg-primary text-on-primary text-[13px] font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
+                {isProcessing === 'create' ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Creating...</> : <><FileText className="w-3.5 h-3.5" /> Create</>}
+              </button>
+              <button onClick={() => setShowCreateModal(false)}
+                className="px-4 py-2 bg-surface-container text-on-surface text-[13px] font-medium rounded-lg hover:bg-surface-container-high">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Rapportino Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowRejectModal(null)}>
+          <div className="absolute inset-0 bg-black/30" />
+          <div className="relative bg-surface rounded-xl shadow-xl w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[15px] font-semibold text-on-surface mb-2">Reject Rapportino</h3>
+            <p className="text-[11px] text-on-surface-variant mb-3">Provide a reason for rejection</p>
+            <textarea
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              placeholder="Rejection reason..."
+              className="w-full h-20 px-3 py-2 text-[12px] bg-surface-container rounded-lg border border-outline-variant/40 resize-none"
+            />
+            <div className="flex gap-2 mt-4">
+              <button onClick={() => handleReject(showRejectModal)} disabled={isProcessing === `${showRejectModal}-reject`}
+                className="flex-1 py-2 bg-red-600 text-white text-[13px] font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
+                {isProcessing === `${showRejectModal}-reject` ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Rejecting...</> : <><ThumbsDown className="w-3.5 h-3.5" /> Reject</>}
+              </button>
+              <button onClick={() => setShowRejectModal(null)}
+                className="px-4 py-2 bg-surface-container text-on-surface text-[13px] font-medium rounded-lg hover:bg-surface-container-high">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1588,9 +1977,10 @@ export function FinanceTab({ service, onServiceUpdate }: {
   const [voidReason, setVoidReason] = useState('');
   const [showVoidPayment, setShowVoidPayment] = useState<any>(null);
   const [voidPaymentReason, setVoidPaymentReason] = useState('');
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
-  const totalRevenue = (revenue?.base || 0) + (revenue?.kmOver || 0) + (revenue?.hoursOver || 0) + (revenue?.diaria || 0) + (revenue?.notturno || 0);
-  const totalCost = (cost?.base || 0) + (cost?.kmOver || 0) + (cost?.hoursOver || 0) + (cost?.diaria || 0) + (cost?.notturno || 0);
+  const totalRevenue = (revenue?.base || 0) + (revenue?.kmOver || 0) + (revenue?.hoursOver || 0) + (revenue?.diaria || 0) + (revenue?.notturno || 0) + (revenue?.holiday || 0) + (revenue?.wait || 0) + (revenue?.airport || 0);
+  const totalCost = (cost?.base || 0) + (cost?.kmOver || 0) + (cost?.hoursOver || 0) + (cost?.diaria || 0) + (cost?.notturno || 0) + (cost?.holiday || 0) + (cost?.wait || 0) + (cost?.extras || 0);
   const margin = totalRevenue - totalCost;
   const marginPercent = totalRevenue > 0 ? ((margin / totalRevenue) * 100).toFixed(1) : '0.0';
 
@@ -1641,7 +2031,7 @@ export function FinanceTab({ service, onServiceUpdate }: {
     try {
       const { adjustRevenue, adjustCost } = await import('../services/api');
       const fn = type === 'revenue' ? adjustRevenue : adjustCost;
-      await fn(service.id, { amount: parseFloat(adjustAmount), reason: adjustReason || `Manual ${type} adjustment` });
+      await fn(service.id, { amount: parseFloat(adjustAmount), description: adjustReason || `Manual ${type} adjustment` });
       showToast(`${type} adjusted by €${adjustAmount}`, 'success');
       setShowAdjustRevenue(false);
       setShowAdjustCost(false);
@@ -1669,7 +2059,50 @@ export function FinanceTab({ service, onServiceUpdate }: {
       <div className="space-y-2">
         <span className="text-[10px] font-semibold text-on-surface-variant/60 uppercase tracking-wider">Actions</span>
         <div className="grid grid-cols-2 gap-2">
+          {/* Pendiente → Calculado */}
+          {financialStatus === 'Pendiente' && can('service.approveFinancial') && (
+            <button
+              onClick={() => handleFinancialAction('Calculate', async () => {
+                const { calculateService } = await import('../services/api');
+                return calculateService(service.id);
+              })}
+              disabled={isProcessing === 'Calculate'}
+              className="py-2 bg-blue-600 text-white text-[12px] font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5"
+            >
+              {isProcessing === 'Calculate' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Calculator className="w-3.5 h-3.5" />}
+              Calculate
+            </button>
+          )}
+          {/* Calculado → Confrontación */}
           {financialStatus === 'Calculado' && can('service.approveFinancial') && (
+            <button
+              onClick={() => handleFinancialAction('Confrontación', async () => {
+                const { moveToConfrontacion } = await import('../services/api');
+                return moveToConfrontacion(service.id);
+              })}
+              disabled={isProcessing === 'Confrontación'}
+              className="py-2 bg-amber-600 text-white text-[12px] font-medium rounded-lg hover:bg-amber-700 transition-colors flex items-center justify-center gap-1.5"
+            >
+              {isProcessing === 'Confrontación' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowLeftRight className="w-3.5 h-3.5" />}
+              Confrontación
+            </button>
+          )}
+          {/* Calculado/Confrontación → ActualsConfirmados */}
+          {(financialStatus === 'Calculado' || financialStatus === 'Confrontacion') && can('service.approveFinancial') && (
+            <button
+              onClick={() => handleFinancialAction('Confirm Actuals', async () => {
+                const { confirmActuals } = await import('../services/api');
+                return confirmActuals(service.id);
+              })}
+              disabled={isProcessing === 'Confirm Actuals'}
+              className="py-2 bg-teal-600 text-white text-[12px] font-medium rounded-lg hover:bg-teal-700 transition-colors flex items-center justify-center gap-1.5"
+            >
+              {isProcessing === 'Confirm Actuals' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+              Confirm Actuals
+            </button>
+          )}
+          {/* Calculado/Confrontación/ActualsConfirmados → Aprobado */}
+          {(financialStatus === 'Calculado' || financialStatus === 'Confrontacion' || financialStatus === 'ActualsConfirmados') && can('service.approveFinancial') && (
             <button
               onClick={() => handleFinancialAction('Approve', async () => {
                 const { approveFinancial } = await import('../services/api');
@@ -1682,7 +2115,22 @@ export function FinanceTab({ service, onServiceUpdate }: {
               Approve
             </button>
           )}
+          {/* Aprobado → Facturable */}
           {financialStatus === 'Aprobado' && can('service.facturar') && (
+            <button
+              onClick={() => handleFinancialAction('Mark Facturable', async () => {
+                const { markFacturable } = await import('../services/api');
+                return markFacturable(service.id);
+              })}
+              disabled={isProcessing === 'Mark Facturable'}
+              className="py-2 bg-indigo-600 text-white text-[12px] font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-1.5"
+            >
+              {isProcessing === 'Mark Facturable' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+              Mark Facturable
+            </button>
+          )}
+          {/* Facturable → Facturado */}
+          {financialStatus === 'Facturable' && can('service.facturar') && (
             <button
               onClick={() => handleFinancialAction('Facturar', async () => {
                 const { facturarService } = await import('../services/api');
@@ -1695,6 +2143,7 @@ export function FinanceTab({ service, onServiceUpdate }: {
               Facturar
             </button>
           )}
+          {/* Facturado → Cobrado */}
           {financialStatus === 'Facturado' && can('service.cobrar') && (
             <button
               onClick={() => handleFinancialAction('Cobrar', async () => {
@@ -1708,6 +2157,7 @@ export function FinanceTab({ service, onServiceUpdate }: {
               Cobrar
             </button>
           )}
+          {/* Cobrado → Cerrado */}
           {financialStatus === 'Cobrado' && can('service.close') && (
             <button
               onClick={() => handleFinancialAction('Close', async () => {
@@ -1719,6 +2169,20 @@ export function FinanceTab({ service, onServiceUpdate }: {
             >
               {isProcessing === 'Close' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
               Close
+            </button>
+          )}
+          {/* Cerrado → CerradoComercialmente */}
+          {financialStatus === 'Cerrado' && can('service.close') && (
+            <button
+              onClick={() => handleFinancialAction('Cerrar Comercialmente', async () => {
+                const { cerrarComercialmente } = await import('../services/api');
+                return cerrarComercialmente(service.id);
+              })}
+              disabled={isProcessing === 'Cerrar Comercialmente'}
+              className="py-2 bg-surface-container text-on-surface text-[12px] font-medium rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-center gap-1.5"
+            >
+              {isProcessing === 'Cerrar Comercialmente' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
+              Cerrar Comerc.
             </button>
           )}
           {can('service.adjustRevenue') && (
@@ -1737,6 +2201,32 @@ export function FinanceTab({ service, onServiceUpdate }: {
             >
               <DollarSign className="w-3.5 h-3.5" />
               Adjust Cost
+            </button>
+          )}
+          {can('service.economics') && (
+            <button
+              onClick={async () => {
+                setIsRecalculating(true);
+                try {
+                  const { recalculateServiceEconomics } = await import('../services/api');
+                  const result = await recalculateServiceEconomics(service.id);
+                  if (result.warnings && result.warnings.length > 0) {
+                    showToast(`Recalculated with warnings: ${result.warnings.join('; ')}`, 'warning');
+                  } else {
+                    showToast(`Recalculated: ${result.revenueItems || 0} revenue + ${result.costItems || 0} cost items`, 'success');
+                  }
+                  onServiceUpdate?.();
+                } catch (err) {
+                  showToast(`Recalculate failed: ${err instanceof Error ? err.message : 'Error'}`, 'error');
+                } finally {
+                  setIsRecalculating(false);
+                }
+              }}
+              disabled={isRecalculating}
+              className="py-2 bg-surface-container text-on-surface text-[12px] font-medium rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-center gap-1.5"
+            >
+              {isRecalculating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+              Recalculate
             </button>
           )}
         </div>
@@ -1776,10 +2266,34 @@ export function FinanceTab({ service, onServiceUpdate }: {
               <span className="text-on-surface">€{revenue.notturno.toFixed(2)}</span>
             </div>
           )}
+          {revenue?.holiday != null && revenue.holiday > 0 && (
+            <div className="flex justify-between">
+              <span className="text-on-surface-variant">Holiday</span>
+              <span className="text-on-surface">€{revenue.holiday.toFixed(2)}</span>
+            </div>
+          )}
+          {revenue?.wait != null && revenue.wait > 0 && (
+            <div className="flex justify-between">
+              <span className="text-on-surface-variant">Wait Time</span>
+              <span className="text-on-surface">€{revenue.wait.toFixed(2)}</span>
+            </div>
+          )}
+          {revenue?.airport != null && revenue.airport > 0 && (
+            <div className="flex justify-between">
+              <span className="text-on-surface-variant">Airport Surcharge</span>
+              <span className="text-on-surface">€{revenue.airport.toFixed(2)}</span>
+            </div>
+          )}
           <div className="flex justify-between font-medium border-t border-outline-variant/30 pt-1.5">
             <span className="text-on-surface">Total Revenue</span>
             <span className="text-on-surface">€{totalRevenue.toFixed(2)}</span>
           </div>
+          {totalRevenue === 0 && totalCost > 0 && (
+            <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-800">
+              Revenue is €0 — no matching RateCard found for this client + {service.vehicleType || 'Van'} + {service.serviceType || 'Dispo'}.
+              Check Rate Cards or click <strong>Recalculate</strong> after creating one.
+            </div>
+          )}
         </div>
       </div>
 
@@ -1815,6 +2329,24 @@ export function FinanceTab({ service, onServiceUpdate }: {
             <div className="flex justify-between">
               <span className="text-on-surface-variant">Notturno</span>
               <span className="text-on-surface">€{cost.notturno.toFixed(2)}</span>
+            </div>
+          )}
+          {cost?.holiday != null && cost.holiday > 0 && (
+            <div className="flex justify-between">
+              <span className="text-on-surface-variant">Holiday</span>
+              <span className="text-on-surface">€{cost.holiday.toFixed(2)}</span>
+            </div>
+          )}
+          {cost?.wait != null && cost.wait > 0 && (
+            <div className="flex justify-between">
+              <span className="text-on-surface-variant">Wait Time</span>
+              <span className="text-on-surface">€{cost.wait.toFixed(2)}</span>
+            </div>
+          )}
+          {cost?.extras != null && cost.extras > 0 && (
+            <div className="flex justify-between">
+              <span className="text-on-surface-variant">Extras (Parking/Tolls/Fuel)</span>
+              <span className="text-on-surface">€{cost.extras.toFixed(2)}</span>
             </div>
           )}
           <div className="flex justify-between font-medium border-t border-outline-variant/30 pt-1.5">
@@ -1941,6 +2473,22 @@ export function FinanceTab({ service, onServiceUpdate }: {
                 <div className="flex gap-1">
                   {inv.status === 'Borrador' && can('invoice.send') && (
                     <button onClick={async () => {
+                      setIsProcessing(`emit-${inv.id}`);
+                      try {
+                        const { emitInvoice } = await import('../services/api');
+                        await emitInvoice(inv.id);
+                        showToast('Invoice emitted', 'success');
+                        setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, status: 'Emitida' } : i));
+                        onServiceUpdate?.();
+                      } catch (err) { showToast(`Failed: ${err instanceof Error ? err.message : 'Emit'}`, 'error'); }
+                      finally { setIsProcessing(null); }
+                    }} disabled={!!isProcessing}
+                      className="text-[10px] px-2 py-1 bg-indigo-50 text-indigo-700 rounded hover:bg-indigo-100 border border-indigo-200">
+                      Emit
+                    </button>
+                  )}
+                  {inv.status === 'Emitida' && can('invoice.send') && (
+                    <button onClick={async () => {
                       setIsProcessing(`send-${inv.id}`);
                       try {
                         const { sendInvoice } = await import('../services/api');
@@ -1955,7 +2503,7 @@ export function FinanceTab({ service, onServiceUpdate }: {
                       Send
                     </button>
                   )}
-                  {inv.status !== 'Anulada' && inv.status !== 'Paid' && can('invoice.void') && (
+                  {inv.status !== 'Anulada' && inv.status !== 'Pagada' && can('invoice.void') && (
                     <button onClick={() => setShowVoidInvoice(inv)}
                       className="text-[10px] px-2 py-1 bg-red-50 text-red-700 rounded hover:bg-red-100 border border-red-200">
                       Void
@@ -1998,6 +2546,22 @@ export function FinanceTab({ service, onServiceUpdate }: {
                     }} disabled={!!isProcessing}
                       className="text-[10px] px-2 py-1 bg-green-50 text-green-700 rounded hover:bg-green-100 border border-green-200">
                       Confirm
+                    </button>
+                  )}
+                  {pay.status === 'Confirmado' && can('payment.confirm') && (
+                    <button onClick={async () => {
+                      setIsProcessing(`reconcile-${pay.id}`);
+                      try {
+                        const { reconcilePayment } = await import('../services/api');
+                        await reconcilePayment(pay.id);
+                        showToast('Payment reconciled', 'success');
+                        setPayments(prev => prev.map(p => p.id === pay.id ? { ...p, status: 'Conciliado' } : p));
+                        onServiceUpdate?.();
+                      } catch (err) { showToast(`Failed: ${err instanceof Error ? err.message : 'Reconcile'}`, 'error'); }
+                      finally { setIsProcessing(null); }
+                    }} disabled={!!isProcessing}
+                      className="text-[10px] px-2 py-1 bg-teal-50 text-teal-700 rounded hover:bg-teal-100 border border-teal-200">
+                      Reconcile
                     </button>
                   )}
                   {pay.status !== 'Conciliado' && pay.status !== 'Anulado' && can('payment.void') && (

@@ -40,7 +40,7 @@ export default function TransportListFilterBar({
   onClear,
 }: TransportListFilterBarProps) {
   const hasFilters = filterDateFrom || filterDateTo || filterDriver || filterOperatingCompany || filterStatus || filterProject || filterFinancialStatus;
-  const projects = [...new Set(services.map(s => s.project).filter(Boolean))];
+  const projects = [...new Set(services.map(s => s.production).filter(Boolean))];
 
   return (
     <div className="flex items-center gap-2 flex-wrap">

@@ -95,6 +95,9 @@ export interface Service {
     hoursOver: number;
     diaria: number;
     notturno: number;
+    holiday?: number;
+    wait?: number;
+    airport?: number;
   };
   costBreakdown: {
     base: number;
@@ -102,6 +105,9 @@ export interface Service {
     hoursOver: number;
     diaria: number;
     notturno: number;
+    holiday?: number;
+    wait?: number;
+    extras?: number;
   };
   revenueValidated: boolean;
   costValidated: boolean;
@@ -155,8 +161,10 @@ export type ScreenId =
   // MANAGEMENT
   | 'customers'
   | 'providers'
+  | 'contacts'
   | 'drivers'
   | 'vehicles'
+  | 'rate_cards'
   | 'projects'
   // SYSTEM
   | 'audit_center'
@@ -169,8 +177,7 @@ export type ScreenId =
   | 'driver_panel'
   // DEEP LINKS (not in sidebar, accessed from internal navigation)
   | 'documents'
-  | 'reports'
-  | 'rate_cards';
+  | 'reports';
 
 // --- Helpers for date formatting ---
 const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -307,8 +314,8 @@ export function mapServiceDTOToService(dto: Record<string, any>): Service {
     kmTotal: dto.kmTotal || dto.km || 0,
     kmOver: dto.kmOver || 0,
     rawText: dto.rawText || '',
-    revenueBreakdown: dto.revenueBreakdown || { base: parseFloat(dto.estimatedRevenue) || 0, kmOver: 0, hoursOver: 0, diaria: 0, notturno: 0 },
-    costBreakdown: dto.costBreakdown || { base: parseFloat(dto.estimatedCost) || 0, kmOver: 0, hoursOver: 0, diaria: 0, notturno: 0 },
+    revenueBreakdown: dto.revenueBreakdown || { base: parseFloat(dto.estimatedRevenue) || 0, kmOver: 0, hoursOver: 0, diaria: 0, notturno: 0, holiday: 0, wait: 0, airport: 0 },
+    costBreakdown: dto.costBreakdown || { base: parseFloat(dto.estimatedCost) || 0, kmOver: 0, hoursOver: 0, diaria: 0, notturno: 0, holiday: 0, wait: 0, extras: 0 },
     revenueValidated: dto.revenueValidated || false,
     costValidated: dto.costValidated || false,
     // Cost fields from parametros/backend (DashboardScreen edit modal)
@@ -490,10 +497,16 @@ export function formatTimeDisplay(timeStr: string | Date): string {
   
   const str = String(timeStr);
   
-  // Handle ranges
+  // Handle ranges with dash or en-dash: "08.10 - 17.00" or "08:10–17:00"
   const rangeMatch = str.match(/(\d{1,2}[.:]\d{1,2})\s*[-–]\s*(\d{1,2}[.:]\d{1,2})/);
   if (rangeMatch) {
     return `${formatSingleTime(rangeMatch[1])} - ${formatSingleTime(rangeMatch[2])}`;
+  }
+  
+  // Handle comma-separated ranges: "08.10, 15.30" (production time range from TransportList)
+  const commaRangeMatch = str.match(/(\d{1,2}[.:]\d{1,2})\s*,\s*(\d{1,2}[.:]\d{1,2})/);
+  if (commaRangeMatch) {
+    return `${formatSingleTime(commaRangeMatch[1])} - ${formatSingleTime(commaRangeMatch[2])}`;
   }
   
   return formatSingleTime(str);

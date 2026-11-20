@@ -237,10 +237,10 @@ const DriverReportCommands = {
         warnings.push('Reconciliation not created: ' + e.message);
       }
 
-      // 5. AUTO-RESOLVER si producción y conductor coinciden
+      // 5. AUTO-RESOLVER — always resolve with driver values as final
       var autoResolved = null;
       try {
-        autoResolved = ReconciliationCommands.autoResolveIfMatch(serviceId);
+        autoResolved = ReconciliationCommands.autoResolveIfMatch(serviceId, driverReportData);
       } catch (e) {
         Logger.log('[approveReport] AutoResolve skipped: ' + e.message);
       }

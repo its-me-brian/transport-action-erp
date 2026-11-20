@@ -213,7 +213,7 @@ function acceptReport(inboxId, reviewedBy) {
         });
         return { success: false, error: createErr.message };
       }
-      var reportId = created ? created.ID : null;
+      var reportId = created ? (created.id || created.ID) : null;
 
       // §33: Approval is a SEPARATE step — acceptReport only creates DriverReport in Pendiente
       // Coordinator must manually approve via approveDriverReport()
@@ -401,4 +401,70 @@ function submitToReview(inboxId) {
   } catch (e) {
     return { success: false, error: e.message };
   }
+}
+
+// ============================================================================
+// BATCH OPERATIONS
+// ============================================================================
+
+/**
+ * Accept multiple inbox items at once.
+ * @param {string[]} inboxIds - Array of inbox item IDs to accept
+ * @returns {Object} { success, results: [{id, success, error?, reportId?}], accepted, failed }
+ */
+function apiBulkAcceptInbox(inboxIds) {
+  if (!Array.isArray(inboxIds) || inboxIds.length === 0) {
+    return { success: false, error: 'No inbox IDs provided' };
+  }
+  
+  var results = [];
+  var accepted = 0;
+  var failed = 0;
+  
+  for (var i = 0; i < inboxIds.length; i++) {
+    try {
+      var result = acceptReport(inboxIds[i], 'bulk-accept');
+      results.push({ id: inboxIds[i], success: true, reportId: result ? result.reportId : null });
+      accepted++;
+    } catch (e) {
+      results.push({ id: inboxIds[i], success: false, error: e.message });
+      failed++;
+    }
+  }
+  
+  return { success: failed === 0, results: results, accepted: accepted, failed: failed };
+}
+
+/**
+ * Normalize multiple inbox items at once (same normalized data for all).
+ * @param {string[]} inboxIds - Array of inbox item IDs to normalize
+ * @param {Object} normalizedData - The normalized data to apply to all items
+ * @returns {Object} { success, results: [{id, success, error?}], normalized, failed }
+ */
+function apiBulkNormalizeInbox(inboxIds, normalizedData) {
+  if (!Array.isArray(inboxIds) || inboxIds.length === 0) {
+    return { success: false, error: 'No inbox IDs provided' };
+  }
+  
+  var results = [];
+  var normalized = 0;
+  var failed = 0;
+  
+  for (var i = 0; i < inboxIds.length; i++) {
+    try {
+      var result = normalizeReport(inboxIds[i], normalizedData);
+      if (result && result.error) {
+        results.push({ id: inboxIds[i], success: false, error: result.error });
+        failed++;
+      } else {
+        results.push({ id: inboxIds[i], success: true });
+        normalized++;
+      }
+    } catch (e) {
+      results.push({ id: inboxIds[i], success: false, error: e.message });
+      failed++;
+    }
+  }
+  
+  return { success: failed === 0, results: results, normalized: normalized, failed: failed };
 }

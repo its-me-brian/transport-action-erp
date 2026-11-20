@@ -566,7 +566,7 @@ const ServiceTableRows = React.memo(function ServiceTableRows(props: ServiceTabl
     return 'bg-[#c6d44e] text-black';
   };
 
-  const orderedGroups: { section: string; services: typeof services }[] = [];
+  const orderedGroups: { section: string; services: typeof filteredServices }[] = [];
   for (const [secName, secServices] of sectionMap) {
     orderedGroups.push({ section: secName, services: secServices });
   }

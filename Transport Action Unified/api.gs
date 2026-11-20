@@ -930,6 +930,26 @@ function _handleRoute(params, data) {
         _checkPermission(data, 'service.economics');
         result = apiApplyCostBreakdown(data.serviceId, data.driverReport);
         break;
+      case 'recalculateServiceEconomics':
+        _checkPermission(data, 'service.economics');
+        result = apiRecalculateServiceEconomics(data.serviceId);
+        break;
+
+      // =====================================================================
+      // DIAGNOSTICS
+      // =====================================================================
+      case 'debugRateCardLookup':
+        _checkPermission(data, 'service.economics');
+        result = apiDebugRateCardLookup(data.serviceId);
+        break;
+      case 'debugDriverReports':
+        _checkPermission(data, 'service.economics');
+        result = apiDebugDriverReports(data.serviceId);
+        break;
+      case 'debugServiceEconomicsChain':
+        _checkPermission(data, 'service.economics');
+        result = apiDebugServiceEconomicsChain(data.serviceId);
+        break;
 
       // =====================================================================
       // MIGRATION
@@ -1309,6 +1329,14 @@ function _handleRoute(params, data) {
       case 'lockReport':
         _checkPermission(data, 'inbox.review');
         result = lockReport(data.inboxId);
+        break;
+      case 'bulkAcceptInbox':
+        _checkPermission(data, 'inbox.review');
+        result = apiBulkAcceptInbox(data.inboxIds);
+        break;
+      case 'bulkNormalizeInbox':
+        _checkPermission(data, 'inbox.normalize');
+        result = apiBulkNormalizeInbox(data.inboxIds, data.normalizedData);
         break;
 
       // =====================================================================

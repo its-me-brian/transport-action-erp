@@ -11,7 +11,7 @@ import {
   Filter,
   ArrowRight
 } from 'lucide-react';
-import { ScreenId } from '../types';
+import { ScreenId, formatTimeDisplay } from '../types';
 import {
   ReconciliationDTO,
   getReconciliations,
@@ -100,8 +100,8 @@ const ReconciliationCard = React.memo(function ReconciliationCard({ r, expandedI
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <h4 className="text-xs font-bold text-blue-700 mb-2">Production</h4>
               <div className="space-y-1 text-sm">
-                <div><span className="text-on-surface-variant">Start:</span> <span className={diffClass(r.production.startTime, r.driver.startTime)}>{r.production.startTime || '—'}</span></div>
-                <div><span className="text-on-surface-variant">End:</span> <span className={diffClass(r.production.endTime, r.driver.endTime)}>{r.production.endTime || '—'}</span></div>
+                <div><span className="text-on-surface-variant">Start:</span> <span className={diffClass(r.production.startTime, r.driver.startTime)}>{formatTimeDisplay(r.production.startTime) || '—'}</span></div>
+                <div><span className="text-on-surface-variant">End:</span> <span className={diffClass(r.production.endTime, r.driver.endTime)}>{formatTimeDisplay(r.production.endTime) || '—'}</span></div>
                 <div><span className="text-on-surface-variant">KM:</span> <span className={diffClass(r.production.km, r.driver.km)}>{r.production.km}</span></div>
                 <div><span className="text-on-surface-variant">Diaria:</span> <span className={diffClass(r.production.diaria, r.driver.diaria)}>{r.production.diaria}</span></div>
                 <div><span className="text-on-surface-variant">Festivo:</span> <span className={diffClass(r.production.festivo, r.driver.festivo)}>{r.production.festivo ? 'Yes' : 'No'}</span></div>
@@ -112,8 +112,8 @@ const ReconciliationCard = React.memo(function ReconciliationCard({ r, expandedI
             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
               <h4 className="text-xs font-bold text-green-700 mb-2">Driver</h4>
               <div className="space-y-1 text-sm">
-                <div><span className="text-on-surface-variant">Start:</span> <span className={diffClass(r.driver.startTime, r.production.startTime)}>{r.driver.startTime || '—'}</span></div>
-                <div><span className="text-on-surface-variant">End:</span> <span className={diffClass(r.driver.endTime, r.production.endTime)}>{r.driver.endTime || '—'}</span></div>
+                <div><span className="text-on-surface-variant">Start:</span> <span className={diffClass(r.driver.startTime, r.production.startTime)}>{formatTimeDisplay(r.driver.startTime) || '—'}</span></div>
+                <div><span className="text-on-surface-variant">End:</span> <span className={diffClass(r.driver.endTime, r.production.endTime)}>{formatTimeDisplay(r.driver.endTime) || '—'}</span></div>
                 <div><span className="text-on-surface-variant">KM:</span> <span className={diffClass(r.driver.km, r.production.km)}>{r.driver.km}</span></div>
                 <div><span className="text-on-surface-variant">Diaria:</span> <span className={diffClass(r.driver.diaria, r.production.diaria)}>{r.driver.diaria}</span></div>
                 <div><span className="text-on-surface-variant">Festivo:</span> <span className={diffClass(r.driver.festivo, r.production.festivo)}>{r.driver.festivo ? 'Yes' : 'No'}</span></div>
@@ -132,8 +132,8 @@ const ReconciliationCard = React.memo(function ReconciliationCard({ r, expandedI
                 Final {r.status === 'Resuelto' ? '(Resolved)' : '(Pending)'}
               </h4>
               <div className="space-y-1 text-sm">
-                <div><span className="text-on-surface-variant">Start:</span> {r.final.startTime || '—'}</div>
-                <div><span className="text-on-surface-variant">End:</span> {r.final.endTime || '—'}</div>
+                <div><span className="text-on-surface-variant">Start:</span> {formatTimeDisplay(r.final.startTime) || '—'}</div>
+                <div><span className="text-on-surface-variant">End:</span> {formatTimeDisplay(r.final.endTime) || '—'}</div>
                 <div><span className="text-on-surface-variant">KM:</span> {r.final.km}</div>
                 <div><span className="text-on-surface-variant">Diaria:</span> {r.final.diaria}</div>
                 <div><span className="text-on-surface-variant">Festivo:</span> {r.final.festivo ? 'Yes' : 'No'}</div>
@@ -192,7 +192,7 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
       }
     } catch (err) {
       console.error('Error loading reconciliations:', err);
-      showToast('Error al cargar conciliaciones', 'error');
+      showToast('Error loading reconciliations', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -249,12 +249,17 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
     if (!resolvingId) return;
     setIsResolving(true);
     try {
-      await resolveReconciliation(resolvingId, resolution);
-      setResolvingId(null);
-      await loadReconciliations();
+      const result = await resolveReconciliation(resolvingId, resolution);
+      if (result?.error) {
+        showToast(result.error, 'error');
+      } else {
+        showToast('Reconciliation resolved', 'success');
+        setResolvingId(null);
+        await loadReconciliations();
+      }
     } catch (err) {
       console.error('Error resolving reconciliation:', err);
-      showToast('Error al resolver conciliación', 'error');
+      showToast('Error resolving reconciliation', 'error');
     } finally {
       setIsResolving(false);
     }

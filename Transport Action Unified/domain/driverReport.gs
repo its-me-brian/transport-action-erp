@@ -18,11 +18,25 @@ const DriverReportRepository = {
   },
 
   /**
-   * Obtener el reporte activo (no locked) para un servicio
+   * Obtener el reporte activo para un servicio.
+   * After approval, reports are locked. "Active" means the most recent approved report.
+   * Fallback: most recent unlocked (pending) report.
    */
   getActiveByService(serviceId) {
     const reports = this.getByService(serviceId);
-    return reports.find(r => r.Locked !== 'true' && r.Locked !== true);
+    if (reports.length === 0) return null;
+    
+    // Prefer: most recent approved (locked + Aceptado)
+    const approved = reports
+      .filter(r => r.Status === 'Aceptado')
+      .sort((a, b) => (parseInt(b.Version) || 0) - (parseInt(a.Version) || 0));
+    if (approved.length > 0) return approved[0];
+    
+    // Fallback: most recent pending (not locked)
+    const pending = reports
+      .filter(r => r.Locked !== 'true' && r.Locked !== true)
+      .sort((a, b) => (parseInt(b.Version) || 0) - (parseInt(a.Version) || 0));
+    return pending[0] || null;
   },
 
   /**
@@ -92,13 +106,13 @@ const DriverReportRepository = {
       version: parseInt(entity.Version) || 1,
       previousReportId: entity.PreviousReportID,
       // Cost fields
-      startTime: entity.StartTime || '',
-      endTime: entity.EndTime || '',
+      startTime: _normalizeTimeToHHMM(entity.StartTime),
+      endTime: _normalizeTimeToHHMM(entity.EndTime),
       km: parseFloat(entity.KmTotal) || 0,
       hasDiaria: entity.HasDiaria === 'true' || entity.HasDiaria === true,
       isFestivo: entity.IsFestivo === 'true' || entity.IsFestivo === true,
       isNotturno: entity.IsNotturno === 'true' || entity.IsNotturno === true,
-      diariaType: entity.DiariaType || 'none',
+      diariaType: _normalizeDiariaType(entity.DiariaType),
       // Extra costs
       kmExtra: parseFloat(entity.KmExtra) || 0,
       hoursExtra: parseFloat(entity.HoursExtra) || 0,
@@ -144,4 +158,51 @@ function apiGetDriverReport(id) {
 function apiGetActiveDriverReport(serviceId) {
   const report = DriverReportRepository.getActiveByService(serviceId);
   return report ? DriverReportRepository.toDTO(report) : null;
+}
+
+/**
+ * Diagnostic: check DriverReports for a given service.
+ * Shows all reports, their Status, Locked values, and what getActiveByService returns.
+ */
+function apiDebugDriverReports(serviceId) {
+  const allReports = DriverReportRepository.getAll();
+  const serviceReports = serviceId
+    ? allReports.filter(r => r.ServiceID === serviceId)
+    : [];
+  
+  const activeReport = serviceId ? DriverReportRepository.getActiveByService(serviceId) : null;
+  
+  // Show ALL reports in the sheet with their key fields (to find mismatched ServiceIDs)
+  const allReportSummaries = allReports.map(r => ({
+    id: r.ID,
+    ServiceID: r.ServiceID,
+    DriverID: r.DriverID,
+    Version: r.Version,
+    Status: r.Status,
+    Locked: r.Locked,
+    Source: r.Source
+  }));
+  
+  return {
+    serviceId: serviceId,
+    totalReportsInSheet: allReports.length,
+    reportsForService: serviceReports.length,
+    rawReports: serviceReports.map(r => ({
+      id: r.ID,
+      Status: r.Status,
+      Locked: r.Locked,
+      StartTime: r.StartTime,
+      EndTime: r.EndTime,
+      KmTotal: r.KmTotal
+    })),
+    allReportSummaries: allReportSummaries,
+    activeReport: activeReport ? {
+      id: activeReport.id,
+      status: activeReport.status,
+      locked: activeReport.locked,
+      startTime: activeReport.startTime,
+      endTime: activeReport.endTime,
+      km: activeReport.km
+    } : null
+  };
 }

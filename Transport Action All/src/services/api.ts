@@ -245,6 +245,7 @@ interface ImportResult {
   production?: string;
   projectName?: string;
   transportCompany?: string;
+  fileUrl?: string;
   dateStr?: string;
   footerContacts?: { name: string; role: string; phone: string; email: string }[];
   servicios?: TransportService[];
@@ -526,6 +527,9 @@ export async function createService(data: {
   Notes?: string;
   ServiceType?: string;
   SourceType?: string;
+  Section?: string;
+  FlightInfo?: string;
+  VehicleType?: string;
 }): Promise<{ success: boolean; id?: string; error?: string }> {
   return gasPostWithRetry('createService', data);
 }
@@ -599,10 +603,6 @@ export async function reportService(serviceId: string): Promise<{ success?: bool
   return gasPostWithRetry('reportService', { serviceId });
 }
 
-export async function moveToReview(serviceId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPostWithRetry('moveToRevision', { serviceId });
-}
-
 export async function validateService(serviceId: string): Promise<{ success?: boolean; error?: string }> {
   return gasPostWithRetry('validateService', { serviceId });
 }
@@ -632,6 +632,16 @@ export async function adjustCost(serviceId: string, adjustment: {
   referenceLineId?: string;
 }): Promise<{ success?: boolean; error?: string; id?: string }> {
   return gasPostWithRetry('adjustCost', { serviceId, adjustment });
+}
+
+export async function recalculateServiceEconomics(serviceId: string): Promise<{
+  serviceId?: string; revenueItems?: number; costItems?: number; warnings?: string[]; error?: string;
+}> {
+  return gasPostWithRetry('recalculateServiceEconomics', { serviceId });
+}
+
+export async function debugServiceEconomicsChain(serviceId: string): Promise<any> {
+  return gasPostWithRetry('debugServiceEconomicsChain', { serviceId });
 }
 
 export async function getEstimatedVsActual(projectId: string): Promise<{
@@ -715,7 +725,8 @@ export async function importTransportListWithProject(data: {
   projectId?: string;
   operatingCompany: string;
   fileUrl?: string;
-}): Promise<{ success: boolean; servicesCreated?: number; clientId?: string; projectId?: string; error?: string }> {
+  dateStr?: string;
+}): Promise<{ success: boolean; servicesCreated?: number; clientId?: string; projectId?: string; servicesSkipped?: number; importLogs?: string[]; error?: string }> {
   return gasPostWithRetry('importTransportListWithProject', data);
 }
 
@@ -860,6 +871,8 @@ export async function getDriversByCollaborator(collaboratorId: string): Promise<
     licenseExpiry: row.LicenseExpiry || row.licenseExpiry || '',
     operatingCompany: row.OperatingCompany || row.operatingCompany || '',
     source: row.Source || row.source || 'manual',
+    lastUsed: row.LastUsed || row.lastUsed || '',
+    totalRides: parseInt(row.TotalRides) || 0,
     lastImportDate: row.LastImportDate || row.lastImportDate || '',
   }));
 }
@@ -1540,6 +1553,7 @@ export async function getExpenses(filters?: { projectId?: string; status?: strin
     status: row.Status || row.status || '',
     projectId: row.ProjectID || row.projectId || '',
     operatingCompany: row.OperatingCompany || row.operatingCompany || '',
+    notes: row.Notes || row.notes || '',
     createdBy: row.CreatedBy || row.createdBy || '',
     createdAt: row.CreatedAt || row.createdAt || '',
     updatedAt: row.UpdatedAt || row.updatedAt || '',
@@ -1574,9 +1588,13 @@ export async function correctExpense(id: string): Promise<{ success?: boolean; i
 // ============================================================================
 
 interface AuthUser {
+  id?: string;
+  username: string;
   email: string;
   role: string;
-  username: string;
+  name?: string;
+  phone?: string;
+  status?: string;
 }
 
 interface AuthResponse {
@@ -1590,6 +1608,7 @@ interface AuthResponse {
 export interface UserRecord {
   id: string;
   username: string;
+  name: string;
   email: string;
   phone: string;
   role: string;
@@ -1748,6 +1767,7 @@ export interface RapportinoClientDTO {
   periodEnd: string;
   weekStart: string;
   weekEnd: string;
+  totalAmount: number;
   status: string;
   notes: string;
   createdBy: string;
@@ -1766,6 +1786,7 @@ export interface RapportinoDriverDTO {
   periodEnd: string;
   weekStart: string;
   weekEnd: string;
+  totalAmount: number;
   status: string;
   notes: string;
   createdBy: string;
@@ -1790,6 +1811,7 @@ export interface RapportinoItemDTO {
 export async function getRapportinoClients(filters?: {
   projectId?: string;
   clientId?: string;
+  serviceId?: string;
   status?: string;
   dateFrom?: string;
   dateTo?: string;
@@ -1895,6 +1917,9 @@ export interface RapportinoCollaboratorDTO {
   periodType: string;
   periodStart: string;
   periodEnd: string;
+  weekStart: string;
+  weekEnd: string;
+  totalAmount: number;
   status: string;
   notes: string;
   createdBy: string;
@@ -2223,17 +2248,20 @@ export async function getRateCards(clientId?: string): Promise<RateCardDTO[]> {
     name: row.Name || row.name || '',
     category: row.Category || row.category || '',
     vehicleType: row.VehicleType || row.vehicleType || '',
-    basePrice: parseFloat(row.BasePrice) || 0,
-    extraKmRate: parseFloat(row.ExtraKmRate) || 0,
-    extraHourRate: parseFloat(row.ExtraHourRate) || 0,
-    waitRate: parseFloat(row.WaitRate) || 0,
-    nightFee: parseFloat(row.NightFee) || 0,
-    holidayFee: parseFloat(row.HolidayFee) || 0,
-    halfDayPrice: parseFloat(row.HalfDayPrice) || 0,
-    fullDayPrice: parseFloat(row.FullDayPrice) || 0,
-    airportSurcharge: parseFloat(row.AirportSurcharge) || 0,
+    serviceType: row.ServiceType || row.serviceType || 'Dispo',
+    basePrice: parseFloat(row.BasePrice || row.basePrice) || 0,
+    includedKm: parseFloat(row.IncludedKm || row.includedKm) || 0,
+    includedHours: parseFloat(row.IncludedHours || row.includedHours) || 0,
+    extraKmRate: parseFloat(row.ExtraKmRate || row.extraKmRate) || 0,
+    extraHourRate: parseFloat(row.ExtraHourRate || row.extraHourRate) || 0,
+    waitRate: parseFloat(row.WaitRate || row.waitRate) || 0,
+    nightFee: parseFloat(row.NightFee || row.nightFee) || 0,
+    holidayFee: parseFloat(row.HolidayFee || row.holidayFee) || 0,
+    halfDayPrice: parseFloat(row.HalfDayPrice || row.halfDayPrice) || 0,
+    fullDayPrice: parseFloat(row.FullDayPrice || row.fullDayPrice) || 0,
+    airportSurcharge: parseFloat(row.AirportSurcharge || row.airportSurcharge) || 0,
     operatingCompany: row.OperatingCompany || row.operatingCompany || '',
-    active: row.Active === true || row.Active === 'true',
+    active: row.Active === true || row.Active === 'true' || row.active === true,
     notes: row.Notes || row.notes || '',
     clientId: row.ClientID || row.clientId || '',
     projectId: row.ProjectID || row.projectId || '',
@@ -2244,7 +2272,7 @@ export async function getRateCards(clientId?: string): Promise<RateCardDTO[]> {
   }));
 }
 
-export async function createRateCard(data: { name: string; category?: string; vehicleType?: string; basePrice?: number; clientId?: string; projectId?: string }): Promise<{ success?: boolean; id?: string; error?: string }> {
+export async function createRateCard(data: { name: string; category?: string; vehicleType?: string; serviceType?: string; basePrice?: number; clientId?: string; projectId?: string; includedKm?: number; includedHours?: number; extraKmRate?: number; extraHourRate?: number; waitRate?: number; nightFee?: number; holidayFee?: number; halfDayPrice?: number; fullDayPrice?: number; airportSurcharge?: number; notes?: string }): Promise<{ success?: boolean; id?: string; error?: string }> {
   return gasPostWithRetry('apiCreateRateCard', data);
 }
 
@@ -2422,6 +2450,7 @@ export interface DriverLinkDTO {
   createdAt: string;
   expiresAt: string;
   link?: string;
+  error?: string;
 }
 
 /**
@@ -2550,6 +2579,23 @@ export async function lockReport(
 }
 
 // ============================================================================
+// BATCH INBOX OPERATIONS
+// ============================================================================
+
+export async function bulkAcceptInbox(
+  inboxIds: string[]
+): Promise<{ success?: boolean; results?: any[]; accepted?: number; failed?: number; error?: string }> {
+  return gasPostWithRetry('bulkAcceptInbox', { inboxIds });
+}
+
+export async function bulkNormalizeInbox(
+  inboxIds: string[],
+  normalizedData: Record<string, any>
+): Promise<{ success?: boolean; results?: any[]; normalized?: number; failed?: number; error?: string }> {
+  return gasPostWithRetry('bulkNormalizeInbox', { inboxIds, normalizedData });
+}
+
+// ============================================================================
 // DRIVER LINK RESPONSES — Raw submissions from Rapportino form
 // ============================================================================
 
@@ -2604,6 +2650,9 @@ export interface WhatsAppParsedReport {
   isFestivo?: boolean;
   isNotturno?: boolean;
   notes?: string;
+  serviceCandidates?: { id: string; time: string; production: string; section: string; passengerName: string; status: string; route: string; confidence: number }[];
+  /** Internal: enriched service candidates from backend for dropdown */
+  _serviceCandidates?: { id: string; time: string; production: string; section: string; passengerName: string; status: string; route: string; confidence: number }[];
 }
 
 export interface WhatsAppParseResult {
@@ -2659,6 +2708,7 @@ export interface ReconciliationDTO {
   resolutionNotes: string;
   createdAt: string;
   updatedAt: string;
+  error?: string;
 }
 
 export async function getReconciliations(filters?: { status?: string; projectId?: string; serviceId?: string; company?: string }): Promise<ReconciliationDTO[]> {

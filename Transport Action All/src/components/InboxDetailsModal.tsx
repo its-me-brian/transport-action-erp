@@ -1,6 +1,6 @@
 import React from 'react';
 import { Check, X, Lock, Send } from 'lucide-react';
-import { InboxItem } from './ReportInboxScreen';
+import { InboxItem } from '../hooks/useReportInbox';
 
 const getSourceBadge = (source: string) => {
   switch (source) {

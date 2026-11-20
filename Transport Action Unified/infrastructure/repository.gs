@@ -7,6 +7,77 @@
 // ============================================================================
 
 /**
+ * Normaliza un valor de tiempo a formato "HH:MM".
+ * Google Sheets almacena tiempos como Date objects con epoch 1899-12-30.
+ * Esta función convierte Date objects, strings ISO, y strings various a "HH:MM".
+ */
+function _normalizeTimeToHHMM(val) {
+  if (!val) return '';
+  
+  // Date object from Google Sheets (e.g., 1899-12-30T07:10:00.000Z)
+  if (val instanceof Date) {
+    var h = String(val.getHours()).padStart(2, '0');
+    var m = String(val.getMinutes()).padStart(2, '0');
+    return h + ':' + m;
+  }
+  
+  var str = String(val).trim();
+  if (!str) return '';
+  
+  // ISO string like "1899-12-30T07:10:00.000Z" — extract HH:MM
+  var isoMatch = str.match(/T(\d{2}):(\d{2})/);
+  if (isoMatch) {
+    return isoMatch[1] + ':' + isoMatch[2];
+  }
+  
+  // Already "HH:MM" format
+  var hhmmMatch = str.match(/^(\d{1,2}):(\d{2})$/);
+  if (hhmmMatch) {
+    return (hhmmMatch[1].length === 1 ? '0' : '') + hhmmMatch[1] + ':' + hhmmMatch[2];
+  }
+  
+  // Dot format "HH.MM" or "H.M"
+  var dotMatch = str.match(/^(\d{1,2})[.](\d{1,2})$/);
+  if (dotMatch) {
+    return (dotMatch[1].length === 1 ? '0' : '') + dotMatch[1] + ':' + (dotMatch[2].length === 1 ? '0' : '') + dotMatch[2];
+  }
+  
+  // Standalone hour like "8", "08"
+  var hourOnly = str.match(/^(\d{1,2})$/);
+  if (hourOnly) {
+    return (hourOnly[1].length === 1 ? '0' : '') + hourOnly[1] + ':00';
+  }
+  
+  // Comma-separated range "08.10, 15.30" — normalize both times
+  var commaMatch = str.match(/(\d{1,2}[.:]\d{1,2})\s*,\s*(\d{1,2}[.:]\d{1,2})/);
+  if (commaMatch) {
+    return _normalizeTimeToHHMM(commaMatch[1]) + ', ' + _normalizeTimeToHHMM(commaMatch[2]);
+  }
+  
+  // Dash range "08.10 - 17.00" — normalize both times
+  var dashMatch = str.match(/(\d{1,2}[.:]\d{1,2})\s*[-–]\s*(\d{1,2}[.:]\d{1,2})/);
+  if (dashMatch) {
+    return _normalizeTimeToHHMM(dashMatch[1]) + ' - ' + _normalizeTimeToHHMM(dashMatch[2]);
+  }
+  
+  // Return as-is if we can't parse it
+  return str;
+}
+
+/**
+ * Normaliza el valor de DiariaType a los valores válidos: 'piena', 'mezza', 'none'.
+ * Mapea valores inválidos como 'standard', 'full', 'half', etc.
+ */
+function _normalizeDiariaType(val) {
+  if (!val) return 'none';
+  var str = String(val).trim().toLowerCase();
+  if (str === 'piena' || str === 'full' || str === 'full_day' || str === 'full day' || str === 'standard') return 'piena';
+  if (str === 'mezza' || str === 'half' || str === 'half_day' || str === 'half day' || str === 'media') return 'mezza';
+  if (str === 'none' || str === 'no' || str === '') return 'none';
+  return 'none'; // Default for unknown values
+}
+
+/**
  * Obtiene todas las filas de una hoja como array de objetos.
  * La primera fila son los headers.
  * Excluye registros soft-deleted (DeletedAt set).

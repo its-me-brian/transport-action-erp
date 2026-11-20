@@ -124,6 +124,7 @@ export const subSectionToQueryParam: Record<ServiceSubSection, string> = {
   reconciliation: 'reconciliation',
   whatsapp: 'whatsapp',
   rapportino: 'rapportino',
+  finance: 'finance',
 };
 
 // === URL query param → Sub-section ===

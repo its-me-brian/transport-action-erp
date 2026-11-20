@@ -1,14 +1,18 @@
-import React from 'react';
-import { Inbox, Eye, Filter } from 'lucide-react';
+import React, { useState } from 'react';
+import { Inbox, Eye, Filter, CheckSquare, Loader2 } from 'lucide-react';
 import InboxNormalizeModal from './InboxNormalizeModal';
 import InboxDetailsModal from './InboxDetailsModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useReportInbox, InboxItem } from '../hooks/useReportInbox';
 import { useOpenService } from '../hooks/useOpenService';
+import { useToast } from '../contexts/ToastContext';
+import { bulkAcceptInbox } from '../services/api';
 import { Skeleton } from './ui/Skeleton';
 
 interface InboxItemRowProps {
   item: InboxItem;
+  isSelected: boolean;
+  onToggleSelect: () => void;
   getSourceBadge: (source: string) => React.ReactNode;
   getStatusBadge: (status: string) => React.ReactNode;
   driverName: (id: string, item?: InboxItem) => string;
@@ -18,10 +22,18 @@ interface InboxItemRowProps {
   handleSelectItem: (item: InboxItem) => void;
 }
 
-const InboxItemRow = React.memo(function InboxItemRow({ item, getSourceBadge, getStatusBadge, driverName, formatDisplayDate, getServiceId, openService, handleSelectItem }: InboxItemRowProps) {
+const InboxItemRow = React.memo(function InboxItemRow({ item, isSelected, onToggleSelect, getSourceBadge, getStatusBadge, driverName, formatDisplayDate, getServiceId, openService, handleSelectItem }: InboxItemRowProps) {
   const svcId = getServiceId(item);
   return (
-    <tr key={item.ID} className="hover:bg-surface-container-low transition-colors">
+    <tr key={item.ID} className={`hover:bg-surface-container-low transition-colors ${isSelected ? 'bg-primary/5' : ''}`}>
+      <td className="px-4 py-3">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onToggleSelect}
+          className="w-4 h-4 rounded border-outline-variant"
+        />
+      </td>
       <td className="px-4 py-3">{getSourceBadge(item.Source)}</td>
       <td className="px-4 py-3 text-sm font-medium">{driverName(item.DriverID, item)}</td>
       <td className="px-4 py-3 text-sm">
@@ -60,6 +72,7 @@ interface ReportInboxScreenProps {
 export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps) {
   const { can } = useAuth();
   const openService = useOpenService();
+  const { showToast } = useToast();
   const {
     items, isLoading, selectedItem, normForm, matchingServices, isSearchingServices,
     filterSource, filterStatus, filterDriver,
@@ -72,6 +85,47 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
     driverName, projectName, formatDisplayDate, getFieldDiff, getRawData,
     loadItems,
   } = useReportInbox({ onNavigate });
+
+  // Batch selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+
+  const toggleSelectItem = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredItems.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredItems.map(i => i.ID)));
+    }
+  };
+
+  const handleBulkAccept = async () => {
+    const ids = Array.from(selectedIds);
+    const pendingItems = filteredItems.filter(i => ids.includes(i.ID) && i.Status === 'ACCEPTED');
+    if (pendingItems.length === 0) {
+      showToast('No ACCEPTED items selected for bulk accept', 'warning');
+      return;
+    }
+    setIsBulkProcessing(true);
+    try {
+      const result = await bulkAcceptInbox(pendingItems.map(i => i.ID));
+      showToast(`Bulk accept: ${result.accepted || 0} accepted, ${result.failed || 0} failed`, result.failed ? 'warning' : 'success');
+      setSelectedIds(new Set());
+      loadItems();
+    } catch (err) {
+      showToast(`Bulk accept failed: ${err instanceof Error ? err.message : 'Error'}`, 'error');
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -210,10 +264,40 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
         </div>
       ) : (
         <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden">
+          {/* Bulk Actions Toolbar */}
+          {selectedIds.size > 0 && (
+            <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center gap-3">
+              <span className="text-sm font-medium text-primary">{selectedIds.size} selected</span>
+              {can('inbox.review') && (
+                <button
+                  onClick={handleBulkAccept}
+                  disabled={isBulkProcessing}
+                  className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1.5"
+                >
+                  {isBulkProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckSquare className="w-3 h-3" />}
+                  Accept Selected
+                </button>
+              )}
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="px-3 py-1.5 text-xs text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors"
+              >
+                Clear Selection
+              </button>
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full min-w-[700px]">
             <thead className="bg-surface-container">
               <tr>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface w-10">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size === filteredItems.length && filteredItems.length > 0}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 rounded border-outline-variant"
+                  />
+                </th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Source</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Driver</th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-on-surface">Service</th>
@@ -228,6 +312,8 @@ export default function ReportInboxScreen({ onNavigate }: ReportInboxScreenProps
                   <InboxItemRow
                     key={item.ID}
                     item={item}
+                    isSelected={selectedIds.has(item.ID)}
+                    onToggleSelect={() => toggleSelectItem(item.ID)}
                     getSourceBadge={getSourceBadge}
                     getStatusBadge={getStatusBadge}
                     driverName={driverName}

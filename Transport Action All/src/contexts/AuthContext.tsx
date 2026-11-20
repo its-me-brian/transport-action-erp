@@ -278,15 +278,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (savedToken && savedUser && savedExpiry) {
       const expiry = new Date(savedExpiry);
       if (expiry > new Date()) {
-        setToken(savedToken);
-        setUser(JSON.parse(savedUser));
-        setIsLoading(false);
-        // Validate in background
-        validateSession(savedToken).then(res => {
-          if (!res.valid) {
-            clearSession();
-          }
-        });
+        try {
+          setToken(savedToken);
+          setUser(JSON.parse(savedUser));
+          setIsLoading(false);
+          // Validate in background
+          validateSession(savedToken).then(res => {
+            if (!res.valid) {
+              clearSession();
+            }
+          }).catch(() => {
+            // Network error or backend unreachable — session stays valid from localStorage
+          });
+        } catch {
+          // Corrupted localStorage — clear and show login
+          clearSession();
+        }
       } else {
         clearSession();
       }
@@ -318,7 +325,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const result = await loginUser(username, password);
       if (result.success && result.token && result.user) {
-        saveSession(result.token, result.user);
+        // Map API AuthUser to Context AuthUser (backend may not return all fields)
+        const user = {
+          id: result.user.id || '',
+          username: result.user.username,
+          email: result.user.email || '',
+          phone: result.user.phone || '',
+          role: result.user.role as UserRole,
+          status: result.user.status || 'approved',
+        };
+        saveSession(result.token, user);
         return { success: true };
       }
       return { success: false, error: result.error || 'Login failed' };

@@ -11,73 +11,6 @@
  * manual data entry is required for every service, with high error risk.
  */
 
-// ============================================================================
-// MAIN PARSING FUNCTIONS
-// ============================================================================
-
-/**
- * Parse WhatsApp text from drivers to extract rapportino data.
- * 
- * Typical formats:
- * - "8:30 - 21:30 | 73km | Van Disposal"
- * - "Inizio 8:30 Fine 21:30 km 73"
- * - "8.30/21.30 73km van"
- * - "08:30-21:30 | km: 73 | diaria"
- * 
- * @param {string} text - Raw WhatsApp message
- * @returns {Object} Parsed service data
- */
-function parseWhatsAppText(text) {
-  if (!text) return {};
-  
-  var result = {};
-  var lower = text.toLowerCase();
-  
-  // Extract time range: "8:30 - 21:30" or "8.30/21.30" or "8:30-21:30"
-  var timeRangeMatch = text.match(/(\d{1,2}[.:]\d{2})\s*[-–/]\s*(\d{1,2}[.:]\d{2})/);
-  if (timeRangeMatch) {
-    result.startTime = _formatSingleTime(timeRangeMatch[1]);
-    result.endTime = _formatSingleTime(timeRangeMatch[2]);
-  }
-  
-  // Extract single time if no range: "Inizio 8:30"
-  if (!result.startTime) {
-    var startMatch = text.match(/(?:inizio|start|in)[:\s]*(\d{1,2}[.:]\d{2})/i);
-    if (startMatch) result.startTime = _formatSingleTime(startMatch[1]);
-  }
-  if (!result.endTime) {
-    var endMatch = text.match(/(?:fine|end|out)[:\s]*(\d{1,2}[.:]\d{2})/i);
-    if (endMatch) result.endTime = _formatSingleTime(endMatch[1]);
-  }
-  
-  // Extract kilometers: "73km" or "km 73" or "73 km"
-  var kmMatch = text.match(/(\d+(?:[.,]\d+)?)\s*km/i) || text.match(/km[:\s]*(\d+(?:[.,]\d+)?)/i);
-  if (kmMatch) result.km = parseFloat(kmMatch[1].replace(',', '.'));
-  
-  // Extract overtime: "overtime 1.5h" or "straordinario 1.5"
-  var otMatch = text.match(/(?:overtime|straordinario|ot)[:\s]*(\d+(?:[.,]\d+)?)/i);
-  if (otMatch) result.overtimeHours = parseFloat(otMatch[1].replace(',', '.'));
-  
-  // Detect diaria (meal allowance)
-  result.hasDiaria = /diaria|pranzo|lunch|meal/i.test(text);
-  
-  // Detect festivo (holiday)
-  result.isFestivo = /festivo|holiday|sunday|domenica|sabato|saturday/i.test(text);
-  
-  // Detect night shift
-  result.isNotturno = /notturno|night|nott/i.test(text);
-  
-  // Extract vehicle type
-  var vehicleMatch = text.match(/(?:van|car|transfer|disposal|minivan|bus|suv)/i);
-  if (vehicleMatch) result.vehicleType = vehicleMatch[0];
-  
-  // Extract route description (text between pipes or after vehicle type)
-  var routeMatch = text.match(/\|\s*(.+?)\s*\|/) || text.match(/(?:van|car|transfer|disposal)\s+(.+)/i);
-  if (routeMatch) result.routeDescription = routeMatch[1].trim();
-  
-  return result;
-}
-
 /**
  * Parse a single driver report from WhatsApp text.
  * Extracts driver name, date, times, km, diaria type.
@@ -91,26 +24,29 @@ function parseDriverReport(text) {
   // Extract date - try multiple patterns
   var dateRaw = '';
   var dateParsed = '';
-  // Pattern 1: DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
+  // Pattern 1: DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY — validate month AND day ranges
   var dateMatch = text.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
   if (dateMatch) {
-    dateRaw = dateMatch[0];
-    var day = dateMatch[1].padStart(2, '0');
-    var month = dateMatch[2].padStart(2, '0');
-    var year = dateMatch[3].length === 2 ? '20' + dateMatch[3] : dateMatch[3];
-    dateParsed = year + '-' + month + '-' + day;
-  } else {
-    // Pattern 2: DD/MM or DD-MM or DD.MM (no year) — infer current year
+    var day = parseInt(dateMatch[1]);
+    var month = parseInt(dateMatch[2]);
+    if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+      dateRaw = dateMatch[0];
+      var dayStr = dateMatch[1].padStart(2, '0');
+      var monthStr = dateMatch[2].padStart(2, '0');
+      var year = dateMatch[3].length === 2 ? '20' + dateMatch[3] : dateMatch[3];
+      dateParsed = year + '-' + monthStr + '-' + dayStr;
+    }
+  }
+  // Pattern 2: DD/MM or DD-MM or DD.MM (no year) — infer current year
+  if (!dateParsed) {
     var dateMatchNoYear = text.match(/(\d{1,2})[\/\-.](\d{1,2})(?!\d)/);
     if (dateMatchNoYear) {
-      var day = dateMatchNoYear[1].padStart(2, '0');
-      var month = dateMatchNoYear[2].padStart(2, '0');
-      // Validate month range
-      var monthNum = parseInt(month);
-      if (monthNum >= 1 && monthNum <= 12) {
+      var day = parseInt(dateMatchNoYear[1]);
+      var month = parseInt(dateMatchNoYear[2]);
+      if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
         var year = new Date().getFullYear().toString();
         dateRaw = dateMatchNoYear[0];
-        dateParsed = year + '-' + month + '-' + day;
+        dateParsed = year + '-' + dateMatchNoYear[2].padStart(2, '0') + '-' + dateMatchNoYear[1].padStart(2, '0');
       }
     }
   }
@@ -149,10 +85,18 @@ function parseDriverReport(text) {
     }
   }
   
-  // Pattern 5: Fallback - first line cleaned
+  // Pattern 5: Fallback - first line cleaned (only if it looks like a name)
   if (!driverName) {
     var firstLine = text.split('\n')[0].trim();
-    driverName = firstLine.replace(/[\d\/\-.:]/g, '').replace(/\s+/g, ' ').trim();
+    var cleaned = firstLine.replace(/[\d\/\-.:]/g, '').replace(/\s+/g, ' ').trim();
+    // Only use fallback if it looks like a real name (2+ words, first char uppercase, no common keywords)
+    var lowerCleaned = cleaned.toLowerCase();
+    if (cleaned.length >= 3 &&
+        /^[A-Z]/.test(cleaned) &&
+        !/^(inizio|fine|km|diaria|van|car|transfer|disposal|minibus|bus|suv|start|end|out)/i.test(cleaned) &&
+        cleaned.split(' ').length >= 2) {
+      driverName = cleaned;
+    }
   }
   
   // Extract time range first: "8:30-21:30" or "8:30/21:30" or "08:30 – 21:30"

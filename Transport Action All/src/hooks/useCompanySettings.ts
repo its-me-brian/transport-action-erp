@@ -514,6 +514,7 @@ export default function useCompanySettings({ onNavigate }: UseCompanySettingsPro
     setTempWhatsApp,
     setTempEmailTemplate,
     setEditingEmailTemplate,
+    setEditingWhatsApp,
     setNewVehicleType,
     setNewServiceType,
     setVehicleTypes,
