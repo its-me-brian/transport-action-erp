@@ -34,6 +34,12 @@ backend_perms.txt
 backup/
 backups/
 
+# E2E — reportes de la batería de sistema completo
+reports/
+
+# Scripts scratch con URL de producción hardcodeada
+_test-*.mjs
+
 # Logs
 *.log
 npm-debug.log*

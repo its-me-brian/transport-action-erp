@@ -23,6 +23,16 @@ function fromEnvFile(key: string): string | undefined {
 
 export const USERNAME = process.env.TEST_USERNAME || fromEnvFile('TEST_USERNAME') || 'admin';
 
+/** URL del Web App desplegado (para pruebas de API y del link público). */
+export function gasUrl(): string {
+  return (
+    process.env.GAS_URL ||
+    process.env.VITE_GAS_WEBAPP_URL ||
+    fromEnvFile('VITE_GAS_WEBAPP_URL') ||
+    ''
+  );
+}
+
 export function adminPassword(): string {
   const value = process.env.TEST_PASSWORD || fromEnvFile('TEST_PASSWORD');
 

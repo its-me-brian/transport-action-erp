@@ -74,6 +74,35 @@ Invoke-RestMethod "$url`?action=healthCheck"
 
 ---
 
+### 2.1 Batería de sistema completo (API, 9 suites)
+
+`scripts/e2e/` recorre la app **como usuario real** contra el Web App desplegado: no usa mocks. Cubre 217 de las 242 acciones del router (90 %), incluidos el ciclo de vida del servicio, la economía (rate cards, breakdowns, ajustes), el link público del chofer y la facturación.
+
+```bash
+node scripts/e2e/run.mjs --check      # valida la batería contra api.gs, sin red ni credenciales
+node scripts/e2e/run.mjs              # corre todo (requiere TEST_PASSWORD)
+node scripts/e2e/run.mjs --suite 05 --verbose
+node scripts/e2e/run.mjs --json reports/e2e.json --coverage
+```
+
+| Suite | Qué prueba |
+|---|---|
+| `01-system-auth` | login, sesión, permisos por rol, router (acción inexistente) |
+| `02-catalog` | clientes, proyectos, choferes, vehículos, colaboradores, tarifas |
+| `03-service-lifecycle` | crear → asignar → confirmar → iniciar → completar → validar, transiciones inválidas |
+| `04-economics` | revenue/cost breakdown, ajustes, recálculo, invariantes |
+| `05-driver-reports-links` | inbox (aceptar/rechazar/versionar) y link público del chofer + revocación |
+| `06-rapportino` | rapportino por cliente, chofer y colaborador |
+| `07-invoicing` | factura, items, cobro, gasto, anulación |
+| `08-queries-audit` | listados, filtros, dashboard, auditoría y activity feed |
+| `09-admin-settings` | usuarios, roles, settings, migraciones y snapshot |
+
+`--check` es el paso previo barato: detecta un nombre de acción mal escrito en 20 ms, en vez de a mitad de una corrida larga por cold starts.
+
+**Escribe datos reales.** Crea fixtures con el prefijo `E2E-<timestamp>` (cliente, proyecto, 3 choferes, vehículo, colaborador, tarifas) y las borra al final. `--keep` las deja para inspeccionarlas en la Sheet. No lo corras contra una base con producciones activas sin backup previo (§9).
+
+---
+
 ## 3. Smoke test — bloque operativo (pasos 1–9)
 
 Usar **datos de prueba** con prefijo `TEST-` en notas/proyecto, así se pueden borrar después.
@@ -202,6 +231,20 @@ Efecto de cada rol en el menú:
 > Antes de v1 este comando reportaba `success` y no hacía nada: `_softDelete`
 > escribía en una columna `ID` que la hoja Users no tiene (`User_ID`), así que
 > la baja fallaba en silencio y el usuario seguía entrando.
+
+---
+
+### 6.6 Recuperar la contraseña de admin sin sesión
+
+Todos los resets de arriba exigen estar logueado como admin. Si se perdió la única credencial, la vía es un script en el editor de Apps Script:
+
+1. Abrir el proyecto en https://script.google.com → editor.
+2. Elegir la función `resetAdminPassword` (archivo `utils/resetAdminPassword.gs`).
+3. **Ejecutar** y autorizar.
+4. Copiar del log la contraseña generada — se muestra **una sola vez**.
+5. Entrar a la app y cambiarla desde **Change my password**.
+
+Qué hace: salt nuevo + hash nuevo, revoca la sesión abierta de esa cuenta y no toca rol ni estado. Si la cuenta está `pending`, `disabled` o `deleted`, el log lo avisa y el login la sigue rechazando: primero hay que aprobarla.
 
 ---
 
