@@ -1,7 +1,5 @@
 import { test, expect } from '@playwright/test';
-
-const USERNAME = process.env.TEST_USERNAME || 'admin';
-const PASSWORD = process.env.TEST_PASSWORD || 'admin123';
+import { USERNAME, adminPassword } from './credentials';
 
 /**
  * Helper: log in as admin and wait for the dashboard to load.
@@ -13,7 +11,7 @@ async function loginAsAdmin(page: import('@playwright/test').Page) {
 
   await expect(page.locator('input[placeholder="Enter your username"]')).toBeVisible({ timeout: 15_000 });
   await page.fill('input[placeholder="Enter your username"]', USERNAME);
-  await page.fill('input[placeholder="Enter your password"]', PASSWORD);
+  await page.fill('input[placeholder="Enter your password"]', adminPassword());
   await page.click('button:has-text("Sign In")');
 
   // Wait for dashboard to load

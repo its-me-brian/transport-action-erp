@@ -10,7 +10,7 @@ Guía para levantar el sistema en tu máquina y recorrer el circuito completo an
 Navegador → Vite dev server (localhost:3001) → Apps Script Web App (deploy real) → Google Sheets (datos reales)
 ```
 
-**Estado actual (verificado):** el Web App corre el deployment del `.env`, ya redesplegado con los cambios de `serviceEconomics`, `rateCard`, `reconciliation`, `driverReport`, `whatsapp`, **gestión de contraseñas** y **roles/permisos en el alta de usuarios** (versión **225**). No hace falta volver a desplegar para probar.
+**Estado actual (verificado):** el Web App corre el deployment del `.env`, ya redesplegado con los cambios de `serviceEconomics`, `rateCard`, `reconciliation`, `driverReport`, `whatsapp`, **gestión de contraseñas**, **roles/permisos en el alta de usuarios** y **backup snapshot** (versión **230**). No hace falta volver a desplegar para probar.
 
 | Qué querés probar | Qué hacer primero |
 |---|---|
@@ -22,7 +22,7 @@ Navegador → Vite dev server (localhost:3001) → Apps Script Web App (deploy r
 Para volver atrás después de un cambio riesgoso:
 
 ```powershell
-clasp deploy --deploymentId <DEPLOYMENT_ID> --versionNumber 224 -d "rollback"
+clasp deploy --deploymentId <DEPLOYMENT_ID> --versionNumber 229 -d "rollback"
 ```
 
 ---
@@ -38,11 +38,12 @@ clasp deploy --deploymentId <DEPLOYMENT_ID> --versionNumber 224 -d "rollback"
   ```
 
   (`.env` está en `.gitignore`; el ejemplo está en `.env.example`)
-- Credenciales: `admin` con la contraseña de bootstrap. En instalaciones nuevas
-  `utils/setupAdmin.gs` **genera una contraseña aleatoria** y la imprime una sola
-  vez en el log de ejecución; no hay contraseña por defecto en el repositorio.
-  En este entorno la temporal sigue siendo `admin123`.
-  **Rotarla en el paso 6.1 antes de abrir el sistema a usuarios reales.**
+- Credenciales: usuario `admin` con **la contraseña que fijaste en el paso 6.1**.
+  `utils/setupAdmin.gs` genera una contraseña aleatoria por instalación y la
+  imprime una sola vez en el log de ejecución: no hay contraseña por defecto en
+  el repositorio. En este entorno la temporal `admin123` **ya fue rotada**, así
+  que si no la tenés anotada, pedile a otro admin un reset (paso 6.2) o volvé a
+  correr `utils/setupAdmin.gs` desde el editor de Apps Script.
 
 ---
 
@@ -58,7 +59,7 @@ npm run dev        # http://localhost:3001
 |---|---|---|
 | `npm run lint` | TypeScript estricto | sin salida, exit 0 |
 | `npm test` | **792** tests unitarios (33 archivos) | `792 passed`, ~62 s |
-| `npx playwright test e2e/auth.spec.ts` | login real contra el backend | `5 passed`, ~31 s |
+| `npx playwright test e2e/auth.spec.ts` | login real contra el backend | `5 passed`, ~31 s (requiere `TEST_PASSWORD`) |
 | `npx playwright test` | + flujo de creación de servicio | **escribe datos reales** en la Sheet — usar con cuidado |
 
 Chequeo de conectividad al backend, sin tocar datos:
@@ -80,7 +81,7 @@ No usar producciones activas: el flujo mueve estados reales y congela breakdowns
 
 | # | Dónde | Acción | Estado esperado |
 |---|---|---|---|
-| 1 | `/` | Login `admin` con la contraseña de bootstrap (en este entorno, `admin123`) | entra al dashboard, sin pantalla en blanco |
+| 1 | `/` | Login `admin` con tu contraseña actual | entra al dashboard, sin pantalla en blanco |
 | 2 | `/dashboard` | Esperar carga | métricas y listado sin errores en consola |
 | 3 | `/new-service` | Crear servicio (proyecto, origen, destino, fecha, chofer) | `OperationalStatus = Importado` |
 | 4 | `/service/<id>` | Asignar chofer + vehículo | `Asignado` |
@@ -138,7 +139,7 @@ Cierre de sesión:
 
 1. Entrar a `/user-management` como `admin`.
 2. Botón **Change my password** (arriba, al lado de *Create User*).
-3. Contraseña actual (la de bootstrap: en este entorno `admin123`), nueva contraseña de al menos 6 caracteres, confirmar.
+3. Contraseña actual (la que usás hoy), nueva contraseña de al menos 6 caracteres, confirmar.
 4. Guardar, cerrar sesión y volver a entrar con la contraseña nueva.
 
 El cambio queda registrado en `/audit-center` como `user.passwordChanged`.
@@ -234,26 +235,96 @@ Anotar dispositivo, navegador y pantalla de cualquier cosa que falle.
 
 ---
 
-## 9. Si algo falla
+## 9. Backup de la base
+
+Antes de cada release, y siempre antes de una migración, sacá un snapshot de los
+datos. No requiere `clasp` ni credenciales de Google: usa la API del Web App.
+
+```powershell
+$env:ADMIN_PASSWORD = '<tu contraseña de admin>'
+node scripts/backup-snapshot.mjs
+# opcional: --out D:\backups   --include Services,Users
+```
+
+Deja `backups/db-AAAAMMDD-HHMMSS.json` (ignorado por git) y imprime el conteo de
+filas por hoja. Verificá que el total coincida con el de la pantalla de la Sheet:
+si una hoja sale recortada, el script lo avisa con `AVISO: hojas recortadas`.
+
+Qué cubre y qué no:
+
+| Cubre | No cubre |
+|---|---|
+| Todas las filas de todas las hojas (39 en este entorno) | Fórmulas, formatos, validaciones, hojas ocultas |
+| Timestamp, ID de la hoja y conteos | Restaurar contraseñas: `Users` sale con `Password_Hash`, `Salt` y `Token` en `[redacted]` |
+
+El respaldo fiel sigue siendo **Archivo → Hacer una copia** en Google Sheets, o
+`Archivo → Descargar → .xlsx`. El snapshot sirve para comparar y para recuperar
+datos, no para reemplazar el archivo.
+
+Endpoint: `action=exportSnapshot` (solo `admin`, permiso `system.backup`), con
+`maxCells` e `includeSheets` opcionales. Queda auditado como
+`system.backupExported` en `/audit-center`.
+
+---
+
+## 10. Si algo falla
 
 1. **F12 → Network**, filtrar por `exec`. Cada llamada lleva `?action=<nombre>` y un body JSON. Esa acción es la que hay que buscar en `Transport Action Unified/api.gs`.
 2. **Cold start**: la primera llamada después de un rato puede tardar 3–10 s. El cliente reintenta con backoff; no es un bug.
 3. **401 / 403**: token vencido (volver a loguear) o permiso faltante en la matriz de `docs/08-PERMISSIONS.md`.
 4. **"Unknown action"**: el frontend está nuevo y el deployment viejo → `clasp push` + redesplegar.
 5. **"Transición inválida"**: es correcto, lo lanza `_assertValidTransition`. Revisar `docs/04-STATE_MACHINES.md`.
-6. **Pantalla en blanco**: `localStorage.clear()` y recargar; si persiste, mirar `ErrorBoundary` en consola.
+6. **`success: true` con `data.error` dentro**: el sobre HTTP del router
+   (`api.gs` → `{ success: true, data: result }`) es siempre `true` cuando la
+   acción existió; el fallo de negocio viaja **dentro** de `data` (por ejemplo
+   `data.error: "Invalid credentials"`). No mires `success` para saber si una
+   operación salió bien: mirá `data`/`data.error`. Un script que solo valida
+   `success` va a reportar éxito en un login rechazado.
+7. **Pantalla en blanco**: `localStorage.clear()` y recargar; si persiste, mirar `ErrorBoundary` en consola.
 
 Para reportar un fallo sirve: pantalla, acción clickeada, `action` de la request, payload y la respuesta JSON.
 
 ---
 
-## 10. Pendientes que esta guía NO cubre
+## 11. Pendientes que esta guía NO cubre
 
-- Mover el token de WhatsApp y los IDs de Sheet a Properties (hoy hay defaults en código).
-- Deploy versionado automático por release (hoy es manual y sin tag).
-- **Backup del Sheet**: no hay automatización en el repo. Antes de cada release,
-  hacer una copia en Drive (`Archivo → Hacer una copia`) o exportar a `.xlsx`.
-- Borrar `utils/setupAdmin.gs` del proyecto una vez que el admin existe: hoy
-  genera una contraseña aleatoria por instalación, pero el archivo no debería
-  quedar vivo en producción.
+- **ID de la Sheet en código.** `_constants.gs` tiene `DB_SHEET_ID` hardcodeado
+  (es el valor de respaldo). No hay token de WhatsApp en el backend: la captura de
+  WhatsApp es *pegar el texto* y parsearlo, no una API. Lo pendiente es mover ese
+  ID a Script Properties para que el mismo código sirva a otra base de datos.
+- **`utils/setupAdmin.gs` sigue en el proyecto.** Hoy genera una contraseña
+  aleatoria por instalación (ya no hay default), pero una vez que el admin existe
+  conviene borrarlo del proyecto de Apps Script para que nadie lo re-ejecute.
+- **Un solo deployment vivo.** No hay staging: lo que se publica es producción.
+  El rollback es una versión anterior del mismo deployment (sección 12).
 - Deuda de UI conocida: `ServiceWorkspaceTabs.tsx` (2.846 líneas), 81 `any`, 14 `console.log`.
+
+---
+
+## 12. Release versionado (push + versión + deploy)
+
+```powershell
+.\scripts\release.ps1 -Message "v1: rate cards y reconciliación"
+```
+
+El script hace, en orden, y **se detiene en el primer fallo**:
+
+| Paso | Qué hace | Si falla |
+|---|---|---|
+| 1 | `npm run lint` + `npm test` | no publica nada |
+| 2 | `clasp push` | no publica nada |
+| 3 | `clasp version "<mensaje>"` | no toca el deployment vivo |
+| 4 | `clasp deploy -i <id> -V <nueva>` | el Web App sigue en la versión anterior |
+| 5 | `healthCheck` contra el `/exec` real | imprime el rollback |
+
+Detalles que importan:
+
+- Usa **el mismo deployment ID** que la URL del `.env`: la URL no cambia y se
+  conservan los permisos (los links públicos de chofer necesitan "Anyone").
+- Cada release deja una **versión inmutable**. Para volver atrás, el script
+  imprime la línea exacta con el número anterior.
+- `-SkipTests` publica sin correr la suite. Solo para un hotfix urgente.
+- Verificado: crea la versión, redespliega y el `healthCheck` responde `ok`.
+
+Lo que el script **no** hace (a propósito): no hace commit, no pushea a git y no
+toca el frontend. El orden recomendado es commit → release → prueba.

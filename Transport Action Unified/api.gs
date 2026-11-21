@@ -1461,6 +1461,21 @@ function _handleRoute(params, data) {
         break;
 
       // =====================================================================
+      // SYSTEM / BACKUP — snapshot lógico de la base (solo admin)
+      // =====================================================================
+      case 'exportSnapshot':
+        _checkPermission(data, 'system.backup');
+        result = sbExportSnapshot(data.token, {
+          maxCells: data.maxCells,
+          includeSheets: data.includeSheets
+        });
+        break;
+      case 'snapshotSummary':
+        _checkPermission(data, 'system.backup');
+        result = sbSnapshotSummary(data.token);
+        break;
+
+      // =====================================================================
       // WHATSAPP PARSERS — AUTHENTICATED (utility)
       // =====================================================================
       case 'parseDriverReport':

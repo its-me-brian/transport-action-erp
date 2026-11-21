@@ -1,7 +1,5 @@
 import { test, expect } from '@playwright/test';
-
-const USERNAME = process.env.TEST_USERNAME || 'admin';
-const PASSWORD = process.env.TEST_PASSWORD || 'admin123';
+import { USERNAME, adminPassword } from './credentials';
 
 /**
  * Helper: navigate to a clean auth screen.
@@ -59,7 +57,7 @@ test.describe('Auth Flow', () => {
     await expect(page.locator('input[placeholder="Enter your username"]')).toBeVisible({ timeout: 30_000 });
 
     await page.fill('input[placeholder="Enter your username"]', USERNAME);
-    await page.fill('input[placeholder="Enter your password"]', PASSWORD);
+    await page.fill('input[placeholder="Enter your password"]', adminPassword());
     await page.locator('button[type="submit"]').click();
 
     // After login, should see the main app

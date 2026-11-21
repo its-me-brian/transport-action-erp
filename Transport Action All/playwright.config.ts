@@ -6,7 +6,7 @@ import { defineConfig, devices } from '@playwright/test';
  * Environment variables:
  *   BASE_URL       — Vite dev server (default: http://localhost:3000)
  *   TEST_USERNAME  — admin username (default: admin)
- *   TEST_PASSWORD  — admin password  (default: admin123)
+ *   TEST_PASSWORD  — admin password (obligatorio: no hay default; ver e2e/credentials.ts)
  */
 export default defineConfig({
   testDir: './e2e',

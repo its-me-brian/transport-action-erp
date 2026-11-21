@@ -239,7 +239,8 @@ var PERMISSION_MATRIX = {
   'activityFeed.read':         ['admin', 'coordinator', 'accounting', 'driver'],
   'userManagement':            ['admin'],
   'invariantCheck':            ['admin'],
-  'integrationTest':           ['admin']
+  'integrationTest':           ['admin'],
+  'system.backup':             ['admin']
 };
 
 // ============================================================================

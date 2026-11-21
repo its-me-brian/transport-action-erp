@@ -143,6 +143,7 @@ function _buildActivityDescription(event) {
 
     // Sistema
     'transport_list.imported': `Lista de transporte importada (${event.entityId})`,
+    'system.backupExported': `Backup exportado por ${event.payload && event.payload.requestedBy || 'admin'} (${event.payload && event.payload.rowCount || 0} filas)`,
     'user.login': `Usuario ${event.user} inició sesión`,
     'user.logout': `Usuario ${event.user} cerró sesión`,
 

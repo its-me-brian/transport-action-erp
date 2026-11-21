@@ -32,6 +32,7 @@ backend_perms.txt
 
 # Backup
 backup/
+backups/
 
 # Logs
 *.log
