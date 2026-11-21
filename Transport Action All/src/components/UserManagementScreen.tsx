@@ -9,10 +9,15 @@ import {
   Edit3, 
   Loader2, 
   X,
-  Search
+  Search,
+  KeyRound,
+  Eye,
+  EyeOff,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { ScreenId } from '../types';
-import { getUsers, approveUser, rejectUser, updateUserRole, deleteUser, createUser, updateUser, UserRecord } from '../services/api';
+import { getUsers, approveUser, rejectUser, updateUserRole, deleteUser, createUser, updateUser, resetPassword, changePassword, UserRecord } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { Skeleton } from './ui/Skeleton';
 
@@ -27,9 +32,10 @@ interface UserRowProps {
   handleDeleteUser: (userId: string) => void;
   setEditingUser: (user: UserRecord | null) => void;
   setEditUserData: (data: { name: string; email: string; role: string }) => void;
+  onResetPassword: (u: UserRecord) => void;
 }
 
-const UserRow = React.memo(function UserRow({ u, currentUserId, userAction, safeDate, handleApproveUser, handleRejectUser, handleToggleRole, handleDeleteUser, setEditingUser, setEditUserData }: UserRowProps) {
+const UserRow = React.memo(function UserRow({ u, currentUserId, userAction, safeDate, handleApproveUser, handleRejectUser, handleToggleRole, handleDeleteUser, setEditingUser, setEditUserData, onResetPassword }: UserRowProps) {
   return (
     <tr key={u.id} className="border-b border-outline-variant/50 hover:bg-surface-dim/50 transition-colors">
       <td className="px-3 sm:px-4 py-3">
@@ -53,12 +59,13 @@ const UserRow = React.memo(function UserRow({ u, currentUserId, userAction, safe
             u.role === 'admin' ? 'bg-primary/10 text-primary' : 
             u.role === 'coordinator' ? 'bg-blue-50 text-blue-700' :
             u.role === 'accounting' ? 'bg-purple-50 text-purple-700' :
+            USER_ROLES.indexOf(u.role) === -1 ? 'bg-amber-50 text-amber-700' :
             'bg-gray-100 text-gray-700'
           }`}
-          title="Click to cycle role"
+          title={USER_ROLES.indexOf(u.role) === -1 ? 'No role assigned — click to assign' : 'Click to cycle role'}
         >
           {u.role === 'admin' && <Shield className="w-2.5 h-2.5" />}
-          {u.role}
+          {USER_ROLES.indexOf(u.role) === -1 ? 'no role' : u.role}
         </button>
       </td>
       <td className="px-3 sm:px-4 py-3">
@@ -112,6 +119,15 @@ const UserRow = React.memo(function UserRow({ u, currentUserId, userAction, safe
             <Edit3 className="w-3.5 h-3.5" />
           </button>
           <button
+            onClick={() => onResetPassword(u)}
+            disabled={userAction === u.id}
+            className="p-1.5 rounded hover:bg-amber-50 text-amber-600 disabled:opacity-50 transition-colors"
+            title="Reset password"
+            aria-label={`Reset password for ${u.username}`}
+          >
+            <KeyRound className="w-3.5 h-3.5" />
+          </button>
+          <button
             onClick={() => handleDeleteUser(u.id)}
             disabled={userAction === u.id || u.id === currentUserId}
             className="p-1.5 rounded hover:bg-red-50 text-red-500 disabled:opacity-30 transition-colors"
@@ -129,6 +145,15 @@ const UserRow = React.memo(function UserRow({ u, currentUserId, userAction, safe
 interface UserManagementScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
 }
+
+/** Roles that actually grant permissions (mirrors VALID_ROLES in auth.gs). */
+const USER_ROLES = ['admin', 'coordinator', 'accounting', 'driver'];
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Admin',
+  coordinator: 'Coordinator',
+  accounting: 'Accounting',
+  driver: 'Driver',
+};
 
 export default function UserManagementScreen({ onNavigate }: UserManagementScreenProps) {
   const { user, token, can } = useAuth();
@@ -148,6 +173,30 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
   const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
   const [editUserData, setEditUserData] = useState({ name: '', email: '', role: 'coordinator' });
   const [isEditingUser, setIsEditingUser] = useState(false);
+
+  // Reset password modal (admin action on another account)
+  const [resetTarget, setResetTarget] = useState<UserRecord | null>(null);
+  const [resetData, setResetData] = useState({ password: '', confirm: '' });
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+
+  // Approve user modal — the role is assigned in the same operation, because
+  // approving without one leaves the account authenticated but powerless.
+  const [approveTarget, setApproveTarget] = useState<UserRecord | null>(null);
+  const [approveRole, setApproveRole] = useState('coordinator');
+  const [approveError, setApproveError] = useState<string | null>(null);
+
+  // Change own password modal
+  const [showOwnPassword, setShowOwnPassword] = useState(false);
+  const [ownPasswordData, setOwnPasswordData] = useState({ current: '', password: '', confirm: '' });
+  const [ownPasswordError, setOwnPasswordError] = useState<string | null>(null);
+  const [isChangingOwn, setIsChangingOwn] = useState(false);
+
+  // Shared password visibility toggle
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Success / warning notice banner
+  const [notice, setNotice] = useState<string | null>(null);
 
   // Load users on mount
   useEffect(() => {
@@ -185,12 +234,28 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
   });
 
   // User management actions
-  const handleApproveUser = async (userId: string) => {
-    if (!token) return;
-    setUserAction(userId);
+  const handleApproveUser = (userId: string) => {
+    const target = users.find(u => u.id === userId) || null;
+    setApproveTarget(target);
+    setApproveRole(target && USER_ROLES.indexOf(target.role) !== -1 ? target.role : 'coordinator');
+    setApproveError(null);
+  };
+
+  const confirmApproveUser = async () => {
+    if (!token || !approveTarget) return;
+    setUserAction(approveTarget.id);
+    setApproveError(null);
     try {
-      await approveUser(token, userId);
+      const result = await approveUser(token, approveTarget.id, approveRole);
+      if (result?.error) {
+        setApproveError(result.error);
+        return;
+      }
+      setNotice(`${approveTarget.username} aprobado con rol ${ROLE_LABELS[approveRole] || approveRole}.`);
+      setApproveTarget(null);
       await loadUsers();
+    } catch (err) {
+      setApproveError(err instanceof Error ? err.message : 'No se pudo aprobar el usuario.');
     } finally {
       setUserAction(null);
     }
@@ -211,10 +276,18 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
     if (!token) return;
     setUserAction(userId);
     try {
-      const roles = ['admin', 'coordinator', 'accounting', 'driver'];
-      const idx = roles.indexOf(currentRole);
-      const newRole = roles[(idx + 1) % roles.length];
-      await updateUserRole(token, userId, newRole);
+      // A role that is not in the matrix (e.g. the registration sentinel
+      // 'pending') cycles from -1 to index 0, which used to escalate the
+      // account straight to admin. Start such accounts at the least
+      // privileged role instead.
+      const idx = USER_ROLES.indexOf(currentRole);
+      const newRole = idx === -1 ? 'driver' : USER_ROLES[(idx + 1) % USER_ROLES.length];
+      const result = await updateUserRole(token, userId, newRole);
+      if (result?.error) {
+        setNotice(`No se pudo cambiar el rol: ${result.error}`);
+      } else {
+        setNotice(`Rol actualizado a ${ROLE_LABELS[newRole] || newRole}.`);
+      }
       await loadUsers();
     } finally {
       setUserAction(null);
@@ -261,6 +334,86 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
     }
   };
 
+  const openResetPassword = (u: UserRecord) => {
+    setResetTarget(u);
+    setResetData({ password: '', confirm: '' });
+    setResetError(null);
+    setShowPassword(false);
+  };
+
+  const handleResetPassword = async () => {
+    if (!token || !resetTarget) return;
+    if (resetData.password.length < 6) {
+      setResetError('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (resetData.password !== resetData.confirm) {
+      setResetError('Las contraseñas no coinciden.');
+      return;
+    }
+    setIsResetting(true);
+    setResetError(null);
+    try {
+      const result = await resetPassword(token, resetTarget.id, resetData.password);
+      if (result?.error) {
+        setResetError(result.error);
+        return;
+      }
+      const target = resetTarget;
+      setResetTarget(null);
+      setResetData({ password: '', confirm: '' });
+      setNotice(
+        result?.selfReset
+          ? 'Tu contraseña fue actualizada.'
+          : `Contraseña de ${target.username} actualizada. Sus sesiones abiertas fueron cerradas.`
+      );
+      await loadUsers();
+    } catch (err: any) {
+      setResetError(err?.message || 'No se pudo resetear la contraseña.');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const openOwnPassword = () => {
+    setShowOwnPassword(true);
+    setOwnPasswordData({ current: '', password: '', confirm: '' });
+    setOwnPasswordError(null);
+    setShowPassword(false);
+  };
+
+  const handleChangeOwnPassword = async () => {
+    if (!token) return;
+    if (!ownPasswordData.current) {
+      setOwnPasswordError('Ingresá tu contraseña actual.');
+      return;
+    }
+    if (ownPasswordData.password.length < 6) {
+      setOwnPasswordError('La contraseña nueva debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (ownPasswordData.password !== ownPasswordData.confirm) {
+      setOwnPasswordError('Las contraseñas no coinciden.');
+      return;
+    }
+    setIsChangingOwn(true);
+    setOwnPasswordError(null);
+    try {
+      const result = await changePassword(token, ownPasswordData.current, ownPasswordData.password);
+      if (result?.error) {
+        setOwnPasswordError(result.error);
+        return;
+      }
+      setShowOwnPassword(false);
+      setOwnPasswordData({ current: '', password: '', confirm: '' });
+      setNotice('Tu contraseña fue actualizada. Usala en el próximo login.');
+    } catch (err: any) {
+      setOwnPasswordError(err?.message || 'No se pudo cambiar la contraseña.');
+    } finally {
+      setIsChangingOwn(false);
+    }
+  };
+
   // Stats
   const stats = {
     total: users.length,
@@ -298,14 +451,34 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
           <h1 className="font-headline-lg-mobile md:font-headline-lg text-on-surface">User Management</h1>
           <p className="text-[13px] text-on-surface-variant">Manage user accounts, roles, and permissions.</p>
         </div>
-        <button
-          onClick={() => setShowCreateUser(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg text-[12px] font-medium hover:bg-primary-hover transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Create User
-        </button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+          <button
+            onClick={openOwnPassword}
+            className="flex items-center justify-center gap-2 px-4 py-2 border border-outline-variant bg-surface-container-lowest text-on-surface rounded-lg text-[12px] font-medium hover:bg-surface-container-low transition-colors"
+          >
+            <KeyRound className="w-4 h-4" />
+            Change my password
+          </button>
+          <button
+            onClick={() => setShowCreateUser(true)}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg text-[12px] font-medium hover:bg-primary-hover transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Create User
+          </button>
+        </div>
       </div>
+
+      {/* Notice */}
+      {notice && (
+        <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-[12px] text-green-800">
+          <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+          <span className="flex-1">{notice}</span>
+          <button onClick={() => setNotice(null)} aria-label="Dismiss notice" className="text-green-700 hover:text-green-900">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -393,6 +566,7 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
                     handleDeleteUser={handleDeleteUser}
                     setEditingUser={setEditingUser}
                     setEditUserData={setEditUserData}
+                    onResetPassword={openResetPassword}
                   />
                 ))}
               </tbody>
@@ -545,6 +719,215 @@ export default function UserManagementScreen({ onNavigate }: UserManagementScree
                 className="px-4 py-2 rounded-lg bg-primary text-on-primary text-[12px] font-medium hover:bg-primary/90 disabled:opacity-50"
               >
                 {isEditingUser ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Approve User Modal — role assigned at approval time */}
+      {approveTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 backdrop-blur-sm">
+          <div className="bg-surface rounded-t-2xl sm:rounded-xl shadow-xl w-full max-w-md max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-outline-variant shrink-0">
+              <div className="min-w-0">
+                <h3 className="text-[14px] font-semibold text-on-surface">Approve user</h3>
+                <p className="text-[11px] text-on-surface-variant truncate">{approveTarget.username} · {approveTarget.email}</p>
+              </div>
+              <button onClick={() => setApproveTarget(null)} aria-label="Close">
+                <X className="w-5 h-5 text-on-surface-variant" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3 overflow-y-auto flex-1">
+              <p className="text-[11px] text-on-surface-variant">
+                Elegí el rol con el que va a operar. Sin rol el usuario puede iniciar sesión pero no puede acceder a ninguna pantalla.
+              </p>
+              <div>
+                <label className="block text-[11px] text-on-surface-variant mb-1">Role *</label>
+                <select
+                  value={approveRole}
+                  onChange={(e) => setApproveRole(e.target.value)}
+                  aria-label="Select role to assign"
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  {USER_ROLES.map(role => (
+                    <option key={role} value={role}>{ROLE_LABELS[role]}</option>
+                  ))}
+                </select>
+              </div>
+              {approveError && (
+                <div className="flex items-start gap-2 text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{approveError}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-outline-variant shrink-0">
+              <button
+                onClick={() => setApproveTarget(null)}
+                className="px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant text-[12px] hover:bg-surface-container-low"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmApproveUser}
+                disabled={userAction === approveTarget.id}
+                className="px-4 py-2 rounded-lg bg-primary text-on-primary text-[12px] font-medium hover:bg-primary/90 disabled:opacity-50"
+              >
+                {userAction === approveTarget.id ? 'Approving...' : `Approve as ${ROLE_LABELS[approveRole]}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Reset Password Modal (admin → otro usuario) */}
+      {resetTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 backdrop-blur-sm">
+          <div className="bg-surface rounded-t-2xl sm:rounded-xl shadow-xl w-full max-w-md max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-outline-variant shrink-0">
+              <div className="min-w-0">
+                <h3 className="text-[14px] font-semibold text-on-surface">Reset password</h3>
+                <p className="text-[11px] text-on-surface-variant truncate">{resetTarget.username} · {resetTarget.email}</p>
+              </div>
+              <button onClick={() => setResetTarget(null)} aria-label="Close">
+                <X className="w-5 h-5 text-on-surface-variant" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3 overflow-y-auto flex-1">
+              <p className="text-[11px] text-on-surface-variant">
+                No hace falta la contraseña actual. Si el usuario no sos vos, se cierran sus sesiones abiertas.
+              </p>
+              <div>
+                <label className="block text-[11px] text-on-surface-variant mb-1">New password *</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={resetData.password}
+                    onChange={(e) => setResetData({ ...resetData, password: e.target.value })}
+                    aria-label="New password"
+                    autoComplete="new-password"
+                    className="w-full px-3 py-2 pr-10 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(v => !v)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-on-surface-variant"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[11px] text-on-surface-variant mb-1">Confirm password *</label>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={resetData.confirm}
+                  onChange={(e) => setResetData({ ...resetData, confirm: e.target.value })}
+                  aria-label="Confirm password"
+                  autoComplete="new-password"
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              {resetError && (
+                <div className="flex items-start gap-2 text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{resetError}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-outline-variant shrink-0">
+              <button
+                onClick={() => setResetTarget(null)}
+                className="px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant text-[12px] hover:bg-surface-container-low"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleResetPassword}
+                disabled={isResetting || !resetData.password || !resetData.confirm}
+                className="px-4 py-2 rounded-lg bg-primary text-on-primary text-[12px] font-medium hover:bg-primary/90 disabled:opacity-50"
+              >
+                {isResetting ? 'Resetting...' : 'Reset password'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Own Password Modal */}
+      {showOwnPassword && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 backdrop-blur-sm">
+          <div className="bg-surface rounded-t-2xl sm:rounded-xl shadow-xl w-full max-w-md max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-outline-variant shrink-0">
+              <h3 className="text-[14px] font-semibold text-on-surface">Change my password</h3>
+              <button onClick={() => setShowOwnPassword(false)} aria-label="Close">
+                <X className="w-5 h-5 text-on-surface-variant" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3 overflow-y-auto flex-1">
+              <div>
+                <label className="block text-[11px] text-on-surface-variant mb-1">Current password *</label>
+                <input
+                  type="password"
+                  value={ownPasswordData.current}
+                  onChange={(e) => setOwnPasswordData({ ...ownPasswordData, current: e.target.value })}
+                  aria-label="Current password"
+                  autoComplete="current-password"
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-on-surface-variant mb-1">New password *</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={ownPasswordData.password}
+                    onChange={(e) => setOwnPasswordData({ ...ownPasswordData, password: e.target.value })}
+                    aria-label="New password"
+                    autoComplete="new-password"
+                    className="w-full px-3 py-2 pr-10 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(v => !v)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-on-surface-variant"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[11px] text-on-surface-variant mb-1">Confirm new password *</label>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={ownPasswordData.confirm}
+                  onChange={(e) => setOwnPasswordData({ ...ownPasswordData, confirm: e.target.value })}
+                  aria-label="Confirm new password"
+                  autoComplete="new-password"
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface text-[13px] focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              {ownPasswordError && (
+                <div className="flex items-start gap-2 text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{ownPasswordError}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-outline-variant shrink-0">
+              <button
+                onClick={() => setShowOwnPassword(false)}
+                className="px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant text-[12px] hover:bg-surface-container-low"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleChangeOwnPassword}
+                disabled={isChangingOwn || !ownPasswordData.current || !ownPasswordData.password || !ownPasswordData.confirm}
+                className="px-4 py-2 rounded-lg bg-primary text-on-primary text-[12px] font-medium hover:bg-primary/90 disabled:opacity-50"
+              >
+                {isChangingOwn ? 'Saving...' : 'Change password'}
               </button>
             </div>
           </div>

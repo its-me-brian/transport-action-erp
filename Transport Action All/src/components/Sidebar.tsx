@@ -23,7 +23,8 @@ import {
   UserRound,
   Building2,
   ArrowLeftRight,
-  LayoutDashboard
+  LayoutDashboard,
+  X
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { ScreenId } from '../types';
@@ -107,6 +108,19 @@ export default function Sidebar({ onNavigate, mode, onModeChange }: SidebarProps
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Bloquear el scroll del body mientras el drawer móvil está abierto.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, [mobileOpen]);
+
+  // Cerrar el drawer al navegar (clic en overlay o en un link ya lo hacen).
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
   const currentScreen: ScreenId = useMemo(() => {
     if (location.pathname.startsWith('/service/')) return 'transport';
     return routeToScreen[location.pathname] || 'executive_dashboard';
@@ -143,7 +157,7 @@ export default function Sidebar({ onNavigate, mode, onModeChange }: SidebarProps
         </button>
         <button
           onClick={() => setMobileOpen(true)}
-          className="md:hidden fixed top-4 left-4 z-50 w-10 h-10 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-md flex items-center justify-center hover:bg-surface-container-low transition-colors"
+          className="md:hidden fixed top-1 left-1 z-50 w-10 h-10 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-md flex items-center justify-center hover:bg-surface-container-low transition-colors"
           aria-label="Open navigation menu"
         >
           <Menu className="w-5 h-5 text-on-surface" />
@@ -152,7 +166,7 @@ export default function Sidebar({ onNavigate, mode, onModeChange }: SidebarProps
     );
   }
 
-  const isCollapsed = mode === 'icons';
+  const isCollapsed = mode === 'icons' && !mobileOpen;
   const sidebarWidth = isCollapsed ? 'w-[68px]' : 'w-[260px]';
 
   return (
@@ -161,7 +175,7 @@ export default function Sidebar({ onNavigate, mode, onModeChange }: SidebarProps
       {!mobileOpen && (
         <button
           onClick={() => setMobileOpen(true)}
-          className="md:hidden fixed top-3 left-3 z-50 w-10 h-10 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-md flex items-center justify-center hover:bg-surface-container-low transition-colors"
+          className="md:hidden fixed top-1 left-1 z-50 w-10 h-10 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-md flex items-center justify-center hover:bg-surface-container-low transition-colors"
           aria-label="Open navigation menu"
         >
           <Menu className="w-5 h-5 text-on-surface" />
@@ -180,8 +194,8 @@ export default function Sidebar({ onNavigate, mode, onModeChange }: SidebarProps
       <aside
         id="sidebar-container"
         className={`fixed left-0 top-0 h-full border-r border-outline-variant z-40 px-3 py-4 transition-all duration-300 bg-surface-dim text-on-surface ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        } ${sidebarWidth}`}
+          mobileOpen ? 'translate-x-0 w-[280px] max-w-[85vw]' : '-translate-x-full md:translate-x-0'
+        } ${mobileOpen ? '' : sidebarWidth}`}
       >
         <div className="flex flex-col h-full">
           {/* Header */}
@@ -190,17 +204,26 @@ export default function Sidebar({ onNavigate, mode, onModeChange }: SidebarProps
               <img alt="Transport Action Logo" className="w-full h-full object-contain" src="/logo.jpg" />
             </div>
             {!isCollapsed && (
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0 flex-1">
                 <span className="font-headline-md text-primary font-bold text-sm">Transport Movie System</span>
                 <span className="text-[11px] text-on-surface-variant">Action</span>
               </div>
             )}
+            {mobileOpen && (
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="md:hidden p-2 -mr-1 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors shrink-0"
+                aria-label="Close navigation menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
           </div>
 
-          {/* Collapse Toggle */}
+          {/* Collapse Toggle — solo desktop */}
           <button
             onClick={toggleMode}
-            className="flex items-center justify-center gap-2 mb-4 mx-2 py-1.5 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors text-[11px]"
+            className="hidden md:flex items-center justify-center gap-2 mb-4 mx-2 py-1.5 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors text-[11px]"
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >

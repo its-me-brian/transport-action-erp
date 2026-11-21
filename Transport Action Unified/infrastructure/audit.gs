@@ -144,7 +144,17 @@ function _buildActivityDescription(event) {
     // Sistema
     'transport_list.imported': `Lista de transporte importada (${event.entityId})`,
     'user.login': `Usuario ${event.user} inició sesión`,
-    'user.logout': `Usuario ${event.user} cerró sesión`
+    'user.logout': `Usuario ${event.user} cerró sesión`,
+
+    // Usuarios
+    'user.created': `Usuario ${event.payload && event.payload.username || event.entityId} creado`,
+    'user.approved': `Usuario ${event.payload && event.payload.username || event.entityId} aprobado`,
+    'user.rejected': `Usuario ${event.payload && event.payload.username || event.entityId} rechazado`,
+    'user.roleChanged': `Rol de ${event.payload && event.payload.username || event.entityId} cambiado a ${event.payload && event.payload.newRole || '—'}`,
+    'user.updated': `Usuario ${event.payload && event.payload.username || event.entityId} actualizado`,
+    'user.deleted': `Usuario ${event.payload && event.payload.username || event.entityId} eliminado`,
+    'user.passwordReset': `Contraseña de ${event.payload && event.payload.username || event.entityId} reseteada por ${event.payload && event.payload.resetBy || 'admin'}`,
+    'user.passwordChanged': `Usuario ${event.payload && event.payload.username || event.entityId} cambió su contraseña`
   };
 
   return descriptions[event.type] || `${event.type} en ${event.entity}:${event.entityId}`;

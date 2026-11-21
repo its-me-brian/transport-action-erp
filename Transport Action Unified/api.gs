@@ -346,7 +346,7 @@ function _handleRoute(params, data) {
         break;
       case 'approveUser':
         _checkPermission(data, 'userManagement');
-        result = umApproveUser(data.token, data.userId);
+        result = umApproveUser(data.token, data.userId, data.role);
         break;
       case 'rejectUser':
         _checkPermission(data, 'userManagement');
@@ -355,6 +355,17 @@ function _handleRoute(params, data) {
       case 'updateUserRole':
         _checkPermission(data, 'userManagement');
         result = umUpdateUserRole(data.token, data.userId, data.newRole);
+        break;
+      case 'resetPassword':
+        _checkPermission(data, 'userManagement');
+        result = umResetPassword(data.token, data.userId, data.newPassword);
+        break;
+
+      // =====================================================================
+      // AUTH — self-service password change (requires own session token)
+      // =====================================================================
+      case 'changePassword':
+        result = changePassword(data.token, data.currentPassword, data.newPassword);
         break;
 
       // =====================================================================

@@ -622,6 +622,26 @@ describe('S. Auth', () => {
     expect(result.success).toBe(true);
   });
 
+  it('throws on a permission-denied query envelope instead of returning it as data', async () => {
+    // Regression: a 403 arrived as {success:false,error:{...}} with HTTP 200.
+    // gasGet used to return it, so ExecutiveDashboard read summary.services.total
+    // and crashed with "Cannot read properties of undefined (reading 'total')".
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: false,
+        statusCode: 403,
+        error: {
+          type: 'AuthorizationError',
+          code: 'AUTHORIZATION_ERROR',
+          message: 'Insufficient permissions. Required: report.dashboard'
+        }
+      })
+    });
+
+    await expect(api.getMainDashboard()).rejects.toThrow(/Insufficient permissions/);
+  });
+
   it('createUser creates', async () => {
     mockGasResponse({ success: true });
     const result = await api.createUser('test-token', {
@@ -629,6 +649,22 @@ describe('S. Auth', () => {
       password: 'pass123', role: 'driver'
     });
     expect(result.success).toBe(true);
+  });
+
+  it('resetPassword posts the new password', async () => {
+    mockGasResponse({ success: true, selfReset: false });
+    const result = await api.resetPassword('test-token', 'USR-00002', 'nuevaClave123');
+    expect(result.success).toBe(true);
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toContain('action=resetPassword');
+  });
+
+  it('changePassword posts current and new password', async () => {
+    mockGasResponse({ success: true });
+    const result = await api.changePassword('test-token', 'admin123', 'NuevaClave2026');
+    expect(result.success).toBe(true);
+    const url = mockFetch.mock.calls[0][0] as string;
+    expect(url).toContain('action=changePassword');
   });
 });
 

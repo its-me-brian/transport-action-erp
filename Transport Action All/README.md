@@ -17,7 +17,7 @@ Google Sheets (base de datos, 38 hojas)
 - **Componentes**: 39 componentes UI
 - **Screens**: 33 pantallas
 - **API Client**: 195 funciones en `services/api.ts`
-- **Tests**: 774 tests (31 archivos, vitest + @testing-library/react)
+- **Tests**: 786 tests (32 archivos, vitest + @testing-library/react)
 - **Build**: Vite + TypeScript + Tailwind CSS v4
 
 ### Backend (`Transport Action Unified/`)
@@ -93,7 +93,7 @@ cd "Transport Action All"
 npm ci            # instalar dependencias
 
 npm run lint      # tsc --noEmit
-npm test          # vitest run (774 tests)
+npm test          # vitest run (786 tests)
 npm run test:e2e  # Playwright (escribe datos reales)
 npm run dev       # http://localhost:3001
 npm run build     # build de produccion
@@ -147,7 +147,7 @@ cd "test/Transport Action Unified" && npx clasp push
 ```bash
 cd test && npx vitest run
 ```
-- 774 tests pasando
+- 786 tests pasando
 - 31 archivos de test
 - Cobertura: state machines, API contracts, screens, DTOs
 

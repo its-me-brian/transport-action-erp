@@ -105,7 +105,7 @@ export default function DashboardHeader({
       </div>
 
       {/* Row 2: Navigation + View Toggle + Filters + Search */}
-      <div className="flex items-center gap-1.5 px-4 py-1.5 shrink-0">
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 px-4 py-1.5 shrink-0">
         {/* Date navigation */}
         <div className="flex items-center gap-0.5 shrink-0">
           <button onClick={goToPrev} className="p-0.5 rounded hover:bg-surface-dim transition-colors text-on-surface-variant hover:text-on-surface">

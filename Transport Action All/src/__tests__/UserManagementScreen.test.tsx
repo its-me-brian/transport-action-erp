@@ -23,6 +23,8 @@ const mockUpdateUserRole = vi.fn();
 const mockDeleteUser = vi.fn();
 const mockCreateUser = vi.fn();
 const mockUpdateUser = vi.fn();
+const mockResetPassword = vi.fn();
+const mockChangePassword = vi.fn();
 
 vi.mock('../services/api', () => ({
   getUsers: (...args: any[]) => mockGetUsers(...args),
@@ -32,6 +34,8 @@ vi.mock('../services/api', () => ({
   deleteUser: (...args: any[]) => mockDeleteUser(...args),
   createUser: (...args: any[]) => mockCreateUser(...args),
   updateUser: (...args: any[]) => mockUpdateUser(...args),
+  resetPassword: (...args: any[]) => mockResetPassword(...args),
+  changePassword: (...args: any[]) => mockChangePassword(...args),
 }));
 
 const mockCan = vi.fn(() => true);
@@ -196,8 +200,8 @@ describe('UserManagementScreen', () => {
     expect(screen.getByTitle('Reject')).toBeInTheDocument();
   });
 
-  it('calls approveUser when Approve clicked', async () => {
-    mockApproveUser.mockResolvedValue({});
+  it('opens the approve modal and assigns the selected role', async () => {
+    mockApproveUser.mockResolvedValue({ success: true, role: 'coordinator' });
     mockGetUsers.mockResolvedValue({ success: true, users: [mockUsers[1]] });
     render(<UserManagementScreen onNavigate={mockOnNavigate} />);
 
@@ -206,8 +210,13 @@ describe('UserManagementScreen', () => {
     });
 
     fireEvent.click(screen.getByTitle('Approve'));
+
+    const roleSelect = await screen.findByLabelText('Select role to assign');
+    fireEvent.change(roleSelect, { target: { value: 'accounting' } });
+    fireEvent.click(screen.getByText('Approve as Accounting'));
+
     await waitFor(() => {
-      expect(mockApproveUser).toHaveBeenCalledWith('test-token', 'u2');
+      expect(mockApproveUser).toHaveBeenCalledWith('test-token', 'u2', 'accounting');
     });
   });
 
@@ -305,5 +314,92 @@ describe('UserManagementScreen', () => {
 
     const deleteButton = screen.getByTitle('Delete');
     expect(deleteButton).toBeDisabled();
+  });
+
+  // --------------------------------------------------------------------------
+  // Password management
+  // --------------------------------------------------------------------------
+
+  it('shows a Change my password action', async () => {
+    mockGetUsers.mockResolvedValue({ success: true, users: [] });
+    render(<UserManagementScreen onNavigate={mockOnNavigate} />);
+
+    expect(await screen.findByText('Change my password')).toBeInTheDocument();
+  });
+
+  it('reset password button opens the modal for that user', async () => {
+    mockGetUsers.mockResolvedValue({ success: true, users: [mockUsers[1]] });
+    render(<UserManagementScreen onNavigate={mockOnNavigate} />);
+
+    await waitFor(() => expect(screen.getByText('coord1')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTitle('Reset password'));
+
+    expect(screen.getByLabelText('New password')).toBeInTheDocument();
+    expect(screen.getByLabelText('Confirm password')).toBeInTheDocument();
+  });
+
+  it('calls resetPassword with the new password', async () => {
+    mockResetPassword.mockResolvedValue({ success: true, selfReset: false });
+    mockGetUsers.mockResolvedValue({ success: true, users: [mockUsers[1]] });
+    render(<UserManagementScreen onNavigate={mockOnNavigate} />);
+
+    await waitFor(() => expect(screen.getByText('coord1')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTitle('Reset password'));
+    fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'nuevaClave123' } });
+    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'nuevaClave123' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Reset password' }));
+
+    await waitFor(() => {
+      expect(mockResetPassword).toHaveBeenCalledWith('test-token', 'u2', 'nuevaClave123');
+    });
+    expect(await screen.findByText(/Contraseña de coord1 actualizada/)).toBeInTheDocument();
+  });
+
+  it('blocks reset when passwords do not match', async () => {
+    mockGetUsers.mockResolvedValue({ success: true, users: [mockUsers[1]] });
+    render(<UserManagementScreen onNavigate={mockOnNavigate} />);
+
+    await waitFor(() => expect(screen.getByText('coord1')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTitle('Reset password'));
+    fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'abcdef1' } });
+    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'abcdef2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Reset password' }));
+
+    expect(await screen.findByText('Las contraseñas no coinciden.')).toBeInTheDocument();
+    expect(mockResetPassword).not.toHaveBeenCalled();
+  });
+
+  it('blocks reset when password is too short', async () => {
+    mockGetUsers.mockResolvedValue({ success: true, users: [mockUsers[1]] });
+    render(<UserManagementScreen onNavigate={mockOnNavigate} />);
+
+    await waitFor(() => expect(screen.getByText('coord1')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTitle('Reset password'));
+    fireEvent.change(screen.getByLabelText('New password'), { target: { value: '123' } });
+    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: '123' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Reset password' }));
+
+    expect(await screen.findByText(/al menos 6 caracteres/)).toBeInTheDocument();
+    expect(mockResetPassword).not.toHaveBeenCalled();
+  });
+
+  it('changes own password through the self-service modal', async () => {
+    mockChangePassword.mockResolvedValue({ success: true });
+    mockGetUsers.mockResolvedValue({ success: true, users: [] });
+    render(<UserManagementScreen onNavigate={mockOnNavigate} />);
+
+    fireEvent.click(await screen.findByText('Change my password'));
+    fireEvent.change(screen.getByLabelText('Current password'), { target: { value: 'admin123' } });
+    fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'NuevaClave2026' } });
+    fireEvent.change(screen.getByLabelText('Confirm new password'), { target: { value: 'NuevaClave2026' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Change password' }));
+
+    await waitFor(() => {
+      expect(mockChangePassword).toHaveBeenCalledWith('test-token', 'admin123', 'NuevaClave2026');
+    });
   });
 });

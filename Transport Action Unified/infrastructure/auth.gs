@@ -513,6 +513,13 @@ function loginUser(username, password) {
       return { error: 'Account pending admin approval' };
     }
     
+    // A user is only usable once an admin assigned a real role.
+    // Registration stores the sentinel 'pending' in the Role column, so
+    // approving without a role used to produce a session with zero permissions.
+    if (VALID_ROLES.indexOf(user.data[4]) === -1) {
+      return { error: 'Account has no role assigned. Ask an administrator to set your role.' };
+    }
+    
     var token = _generateToken();
     var expiry = new Date();
     expiry.setHours(expiry.getHours() + 8);
@@ -587,6 +594,9 @@ function validateSession(token) {
     if (user.active !== 'approved') {
       return { valid: false, error: 'Account not approved' };
     }
+    if (VALID_ROLES.indexOf(user.role) === -1) {
+      return { valid: false, error: 'Account has no role assigned. Ask an administrator to set your role.' };
+    }
     return { valid: true, user: user };
   } catch (e) {
     return { valid: false, error: e.message };
@@ -601,7 +611,14 @@ function changePassword(token, currentPassword, newPassword) {
   try {
     var user = _getUserFromToken(token);
     if (!user) return { error: 'Invalid session' };
-    
+
+    if (typeof newPassword !== 'string' || newPassword.length < 6) {
+      return { error: 'New password must be at least 6 characters' };
+    }
+    if (newPassword.length > 128) {
+      return { error: 'New password is too long (max 128 characters)' };
+    }
+
     var sh = _getUsersSheet();
     var data = sh.getDataRange().getValues();
     
@@ -621,6 +638,14 @@ function changePassword(token, currentPassword, newPassword) {
         sh.getRange(i + 1, 3).setValue(newHash);
         sh.getRange(i + 1, 4).setValue(newSalt);
         sh.getRange(i + 1, 10).setValue(new Date().toISOString());
+
+        _dispatchEvent({
+          type: 'user.passwordChanged',
+          entity: 'User',
+          entityId: user.id,
+          user: user.email,
+          payload: { username: user.username, selfService: true }
+        });
         
         return { success: true, message: 'Password changed' };
       }

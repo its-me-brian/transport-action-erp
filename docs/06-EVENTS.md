@@ -155,3 +155,9 @@ EVENT_LISTENERS['rapportino_client.facturado'] = [
 | `transport_list.imported` | `{listId, count}` | Lista importada |
 | `user.login` | `{userId}` | Login |
 | `user.logout` | `{userId}` | Logout |
+| `user.created` | `{username, role}` | Usuario creado por admin |
+| `user.approved` | `{username, role}` | Usuario pendiente aprobado |
+| `user.rejected` | `{username, role}` | Usuario pendiente rechazado |
+| `user.roleChanged` | `{username, oldRole, newRole}` | Cambio de rol |
+| `user.passwordReset` | `{username, resetBy, selfReset, sessionsInvalidated}` | Admin reseteó la contraseña |
+| `user.passwordChanged` | `{username}` | El usuario cambió su propia contraseña |

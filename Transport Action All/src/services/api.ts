@@ -309,7 +309,35 @@ async function gasGet(action: string, params?: Record<string, string | number | 
   }
 
   const json = await response.json();
-  return _unwrapResponse(json);
+  const result = _unwrapResponse(json);
+
+  // Queries are expected to return data. When the backend answers with an
+  // error envelope ({success:false,error:{...}}) the previous behaviour was to
+  // return it as if it were valid data, so screens crashed destructuring it
+  // (e.g. ExecutiveDashboard reading summary.services.total after a 403).
+  if (result && result.success === false) {
+    throw _queryError(result);
+  }
+
+  return result;
+}
+
+/**
+ * Convert a backend error envelope into a real Error so callers can use
+ * try/catch instead of defensively destructuring a bogus payload.
+ */
+function _queryError(envelope: any): Error {
+  const inner = envelope.error;
+  const message =
+    (inner && typeof inner === 'object' ? (inner.message || inner.code) : inner) ||
+    'Request failed';
+  const err = new Error(String(message));
+  (err as any).statusCode = envelope.statusCode;
+  if (inner && typeof inner === 'object') {
+    (err as any).code = inner.code;
+    (err as any).ruleId = inner.ruleId;
+  }
+  return err;
 }
 
 /**
@@ -1659,10 +1687,15 @@ export async function getUsers(token: string): Promise<{ success?: boolean; user
 }
 
 /**
- * Approve a user (admin only)
+ * Approve a user (admin only). The role is required when the account
+ * still carries the registration sentinel ('pending').
  */
-export async function approveUser(token: string, userId: string): Promise<{ success?: boolean; error?: string }> {
-  return gasPostWithRetry('approveUser', { token, userId });
+export async function approveUser(
+  token: string,
+  userId: string,
+  role?: string
+): Promise<{ success?: boolean; error?: string; role?: string }> {
+  return gasPostWithRetry('approveUser', { token, userId, role: role || '' });
 }
 
 /**
@@ -1708,6 +1741,29 @@ export async function updateUser(token: string, userId: string, updates: {
   role?: string;
 }): Promise<{ success?: boolean; error?: string }> {
   return gasPostWithRetry('updateUser', { token, userId, updates });
+}
+
+/**
+ * Reset another user's password (admin only). No current password required.
+ * That user's active session is invalidated unless you are resetting yourself.
+ */
+export async function resetPassword(
+  token: string,
+  userId: string,
+  newPassword: string,
+): Promise<{ success?: boolean; selfReset?: boolean; error?: string }> {
+  return gasPostWithRetry('resetPassword', { token, userId, newPassword });
+}
+
+/**
+ * Change your own password. Requires the current password as proof.
+ */
+export async function changePassword(
+  token: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ success?: boolean; error?: string }> {
+  return gasPostWithRetry('changePassword', { token, currentPassword, newPassword });
 }
 
 // ============================================================================

@@ -125,10 +125,16 @@ function umCreateUser(token, userData) {
 
 /**
  * Approve a pending user (admin only).
+ *
+ * A role must be resolved in the same operation: registration stores the
+ * sentinel 'pending' in the Role column, so approving without assigning a
+ * real role would create an account that can log in but can do nothing.
+ *
  * @param {string} token - Session token
  * @param {string} userId - User ID to approve
+ * @param {string} [role] - Role to assign (admin|coordinator|accounting|driver)
  */
-function umApproveUser(token, userId) {
+function umApproveUser(token, userId, role) {
   try {
     var permErr = _requirePermission(token, 'admin');
     if (permErr) return permErr;
@@ -139,18 +145,28 @@ function umApproveUser(token, userId) {
 
       for (var i = 1; i < data.length; i++) {
         if (data[i][0] === userId) {
-          sh.getRange(i + 1, 8).setValue('approved');               // H = Active
-          sh.getRange(i + 1, 10).setValue(new Date().toISOString()); // J = Updated_At
+          var currentRole = data[i][4];
+          var nextRole = role || (VALID_ROLES.indexOf(currentRole) !== -1 ? currentRole : '');
+
+          if (VALID_ROLES.indexOf(nextRole) === -1) {
+            return { error: 'A valid role (admin, coordinator, accounting, driver) is required to approve this user' };
+          }
+
+          if (nextRole !== currentRole) {
+            sh.getRange(i + 1, 5).setValue(nextRole);                 // E = Role
+          }
+          sh.getRange(i + 1, 8).setValue('approved');                 // H = Active
+          sh.getRange(i + 1, 10).setValue(new Date().toISOString());  // J = Updated_At
 
           _dispatchEvent({
             type: 'user.approved',
             entity: 'User',
             entityId: userId,
             user: data[i][6],
-            payload: { username: data[i][1], role: data[i][4] }
+            payload: { username: data[i][1], role: nextRole, previousRole: currentRole }
           });
 
-          return { success: true, message: 'User approved' };
+          return { success: true, message: 'User approved', role: nextRole };
         }
       }
       return { error: 'User not found' };
@@ -280,6 +296,87 @@ function umDeleteUser(token, userId) {
           return { success: true, message: 'User deleted' };
         }
       }
+      return { error: 'User not found' };
+    });
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+// ============================================================================
+// RESET PASSWORD (admin)
+// ============================================================================
+
+/**
+ * Reset a user's password (admin only).
+ *
+ * El admin no necesita conocer la contraseña actual: es la única vía de
+ * recuperación cuando un usuario la olvida. Invalida el token activo del
+ * usuario afectado (columnas L y M) para forzar un nuevo login, salvo que el
+ * admin esté reseteando su propia cuenta (así no se autoexpulsa de la sesión).
+ *
+ * @param {string} token - Session token del admin que ejecuta el reset
+ * @param {string} userId - Usuario a resetear
+ * @param {string} newPassword - Nueva contraseña (mínimo 6 caracteres)
+ */
+function umResetPassword(token, userId, newPassword) {
+  try {
+    var permErr = _requirePermission(token, 'userManagement');
+    if (permErr) return permErr;
+
+    var actor = _getUserFromToken(token);
+    if (!actor) return { error: 'Invalid session' };
+    if (!userId) return { error: 'User ID is required' };
+
+    if (typeof newPassword !== 'string' || newPassword.length < 6) {
+      return { error: 'Password must be at least 6 characters' };
+    }
+    if (newPassword.length > 128) {
+      return { error: 'Password is too long (max 128 characters)' };
+    }
+
+    return _withLock(function() {
+      var sh = _getUsersSheet();
+      var data = sh.getDataRange().getValues();
+
+      for (var i = 1; i < data.length; i++) {
+        if (data[i][0] !== userId) continue;
+
+        var salt = _generateSalt();
+        var hash = _hashPassword(newPassword, salt);
+        var now = new Date().toISOString();
+
+        sh.getRange(i + 1, 3).setValue(hash); // C = Password_Hash
+        sh.getRange(i + 1, 4).setValue(salt); // D = Salt
+        sh.getRange(i + 1, 10).setValue(now); // J = Updated_At
+
+        var selfReset = actor.id === userId;
+        if (!selfReset) {
+          // Cortar sesiones abiertas del usuario afectado.
+          sh.getRange(i + 1, 12).setValue(''); // L = Token
+          sh.getRange(i + 1, 13).setValue(''); // M = Token_Expiry
+        }
+
+        _dispatchEvent({
+          type: 'user.passwordReset',
+          entity: 'User',
+          entityId: userId,
+          user: data[i][6],
+          payload: {
+            username: data[i][1],
+            resetBy: actor.username,
+            selfReset: selfReset,
+            sessionsInvalidated: !selfReset
+          }
+        });
+
+        return {
+          success: true,
+          message: 'Password reset',
+          selfReset: selfReset
+        };
+      }
+
       return { error: 'User not found' };
     });
   } catch (e) {

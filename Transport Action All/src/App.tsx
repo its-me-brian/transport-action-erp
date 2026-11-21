@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import {
   ScreenId,
   Service,
@@ -40,11 +40,13 @@ import RateCardScreen from './components/RateCardScreen';
 import ContactScreen from './components/ContactScreen';
 import DocumentScreen from './components/DocumentScreen';
 import ServiceWorkspacePage from './components/ServiceWorkspacePage';
+import NoAccessScreen from './components/NoAccessScreen';
+import { permissionForPath, firstAllowedRoute } from './lib/access';
 
 type SidebarMode = 'full' | 'icons' | 'hidden';
 
 export default function App() {
-  const { user, token, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { user, token, isAuthenticated, isLoading: authLoading, logout, can } = useAuth();
   const location = useLocation();
   const routerNavigate = useNavigate();
 
@@ -178,6 +180,12 @@ export default function App() {
 
   const hideSidebar = location.pathname === '/new-service' || isInServiceWorkspace;
 
+  // Permission guard: a signed-in user must not render a screen their role
+  // cannot use — the first API call would answer 403 and crash the view.
+  const homeRoute = firstAllowedRoute(can);
+  const requiredPermission = permissionForPath(location.pathname);
+  const isDenied = !!requiredPermission && !can(requiredPermission);
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" role="status">
@@ -210,12 +218,23 @@ export default function App() {
       <ToastProvider>
         <div id="application-container" className="min-h-screen bg-background text-on-surface font-sans flex">
           {!hideSidebar && (
-            <Sidebar onNavigate={(scr) => handleNavigate(scr)} mode={sidebarMode} onModeChange={setSidebarMode} />
+            <>
+              {/* Mobile top bar — reserva espacio para el botón de menú y evita
+                  que el hamburguesa flotante tape los títulos de cada pantalla. */}
+              <div className="md:hidden fixed top-0 inset-x-0 h-12 z-40 bg-surface/95 backdrop-blur border-b border-outline-variant flex items-center pl-14 pr-3">
+                <span className="text-[12px] font-semibold text-on-surface truncate">
+                  Transport Movie System
+                </span>
+              </div>
+              <Sidebar onNavigate={(scr) => handleNavigate(scr)} mode={sidebarMode} onModeChange={setSidebarMode} />
+            </>
           )}
 
           <div
             id="main-body-column"
             className={`flex-1 flex flex-col h-dvh overflow-hidden transition-all duration-300 ${
+              !hideSidebar ? 'pt-12 md:pt-0' : ''
+            } ${
               !hideSidebar
                 ? sidebarMode === 'hidden'
                   ? 'md:pl-0'
@@ -226,7 +245,11 @@ export default function App() {
             }`}
           >
             <div id="content-viewport" className="flex-1 flex flex-col relative w-full h-full min-h-0">
+              {isDenied ? (
+                <NoAccessScreen homeRoute={homeRoute} />
+              ) : (
               <Routes>
+                <Route path="/" element={<Navigate to={homeRoute} replace />} />
                 <Route path="/service/:serviceId/:section?" element={<ServiceWorkspacePage />} />
 
                 <Route path="/dashboard" element={
@@ -309,11 +332,11 @@ export default function App() {
                 } />
                 {/* /driver-submissions removed — consolidated into /driver-reports */}
 
-                {/* Default: redirect to /dashboard */}
-                <Route path="*" element={
-                  <ExecutiveDashboardScreen onNavigate={handleNavigate} />
-                } />
+                {/* Default: send the user to the first screen their role allows */}
+                <Route path="*" element={<Navigate to={homeRoute} replace />} />
+                <Route path="/no-access" element={<NoAccessScreen homeRoute={homeRoute} />} />
               </Routes>
+              )}
             </div>
           </div>
         </div>

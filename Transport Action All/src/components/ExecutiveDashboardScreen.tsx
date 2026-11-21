@@ -67,6 +67,7 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
   const [pendingValidation, setPendingValidation] = useState<ServiceSummary[]>([]);
   const [pendingInvoicing, setPendingInvoicing] = useState<ServiceSummary[]>([]);
   const [showWorklists, setShowWorklists] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -74,17 +75,27 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
 
   const loadDashboardData = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const [summary, validation, invoicing] = await Promise.all([
-        getMainDashboard().catch(() => null),
+        getMainDashboard(),
         getPendingValidation().catch(() => []),
         getPendingInvoicing().catch(() => [])
       ]);
-      if (summary) setDashboardSummary(summary);
+      // Never trust the shape: a denied query or a partial payload must not
+      // reach the render path, or reading summary.services.total crashes.
+      if (summary && summary.services && summary.financials && summary.invoicing &&
+          summary.expenses && summary.resources) {
+        setDashboardSummary(summary);
+      } else {
+        setDashboardSummary(null);
+      }
       if (Array.isArray(validation)) setPendingValidation(validation);
       if (Array.isArray(invoicing)) setPendingInvoicing(invoicing);
     } catch (err) {
       console.error('Error loading dashboard:', err);
+      setDashboardSummary(null);
+      setLoadError(err instanceof Error ? err.message : 'Unable to load dashboard');
     } finally {
       setIsLoading(false);
     }
@@ -317,6 +328,18 @@ export default function ExecutiveDashboardScreen({ onNavigate }: ExecutiveDashbo
             </div>
           </div>
         </>
+      ) : loadError ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-2 text-center px-4">
+          <AlertCircle className="w-8 h-8 text-amber-600" />
+          <span className="text-[13px] font-medium text-on-surface">Dashboard unavailable</span>
+          <span className="text-[12px] text-on-surface-variant max-w-md">{loadError}</span>
+          <button
+            onClick={() => loadDashboardData()}
+            className="mt-2 text-[12px] font-medium text-primary hover:underline cursor-pointer"
+          >
+            Try again
+          </button>
+        </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
           <AlertCircle className="w-8 h-8 text-on-surface-variant" />
