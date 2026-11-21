@@ -255,9 +255,20 @@ function _setupReconciliation(ss) {
     ['ID', 'ServiceID', 'ProjectID', 'ProductionStartTime', 'ProductionEndTime', 'ProductionKm', 'ProductionDiaria', 'ProductionFestivo', 'ProductionNotturno', 'DriverStartTime', 'DriverEndTime', 'DriverKm', 'DriverDiaria', 'DriverFestivo', 'DriverNotturno', 'FinalStartTime', 'FinalEndTime', 'FinalKm', 'FinalDiaria', 'FinalFestivo', 'FinalNotturno', 'Status', 'ResolvedBy', 'ResolvedAt', 'ResolutionNotes', 'CreatedAt', 'UpdatedAt']);
 }
 
+/**
+ * Users sheet — column order is part of the auth contract.
+ *
+ * auth.gs reads and writes this sheet by POSITION (A-M), not by header name:
+ * login writes Last_Login/Token/Expiry into K/L/M, and reads Role from E and
+ * Active from H. The layout below must stay in sync with the documented A-M
+ * contract at the top of infrastructure/auth.gs, otherwise a freshly created
+ * spreadsheet produces accounts nobody can log into.
+ * DeletedAt (N) is appended so soft delete has a tombstone column.
+ */
 function _setupUsers(ss) {
   _safeInsertSheet(ss, 'Users', '#1565C0',
-    ['ID', 'Username', 'PasswordHash', 'Salt', 'DisplayName', 'Email', 'Role', 'Status', 'LastLogin', 'CreatedAt', 'UpdatedAt', 'DeletedAt']);
+    ['User_ID', 'Username', 'Password_Hash', 'Salt', 'Role', 'Name', 'Email', 'Active',
+     'Created_At', 'Updated_At', 'Last_Login', 'Session_Token', 'Session_Expiry', 'DeletedAt']);
 }
 
 function _setupDriverLinks(ss) {

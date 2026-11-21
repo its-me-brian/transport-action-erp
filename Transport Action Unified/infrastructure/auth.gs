@@ -509,6 +509,10 @@ function loginUser(username, password) {
       return { error: 'Invalid credentials' };
     }
     
+    if (user.data[7] === 'deleted') {
+      return { error: 'This account has been disabled' };
+    }
+
     if (user.data[7] !== 'approved') {
       return { error: 'Account pending admin approval' };
     }

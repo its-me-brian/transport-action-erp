@@ -38,8 +38,11 @@ clasp deploy --deploymentId <DEPLOYMENT_ID> --versionNumber 224 -d "rollback"
   ```
 
   (`.env` está en `.gitignore`; el ejemplo está en `.env.example`)
-- Credenciales iniciales: `admin` / `admin123` — creadas por `utils/setupAdmin.gs`.
-  **Rotar esta contraseña en el paso 6.1 antes de abrir el sistema a usuarios reales.**
+- Credenciales: `admin` con la contraseña de bootstrap. En instalaciones nuevas
+  `utils/setupAdmin.gs` **genera una contraseña aleatoria** y la imprime una sola
+  vez en el log de ejecución; no hay contraseña por defecto en el repositorio.
+  En este entorno la temporal sigue siendo `admin123`.
+  **Rotarla en el paso 6.1 antes de abrir el sistema a usuarios reales.**
 
 ---
 
@@ -54,7 +57,7 @@ npm run dev        # http://localhost:3001
 | Comando | Qué valida | Resultado esperado (verificado) |
 |---|---|---|
 | `npm run lint` | TypeScript estricto | sin salida, exit 0 |
-| `npm test` | **786** tests unitarios (32 archivos) | `786 passed`, ~113 s |
+| `npm test` | **792** tests unitarios (33 archivos) | `792 passed`, ~62 s |
 | `npx playwright test e2e/auth.spec.ts` | login real contra el backend | `5 passed`, ~31 s |
 | `npx playwright test` | + flujo de creación de servicio | **escribe datos reales** en la Sheet — usar con cuidado |
 
@@ -77,7 +80,7 @@ No usar producciones activas: el flujo mueve estados reales y congela breakdowns
 
 | # | Dónde | Acción | Estado esperado |
 |---|---|---|---|
-| 1 | `/` | Login `admin` / `admin123` | entra al dashboard, sin pantalla en blanco |
+| 1 | `/` | Login `admin` con la contraseña de bootstrap (en este entorno, `admin123`) | entra al dashboard, sin pantalla en blanco |
 | 2 | `/dashboard` | Esperar carga | métricas y listado sin errores en consola |
 | 3 | `/new-service` | Crear servicio (proyecto, origen, destino, fecha, chofer) | `OperationalStatus = Importado` |
 | 4 | `/service/<id>` | Asignar chofer + vehículo | `Asignado` |
@@ -135,7 +138,7 @@ Cierre de sesión:
 
 1. Entrar a `/user-management` como `admin`.
 2. Botón **Change my password** (arriba, al lado de *Create User*).
-3. Contraseña actual `admin123`, nueva contraseña de al menos 6 caracteres, confirmar.
+3. Contraseña actual (la de bootstrap: en este entorno `admin123`), nueva contraseña de al menos 6 caracteres, confirmar.
 4. Guardar, cerrar sesión y volver a entrar con la contraseña nueva.
 
 El cambio queda registrado en `/audit-center` como `user.passwordChanged`.
@@ -186,6 +189,19 @@ Efecto de cada rol en el menú:
 3. Esperado: pantalla **"No access to this section"** con botón *Go to my dashboard* y *Sign out*. No debe aparecer un error de React ni una tabla vacía.
 4. Abrir `/` o una URL inexistente: debe redirigir a la primera pantalla permitida del rol, nunca al dashboard ejecutivo si el rol no lo tiene.
 
+### 6.5 Dar de baja un usuario
+
+1. En `/user-management`, botón **Delete** (papelera) sobre el usuario.
+2. Esperado: el usuario **desaparece de la lista** y no puede volver a entrar
+   (*"This account has been disabled"*), aunque la fila siga en la hoja como
+   rastro de auditoría.
+3. La baja de tu propia cuenta y la del **último admin activo** se rechazan.
+4. El evento `user.deleted` aparece en `/audit-center`.
+
+> Antes de v1 este comando reportaba `success` y no hacía nada: `_softDelete`
+> escribía en una columna `ID` que la hoja Users no tiene (`User_ID`), así que
+> la baja fallaba en silencio y el usuario seguía entrando.
+
 ---
 
 ## 7. Verificación en móvil
@@ -235,5 +251,9 @@ Para reportar un fallo sirve: pantalla, acción clickeada, `action` de la reques
 
 - Mover el token de WhatsApp y los IDs de Sheet a Properties (hoy hay defaults en código).
 - Deploy versionado automático por release (hoy es manual y sin tag).
-- Rotación de la clave de `setupAdmin.gs` y borrado del archivo una vez usada.
+- **Backup del Sheet**: no hay automatización en el repo. Antes de cada release,
+  hacer una copia en Drive (`Archivo → Hacer una copia`) o exportar a `.xlsx`.
+- Borrar `utils/setupAdmin.gs` del proyecto una vez que el admin existe: hoy
+  genera una contraseña aleatoria por instalación, pero el archivo no debería
+  quedar vivo en producción.
 - Deuda de UI conocida: `ServiceWorkspaceTabs.tsx` (2.846 líneas), 81 `any`, 14 `console.log`.

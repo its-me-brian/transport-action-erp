@@ -14,6 +14,16 @@
 // ============================================================================
 
 /**
+ * A Users row counts as deleted when it carries a DeletedAt tombstone (column
+ * N) or its Active column reads 'deleted'. Both markers are honoured so sheets
+ * created before migration 008 (no DeletedAt column) keep working.
+ */
+function _isDeletedUserRow(row) {
+  if (row[13]) return true;
+  return String(row[7]).trim().toLowerCase() === 'deleted';
+}
+
+/**
  * Get all users (admin only).
  * @param {string} token - Session token
  * @returns {{ success: boolean, users: Array }}
@@ -28,6 +38,10 @@ function umGetUsers(token) {
     var users = [];
 
     for (var i = 1; i < data.length; i++) {
+      // Deleted accounts keep their row as a tombstone (audit trail) but must
+      // never be listed again.
+      if (_isDeletedUserRow(data[i])) continue;
+
       users.push({
         id: data[i][0],
         username: data[i][1],
@@ -278,23 +292,53 @@ function umDeleteUser(token, userId) {
     var permErr = _requirePermission(token, 'admin');
     if (permErr) return permErr;
 
+    var actor = _getUserFromToken(token);
+    if (!actor) return { error: 'Invalid session' };
+    if (!userId) return { error: 'User ID is required' };
+    if (String(actor.id) === String(userId)) {
+      return { error: 'You cannot delete your own account' };
+    }
+
     return _withLock(function() {
       var sh = _getUsersSheet();
+      var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+      var deletedAtCol = headers.indexOf('DeletedAt') + 1; // 0 when absent
+
       var data = sh.getDataRange().getValues();
 
-      for (var i = 1; i < data.length; i++) {
-        if (data[i][0] === userId) {
-          _dispatchEvent({
-            type: 'user.deleted',
-            entity: 'User',
-            entityId: userId,
-            user: data[i][6],
-            payload: { username: data[i][1], role: data[i][4] }
-          });
+      // Count remaining admins so the last one cannot be removed.
+      var admins = 0;
+      for (var a = 1; a < data.length; a++) {
+        if (data[a][4] === 'admin' && data[a][7] === 'approved' && !_isDeletedUserRow(data[a])) admins++;
+      }
 
-          _softDelete('Users', userId);
-          return { success: true, message: 'User deleted' };
+      for (var i = 1; i < data.length; i++) {
+        if (String(data[i][0]) !== String(userId)) continue;
+        if (_isDeletedUserRow(data[i])) return { error: 'User already deleted' };
+
+        if (data[i][4] === 'admin' && admins <= 1) {
+          return { error: 'Cannot delete the last active administrator' };
         }
+
+        _dispatchEvent({
+          type: 'user.deleted',
+          entity: 'User',
+          entityId: userId,
+          user: data[i][6],
+          payload: { username: data[i][1], role: data[i][4] }
+        });
+
+        // Tombstone: the row stays for the audit trail, but Status leaves
+        // 'approved' (which loginUser requires) and the session is revoked.
+        sh.getRange(i + 1, 8).setValue('deleted');   // H = Active/Status
+        sh.getRange(i + 1, 12).setValue('');         // L = Session_Token
+        sh.getRange(i + 1, 13).setValue('');         // M = Session_Expiry
+        sh.getRange(i + 1, 10).setValue(new Date().toISOString()); // J = Updated_At
+        if (deletedAtCol) {
+          sh.getRange(i + 1, deletedAtCol).setValue(new Date().toISOString());
+        }
+
+        return { success: true, message: 'User deleted' };
       }
       return { error: 'User not found' };
     });

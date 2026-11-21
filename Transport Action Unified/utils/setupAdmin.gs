@@ -12,8 +12,12 @@
 //
 // CREDENCIALES:
 //   Username: admin
-//   Password: admin123
+//   Password: SE GENERA AL AZAR en cada ejecución y se imprime una sola vez
+//             en el log de ejecución (no hay contraseña por defecto).
 //   Role: admin
+//
+// Tras el primer login, cambiá la contraseña desde Users & Roles →
+// "Change my password" y borrá este archivo del proyecto.
 // ============================================================================
 
 function setupAdminUser() {
@@ -41,9 +45,11 @@ function setupAdminUser() {
     }
   }
 
-  // Generar salt y hash
+  // Generar salt y hash. La contraseña es aleatoria por instalación: nunca
+  // hay una credencial por defecto viva en el repositorio.
   var salt = _generateSalt();
-  var hash = _hashPassword('admin123', salt);
+  var password = _generateBootstrapPassword();
+  var hash = _hashPassword(password, salt);
 
   // ID incremental
   var lastId = 0;
@@ -75,9 +81,29 @@ function setupAdminUser() {
   Logger.log('[SETUP] Usuario admin creado exitosamente:');
   Logger.log('[SETUP]   ID: ' + newId);
   Logger.log('[SETUP]   Username: admin');
-  Logger.log('[SETUP]   Password: admin123');
+  Logger.log('[SETUP]   Password: ' + password + '   <-- anotala ahora, no se vuelve a mostrar');
   Logger.log('[SETUP]   Role: admin');
-  Logger.log('[SETUP]   Salt: ' + salt);
-  Logger.log('[SETUP]   Hash: ' + hash);
-  Logger.log('[SETUP]   ¡BORRÁ ESTE ARCHIVO DESPUÉS DE EJECUTAR!');
+  Logger.log('[SETUP]   Cambiá la contraseña en el primer login y borrá este archivo.');
+}
+
+/**
+ * Contraseña de bootstrap para el admin inicial.
+ *
+ * Se genera por instalación en lugar de estar escrita en el repositorio: una
+ * credencial por defecto versionada es una puerta abierta en cada entorno que
+ * la use. Alfabeto sin caracteres ambiguos (0/O, 1/l/I) para poder copiarla a
+ * mano desde el log de ejecución.
+ */
+function _generateBootstrapPassword() {
+  var alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  var bytes = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    Utilities.getUuid() + Utilities.getUuid(),
+    Utilities.Charset.UTF_8
+  );
+  var password = '';
+  for (var i = 0; i < 20; i++) {
+    password += alphabet.charAt(Math.abs(bytes[i]) % alphabet.length);
+  }
+  return password;
 }
