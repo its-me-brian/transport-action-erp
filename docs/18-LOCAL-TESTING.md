@@ -108,6 +108,10 @@ node scripts/e2e/run.mjs --json reports/e2e.json --coverage
 > Versión interactiva con checkboxes, progreso guardado y los atajos alternativos:
 > [checklist-prueba-manual.html](checklist-prueba-manual.html). Abrilo en el navegador
 > (funciona offline, sin servidor) o imprimilo a PDF.
+>
+> Si quien prueba no es técnico, dale [checklist-prueba-facil.html](checklist-prueba-facil.html):
+> el mismo recorrido explicado sin jerga, con "qué hacés / qué tenés que ver / si no pasa"
+> en cada paso. Los pasos que requieren terminal o consola quedaron aparte, en un anexo.
 
 Usar **datos de prueba** con prefijo `TEST-` en notas/proyecto, así se pueden borrar después.
 No usar producciones activas: el flujo mueve estados reales y congela breakdowns.

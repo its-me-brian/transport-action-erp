@@ -1,0 +1,1430 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Probar Transport Action · guía paso a paso</title>
+<style>
+  :root{
+    --bg:#f7f7f5;
+    --card:#ffffff;
+    --ink:#1b1c1a;
+    --muted:#666b64;
+    --line:#e2e3dd;
+    --accent:#0f766e;
+    --accent-soft:#e6f2f0;
+    --do:#1f4e79;
+    --do-soft:#eef4fa;
+    --see:#166534;
+    --see-soft:#eef8f0;
+    --bad:#9a3412;
+    --bad-soft:#fdf3ee;
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  code{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:.85em;background:#eceee9;border:1px solid var(--line);
+    border-radius:4px;padding:.05em .35em;word-break:break-word;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:0 20px}
+
+  header.top{
+    background:var(--card);border-bottom:1px solid var(--line);
+    padding:22px 0 18px;position:sticky;top:0;z-index:20;
+  }
+  .head-row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between}
+  h1{margin:0;font-size:21px;letter-spacing:-.2px;line-height:1.3}
+  .sub{margin:6px 0 0;color:var(--muted);font-size:14px}
+  .counter{font-variant-numeric:tabular-nums;font-size:14px;color:var(--muted);white-space:nowrap}
+  .counter b{color:var(--ink);font-size:20px}
+  .bar{height:10px;background:#e9eae5;border-radius:99px;overflow:hidden;margin-top:14px}
+  .bar > i{display:block;height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .18s ease}
+  .tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
+  button.tool{
+    appearance:none;border:1px solid var(--line);background:#fff;color:var(--ink);
+    border-radius:8px;padding:8px 12px;font-size:13px;cursor:pointer;line-height:1.2;
+  }
+  button.tool:hover{background:#f2f3ef}
+  button.tool.danger{color:#b42318;border-color:#f0c9c4}
+  button.tool.danger:hover{background:#fdf1ef}
+  input.search{
+    flex:1 1 220px;min-width:170px;border:1px solid var(--line);border-radius:8px;
+    padding:9px 11px;font-size:14px;background:#fff;color:var(--ink);
+  }
+  input.search:focus,button.tool:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+  .intro{margin:24px 0 0;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px}
+  .intro h2{margin:0 0 10px;font-size:15px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .intro p{margin:0 0 10px;font-size:15px}
+  .intro ol,.intro ul{margin:0 0 10px;padding-left:22px}
+  .intro li{margin:6px 0;font-size:15px}
+  .legend{display:grid;gap:10px;margin-top:14px}
+  .legend > div{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+  .chip{
+    flex:0 0 auto;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+    padding:3px 8px;border-radius:6px;white-space:nowrap
+  }
+  .chip.do{background:var(--do-soft);color:var(--do)}
+  .chip.see{background:var(--see-soft);color:var(--see)}
+  .chip.bad{background:var(--bad-soft);color:var(--bad)}
+  .callout{
+    margin-top:16px;background:#fff8e6;border:1px solid #f0dfa8;
+    border-radius:8px;padding:12px 14px;font-size:14px;color:#5c4708
+  }
+  .callout b{color:#3f3105}
+  .glosario{margin-top:12px;display:grid;gap:8px;font-size:14px}
+  .glosario div{display:flex;gap:8px;flex-wrap:wrap}
+  .glosario dt{font-weight:700;min-width:150px}
+  .glosario dd{margin:0;color:#4a4f49;flex:1 1 320px}
+
+  main{padding:22px 0 70px}
+  section{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    margin:0 0 18px;overflow:hidden;
+  }
+  .sec-head{
+    display:flex;align-items:center;gap:12px;justify-content:space-between;
+    padding:15px 18px;border-bottom:1px solid var(--line);background:#fbfbf9;
+  }
+  .sec-head h2{margin:0;font-size:16.5px;letter-spacing:-.1px;line-height:1.35}
+  .sec-head .kicker{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin-bottom:3px}
+  .sec-head .time{display:block;font-size:12.5px;color:var(--muted);font-weight:400;margin-top:4px}
+  .badge{
+    font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;color:var(--accent);
+    background:var(--accent-soft);border-radius:99px;padding:4px 10px;white-space:nowrap
+  }
+  .badge.full{background:#e7f6e9;color:#166534}
+  ul.list{list-style:none;margin:0;padding:6px 0}
+  li.item{padding:0}
+  li.item label{
+    display:flex;gap:13px;align-items:flex-start;padding:14px 18px;cursor:pointer;
+    border-left:3px solid transparent;
+  }
+  li.item label:hover{background:#fafbf8}
+  li.item input[type=checkbox]{
+    width:20px;height:20px;margin:3px 0 0;flex:0 0 auto;accent-color:var(--accent);cursor:pointer
+  }
+  .body{display:block;min-width:0}
+  .t{display:block;font-weight:700;font-size:15.5px;line-height:1.4}
+  .do,.see,.ifbad{display:block;margin-top:6px;font-size:14.5px;line-height:1.55}
+  .do{color:#2a2f29}
+  .do::before{content:"Qué hacés · ";font-weight:700;color:var(--do)}
+  .see{color:#2a2f29}
+  .see::before{content:"Qué tenés que ver · ";font-weight:700;color:var(--see)}
+  .ifbad{color:#5c3a26}
+  .ifbad::before{content:"Si no pasa · ";font-weight:700;color:var(--bad)}
+  .alt{display:block;margin-top:6px;font-size:13.5px;color:var(--muted)}
+  .alt::before{content:"Otra forma de llegar · ";font-weight:700}
+  li.done{background:#f5faf6}
+  li.done .t{color:#5c6b60}
+  li.done .do,li.done .see,li.done .ifbad,li.done .alt{opacity:.6}
+  li.done input[type=checkbox]{accent-color:#16a34a}
+  li.hide{display:none}
+
+  .table-scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:14px;min-width:660px}
+  th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#fbfbf9;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  td:first-child{font-weight:700}
+  tr.done td{background:#f5faf6}
+  .cell-check{width:36px}
+  .cell-check input{width:19px;height:19px;accent-color:var(--accent)}
+  .route{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:var(--muted);margin-top:3px;word-break:break-all}
+  .note{font-size:14px;color:var(--muted);padding:12px 18px 14px;margin:0}
+  .note b{color:#3f3105}
+
+  footer{padding:0 0 40px;color:var(--muted);font-size:13px;text-align:center}
+  .empty{padding:26px 16px;text-align:center;color:var(--muted);font-size:14px;display:none}
+
+  .tecnico{border:2px dashed #c9cbc2}
+  .tecnico .sec-head{background:#f2f2ee}
+
+  @media (max-width:640px){
+    header.top{position:static}
+    .head-row{flex-direction:column;gap:8px}
+    h1{font-size:19px}
+    .wrap{padding:0 14px}
+    li.item label{padding:13px 14px}
+    .sec-head{padding:13px 14px}
+    .glosario dt{min-width:100%}
+  }
+  @media print{
+    body{background:#fff}
+    header.top{position:static;border:0;padding:0 0 10px}
+    .tools,.search,.bar,.badge{display:none!important}
+    section{break-inside:avoid;box-shadow:none;border-color:#ccc}
+    main{padding:0}
+    .intro{display:none}
+    li.hide{display:block!important}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="head-row">
+      <div>
+        <h1>Probar Transport Action · guía paso a paso</h1>
+        <p class="sub">Pensada para alguien que nunca hizo pruebas de software. Se marca con un clic y el avance queda guardado en esta computadora.</p>
+      </div>
+      <div class="counter"><b id="done">0</b> / <span id="total">0</span> · <span id="pct">0%</span></div>
+    </div>
+    <div class="bar"><i id="fill"></i></div>
+    <div class="tools">
+      <input class="search" id="q" type="search" placeholder="Buscar: factura, chofer, celular…" aria-label="Buscar un paso">
+      <button class="tool" id="toggle-done" type="button">Ocultar los ya hechos</button>
+      <button class="tool" id="print" type="button">Imprimir o guardar en PDF</button>
+      <button class="tool danger" id="reset" type="button">Empezar de cero</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="intro">
+    <h2>Leé esto primero (2 minutos)</h2>
+    <p>Esta guía no es para programadores. Es para <b>usar la aplicación como la va a usar la gente de la oficina</b> y anotar todo lo que no funcione. No hace falta saber nada de computación: solo seguir los pasos y mirar la pantalla.</p>
+    <p><b>Son unos 90 minutos en total</b>, pero está cortada en bloques. Podés hacer dos o tres bloques hoy, cerrar todo y seguir mañana: las marcas quedan guardadas.</p>
+    <p><b>Tres reglas, y con eso alcanza:</b></p>
+    <ol>
+      <li><b>Todo lo que crees empieza con <code>PRUEBA-</code> y tu nombre.</b> Por ejemplo <code>PRUEBA-JUAN</code>. Así después se borra fácil y no se mezcla con los datos de verdad.</li>
+      <li><b>Si algo no coincide con lo que dice la guía, no lo arregles: anotalo.</b> No hace falta entender por qué falló. Alcanza con decir qué hiciste y qué apareció.</li>
+      <li><b>No marques un paso si no viste lo que dice "Qué tenés que ver".</b> La tentación de marcar todo para terminar rápido es el enemigo de esta prueba.</li>
+    </ol>
+
+    <div class="legend">
+      <div><span class="chip do">Qué hacés</span><span>Los clics, en orden. Si dice <i>clic en</i>, es un clic normal con el botón izquierdo.</span></div>
+      <div><span class="chip see">Qué tenés que ver</span><span>Lo que debe aparecer en pantalla. Si aparece otra cosa, el paso no está aprobado.</span></div>
+      <div><span class="chip bad">Si no pasa</span><span>Qué anotar en ese caso. No es para que lo resuelvas: es para que quien programa pueda reproducirlo.</span></div>
+    </div>
+
+    <div class="callout">
+      <b>Cuando algo falla, anotá estas cuatro cosas.</b> Con eso se arregla; sin eso se adivina.<br>
+      1) En qué pantalla estabas (el nombre del menú, o la dirección de arriba del navegador).<br>
+      2) Qué botón apretaste.<br>
+      3) Qué esperabas que pasara.<br>
+      4) Qué pasó en realidad (texto del mensaje, o una captura de pantalla con <code>Windows + Shift + S</code>).
+    </div>
+
+    <div class="callout" style="background:#eef4fa;border-color:#c9dcf0;color:#1f4e79">
+      <b>Palabras de la aplicación que conviene conocer.</b> No son términos de informática, son del rubro:
+      <div class="glosario">
+        <div><dt>Servicio</dt><dd>Un viaje o traslado concreto que se le hace a un cliente.</dd></div>
+        <div><dt>Proyecto</dt><dd>El grupo donde se juntan los servicios de un mismo cliente (por ejemplo, una producción).</dd></div>
+        <div><dt>Parte del chofer</dt><dd>Lo que el chofer informa al terminar: kilómetros, horas y gastos del viaje.</dd></div>
+        <div><dt>Rapportino</dt><dd>La hoja resumen con todos los servicios de un período, que se le pasa al cliente para cobrarle.</dd></div>
+        <div><dt>Conciliación</dt><dd>Comparar lo que se había planificado con lo que realmente pasó, y dejar el número final.</dd></div>
+        <div><dt>Validar</dt><dd>Dar un servicio por bueno. Desde ese momento los importes quedan fijos y no se tocan más.</dd></div>
+        <div><dt>Emisor</dt><dd>Los datos de tu empresa que van impresos en la factura: nombre, CIF, dirección.</dd></div>
+      </div>
+    </div>
+  </div>
+
+  <section data-sec="s0">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 0</span>Prepararse<span class="time">5 minutos · sin esto, el resto no sirve</span></h2>
+      <span class="badge" data-count="s0">0/5</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s0-1"><span class="body">
+        <span class="t">Tenés la dirección de la aplicación y una cuenta que funciona</span>
+        <span class="do">Abrí Chrome o Edge. Escribí en la barra de arriba la dirección que te pasaron (si estás en la misma computadora donde se instaló, es <code>http://localhost:3001</code>) y apretá Enter.</span>
+        <span class="see">Una pantalla de inicio de sesión, con dos casillas: usuario y contraseña.</span>
+        <span class="ifbad">Anotá qué aparece. Si dice algo de <i>SSL</i> o <i>conexión no segura</i>, probá borrando la <code>s</code> de <code>https</code> en la dirección, para que quede <code>http</code>.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s0-2"><span class="body">
+        <span class="t">Entraste con tu usuario</span>
+        <span class="do">Escribí tu usuario y contraseña y apretá el botón de entrar.</span>
+        <span class="see">La pantalla principal, con números y gráficos. Arriba a la izquierda, el nombre de la aplicación.</span>
+        <span class="ifbad">Si dice que la contraseña es incorrecta y estás seguro de que está bien, anotalo: es un problema real, no un error tuyo.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s0-3"><span class="body">
+        <span class="t">Elegiste un nombre para tus pruebas</span>
+        <span class="do">Decidí una etiqueta, por ejemplo <code>PRUEBA-JUAN</code>. Todo lo que crees en esta guía (cliente, proyecto, chofer) va a llevar ese texto adelante.</span>
+        <span class="see">Nada en pantalla todavía. Es solo para tenerlo claro antes de empezar.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s0-4"><span class="body">
+        <span class="t">Tenés dónde anotar</span>
+        <span class="do">Abrí el bloc de notas, un documento de Word, o prepará papel y lapicera. Va a ser tu registro de fallos.</span>
+        <span class="see">Un lugar donde escribir, con las cuatro preguntas del recuadro amarillo de arriba a mano.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s0-5"><span class="body">
+        <span class="t">Sabés dónde se ve el mensaje de error técnico</span>
+        <span class="do">Apretá la tecla <code>F12</code>. Se abre un panel a la derecha o abajo. Buscá la pestaña que dice <b>Console</b> (o "Consola").</span>
+        <span class="see">Un panel con texto. Puede tener letras rojas o estar vacío. No hace falta entenderlo: cuando algo falle, sacale una captura a ese panel.</span>
+        <span class="ifbad">Si no se abre, probá con <code>Ctrl + Shift + I</code>. Si usás una Mac, con <code>Cmd + Option + I</code>.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s08">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 1</span>Los datos de tu empresa<span class="time">5 minutos · hacelo antes de facturar</span></h2>
+      <span class="badge" data-count="s08">0/3</span>
+    </div>
+    <p class="note">Va primero a propósito: <b>sin estos datos no se puede emitir una sola factura</b>. Y esta pantalla tenía un problema silencioso: guardabas y no guardaba nada, sin avisar.</p>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s08-1"><span class="body">
+        <span class="t">Los datos ya están cargados y se ven</span>
+        <span class="do">En el menú de la izquierda buscá <b>Settings</b> (o "Ajustes") y entrá. Buscá la parte que dice <b>Company</b> o <b>Empresa</b>.</span>
+        <span class="see">Las tarjetas con el nombre de tu empresa, el CIF, la dirección, el teléfono, la moneda (EUR) y el IVA (21%) ya completos.</span>
+        <span class="ifbad">Si las tarjetas están vacías aunque los datos existan, anotalo con captura: es exactamente el problema que se arregló en la última versión, y querría decir que volvió.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s08-2"><span class="body">
+        <span class="t">Cuando guardás, se guarda de verdad</span>
+        <span class="do">Apretá el botón de editar. Cambiá el teléfono por uno inventado, por ejemplo <code>600 000 000</code>. Apretá el botón de guardar. Después apretá <code>F5</code> para recargar la página.</span>
+        <span class="see">Primero un cartel verde o un mensaje de "guardado". Después de recargar, el teléfono nuevo sigue ahí.</span>
+        <span class="ifbad">Si el teléfono vuelve al anterior, o si no aparece ningún mensaje al guardar, anotalo. Ese "guardar en silencio" es el peor tipo de fallo: parece que funcionó.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s08-3"><span class="body">
+        <span class="t">Los cuatro datos obligatorios están completos</span>
+        <span class="do">Revisá que estén cargados: <b>nombre de la empresa</b>, <b>CIF</b>, <b>dirección fiscal</b> y <b>moneda</b>. Si el CIF dice <code>00FALSO12135</code>, está puesto así a propósito para probar.</span>
+        <span class="see">Los cuatro con contenido real. La dirección de prueba es "Via San Fernando 7".</span>
+        <span class="ifbad">Anotá cuál falta. Antes de la primera factura de verdad, el CIF y la dirección tienen que ser los reales: con un CIF inventado la factura no le sirve al cliente.</span>
+        <span class="alt">si la empresa no existe todavía, se crea desde esta misma pantalla con el botón de guardar.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s1">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 2</span>Entrar, salir y quién puede ver qué<span class="time">8 minutos</span></h2>
+      <span class="badge" data-count="s1">0/8</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s1-1"><span class="body">
+        <span class="t">Con una contraseña equivocada no se entra</span>
+        <span class="do">Cerrá sesión. En la pantalla de inicio escribí tu usuario con una contraseña cualquiera, por ejemplo <code>1234</code>.</span>
+        <span class="see">Un mensaje claro de que el usuario o la contraseña no son correctos. La página sigue funcionando, no se queda cargando para siempre.</span>
+        <span class="ifbad">Si entra igual, es grave: anotalo primero de todo. Si se queda girando sin decir nada, también.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s1-2"><span class="body">
+        <span class="t">La sesión aguanta un recargo de página</span>
+        <span class="do">Volvé a entrar bien. Ahora apretá <code>F5</code>.</span>
+        <span class="see">Seguís adentro, en la misma pantalla donde estabas. No te manda de vuelta al inicio de sesión.</span>
+        <span class="ifbad">Anotá si te expulsa. Con la lentitud de la aplicación, perder la sesión a mitad de una carga es un problema serio.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s1-3"><span class="body">
+        <span class="t">Cerrar sesión deja todo cerrado</span>
+        <span class="do">Buscá en el menú la opción de cerrar sesión (<b>Sign out</b>). Después apretá el botón de "atrás" del navegador.</span>
+        <span class="see">Volvés a la pantalla de inicio de sesión. El botón "atrás" no te devuelve adentro de la aplicación.</span>
+        <span class="ifbad">Si el "atrás" te muestra la aplicación como si siguieras conectado, anotalo: en una computadora compartida eso deja los datos a la vista de cualquiera.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s1-4"><span class="body">
+        <span class="t">El menú del administrador está completo</span>
+        <span class="do">Mirá el menú de la izquierda con tu usuario de administrador.</span>
+        <span class="see">Cuatro grupos: <b>Operations</b>, <b>Finance</b>, <b>Management</b> y <b>System</b>, con sus opciones adentro.</span>
+        <span class="ifbad">Anotá qué falta. Si una pantalla no aparece en el menú, más adelante vas a ver que igual se puede llegar por una dirección directa.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s1-5"><span class="body">
+        <span class="t">Un coordinador ve menos opciones</span>
+        <span class="do">Cerrá sesión y entrá con un usuario de tipo <i>coordinador</i> (el usuario <code>brian</code>, si existe en tu base).</span>
+        <span class="see">Ve operación, finanzas y gestión, pero <b>no</b> ve la administración de usuarios ni los ajustes del sistema.</span>
+        <span class="ifbad">Si ve todo, anotalo: significa que los permisos no se están aplicando en el menú.</span>
+        <span class="alt">repetilo con un usuario de tipo <i>contabilidad</i> si tenés uno.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s1-6"><span class="body">
+        <span class="t">Escribir una dirección prohibida a mano no funciona</span>
+        <span class="do">Seguís con el usuario coordinador. Arriba del navegador, al final de la dirección, agregá <code>/user-management</code> y apretá Enter.</span>
+        <span class="see">Una pantalla que dice que no tenés acceso a esa sección, con dos botones: ir a tu pantalla principal, o cerrar sesión.</span>
+        <span class="ifbad">Si entra, o si ves una pantalla rota o una tabla vacía, anotalo con captura.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s1-7"><span class="body">
+        <span class="t">Una dirección inventada no rompe nada</span>
+        <span class="do">En la barra del navegador, borrá lo que está después de la dirección principal y escribí cualquier cosa, por ejemplo <code>/esto-no-existe</code>.</span>
+        <span class="see">Te lleva a una pantalla válida para tu tipo de usuario, sin mensajes de error feos.</span>
+        <span class="ifbad">Anotá la dirección que probaste y qué apareció.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s1-8"><span class="body">
+        <span class="t">La pantalla de "sin acceso" existe por sí sola</span>
+        <span class="do">Escribí <code>/no-access</code> al final de la dirección y apretá Enter.</span>
+        <span class="see">Se ve la pantalla de "no tenés acceso", prolija, con sus botones.</span>
+        <span class="ifbad">Si aparece una pantalla en blanco o un error, anotalo.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s2">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 3</span>Cargar los datos base<span class="time">15 minutos</span></h2>
+      <span class="badge" data-count="s2">0/12</span>
+    </div>
+    <p class="note">Estos son los datos que después se usan en todo lo demás: clientes, proyectos, choferes, vehículos y tarifas. Todo lo que crees acá lleva tu etiqueta <code>PRUEBA-</code>.</p>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s2-1"><span class="body">
+        <span class="t">La lista de clientes carga y se puede buscar</span>
+        <span class="do">Entrá a <b>Customers</b> (Clientes) desde el menú. Escribí tres letras en el buscador de arriba de la tabla.</span>
+        <span class="see">La lista aparece con clientes reales, y al escribir se van quedando solo los que coinciden. Sin recargar la página.</span>
+        <span class="ifbad">Si la tabla queda vacía o girando, anotá si tenías que haber clientes cargados.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-2"><span class="body">
+        <span class="t">Crear un cliente de prueba</span>
+        <span class="do">Apretá el botón de nuevo cliente. Nombre: <code>PRUEBA-TU-NOMBRE SL</code>. Completá CIF, dirección y email con datos inventados pero con forma real.</span>
+        <span class="see">El cliente aparece en la lista, con los datos que cargaste.</span>
+        <span class="ifbad">Anotá qué campo rechazó o qué mensaje apareció.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-3"><span class="body">
+        <span class="t">Editar un cliente y que el cambio quede</span>
+        <span class="do">Abrí ese cliente, apretá editar, cambiá el teléfono. Guardá y apretá <code>F5</code>.</span>
+        <span class="see">El teléfono nuevo sigue ahí después de recargar.</span>
+        <span class="ifbad">Si vuelve al valor viejo, anotalo: es el mismo tipo de fallo silencioso que el de los datos de la empresa.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-4"><span class="body">
+        <span class="t">Abrir la ficha de un cliente muestra lo suyo</span>
+        <span class="do">Hacé clic en la fila del cliente (o en su nombre).</span>
+        <span class="see">Una pantalla con sus proyectos y sus servicios asociados.</span>
+        <span class="ifbad">Anotá si queda vacía o da error.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-5"><span class="body">
+        <span class="t">No se puede borrar un cliente que tiene proyectos</span>
+        <span class="do">Primero creá un proyecto para ese cliente (paso siguiente). Después volvé a la lista y apretá borrar en ese cliente.</span>
+        <span class="see">Un mensaje que explica que no se puede porque tiene proyectos o servicios. El cliente sigue en la lista.</span>
+        <span class="ifbad">Si lo borra igual, anotalo como grave: se perderían datos reales por accidente.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-6"><span class="body">
+        <span class="t">Crear un proyecto para ese cliente</span>
+        <span class="do">Entrá a <b>Projects</b> (Proyectos). Nuevo proyecto: nombre <code>PRUEBA-TU-NOMBRE</code>, y elegí tu cliente de prueba en la lista.</span>
+        <span class="see">El proyecto aparece en la lista y después se puede elegir al crear un servicio.</span>
+        <span class="ifbad">Si el cliente no aparece en la lista para elegir, anotalo.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-7"><span class="body">
+        <span class="t">Editar el proyecto</span>
+        <span class="do">Abrilo, apretá editar, cambiá el nombre y guardá.</span>
+        <span class="see">El nombre nuevo queda guardado y se ve en la lista.</span>
+        <span class="ifbad">Anotá el mensaje si aparece alguno.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-8"><span class="body">
+        <span class="t">Crear un proveedor (colaborador) con sus tarifas</span>
+        <span class="do">Entrá a <b>Providers</b> (Proveedores). Creá uno llamado <code>PRUEBA-COLABORADOR</code>. Después cargale una tarifa: un importe por servicio.</span>
+        <span class="see">El proveedor queda en la lista y, más adelante, se puede elegir como proveedor al asignar un servicio.</span>
+        <span class="ifbad">Anotá si no aparece la opción de cargar tarifas.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-9"><span class="body">
+        <span class="t">Alta, edición y baja de un chofer</span>
+        <span class="do">Entrá a <b>Drivers</b> (Choferes). Creá uno: <code>PRUEBA-CHOFER-1</code>, con teléfono y email inventados. Editalo. Después borralo y confirmá.</span>
+        <span class="see">Se crea, se edita y al borrar aparece una confirmación. El buscador lo encuentra por nombre.</span>
+        <span class="ifbad">Anotá en qué paso de los tres falló.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-10"><span class="body">
+        <span class="t">Vehículos</span>
+        <span class="do">Entrá a <b>Vehicles</b> (Vehículos). Creá uno con una matrícula inventada, por ejemplo <code>PRUEBA-1234</code>.</span>
+        <span class="see">El vehículo aparece en la lista y después se puede elegir al asignar un chofer a un servicio.</span>
+        <span class="ifbad">Anotá si no aparece al momento de asignar.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-11"><span class="body">
+        <span class="t">Las tarifas de venta (rate cards)</span>
+        <span class="do">Entrá a <b>Rate Cards</b> (Tarifas). Mirá la lista, abrí una y cambiá un importe. Guardá.</span>
+        <span class="see">El cambio queda guardado. Más adelante, cuando recalcules un servicio, ese importe nuevo tiene que aparecer.</span>
+        <span class="ifbad">Anotá si el cambio no se guarda.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-12"><span class="body">
+        <span class="t">Contactos y documentos</span>
+        <span class="do">Entrá a <b>Contacts</b> (Contactos) y a <b>Documents</b> (Documentos). Creá un contacto y abrí un documento de la lista.</span>
+        <span class="see">El contacto se guarda; el documento se abre o se descarga.</span>
+        <span class="ifbad">Anotá cuál de los dos falló.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s3">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 4</span>Dar de alta un servicio<span class="time">10 minutos</span></h2>
+      <span class="badge" data-count="s3">0/5</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s3-1"><span class="body">
+        <span class="t">El botón de crear servicio abre el formulario</span>
+        <span class="do">Entrá a <b>Transport</b> (Transporte) y apretá el botón con el signo <b>+</b>.</span>
+        <span class="see">Se abre un formulario vacío para cargar un servicio nuevo.</span>
+        <span class="ifbad">Anotá si el botón no hace nada o abre una pantalla en blanco.</span>
+        <span class="alt">también se llega escribiendo <code>/new-service</code> al final de la dirección.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-2"><span class="body">
+        <span class="t">El servicio se crea completo</span>
+        <span class="do">Elegí tu proyecto de prueba, escribí un origen, un destino, una fecha y un chofer. Guardá.</span>
+        <span class="see">El servicio aparece en la tabla con el estado <b>Importado</b> (recién cargado, todavía sin asignar).</span>
+        <span class="ifbad">Anotá qué campo no te dejó completar y qué dijo el mensaje.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-3"><span class="body">
+        <span class="t">Importar varios servicios desde un Excel</span>
+        <span class="do">En Transport, apretá el botón de <b>Import Excel</b>. Elegí un archivo de Excel con la lista de viajes.</span>
+        <span class="see">Primero una vista previa de lo que va a crear, después la posibilidad de vincularlo a un proyecto y confirmar. Al final, los servicios aparecen en la tabla.</span>
+        <span class="ifbad">Anotá el mensaje exacto. Si no tenés un Excel de prueba, saltá este paso y anotá "no probado, sin archivo".</span>
+        <span class="alt">la pantalla de importación no está en el menú: se llega solo por este botón o escribiendo <code>/transport-list</code>.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-4"><span class="body">
+        <span class="t">La ficha del servicio tiene todas sus pestañas</span>
+        <span class="do">Hacé clic en el servicio que creaste para abrirlo.</span>
+        <span class="see">Una pantalla con un resumen arriba y pestañas: <b>Movements</b> (movimientos), <b>Operations</b> (operación), <b>Communication</b> (comunicación), <b>Finance</b> (finanzas) e <b>History</b> (historial).</span>
+        <span class="ifbad">Anotá si falta alguna pestaña o si alguna queda vacía.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-5"><span class="body">
+        <span class="t">Se pueden corregir la fecha y las horas</span>
+        <span class="do">En la pestaña <b>Movements</b>, cambiá la hora de salida. Guardá y apretá <code>F5</code>.</span>
+        <span class="see">La hora nueva sigue ahí después de recargar.</span>
+        <span class="ifbad">Anotá si vuelve a la anterior.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s4">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 5</span>Llevar el servicio hasta "Validado"<span class="time">15 minutos · es el corazón del sistema</span></h2>
+      <span class="badge" data-count="s4">0/10</span>
+    </div>
+    <p class="note">Un servicio pasa por una serie de estados, siempre en el mismo orden. Si te saltás uno, la aplicación tiene que avisarte. <b>Anotá los importes cuando llegues a "Validado"</b>: los vas a comparar más adelante con la hoja de resumen.</p>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s4-1"><span class="body">
+        <span class="t">Asignar chofer y vehículo</span>
+        <span class="do">En la ficha del servicio, pestaña <b>Operations</b>, elegí el chofer de prueba y el vehículo. Confirmá.</span>
+        <span class="see">El estado pasa a <b>Asignado</b>. Y ese chofer ya no se puede usar en otro servicio activo al mismo tiempo.</span>
+        <span class="ifbad">Anotá si el chofer no aparece en la lista.</span>
+        <span class="alt">también se puede asignar directo desde la tabla de Transport, en la celda del chofer.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s4-2"><span class="body">
+        <span class="t">Asignar varios servicios de una vez</span>
+        <span class="do">En la tabla de Transport, marcá la casilla de dos o tres servicios y usá el botón de asignar chofer en grupo.</span>
+        <span class="see">Se asigna a los que marcaste y <b>solo</b> a esos. Los demás quedan como estaban.</span>
+        <span class="ifbad">Anotá si toca servicios que no habías marcado: eso sería peor que no asignar nada.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s4-3"><span class="body">
+        <span class="t">Confirmar</span>
+        <span class="do">En <b>Operations</b>, apretá el botón de confirmar.</span>
+        <span class="see">El estado pasa a <b>Confirmado</b> y queda registrada la fecha y hora en que se confirmó.</span>
+        <span class="ifbad">Anotá el mensaje si no avanza.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s4-4"><span class="body">
+        <span class="t">Iniciar</span>
+        <span class="do">Apretá el botón de iniciar el viaje.</span>
+        <span class="see">El estado pasa a <b>EnRuta</b> (el chofer ya está trabajando).</span>
+        <span class="ifbad">Anotá qué dice el mensaje.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s4-5"><span class="body">
+        <span class="t">Completar</span>
+        <span class="do">Apretá el botón de completar el servicio.</span>
+        <span class="see">El estado pasa a <b>Realizado</b> (el viaje terminó).</span>
+        <span class="ifbad">Anotá qué dice el mensaje.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s4-6"><span class="body">
+        <span class="t">Reportar</span>
+        <span class="do">Apretá el botón de reportar.</span>
+        <span class="see">El estado pasa a <b>Reportado</b>, y el parte del chofer queda vinculado a este servicio.</span>
+        <span class="ifbad">Anotá si dice que falta el parte del chofer: en ese caso primero hay que hacer el Bloque 7.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s4-7"><span class="body">
+        <span class="t">Validar, y anotar los importes</span>
+        <span class="do">Andá a la pestaña <b>Finance</b> y anotá en papel el total que ves. Después apretá el botón de validar.</span>
+        <span class="see">El estado pasa a <b>Validado</b>. Los importes quedan fijos: ya no se pueden editar. El número que anotaste no cambia después.</span>
+        <span class="ifbad">Anotá si el estado no avanza, o si los importes cambian solos después de validar.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s4-8"><span class="body">
+        <span class="t">El historial cuenta la película completa</span>
+        <span class="do">Abrí la pestaña <b>History</b> del servicio.</span>
+        <span class="see">Todos los cambios de estado, en orden, cada uno con la fecha y el usuario que lo hizo.</span>
+        <span class="ifbad">Anotá si falta algún paso de los que hiciste.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s4-9"><span class="body">
+        <span class="t">Cancelar un servicio recién creado</span>
+        <span class="do">Creá otro servicio rápido (solo lo mínimo) y apretá cancelar o borrar.</span>
+        <span class="see">Se puede borrar mientras está en <b>Importado</b> o <b>Asignado</b>, y desaparece de la tabla.</span>
+        <span class="ifbad">Anotá si no te deja o si queda a medias.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s4-10"><span class="body">
+        <span class="t">Un servicio avanzado no se puede borrar</span>
+        <span class="do">Intentá borrar el servicio que ya validaste.</span>
+        <span class="see">La aplicación lo rechaza con un mensaje. Es correcto: un servicio ya validado o facturado no se borra, porque está en la contabilidad.</span>
+        <span class="ifbad">Si lo borra, anotalo como grave.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s5">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 6</span>El link que se le manda al chofer<span class="time">10 minutos</span></h2>
+      <span class="badge" data-count="s5">0/7</span>
+    </div>
+    <p class="note">Esta es la única parte que usa alguien de afuera de la oficina: el chofer recibe un link, lo abre en su teléfono y carga los datos del viaje. No necesita usuario ni contraseña.</p>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s5-1"><span class="body">
+        <span class="t">Generar el link</span>
+        <span class="do">Entrá a <b>Driver Links</b> (Links de chofer) en el menú. Elegí tu servicio y apretá crear link.</span>
+        <span class="see">Aparece una dirección larga, del estilo <code>…?action=driverForm&amp;token=…</code>, con un botón para copiarla.</span>
+        <span class="ifbad">Anotá si no aparece el servicio en la lista.</span>
+        <span class="alt">también se genera desde la ficha del servicio, en <b>Operations</b>.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s5-2"><span class="body">
+        <span class="t">El link abre sin pedir contraseña</span>
+        <span class="do">Copiá el link. Abrí una ventana de incógnito (<code>Ctrl + Shift + N</code> en Chrome) y pegalo ahí.</span>
+        <span class="see">Se abre un formulario para cargar el viaje, sin pedir usuario ni contraseña.</span>
+        <span class="ifbad">Si te manda a la pantalla de inicio de sesión, anotalo: significa que el chofer no va a poder usarlo desde su teléfono.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s5-3"><span class="body">
+        <span class="t">El formulario acepta los datos del viaje</span>
+        <span class="do">Completá kilómetros, horas de inicio y fin, y algún gasto (peaje o combustible). Enviá.</span>
+        <span class="see">Un mensaje de que el parte se envió bien, y la pantalla queda en modo "gracias" o similar.</span>
+        <span class="ifbad">Anotá qué campo rechazó y con qué mensaje.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s5-4"><span class="body">
+        <span class="t">En la oficina se ve que el chofer lo abrió y lo envió</span>
+        <span class="do">Volvé a la ventana normal y recargá la pantalla de <b>Driver Links</b>.</span>
+        <span class="see">Ese link pasó por los estados <b>Active</b> (creado) → <b>Opened</b> (abierto) → <b>Submitted</b> (enviado).</span>
+        <span class="ifbad">Anotá en qué estado quedó.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s5-5"><span class="body">
+        <span class="t">Revocar el link lo deja inservible</span>
+        <span class="do">Apretá revocar en ese link. Después abrí de nuevo la dirección en la ventana de incógnito.</span>
+        <span class="see">El link queda en <b>Revoked</b> y al abrirlo dice "Link non valido" (link no válido).</span>
+        <span class="ifbad">Si todavía deja cargar datos, anotalo como grave.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s5-6"><span class="body">
+        <span class="t">Un link inventado no rompe nada</span>
+        <span class="do">En la ventana de incógnito, cambiá el final del link por <code>token=AAA</code> y apretá Enter.</span>
+        <span class="see">Un mensaje de link no válido, claro y prolijo. No una pantalla en blanco ni un error técnico.</span>
+        <span class="ifbad">Anotá qué apareció, con captura.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s5-7"><span class="body">
+        <span class="t">Un link ya usado no deja cargar dos veces</span>
+        <span class="do">Abrí otra vez el link que ya enviaste (antes de revocarlo).</span>
+        <span class="see">No permite enviar de nuevo, o avisa que ya fue enviado.</span>
+        <span class="ifbad">Si deja enviar otra vez, anotalo: se duplicarían los gastos del viaje.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s6">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 7</span>El parte del chofer en la oficina<span class="time">10 minutos</span></h2>
+      <span class="badge" data-count="s6">0/6</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s6-1"><span class="body">
+        <span class="t">El parte llegó a la bandeja de entrada</span>
+        <span class="do">Entrá a <b>Driver Reports</b> (Partes de chofer).</span>
+        <span class="see">Aparece el envío del bloque anterior, con el servicio y el chofer correctos.</span>
+        <span class="ifbad">Si no aparece, anotalo: es el paso que une el link del chofer con la oficina.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s6-2"><span class="body">
+        <span class="t">Los números del parte son los que cargó el chofer</span>
+        <span class="do">Abrí el parte y compará con lo que escribiste en el formulario del chofer.</span>
+        <span class="see">Kilómetros, horas, peajes, parking, combustible y tiempo de espera coinciden, uno por uno.</span>
+        <span class="ifbad">Anotá cuál número no coincide y por cuánto. Un error de centavos importa; uno de miles, más.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s6-3"><span class="body">
+        <span class="t">Aprobar el parte</span>
+        <span class="do">Apretá el botón de aprobar.</span>
+        <span class="see">El parte sale de la bandeja de pendientes, y el servicio queda con su economía recalculada con esos datos.</span>
+        <span class="ifbad">Anotá el mensaje. Si dice que falta algo, anotá qué.</span>
+        <span class="alt">también se aprueba desde la ficha del servicio, en <b>Operations</b>.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s6-4"><span class="body">
+        <span class="t">El parte aprobado queda en el historial</span>
+        <span class="do">Buscá la pestaña o el filtro de historial dentro de Driver Reports.</span>
+        <span class="see">El parte que aprobaste aparece con su estado final.</span>
+        <span class="ifbad">Anotá si no aparece.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s6-5"><span class="body">
+        <span class="t">Rechazar un parte pide un motivo</span>
+        <span class="do">Con otro parte pendiente (o generá uno nuevo con otro link), apretá rechazar.</span>
+        <span class="see">Pide un motivo, el parte queda como <b>Rechazado</b>, y los importes del servicio <b>no</b> cambian.</span>
+        <span class="ifbad">Anotá si no pide motivo, o si los importes cambian igual.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s6-6"><span class="body">
+        <span class="t">Pegar un mensaje de WhatsApp y que lo entienda</span>
+        <span class="do">En Driver Reports, buscá la opción de importar desde texto. Pegá un mensaje de un chofer, del estilo "Viaje Roma-Milano, 480 km, salida 8:00 llegada 18:30, peaje 32 €".</span>
+        <span class="see">Muestra lo que entendió, para que lo revises antes de crear el parte. Y con un texto cualquiera, por ejemplo "hola qué tal", avisa que no pudo interpretarlo en vez de crear un parte vacío.</span>
+        <span class="ifbad">Anotá qué interpretó mal, copiando el texto que pegaste.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s7">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 8</span>Los importes del servicio<span class="time">8 minutos</span></h2>
+      <span class="badge" data-count="s7">0/6</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s7-1"><span class="body">
+        <span class="t">Lo que se cobra está desglosado</span>
+        <span class="do">En la ficha del servicio, pestaña <b>Finance</b>, mirá la parte de ingresos.</span>
+        <span class="see">Las líneas de lo que se le cobra al cliente, cada una con su concepto y su importe, y un total.</span>
+        <span class="ifbad">Si está vacío, anotalo: probablemente falte una tarifa para ese proyecto.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s7-2"><span class="body">
+        <span class="t">Lo que se le paga al chofer también</span>
+        <span class="do">En la misma pestaña, mirá la parte de costos.</span>
+        <span class="see">Las líneas del costo del chofer o del colaborador, coherentes con la tarifa que cargaste.</span>
+        <span class="ifbad">Anotá si el importe no coincide con la tarifa.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s7-3"><span class="body">
+        <span class="t">La ganancia da bien y sin decimales raros</span>
+        <span class="do">Mirá el margen (lo que se cobra menos lo que se paga).</span>
+        <span class="see">Un número con dos decimales, por ejemplo <code>603.18</code>. Nunca algo como <code>603.18499999</code>.</span>
+        <span class="ifbad">Anotá el número exacto con todos sus decimales: es un dato muy útil para quien programa.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s7-4"><span class="body">
+        <span class="t">Se puede hacer un ajuste a mano</span>
+        <span class="do">Usá la opción de agregar un ajuste. Poné un importe, por ejemplo 10 €, y un motivo: "PRUEBA ajuste".</span>
+        <span class="see">El total cambia, el ajuste aparece en la lista con su motivo, y queda registrado en el historial.</span>
+        <span class="ifbad">Anotá si el total no cambia.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s7-5"><span class="body">
+        <span class="t">Recalcular no borra el ajuste a mano</span>
+        <span class="do">Apretá el botón de recalcular.</span>
+        <span class="see">Los importes se recalculan y tu ajuste de 10 € <b>sigue ahí</b>.</span>
+        <span class="ifbad">Si el ajuste desaparece, anotalo: alguien podría perder plata sin darse cuenta.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s7-6"><span class="body">
+        <span class="t">Después de validar, los importes no se tocan</span>
+        <span class="do">En el servicio que ya validaste, intentá editar un importe.</span>
+        <span class="see">No te deja: el botón no está, o el sistema lo rechaza con un mensaje. Es a propósito, para que la contabilidad no cambie sola.</span>
+        <span class="ifbad">Si te deja editar, anotalo como grave.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s8">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 9</span>La hoja de resumen (rapportino)<span class="time">12 minutos</span></h2>
+      <span class="badge" data-count="s8">0/8</span>
+    </div>
+    <p class="note">El rapportino es la hoja que se le manda al cliente con todos los servicios del período. Es el paso previo a facturar: <b>sin rapportino aceptado, no hay factura</b>.</p>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s8-1"><span class="body">
+        <span class="t">Generar el rapportino del período</span>
+        <span class="do">Entrá a <b>Rapportinos</b>. Elegí tu cliente y el período (por ejemplo, esta semana) y apretá generar.</span>
+        <span class="see">Se crea en estado <b>Borrador</b>, con los servicios validados de ese cliente en ese período.</span>
+        <span class="ifbad">Anotá si dice que no hay servicios: revisá que el servicio esté validado y sea de ese cliente y período.</span>
+        <span class="alt">también se genera desde la ficha del servicio, en <b>Finance</b>.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-2"><span class="body">
+        <span class="t">Los totales coinciden con lo que anotaste al validar</span>
+        <span class="do">Abrí el detalle del rapportino y compará con el número que anotaste en papel en el Bloque 5.</span>
+        <span class="see">El mismo número. Si hay más de un servicio, la suma de todos.</span>
+        <span class="ifbad">Anotá los dos números. Si no coinciden, ese es el fallo más importante de toda la prueba: es plata.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-3"><span class="body">
+        <span class="t">Se puede agregar y quitar un servicio</span>
+        <span class="do">Agregá otro servicio al rapportino y después quitálo.</span>
+        <span class="see">El total se recalcula en cada cambio y queda registrado quién lo hizo.</span>
+        <span class="ifbad">Anotá si el total no se actualiza.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-4"><span class="body">
+        <span class="t">El rapportino avanza de estado, en orden</span>
+        <span class="do">Apretá revisar, después enviar, después aceptar. Uno por uno.</span>
+        <span class="see">Borrador → Revisado → Enviado → Aceptado. Cada botón se habilita recién cuando corresponde. Al llegar a Aceptado aparece la opción de facturar.</span>
+        <span class="ifbad">Anotá en qué salto se trabó y qué dijo.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-5"><span class="body">
+        <span class="t">Facturar desde el rapportino</span>
+        <span class="do">Apretá el botón de facturar.</span>
+        <span class="see">Se crea una factura en borrador, con sus líneas y un total real (no cero, no "NaN").</span>
+        <span class="ifbad">Anotá el mensaje. Si el total dice <code>NaN</code>, es un fallo grave y hay que reportarlo tal cual.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-6"><span class="body">
+        <span class="t">Rechazar un rapportino</span>
+        <span class="do">Con otro rapportino en estado Enviado, apretá rechazar.</span>
+        <span class="see">Queda como <b>Rechazado</b>. Y si intentás rechazarlo desde un estado anterior, el sistema no te deja: es correcto.</span>
+        <span class="ifbad">Anotá desde qué estado intentaste y qué pasó.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-7"><span class="body">
+        <span class="t">No se puede enviar un rapportino vacío</span>
+        <span class="do">Creá un rapportino sin servicios e intentá enviarlo.</span>
+        <span class="see">Un mensaje que dice que no se puede enviar vacío.</span>
+        <span class="ifbad">Si lo envía, anotalo.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-8"><span class="body">
+        <span class="t">No se puede facturar si falta algo</span>
+        <span class="do">Tomá un rapportino cuyo servicio todavía no tiene la conciliación resuelta e intentá facturar.</span>
+        <span class="see">El botón está bloqueado o aparece un mensaje que explica qué falta (por ejemplo, "falta resolver la conciliación").</span>
+        <span class="ifbad">Anotá si te deja facturar igual: sería facturar con números sin confirmar.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s9">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 10</span>Facturas, cobros y gastos<span class="time">15 minutos</span></h2>
+      <span class="badge" data-count="s9">0/12</span>
+    </div>
+    <p class="note">Antes de empezar: los tres pasos del <b>Bloque 1</b> (datos de tu empresa) tienen que estar completos. Sin emisor no se puede emitir una factura.</p>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s9-1"><span class="body">
+        <span class="t">La lista de facturas abre sin errores</span>
+        <span class="do">Entrá a <b>Accounting</b> (Contabilidad) y después a <b>Invoices</b> (Facturas).</span>
+        <span class="see">La lista de facturas, aunque esté vacía. Sin cartel de error.</span>
+        <span class="ifbad">Si aparece un error de sistema, anotalo primero: este listado estaba roto y se arregló hace poco.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s9-2"><span class="body">
+        <span class="t">Crear una factura a mano</span>
+        <span class="do">Apretá nueva factura. Elegí tu cliente de prueba, agregá una línea con un importe de 100 €.</span>
+        <span class="see">Se ve el subtotal (100 €), el IVA del 21% (21 €) y el total (121 €). Queda en borrador.</span>
+        <span class="ifbad">Anotá si los tres números no cierran. Sacá captura.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s9-3"><span class="body">
+        <span class="t">Un borrador se puede editar</span>
+        <span class="do">Editá esa factura, cambiá el importe a 200 €, guardá y apretá <code>F5</code>.</span>
+        <span class="see">El total se recalcula (242 €) y sigue igual después de recargar.</span>
+        <span class="ifbad">Anotá si no guarda.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s9-4"><span class="body">
+        <span class="t">Emitir la factura</span>
+        <span class="do">Apretá el botón de emitir.</span>
+        <span class="see">La factura pasa a <b>emitida</b>, con su número asignado. El envío por email se puede omitir o simular.</span>
+        <span class="ifbad">Anotá el mensaje si no emite. Si dice que falta el emisor, volvé al Bloque 1.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s9-5"><span class="body">
+        <span class="t">Una factura emitida ya no se edita</span>
+        <span class="do">Intentá editar la factura que acabas de emitir.</span>
+        <span class="see">No te deja. Solo se puede anular, poniendo un motivo.</span>
+        <span class="ifbad">Si te deja editar, anotalo como grave: una factura ya enviada al cliente no puede cambiar.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s9-6"><span class="body">
+        <span class="t">Anular una factura pide motivo</span>
+        <span class="do">Apretá anular en esa factura y escribí un motivo.</span>
+        <span class="see">Queda como anulada, deja de contar en los totales, y el motivo queda guardado.</span>
+        <span class="ifbad">Anotá si no pide motivo o si sigue sumando.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s9-7"><span class="body">
+        <span class="t">Registrar un cobro</span>
+        <span class="do">Andá a <b>Payments</b> (Pagos). Creá un pago para esa factura: importe, fecha y método (transferencia, por ejemplo).</span>
+        <span class="see">El pago queda en borrador, editable, con los datos guardados.</span>
+        <span class="ifbad">Anotá qué campo rechazó.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s9-8"><span class="body">
+        <span class="t">Confirmar el cobro baja el saldo</span>
+        <span class="do">Apretá confirmar en el pago. Volvé a mirar la factura.</span>
+        <span class="see">El pago queda confirmado y el saldo pendiente de la factura baja por el importe cobrado.</span>
+        <span class="ifbad">Anotá los dos saldos, antes y después: es la cuenta que tiene que cerrar.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s9-9"><span class="body">
+        <span class="t">Un cobro confirmado se puede conciliar</span>
+        <span class="do">Apretá conciliar en ese pago confirmado.</span>
+        <span class="see">La operación se completa. Antes fallaba con un mensaje de "el pago es inmutable"; si volvés a verlo, anotalo tal cual.</span>
+        <span class="ifbad">Copiá el mensaje exacto.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s9-10"><span class="body">
+        <span class="t">Un cobro confirmado no se anula</span>
+        <span class="do">Intentá anular el pago confirmado.</span>
+        <span class="see">Lo rechaza con un mensaje. Es a propósito: un cobro confirmado es definitivo. En cambio, uno en borrador sí se puede anular.</span>
+        <span class="ifbad">Anotá si lo anula.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s9-11"><span class="body">
+        <span class="t">Cargar dos veces el mismo cobro avisa</span>
+        <span class="do">Cargá otro pago con el mismo importe, la misma fecha y la misma factura que el anterior.</span>
+        <span class="see">Un aviso de posible duplicado. El detector estaba roto y se arregló: si no avisa, anotalo.</span>
+        <span class="ifbad">Anotá si lo acepta sin decir nada.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s9-12"><span class="body">
+        <span class="t">Gastos</span>
+        <span class="do">Entrá a <b>Expenses</b> (Gastos). Cargá un gasto con categoría e importe, y después editalo.</span>
+        <span class="see">Se guarda y se puede editar. La categoría y el importe quedan como los cargaste.</span>
+        <span class="ifbad">Anotá si la lista aparece vacía aunque haya gastos cargados.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s10">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 11</span>Conciliación<span class="time">8 minutos</span></h2>
+      <span class="badge" data-count="s10">0/4</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s10-1"><span class="body">
+        <span class="t">La lista de conciliaciones carga y filtra</span>
+        <span class="do">Entrá a <b>Reconciliation</b> (Conciliación). Buscá tu servicio y probá el filtro por estado.</span>
+        <span class="see">La lista aparece, la búsqueda encuentra tu servicio y el filtro deja solo los del estado elegido.</span>
+        <span class="ifbad">Anotá si la tabla queda vacía.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s10-2"><span class="body">
+        <span class="t">Se resuelve con los datos reales del viaje</span>
+        <span class="do">Abrí tu servicio y apretá resolver. Cargá hora de inicio y fin reales, kilómetros, si fue día festivo, si fue de noche, y una nota.</span>
+        <span class="see">Queda como <b>Resuelto</b>. Si cambiaste kilómetros u horas, el importe del servicio se recalcula.</span>
+        <span class="ifbad">Anotá si no guarda o si el importe no cambia cuando debería.</span>
+        <span class="alt">también se resuelve desde la ficha del servicio, en <b>Operations</b>.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s10-3"><span class="body">
+        <span class="t">Una hora imposible se rechaza</span>
+        <span class="do">Intentá resolver con la hora de fin anterior a la de inicio.</span>
+        <span class="see">Un mensaje claro de validación. No guarda una conciliación imposible.</span>
+        <span class="ifbad">Si la guarda, anotalo.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s10-4"><span class="body">
+        <span class="t">Sin conciliar, no se factura</span>
+        <span class="do">Con un servicio sin conciliación resuelta, intentá llegar a facturar.</span>
+        <span class="see">El sistema lo impide y explica qué falta.</span>
+        <span class="ifbad">Anotá si te deja facturar igual.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s11">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 12</span>Usuarios y contraseñas<span class="time">12 minutos</span></h2>
+      <span class="badge" data-count="s11">0/9</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s11-1"><span class="body">
+        <span class="t">La lista de usuarios muestra lo importante</span>
+        <span class="do">Entrá a <b>User Management</b> (Usuarios).</span>
+        <span class="see">Cada usuario con su rol y su estado. Los que se dieron de baja no aparecen.</span>
+        <span class="ifbad">Anotá si aparecen usuarios borrados.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s11-2"><span class="body">
+        <span class="t">Un usuario nuevo no puede entrar hasta que lo aprueben</span>
+        <span class="do">Creá un usuario <code>prueba-tu-nombre@test.com</code> con una contraseña.</span>
+        <span class="see">Queda como <b>pendiente</b>. Si intentás entrar con él en otra ventana, no te deja.</span>
+        <span class="ifbad">Si entra directamente, anotalo: cualquiera podría crearse una cuenta.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s11-3"><span class="body">
+        <span class="t">Aprobar el usuario eligiendo su rol</span>
+        <span class="do">Apretá aprobar en ese usuario. Elegí un rol de la lista (administrador, coordinador, contabilidad o chofer).</span>
+        <span class="see">Después de aprobarlo, ese usuario ya puede entrar y ve el menú que corresponde a su rol.</span>
+        <span class="ifbad">Anotá si no aparece la elección de rol.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s11-4"><span class="body">
+        <span class="t">Cambiar el rol cambia lo que ve</span>
+        <span class="do">Cambiale el rol a coordinador. Cerrá sesión y entrá con él.</span>
+        <span class="see">El menú es más corto, como en el Bloque 2.</span>
+        <span class="ifbad">Anotá si el menú no cambia.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s11-5"><span class="body">
+        <span class="t">Resetear la contraseña de otro usuario</span>
+        <span class="do">Buscá el ícono de la llave en la fila de ese usuario. Poné una contraseña nueva.</span>
+        <span class="see">No te pide la contraseña vieja. Con la nueva se puede entrar. Y si ese usuario estaba conectado, su sesión se cierra.</span>
+        <span class="ifbad">Anotá si pide la vieja o si la nueva no funciona.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s11-6"><span class="body">
+        <span class="t">Cambiar tu propia contraseña</span>
+        <span class="do">Buscá "cambiar mi contraseña". Poné la actual, la nueva, y repetí la nueva.</span>
+        <span class="see">Con la nueva entrás sin problema, y el cambio queda registrado en el historial.</span>
+        <span class="ifbad">Anotá si no acepta la actual o si después no podés entrar.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s11-7"><span class="body">
+        <span class="t">Las contraseñas débiles se frenan antes de enviarse</span>
+        <span class="do">Intentá poner una contraseña de tres letras. Después intentá poner dos contraseñas distintas en "nueva" y "repetir".</span>
+        <span class="see">En los dos casos el botón no avanza y aparece el aviso en el mismo formulario.</span>
+        <span class="ifbad">Anotá si te deja guardar igual.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s11-8"><span class="body">
+        <span class="t">Dar de baja un usuario lo deja afuera</span>
+        <span class="do">Borrá tu usuario de prueba.</span>
+        <span class="see">Desaparece de la lista y si intentás entrar con él, dice que la cuenta está deshabilitada.</span>
+        <span class="ifbad">Anotá si sigue pudiendo entrar.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s11-9"><span class="body">
+        <span class="t">No te podés borrar a vos mismo, ni dejar el sistema sin administrador</span>
+        <span class="do">Intentá borrar tu propio usuario. Y si hay un solo administrador, intentá borrarlo.</span>
+        <span class="see">Las dos operaciones se rechazan con un mensaje que explica por qué.</span>
+        <span class="ifbad">Anotá si alguna pasa: dejaría el sistema sin nadie que pueda administrarlo.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s12">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 13</span>El historial: quién hizo qué<span class="time">6 minutos</span></h2>
+      <span class="badge" data-count="s12">0/3</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s12-1"><span class="body">
+        <span class="t">Todo lo que hiciste aparece registrado</span>
+        <span class="do">Entrá a <b>Audit Center</b> (Auditoría). Buscá el nombre de tu servicio de prueba.</span>
+        <span class="see">Los eventos de todo lo que hiciste en los bloques 4 a 10, en orden, cada uno con el usuario y la hora.</span>
+        <span class="ifbad">Anotá qué evento falta.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s12-2"><span class="body">
+        <span class="t">Se ve el antes y el después de cada cambio</span>
+        <span class="do">Buscá la parte de cambios (Changes) y mirá la edición de la tarifa que hiciste en el Bloque 3.</span>
+        <span class="see">El valor anterior y el nuevo, uno al lado del otro.</span>
+        <span class="ifbad">Anotá si solo muestra el valor nuevo.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s12-3"><span class="body">
+        <span class="t">Los cambios de usuarios también quedan</span>
+        <span class="do">Buscá en el historial los eventos de contraseña y de baja de usuario del Bloque 12.</span>
+        <span class="see">Aparecen con una descripción que se entiende, no con un código raro.</span>
+        <span class="ifbad">Anotá si no aparecen o si dicen algo incomprensible.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s13">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 14</span>Desde el celular<span class="time">10 minutos</span></h2>
+      <span class="badge" data-count="s13">0/7</span>
+    </div>
+    <p class="note">Lo ideal es hacerlo con un teléfono de verdad. Si no tenés, en Chrome apretá <code>F12</code> y después el ícono que parece un teléfono: la pantalla se achica como si fuera un celular.</p>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s13-1"><span class="body">
+        <span class="t">La barra de arriba se ve bien</span>
+        <span class="do">Abrí la pantalla principal en el celular.</span>
+        <span class="see">Una franja arriba con el nombre del sistema, y el botón de menú (☰) que no tapa el título.</span>
+        <span class="ifbad">Anotá con captura si el texto queda cortado.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s13-2"><span class="body">
+        <span class="t">El menú se abre y se cierra bien</span>
+        <span class="do">Apretá el botón ☰.</span>
+        <span class="see">Se abre el menú completo con todas las opciones y sus nombres, el fondo se oscurece, hay una ✕ para cerrarlo, y la página de atrás no se mueve mientras está abierto.</span>
+        <span class="ifbad">Anotá si las opciones salen sin nombre, o si el menú no se cierra.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s13-3"><span class="body">
+        <span class="t">Al elegir una opción, el menú se cierra solo</span>
+        <span class="do">Abrí el menú y tocá cualquier opción.</span>
+        <span class="see">Te lleva a esa pantalla y el menú se cierra sin que tengas que hacer nada más.</span>
+        <span class="ifbad">Anotá si queda abierto tapando la pantalla.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s13-4"><span class="body">
+        <span class="t">Las tablas se pueden ver sin romper la página</span>
+        <span class="do">Entrá a Transporte y a Contabilidad en el celular.</span>
+        <span class="see">La tabla se puede deslizar de costado dentro de su recuadro. La página entera no se va hacia la derecha.</span>
+        <span class="ifbad">Anotá si la página entera se corre de lado: es lo más molesto de usar en el teléfono.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s13-5"><span class="body">
+        <span class="t">Las ventanas de edición se pueden usar completas</span>
+        <span class="do">Abrí cualquier formulario de alta o edición en el celular.</span>
+        <span class="see">La ventana sube desde abajo, se puede desplazar el contenido, y los botones de guardar y cancelar siempre están a la vista.</span>
+        <span class="ifbad">Anotá si el botón de guardar queda escondido abajo de todo.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s13-6"><span class="body">
+        <span class="t">Al tocar una casilla de texto no se agranda todo</span>
+        <span class="do">Tocá un campo para escribir.</span>
+        <span class="see">El teclado aparece y la pantalla no se agranda sola.</span>
+        <span class="ifbad">Anotá si se agranda: es un detalle de iPhone que vuelve incómodo cargar datos.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s13-7"><span class="body">
+        <span class="t">Nada queda tapado por el borde del teléfono</span>
+        <span class="do">Bajá hasta el final de una pantalla larga.</span>
+        <span class="see">El último contenido se lee completo, sin quedar debajo de la rayita del iPhone.</span>
+        <span class="ifbad">Anotá con captura si el último botón no se puede tocar.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s14">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 15</span>Cosas que tienen que fallar (y fallar bien)<span class="time">8 minutos</span></h2>
+      <span class="badge" data-count="s14">0/6</span>
+    </div>
+    <p class="note">Un sistema serio no solo hace lo que debe: <b>también frena lo que no debe</b>. Estos pasos prueban eso. Acá "bien" significa que te rechaza con un mensaje claro.</p>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s14-1"><span class="body">
+        <span class="t">Saltarse un estado del servicio</span>
+        <span class="do">En un servicio nuevo, intentá iniciar el viaje sin confirmarlo antes.</span>
+        <span class="see">Un mensaje de que no se puede pasar de ese estado a ese otro. El servicio no cambia.</span>
+        <span class="ifbad">Anotá el mensaje si es incomprensible, o si el estado cambia igual.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s14-2"><span class="body">
+        <span class="t">Validar un servicio sin costo cargado</span>
+        <span class="do">Creá un servicio sin tarifa de chofer y llegá hasta validar.</span>
+        <span class="see">Lo rechaza diciendo que el servicio necesita al menos un costo cargado. Es correcto: validar sin costo dejaría la ganancia sin calcular.</span>
+        <span class="ifbad">Anotá el mensaje exacto, en el idioma que aparezca.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s14-3"><span class="body">
+        <span class="t">Un link de chofer vencido o de otro servicio</span>
+        <span class="do">Abrí un link viejo, o el link de un servicio distinto al que dice el formulario.</span>
+        <span class="see">Lo rechaza con un mensaje. No permite cargar datos sobre otro servicio.</span>
+        <span class="ifbad">Anotá si deja cargar.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s14-4"><span class="body">
+        <span class="t">Entrar a una sección sin permiso</span>
+        <span class="do">Con el usuario coordinador, intentá llegar a la administración de usuarios (por el menú o por la dirección).</span>
+        <span class="see">Lo bloquea en pantalla, y si alguien lo forzara por fuera de la aplicación, el servidor también lo rechaza.</span>
+        <span class="ifbad">Anotá si entra por algún camino.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s14-5"><span class="body">
+        <span class="t">Borrar un cliente que tiene servicios</span>
+        <span class="do">Intentá borrar tu cliente de prueba, que ya tiene un proyecto y servicios.</span>
+        <span class="see">Lo rechaza y te dice qué depende de él (cuántos proyectos, cuántos servicios).</span>
+        <span class="ifbad">Si lo borra, anotalo como grave.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s14-6"><span class="body">
+        <span class="t">Editar una factura ya emitida</span>
+        <span class="do">Intentá cambiar el importe de una factura emitida.</span>
+        <span class="see">Lo rechaza. La única salida es anularla con un motivo.</span>
+        <span class="ifbad">Anotá si te deja.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s15">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 16</span>La misma tarea por distintos caminos<span class="time">12 minutos</span></h2>
+      <span class="badge" data-count="s15">0/10</span>
+    </div>
+    <p class="note">Muchas cosas se pueden hacer desde dos o tres lugares distintos. Marcá la fila solo cuando probaste <b>todos</b> los caminos y llegaste al mismo resultado. Si uno funciona y el otro no, el problema está en esa pantalla, no en la tarea.</p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th class="cell-check"></th><th>Qué querés hacer</th><th>Camino 1</th><th>Camino 2</th><th>Camino 3</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s15-1"></td>
+            <td>Crear un servicio</td>
+            <td>Botón + en Transporte<span class="route">/new-service</span></td>
+            <td>Escribir la dirección a mano<span class="route">/new-service</span></td>
+            <td>Importar un Excel<span class="route">/transport-list</span></td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s15-2"></td>
+            <td>Asignar un chofer</td>
+            <td>En la celda de la tabla<span class="route">/transport</span></td>
+            <td>Marcar varios y asignar en grupo<span class="route">/transport</span></td>
+            <td>Desde la ficha del servicio<span class="route">/service/:id/operations</span></td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s15-3"></td>
+            <td>Avanzar el estado de un servicio</td>
+            <td>Botón dentro de la ficha<span class="route">/service/:id</span></td>
+            <td>Desde la tabla de Transporte<span class="route">/transport</span></td>
+            <td>Desde la pantalla financiera<span class="route">/financial</span></td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s15-4"></td>
+            <td>Generar el link del chofer</td>
+            <td>Pantalla de links<span class="route">/driver-links</span></td>
+            <td>Desde la ficha del servicio<span class="route">/service/:id/operations</span></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s15-5"></td>
+            <td>Revisar y aprobar el parte</td>
+            <td>Bandeja de partes<span class="route">/driver-reports</span></td>
+            <td>Desde la ficha del servicio<span class="route">/service/:id/operations</span></td>
+            <td>Pegando el texto del WhatsApp<span class="route">/driver-reports</span></td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s15-6"></td>
+            <td>Generar el rapportino</td>
+            <td>Pantalla de rapportinos<span class="route">/rapportinos</span></td>
+            <td>Desde la ficha del servicio<span class="route">/service/:id/finance</span></td>
+            <td>Desde los reportes<span class="route">/reports</span></td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s15-7"></td>
+            <td>Crear una factura</td>
+            <td>Facturación → nueva<span class="route">/accounting</span></td>
+            <td>Botón facturar del rapportino<span class="route">/rapportinos</span></td>
+            <td>Desde la ficha del servicio<span class="route">/service/:id/finance</span></td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s15-8"></td>
+            <td>Registrar un cobro</td>
+            <td>Pantalla de pagos<span class="route">/accounting → Payments</span></td>
+            <td>Desde la ficha del servicio<span class="route">/service/:id/finance</span></td>
+            <td>Desde la pantalla financiera<span class="route">/financial</span></td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s15-9"></td>
+            <td>Gestionar usuarios</td>
+            <td>Pantalla de usuarios<span class="route">/user-management</span></td>
+            <td>Dentro de Ajustes<span class="route">/settings</span></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s15-10"></td>
+            <td>Ver el historial de lo que pasó</td>
+            <td>Auditoría<span class="route">/audit-center</span></td>
+            <td>Dentro de Ajustes<span class="route">/settings</span></td>
+            <td>Usuarios activos<span class="route">/active-users</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note"><b>Ojo:</b> dos pantallas no están en el menú de la izquierda: la de importar Excel y la de reportes. Se llega por un botón o escribiendo la dirección. Si no la encontrás en el menú, no quiere decir que no exista.</p>
+  </section>
+
+  <section data-sec="s16">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 17</span>Cerrar y dejar todo limpio<span class="time">8 minutos</span></h2>
+      <span class="badge" data-count="s16">0/5</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s16-1"><span class="body">
+        <span class="t">Después de recargar, todo sigue igual</span>
+        <span class="do">Volvé a la ficha del servicio que validaste, apretá <code>F5</code>, cerrá sesión y volvé a entrar.</span>
+        <span class="see">El estado, los importes y el historial son los mismos de antes.</span>
+        <span class="ifbad">Anotá qué cambió: si los importes se mueven solos, es un problema de plata.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s16-2"><span class="body">
+        <span class="t">Borraste todo lo que creaste con PRUEBA-</span>
+        <span class="do">Borrá tus clientes, proyectos, choferes, vehículos, proveedores y usuarios de prueba. Los servicios solo se pueden borrar si están en los primeros estados.</span>
+        <span class="see">En las listas ya no queda nada que empiece con <code>PRUEBA-</code>.</span>
+        <span class="ifbad">Anotá lo que no se pudo borrar y por qué. Si un servicio quedó validado o facturado, no se puede borrar: es a propósito.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s16-3"><span class="body">
+        <span class="t">No quedaron errores nuevos en el panel técnico</span>
+        <span class="do">Apretá <code>F12</code> y mirá la pestaña <b>Console</b>.</span>
+        <span class="see">Sin líneas rojas provocadas por lo que hiciste. Las de conexión lenta no cuentan.</span>
+        <span class="ifbad">Sacá captura del panel completo, sin recortar: el texto de arriba es el que sirve.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s16-4"><span class="body">
+        <span class="t">Cerraste sesión</span>
+        <span class="do">Apretá cerrar sesión y cerrá el navegador.</span>
+        <span class="see">Volviste a la pantalla de inicio de sesión.</span>
+        <span class="ifbad">Anotá si no te deja salir.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s16-5"><span class="body">
+        <span class="t">Armaste el informe de fallos</span>
+        <span class="do">Juntá tus anotaciones. Por cada problema: pantalla, qué apretaste, qué esperabas, qué pasó, y la captura.</span>
+        <span class="see">Una lista ordenada, de lo más grave a lo menos. Los de plata y los de datos que no se guardan van primero.</span>
+        <span class="ifbad">Si no encontraste ningún fallo, escribí igual qué probaste: "probé los 17 bloques, sin fallos" también es un resultado.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s17" class="tecnico">
+    <div class="sec-head">
+      <h2><span class="kicker">Anexo</span>Solo para quien mantiene el sistema<span class="time">No hace falta para probar la aplicación</span></h2>
+      <span class="badge" data-count="s17">0/5</span>
+    </div>
+    <p class="note">Estos pasos necesitan una consola de comandos y conocimiento técnico. <b>Si estás probando la aplicación como usuario, salteá todo este anexo.</b></p>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s17-1"><span class="body">
+        <span class="t">Copia de seguridad antes de empezar</span>
+        <span class="do">En la carpeta del proyecto: <code>node scripts/backup-snapshot.mjs</code></span>
+        <span class="see">Un archivo nuevo en <code>backups/</code> y el total de filas impreso en pantalla. Anotá ese número.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17-2"><span class="body">
+        <span class="t">Entorno y versión publicada</span>
+        <span class="do">Verificá que Node sea la versión 22 (<code>node -v</code>), las dependencias instaladas, y anotá el número de versión que está publicada.</span>
+        <span class="see">Node <code>v22.x</code>, sin errores de instalación, y la versión anotada por si hay que volver atrás.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17-3"><span class="body">
+        <span class="t">Copia de seguridad al terminar</span>
+        <span class="do">Corré otra vez <code>node scripts/backup-snapshot.mjs</code>.</span>
+        <span class="see">El total de filas se compara con el del principio. Si hay más, quedaron datos de prueba.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17-4"><span class="body">
+        <span class="t">Limpiar restos de pruebas automáticas</span>
+        <span class="do">Primero en seco: <code>node scripts/e2e/purge.mjs --dry</code>. Si lista filas, después con <code>--confirm</code>.</span>
+        <span class="see">El simulacro no borra nada; el segundo borra y lo deja registrado. Nunca toca al usuario <code>admin</code>.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17-5"><span class="body">
+        <span class="t">Si no hay contraseña de administrador</span>
+        <span class="do">Desde el editor de Apps Script, abrir <code>utils/resetAdminPassword.gs</code>, elegir la función <code>resetAdminPassword</code> y ejecutarla.</span>
+        <span class="see">Genera una contraseña nueva y la muestra <b>una sola vez</b> en el registro de ejecución. Copiala en ese momento.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <div class="empty" id="empty">No hay pasos que coincidan con lo que buscaste.</div>
+
+  <footer>
+    Transport Action · guía de prueba para usuarios · el avance se guarda en esta computadora · se puede imprimir
+  </footer>
+</main>
+
+<script>
+(function () {
+  var KEY = 'ta-checklist-facil-v1';
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('input[type=checkbox][data-id]'));
+  var fill = document.getElementById('fill');
+  var doneEl = document.getElementById('done');
+  var totalEl = document.getElementById('total');
+  var pctEl = document.getElementById('pct');
+  var q = document.getElementById('q');
+  var empty = document.getElementById('empty');
+  var hideDone = false;
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; }
+    catch (e) { return {}; }
+  }
+  function save() {
+    var out = {};
+    boxes.forEach(function (b) { if (b.checked) out[b.dataset.id] = 1; });
+    try { localStorage.setItem(KEY, JSON.stringify(out)); } catch (e) { /* archivo local sin storage */ }
+  }
+
+  var state = load();
+  boxes.forEach(function (b) {
+    b.checked = !!state[b.dataset.id];
+    var li = b.closest('li') || b.closest('tr');
+    if (li) li.classList.toggle('done', b.checked);
+  });
+
+  function update() {
+    var total = boxes.length;
+    var done = boxes.filter(function (b) { return b.checked; }).length;
+    var pct = total ? Math.round((done / total) * 100) : 0;
+    doneEl.textContent = done;
+    totalEl.textContent = total;
+    pctEl.textContent = pct + '%';
+    fill.style.width = pct + '%';
+
+    document.querySelectorAll('section[data-sec]').forEach(function (sec) {
+      var list = Array.prototype.slice.call(sec.querySelectorAll('input[data-id]'));
+      var d = list.filter(function (b) { return b.checked; }).length;
+      var badge = sec.querySelector('[data-count]');
+      if (badge) {
+        badge.textContent = d + '/' + list.length;
+        badge.classList.toggle('full', d === list.length && list.length > 0);
+      }
+    });
+  }
+
+  function applyFilter() {
+    var term = (q.value || '').trim().toLowerCase();
+    var visible = 0;
+    boxes.forEach(function (b) {
+      var row = b.closest('li') || b.closest('tr');
+      if (!row) return;
+      var text = (row.textContent || '').toLowerCase();
+      var matchTerm = !term || text.indexOf(term) !== -1;
+      var matchDone = !hideDone || !b.checked;
+      var show = matchTerm && matchDone;
+      row.classList.toggle('hide', !show);
+      if (show) visible++;
+    });
+    empty.style.display = visible === 0 ? 'block' : 'none';
+  }
+
+  boxes.forEach(function (b) {
+    b.addEventListener('change', function () {
+      var row = b.closest('li') || b.closest('tr');
+      if (row) row.classList.toggle('done', b.checked);
+      save();
+      update();
+      if (hideDone || (q.value || '').trim()) applyFilter();
+    });
+  });
+
+  q.addEventListener('input', applyFilter);
+
+  document.getElementById('toggle-done').addEventListener('click', function () {
+    hideDone = !hideDone;
+    this.textContent = hideDone ? 'Mostrar todos' : 'Ocultar los ya hechos';
+    this.setAttribute('aria-pressed', hideDone ? 'true' : 'false');
+    applyFilter();
+  });
+
+  document.getElementById('print').addEventListener('click', function () { window.print(); });
+
+  document.getElementById('reset').addEventListener('click', function () {
+    if (!window.confirm('¿Borrar todas las marcas? No se puede deshacer.')) return;
+    boxes.forEach(function (b) {
+      b.checked = false;
+      var row = b.closest('li') || b.closest('tr');
+      if (row) row.classList.remove('done');
+    });
+    save();
+    update();
+    applyFilter();
+  });
+
+  update();
+})();
+</script>
+<noscript><p style="padding:16px">Esta guía necesita JavaScript para guardar el avance. Igual se puede imprimir y marcar en papel.</p></noscript>
+</body>
+</html>
