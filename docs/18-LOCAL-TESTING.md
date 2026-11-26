@@ -112,6 +112,9 @@ node scripts/e2e/run.mjs --json reports/e2e.json --coverage
 > Si quien prueba no es técnico, dale [checklist-prueba-facil.html](checklist-prueba-facil.html):
 > el mismo recorrido explicado sin jerga, con "qué hacés / qué tenés que ver / si no pasa"
 > en cada paso. Los pasos que requieren terminal o consola quedaron aparte, en un anexo.
+> Los bloques 17 a 20 recorren la app **rol por rol** (admin, coordinador, contabilidad,
+> chofer) y verifican tanto lo que cada uno puede hacer como lo que el sistema debe negarle.
+> Para esos cuatro hace falta un usuario por rol: se crean en el bloque 12.
 
 Usar **datos de prueba** con prefijo `TEST-` en notas/proyecto, así se pueden borrar después.
 No usar producciones activas: el flujo mueve estados reales y congela breakdowns.

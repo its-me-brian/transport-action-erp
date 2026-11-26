@@ -191,7 +191,8 @@
   <div class="intro">
     <h2>Leé esto primero (2 minutos)</h2>
     <p>Esta guía no es para programadores. Es para <b>usar la aplicación como la va a usar la gente de la oficina</b> y anotar todo lo que no funcione. No hace falta saber nada de computación: solo seguir los pasos y mirar la pantalla.</p>
-    <p><b>Son unos 90 minutos en total</b>, pero está cortada en bloques. Podés hacer dos o tres bloques hoy, cerrar todo y seguir mañana: las marcas quedan guardadas.</p>
+    <p><b>Son unas dos horas en total</b>, pero está cortada en bloques. Podés hacer dos o tres bloques hoy, cerrar todo y seguir mañana: las marcas quedan guardadas.</p>
+    <p>Los bloques <b>1 a 16</b> recorren las pantallas en el orden en que se usa el sistema. Los bloques <b>17 a 20</b> son otra cosa: cada uno entra con un rol distinto (administrador, coordinador, contabilidad, chofer) y comprueba que ese rol vea lo suyo y que el resto le quede cerrado. Para esos cuatro hace falta <b>un usuario por rol</b>, que se crean en el Bloque 12.</p>
     <p><b>Tres reglas, y con eso alcanza:</b></p>
     <ol>
       <li><b>Todo lo que crees empieza con <code>PRUEBA-</code> y tu nombre.</b> Por ejemplo <code>PRUEBA-JUAN</code>. Así después se borra fácil y no se mezcla con los datos de verdad.</li>
@@ -1235,9 +1236,230 @@
     <p class="note"><b>Ojo:</b> dos pantallas no están en el menú de la izquierda: la de importar Excel y la de reportes. Se llega por un botón o escribiendo la dirección. Si no la encontrás en el menú, no quiere decir que no exista.</p>
   </section>
 
+  <section data-sec="s17a">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 17</span>Rol administrador<span class="time">8 minutos · con la cuenta admin</span></h2>
+      <span class="badge" data-count="s17a">0/6</span>
+    </div>
+    <p class="note">Los cuatro bloques que siguen prueban <b>una cosa distinta</b>: que cada rol vea y pueda exactamente lo suyo. Un sistema donde todos pueden todo funciona bien hasta el día que alguien borra algo que no debía. Acá se prueba lo contrario: que <b>también frena</b>.</p>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s17a-1"><span class="body">
+        <span class="t">El administrador ve el menú completo</span>
+        <span class="do">Entrá con la cuenta de administrador y mirá el menú de la izquierda.</span>
+        <span class="see">Están todas: Dashboard, Transport, Driver Reports, Driver Links, Rapportinos, Reconciliation, Accounting, Financial Reports, Customers, Providers, Contacts, Drivers, Vehicles, Rate Cards, Projects, Audit Center, Active Users, Users &amp; Roles, Settings y Documents.</span>
+        <span class="ifbad">Anotá qué sección falta. Si falta una, ni siquiera se puede llegar escribiendo la dirección.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17a-2"><span class="body">
+        <span class="t">Puede administrar usuarios</span>
+        <span class="do">Entrá a <b>Users &amp; Roles</b> (Usuarios).</span>
+        <span class="see">La lista con el rol y el estado de cada uno, y los botones para aprobar, cambiar el rol y resetear la contraseña.</span>
+        <span class="ifbad">Anotá si falta alguno de esos botones: sin ellos no se puede dar de alta a nadie.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17a-3"><span class="body">
+        <span class="t">Puede editar los datos de la empresa</span>
+        <span class="do">Entrá a <b>Settings</b> (Ajustes). Cambiá el teléfono de la sociedad emisora y guardá.</span>
+        <span class="see">Los campos se dejan escribir (no están en gris), el botón de guardar responde, y después de apretar <code>F5</code> el teléfono nuevo sigue ahí.</span>
+        <span class="ifbad">Si guarda pero al recargar vuelve al valor viejo, anotalo: ya pasó una vez y es un bug que no avisa nada.</span>
+        <span class="alt">es la misma pantalla que ya viste en el Bloque 1.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17a-4"><span class="body">
+        <span class="t">Es el único que puede crear tarjetas de tarifas</span>
+        <span class="do">Entrá a <b>Rate Cards</b> y creá una nueva con un nombre que empiece con <code>PRUEBA-</code>.</span>
+        <span class="see">Se guarda y aparece en la lista.</span>
+        <span class="ifbad">Anotá si el botón de crear no aparece, o si guarda y no queda.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17a-5"><span class="body">
+        <span class="t">Ve el historial de todo lo que pasó</span>
+        <span class="do">Entrá a <b>Audit Center</b> (Auditoría) y buscá tu propio usuario.</span>
+        <span class="see">Los movimientos con fecha, usuario y qué cambió, en orden.</span>
+        <span class="ifbad">Anotá si la pantalla queda vacía.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17a-6"><span class="body">
+        <span class="t">Ve quién está conectado en este momento</span>
+        <span class="do">Entrá a <b>Active Users</b>.</span>
+        <span class="see">Aparecés vos, con la sesión abierta.</span>
+        <span class="ifbad">Anotá si dice que no hay nadie aunque estés adentro.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s17b">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 18</span>Rol coordinador<span class="time">12 minutos · necesita un usuario con rol coordinador</span></h2>
+      <span class="badge" data-count="s17b">0/7</span>
+    </div>
+    <p class="note">El coordinador carga el día a día: proyectos, servicios, choferes y el rapportino del cliente. <b>No</b> factura ni cobra, y no toca usuarios. Si todavía no tenés un usuario con este rol, crealo antes desde <b>Users &amp; Roles</b> con la cuenta de administrador (Bloque 12).</p>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s17b-1"><span class="body">
+        <span class="t">Entra sin errores y cae en el tablero</span>
+        <span class="do">Cerrá sesión y entrá con el usuario coordinador.</span>
+        <span class="see">Entra y aparece el tablero (Dashboard), con datos.</span>
+        <span class="ifbad">Anotá si queda en una pantalla en blanco o en "sin acceso": eso ya pasó con usuarios recién creados.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17b-2"><span class="body">
+        <span class="t">El menú es más corto, y eso está bien</span>
+        <span class="do">Mirá el menú de la izquierda.</span>
+        <span class="see">Están Dashboard, Transport, Driver Reports, Driver Links, Rapportinos, Reconciliation, Customers, Providers, Contacts, Drivers, Vehicles, Rate Cards, Projects, Active Users, Settings y Documents. <b>No</b> están Accounting, Financial Reports ni Users &amp; Roles.</span>
+        <span class="ifbad">Que falten secciones no es un error; que aparezca una de más, sí. Anotá cuál.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17b-3"><span class="body">
+        <span class="t">No puede entrar a Contabilidad ni escribiendo la dirección</span>
+        <span class="do">En la barra de arriba, agregá <code>/accounting</code> al final de la dirección y apretá Enter.</span>
+        <span class="see">Una pantalla que dice que no tenés acceso, con un botón para volver a donde sí podés.</span>
+        <span class="ifbad">Anotá si entra igual. Es grave: la pantalla y el servidor tienen que frenarlo los dos.</span>
+        <span class="alt">probá lo mismo con <code>/user-management</code>.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17b-4"><span class="body">
+        <span class="t">En Ajustes solo puede mirar</span>
+        <span class="do">Entrá a <b>Settings</b>.</span>
+        <span class="see">Los campos están en gris y arriba avisa que es solo lectura, que un administrador tiene que hacer los cambios.</span>
+        <span class="ifbad">Anotá si te deja editar y guardar: la configuración de la empresa es solo del administrador.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17b-5"><span class="body">
+        <span class="t">Puede validar un servicio</span>
+        <span class="do">Abrí tu servicio de prueba y llevalo hasta validar, como en el Bloque 5.</span>
+        <span class="see">La validación funciona y los importes quedan fijos.</span>
+        <span class="ifbad">Anotá el mensaje si lo rechaza: validar es tarea del área operativa.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17b-6"><span class="body">
+        <span class="t">Puede resolver una conciliación</span>
+        <span class="do">En la ficha del servicio, abrí la parte de conciliación y cargá los datos reales del viaje.</span>
+        <span class="see">Se puede cargar y queda como <b>Resuelto</b>.</span>
+        <span class="ifbad">Anotá si el botón de resolver no está: conciliar es tarea del coordinador.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17b-7"><span class="body">
+        <span class="t">No puede facturar</span>
+        <span class="do">Abrí un rapportino ya aceptado y buscá el botón de facturar.</span>
+        <span class="see">El botón no está. Facturar es de contabilidad o del administrador.</span>
+        <span class="ifbad">Si el botón está y factura, anotalo: se rompió la frontera entre quien arma el trabajo y quien cobra.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s17c">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 19</span>Rol contabilidad<span class="time">12 minutos · necesita un usuario con rol contabilidad</span></h2>
+      <span class="badge" data-count="s17c">0/7</span>
+    </div>
+    <p class="note">Contabilidad recibe el trabajo ya validado y lo convierte en plata: factura, emite, cobra y paga. <b>No</b> valida servicios ni resuelve conciliaciones. Este bloque prueba justo esa frontera.</p>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s17c-1"><span class="body">
+        <span class="t">Entra sin errores y cae en el tablero</span>
+        <span class="do">Cerrá sesión y entrá con el usuario de contabilidad.</span>
+        <span class="see">Entra y aparece el tablero, con datos.</span>
+        <span class="ifbad">Anotá si queda en blanco o en "sin acceso".</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17c-2"><span class="body">
+        <span class="t">Ve la plata, pero no los partes del chofer</span>
+        <span class="do">Mirá el menú de la izquierda.</span>
+        <span class="see">Están Dashboard, Transport, Rapportinos, Reconciliation, Accounting, Financial Reports, Customers, Providers, Contacts, Drivers, Vehicles, Projects, Audit Center, Settings y Documents. <b>No</b> están Driver Reports, Driver Links, Rate Cards, Active Users ni Users &amp; Roles.</span>
+        <span class="ifbad">Anotá qué sección de más aparece.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17c-3"><span class="body">
+        <span class="t">Factura el rapportino que armó el coordinador</span>
+        <span class="do">Abrí el rapportino que el coordinador dejó aceptado y apretá facturar.</span>
+        <span class="see">Se crea la factura en borrador, con los servicios del período y el total.</span>
+        <span class="ifbad">Anotá si el botón no está: es el traspaso entre las dos áreas y no puede quedar cortado.</span>
+        <span class="alt">también desde <b>Accounting</b>, con el botón de nueva factura.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17c-4"><span class="body">
+        <span class="t">Emite, anula y cobra</span>
+        <span class="do">Emití la factura, registrá un cobro, confirmalo. Después intentá editar la factura ya emitida.</span>
+        <span class="see">Emitir y cobrar funcionan; editar una factura emitida se rechaza y la única salida es anularla con un motivo.</span>
+        <span class="ifbad">Anotá el paso que falla y el mensaje tal cual aparece.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17c-5"><span class="body">
+        <span class="t">No puede validar un servicio</span>
+        <span class="do">Abrí un servicio pendiente de validar y buscá el botón de validar.</span>
+        <span class="see">El botón no está. Y si alguien lo forzara por fuera, el servidor lo rechaza con un mensaje de permiso.</span>
+        <span class="ifbad">Si valida, anotalo: validar congela los importes del servicio y eso es del área operativa.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17c-6"><span class="body">
+        <span class="t">Puede mirar una conciliación, pero no resolverla</span>
+        <span class="do">Abrí la conciliación de un servicio y buscá el botón de resolver.</span>
+        <span class="see">Se puede abrir y leer, pero el botón de resolver no está.</span>
+        <span class="ifbad">Anotá si puede resolverla.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17c-7"><span class="body">
+        <span class="t">Puede ver el historial de auditoría</span>
+        <span class="do">Entrá a <b>Audit Center</b>.</span>
+        <span class="see">La pantalla abre y muestra los movimientos, con quién y cuándo.</span>
+        <span class="ifbad">Anotá si no tiene acceso: contabilidad sí tiene que poder revisar el historial.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s17d">
+    <div class="sec-head">
+      <h2><span class="kicker">Bloque 20</span>Rol chofer<span class="time">10 minutos · cuenta y link público</span></h2>
+      <span class="badge" data-count="s17d">0/6</span>
+    </div>
+    <p class="note">El chofer casi nunca entra con usuario y contraseña: usa el link que se le manda por WhatsApp (Bloque 6). Este bloque prueba <b>las dos cosas</b>: que si tiene cuenta vea solo lo suyo, y que por el link pueda cargar su parte sin tener cuenta.</p>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s17d-1"><span class="body">
+        <span class="t">Con su cuenta cae directo en sus partes</span>
+        <span class="do">Cerrá sesión y entrá con el usuario chofer.</span>
+        <span class="see">Entra a <b>Driver Reports</b> (los partes), no al tablero.</span>
+        <span class="ifbad">Anotá si cae en el tablero o en una pantalla vacía.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17d-2"><span class="body">
+        <span class="t">El menú es mínimo</span>
+        <span class="do">Mirá el menú de la izquierda.</span>
+        <span class="see">Solo <b>Driver Reports</b> y <b>Documents</b>. Nada de Transport, Contabilidad, Usuarios ni Ajustes.</span>
+        <span class="ifbad">Anotá qué otra sección aparece.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17d-3"><span class="body">
+        <span class="t">Ve solo lo suyo, no lo de los otros choferes</span>
+        <span class="do">Mirá la lista de partes.</span>
+        <span class="see">Solo los servicios asignados a él.</span>
+        <span class="ifbad">Si ve los de otro chofer, anotalo como grave: son datos de otra persona.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17d-4"><span class="body">
+        <span class="t">Puede cargar y enviar su parte</span>
+        <span class="do">Abrí uno de sus servicios, cargá kilómetros, horas y gastos, y enviá.</span>
+        <span class="see">Queda esperando revisión, para que lo apruebe el coordinador.</span>
+        <span class="ifbad">Anotá si no puede guardar o si no aparece el botón de enviar.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17d-5"><span class="body">
+        <span class="t">No puede aprobarse su propio parte</span>
+        <span class="do">Buscá el botón de aprobar en su propio parte.</span>
+        <span class="see">No está. Aprobar es del área operativa, no de quien hizo el viaje.</span>
+        <span class="ifbad">Si puede aprobarse solo, anotalo: es un control que falta.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s17d-6"><span class="body">
+        <span class="t">Sin cuenta, el link hace lo mismo</span>
+        <span class="do">Generá el link de un servicio suyo (Bloque 6) y abrilo en una ventana de incógnito.</span>
+        <span class="see">El formulario abre sin pedir usuario ni contraseña, y lo que carga aparece después en Driver Reports.</span>
+        <span class="ifbad">Anotá si pide iniciar sesión (el chofer no tiene por qué tener cuenta) o si lo cargado no aparece.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
   <section data-sec="s16">
     <div class="sec-head">
-      <h2><span class="kicker">Bloque 17</span>Cerrar y dejar todo limpio<span class="time">8 minutos</span></h2>
+      <h2><span class="kicker">Bloque 21</span>Cerrar y dejar todo limpio<span class="time">8 minutos</span></h2>
       <span class="badge" data-count="s16">0/5</span>
     </div>
     <ul class="list">
