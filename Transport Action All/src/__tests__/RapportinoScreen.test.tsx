@@ -38,6 +38,13 @@ vi.mock('../services/api', () => ({
   payRapportinoDriver: (...args: any[]) => mockPayRapportinoDriver(...args),
   removeServiceFromRapportino: (...args: any[]) => mockRemoveServiceFromRapportino(...args),
   generateDriverLink: (...args: any[]) => mockGenerateDriverLink(...args),
+  // Catálogos para traducir IDs a nombres y items del detalle.
+  getProjects: () => Promise.resolve([]),
+  getClients: () => Promise.resolve([]),
+  getDrivers: () => Promise.resolve([]),
+  getCollaborators: () => Promise.resolve([]),
+  getServices: () => Promise.resolve([]),
+  getRapportinoItems: () => Promise.resolve([]),
 }));
 
 vi.mock('../contexts/ToastContext', () => ({

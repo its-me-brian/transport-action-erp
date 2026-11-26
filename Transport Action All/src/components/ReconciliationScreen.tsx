@@ -15,8 +15,11 @@ import { ScreenId, formatTimeDisplay } from '../types';
 import {
   ReconciliationDTO,
   getReconciliations,
-  resolveReconciliation
+  resolveReconciliation,
+  getServices,
+  getProjects
 } from '../services/api';
+import { buildNameMap, buildServiceMap, nameOf, serviceLabel, ServiceSummary } from '../utils/serviceLabels';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useOpenService } from '../hooks/useOpenService';
@@ -38,9 +41,12 @@ interface ReconciliationCardProps {
   getStatusIcon: (status: string) => React.ReactNode;
   getStatusColor: (status: string) => string;
   diffClass: (prod: any, driver: any) => string;
+  /** `07/11/2026 · 08:30 · WANDERING IN ROME`, o el ID si no hay servicio. */
+  serviceName: string;
+  projectName: string;
 }
 
-const ReconciliationCard = React.memo(function ReconciliationCard({ r, expandedId, setExpandedId, openService, openResolveModal, hasDifferences, getStatusIcon, getStatusColor, diffClass }: ReconciliationCardProps) {
+const ReconciliationCard = React.memo(function ReconciliationCard({ r, expandedId, setExpandedId, openService, openResolveModal, hasDifferences, getStatusIcon, getStatusColor, diffClass, serviceName, projectName }: ReconciliationCardProps) {
   const isExpanded = expandedId === r.id;
   const diffs = hasDifferences(r);
   return (
@@ -65,13 +71,14 @@ const ReconciliationCard = React.memo(function ReconciliationCard({ r, expandedI
           <div className="flex items-center gap-2">
             <button
               onClick={(e) => { e.stopPropagation(); openService(r.serviceId); }}
+              title={r.serviceId}
               className="font-medium text-on-surface truncate hover:text-primary hover:underline cursor-pointer text-left"
-              aria-label={`Open service ${r.serviceId}`}
+              aria-label={`Open service ${serviceName}`}
             >
-              {r.serviceId}
+              {serviceName}
             </button>
             <span className="text-xs text-on-surface-variant">→</span>
-            <span className="text-sm text-on-surface-variant truncate">{r.projectId}</span>
+            <span className="text-sm text-on-surface-variant truncate">{projectName || r.projectId}</span>
           </div>
         </div>
         {diffs && r.status !== 'Resuelto' && (
@@ -159,6 +166,10 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
   const { showToast } = useToast();
   const openService = useOpenService();
   const [reconciliations, setReconciliations] = useState<ReconciliationDTO[]>([]);
+  // Catálogos para traducir IDs a etiquetas. Si fallan, las tarjetas muestran el
+  // ID como antes: la pantalla nunca queda inservible por un lookup.
+  const [services, setServices] = useState<Record<string, ServiceSummary>>({});
+  const [projects, setProjects] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -202,15 +213,30 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
     loadReconciliations();
   }, [statusFilter]);
 
+  useEffect(() => {
+    const loadLabels = async () => {
+      try {
+        const [serviceList, projectList] = await Promise.all([getServices(), getProjects()]);
+        setServices(buildServiceMap(serviceList));
+        setProjects(buildNameMap(projectList));
+      } catch (err) {
+        console.error('Error loading reconciliation labels:', err);
+      }
+    };
+    loadLabels();
+  }, []);
+
   const filtered = useMemo(() => reconciliations.filter(r => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       return r.serviceId.toLowerCase().includes(q) ||
              r.projectId.toLowerCase().includes(q) ||
-             r.id.toLowerCase().includes(q);
+             r.id.toLowerCase().includes(q) ||
+             serviceLabel(services[r.serviceId], r.serviceId).toLowerCase().includes(q) ||
+             nameOf(projects, r.projectId).toLowerCase().includes(q);
     }
     return true;
-  }), [reconciliations, searchQuery]);
+  }), [reconciliations, searchQuery, services, projects]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -330,8 +356,8 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search by service, project, or ID..."
-              aria-label="Search by service, project, or ID"
+              placeholder="Search by client, date, service or ID..."
+              aria-label="Search by client, date, service or ID"
               className="w-full pl-9 pr-3 py-2 text-sm bg-surface-container border border-outline-variant rounded-lg focus:outline-none focus:border-primary"
             />
           </div>
@@ -393,6 +419,8 @@ export default function ReconciliationScreen({ onNavigate }: ReconciliationScree
                   getStatusIcon={getStatusIcon}
                   getStatusColor={getStatusColor}
                   diffClass={diffClass}
+                  serviceName={serviceLabel(services[r.serviceId], r.serviceId)}
+                  projectName={nameOf(projects, r.projectId)}
                 />
               );
             })}

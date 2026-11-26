@@ -24,6 +24,9 @@ const mockResolveReconciliation = vi.fn();
 vi.mock('../services/api', () => ({
   getReconciliations: (...args: any[]) => mockGetReconciliations(...args),
   resolveReconciliation: (...args: any[]) => mockResolveReconciliation(...args),
+  // Lookups de etiquetas: sin datos, la tarjeta muestra el ID del servicio.
+  getServices: () => Promise.resolve([]),
+  getProjects: () => Promise.resolve([]),
 }));
 
 vi.mock('../contexts/AuthContext', () => ({
@@ -144,7 +147,7 @@ describe('ReconciliationScreen', () => {
       expect(screen.getByText('SVC-001')).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByPlaceholderText('Search by service, project, or ID...'), { target: { value: 'SVC-001' } });
+    fireEvent.change(screen.getByPlaceholderText('Search by client, date, service or ID...'), { target: { value: 'SVC-001' } });
     expect(screen.getByText('SVC-001')).toBeInTheDocument();
     expect(screen.queryByText('SVC-002')).not.toBeInTheDocument();
   });
@@ -156,7 +159,7 @@ describe('ReconciliationScreen', () => {
       expect(screen.getByText('SVC-001')).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByPlaceholderText('Search by service, project, or ID...'), { target: { value: 'PRJ-002' } });
+    fireEvent.change(screen.getByPlaceholderText('Search by client, date, service or ID...'), { target: { value: 'PRJ-002' } });
     expect(screen.getByText('SVC-002')).toBeInTheDocument();
     expect(screen.queryByText('SVC-001')).not.toBeInTheDocument();
   });

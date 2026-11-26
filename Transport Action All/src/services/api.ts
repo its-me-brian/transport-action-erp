@@ -1866,6 +1866,15 @@ export interface RapportinoItemDTO {
   createdAt: string;
 }
 
+/**
+ * Items (servicios) de un rapportino de cliente.
+ * El parámetro es obligatorio a propósito: `apiGetRapportinoItems` sin filtro
+ * devuelve TODOS los items de la hoja, que nunca es lo que quiere una tarjeta.
+ */
+export async function getRapportinoItems(rapportinoClientId: string): Promise<RapportinoItemDTO[]> {
+  return gasGetWithRetry('getRapportinoItems', { rapportinoClientId });
+}
+
 // --- Rapportino Client ---
 
 export async function getRapportinoClients(filters?: {

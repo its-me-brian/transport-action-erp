@@ -68,13 +68,17 @@ interface ClientCardProps {
   onStatusUpdate: (id: string, action: 'review' | 'send' | 'accept' | 'facturar') => void;
   onView: (r: RapportinoClientDTO) => void;
   formatDate: (d: string) => string;
+  /** Nombres ya resueltos; si faltan, la tarjeta cae al ID. */
+  names?: { entity?: string; project?: string };
 }
 
 export const ClientRapportinoCard = React.memo(function ClientRapportinoCard({
-  rapportino: r, isUpdating, nextAction, nextLabel, onStatusUpdate, onView, formatDate
+  rapportino: r, isUpdating, nextAction, nextLabel, onStatusUpdate, onView, formatDate, names
 }: ClientCardProps) {
   const sc = CLIENT_STATUS_CONFIG[r.status] || CLIENT_STATUS_CONFIG.Borrador;
   const StatusIcon = sc.icon;
+  const entityLabel = names?.entity || r.clientId;
+  const projectLabel = r.projectId ? (names?.project || r.projectId) : '';
   return (
     <motion.div
       layout
@@ -95,8 +99,8 @@ export const ClientRapportinoCard = React.memo(function ClientRapportinoCard({
           <span className="text-[11px] text-on-surface-variant font-mono">{r.id}</span>
         </div>
         <div className="flex items-center gap-3 mt-1 text-[12px] text-on-surface-variant">
-          <span className="font-medium">{r.clientId}</span>
-          {r.projectId && <span>{r.projectId}</span>}
+          <span className="font-medium">{entityLabel}</span>
+          {projectLabel && <span>{projectLabel}</span>}
         </div>
         <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
           <span className="flex items-center gap-1">
@@ -143,13 +147,17 @@ interface DriverCardProps {
   onGenerateLink: (r: RapportinoDriverDTO) => void;
   onView: (r: RapportinoDriverDTO) => void;
   formatDate: (d: string) => string;
+  /** Nombres ya resueltos; si faltan, la tarjeta cae al ID. */
+  names?: { entity?: string; project?: string };
 }
 
 export const DriverRapportinoCard = React.memo(function DriverRapportinoCard({
-  rapportino: r, isUpdating, nextAction, nextLabel, linkLoading, onStatusUpdate, onGenerateLink, onView, formatDate
+  rapportino: r, isUpdating, nextAction, nextLabel, linkLoading, onStatusUpdate, onGenerateLink, onView, formatDate, names
 }: DriverCardProps) {
   const sc = DRIVER_STATUS_CONFIG[r.status] || DRIVER_STATUS_CONFIG.Borrador;
   const StatusIcon = sc.icon;
+  const entityLabel = names?.entity || r.driverId;
+  const projectLabel = r.projectId ? (names?.project || r.projectId) : '';
   return (
     <motion.div
       layout
@@ -170,8 +178,8 @@ export const DriverRapportinoCard = React.memo(function DriverRapportinoCard({
           <span className="text-[11px] text-on-surface-variant font-mono">{r.id}</span>
         </div>
         <div className="flex items-center gap-3 mt-1 text-[12px] text-on-surface-variant">
-          <span className="font-medium">{r.driverId}</span>
-          {r.projectId && <span>{r.projectId}</span>}
+          <span className="font-medium">{entityLabel}</span>
+          {projectLabel && <span>{projectLabel}</span>}
         </div>
         <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
           <span className="flex items-center gap-1">
@@ -226,13 +234,17 @@ interface CollaboratorCardProps {
   onStatusUpdate: (id: string, action: 'send' | 'accept' | 'pay') => void;
   onView: (r: RapportinoCollaboratorDTO) => void;
   formatDate: (d: string) => string;
+  /** Nombres ya resueltos; si faltan, la tarjeta cae al ID. */
+  names?: { entity?: string; project?: string };
 }
 
 export const CollaboratorRapportinoCard = React.memo(function CollaboratorRapportinoCard({
-  rapportino: r, isUpdating, nextAction, nextLabel, onStatusUpdate, onView, formatDate
+  rapportino: r, isUpdating, nextAction, nextLabel, onStatusUpdate, onView, formatDate, names
 }: CollaboratorCardProps) {
   const sc = COLLABORATOR_STATUS_CONFIG[r.status] || COLLABORATOR_STATUS_CONFIG.Borrador;
   const StatusIcon = sc.icon;
+  const entityLabel = names?.entity || r.collaboratorId;
+  const projectLabel = r.projectId ? (names?.project || r.projectId) : '';
   return (
     <motion.div
       layout
@@ -253,8 +265,8 @@ export const CollaboratorRapportinoCard = React.memo(function CollaboratorRappor
           <span className="text-[11px] text-on-surface-variant font-mono">{r.id}</span>
         </div>
         <div className="flex items-center gap-3 mt-1 text-[12px] text-on-surface-variant">
-          <span className="font-medium">{r.collaboratorId}</span>
-          {r.projectId && <span>{r.projectId}</span>}
+          <span className="font-medium">{entityLabel}</span>
+          {projectLabel && <span>{projectLabel}</span>}
         </div>
         <div className="flex items-center gap-3 mt-1 text-[11px] text-on-surface-variant">
           <span className="flex items-center gap-1">

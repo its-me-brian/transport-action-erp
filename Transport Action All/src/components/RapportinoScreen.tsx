@@ -13,6 +13,8 @@ import RapportinoDetailModal from './RapportinoDetailModal';
 import DriverLinkModal from './DriverLinkModal';
 import { Skeleton } from './ui/Skeleton';
 import { useOpenService } from '../hooks/useOpenService';
+import { nameOf } from '../utils/serviceLabels';
+import { RapportinoClientDTO, RapportinoDriverDTO, RapportinoCollaboratorDTO } from '../services/api';
 
 interface RapportinoScreenProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
@@ -33,7 +35,8 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
     filterCollaborator, setFilterCollaborator,
     filterProject, setFilterProject,
     clientsList, driversList, collaboratorsList, projectsList,
-    viewTarget, setViewTarget,
+    names, detailItems, detailLoading, openDetail, closeDetail,
+    viewTarget,
     updatingStatus,
     driverLinkModal, setDriverLinkModal,
     filteredClients, filteredDrivers, filteredCollaborators,
@@ -46,6 +49,19 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
     handleClearFilters,
     onNavigate: nav,
   } = useRapportino({ onNavigate });
+
+  // El modal recibe el nombre ya resuelto: la tarjeta y el detalle muestran
+  // siempre lo mismo, sin dos formas distintas de buscar el nombre.
+  const detailNames = viewTarget
+    ? {
+        entity: activeTab === 'client'
+          ? nameOf(names.clients, (viewTarget as RapportinoClientDTO).clientId)
+          : activeTab === 'driver'
+          ? nameOf(names.drivers, (viewTarget as RapportinoDriverDTO).driverId)
+          : nameOf(names.collaborators, (viewTarget as RapportinoCollaboratorDTO).collaboratorId),
+        project: nameOf(names.projects, viewTarget.projectId),
+      }
+    : undefined;
 
   return (
     <div id="rapportino-screen" className="flex-1 w-full max-w-[1280px] mx-auto space-y-4 p-4 md:p-6 overflow-y-auto h-full pb-24">
@@ -181,8 +197,9 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
               nextAction={getClientNextAction(r.status as ClientStatus)}
               nextLabel={r.status ? CLIENT_NEXT_STATUS_LABELS[r.status] : null}
               onStatusUpdate={handleClientStatusUpdate}
-              onView={(rec) => setViewTarget(rec)}
+              onView={openDetail}
               formatDate={formatDate}
+              names={{ entity: nameOf(names.clients, r.clientId), project: nameOf(names.projects, r.projectId) }}
             />
           ))}
           </AnimatePresence>
@@ -198,8 +215,9 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
                 linkLoading={driverLinkModal.loading && driverLinkModal.rapportino?.id === r.id}
                 onStatusUpdate={handleDriverStatusUpdate}
                 onGenerateLink={handleGenerateDriverLink}
-                onView={(rec) => setViewTarget(rec)}
+                onView={openDetail}
                 formatDate={formatDate}
+                names={{ entity: nameOf(names.drivers, r.driverId), project: nameOf(names.projects, r.projectId) }}
               />
             ))}
           </AnimatePresence>
@@ -213,8 +231,9 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
                 nextAction={getCollaboratorNextAction(r.status as CollaboratorStatus)}
                 nextLabel={r.status ? COLLABORATOR_NEXT_STATUS_LABELS[r.status] : null}
                 onStatusUpdate={handleCollaboratorStatusUpdate}
-                onView={(rec) => setViewTarget(rec)}
+                onView={openDetail}
                 formatDate={formatDate}
+                names={{ entity: nameOf(names.collaborators, r.collaboratorId), project: nameOf(names.projects, r.projectId) }}
               />
             ))}
           </AnimatePresence>
@@ -225,9 +244,13 @@ export default function RapportinoScreen({ onNavigate }: RapportinoScreenProps) 
         <RapportinoDetailModal
           viewTarget={viewTarget}
           activeTab={activeTab}
-          onClose={() => setViewTarget(null)}
+          onClose={closeDetail}
           formatDate={formatDate}
           formatCurrency={formatCurrency}
+          names={detailNames}
+          items={detailItems}
+          itemsLoading={detailLoading}
+          services={names.services}
         />
       )}
 

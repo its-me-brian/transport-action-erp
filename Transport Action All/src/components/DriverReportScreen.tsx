@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { ClipboardCheck, Search, Loader2, CheckCircle, XCircle, Clock, Eye, X } from 'lucide-react';
 import { ScreenId } from '../types';
-import { getDriverReports, getDriverReport, approveDriverReport, rejectDriverReport, DriverReportDTO } from '../services/api';
+import { getDriverReports, getDriverReport, approveDriverReport, rejectDriverReport, DriverReportDTO, getServices, getDrivers } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import { getErrorMessage } from '../utils/errorUtils';
+import { buildNameMap, buildServiceMap, nameOf, ServiceSummary, serviceLabel } from '../utils/serviceLabels';
 import { Skeleton } from './ui/Skeleton';
 
 interface Props { onNavigate: (screen: ScreenId) => void; }
@@ -15,12 +16,16 @@ const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; bg
 };
 const fmt = (n: number) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
 
-const ReportCardItem = React.memo(function ReportCardItem({ r, isProcessing, onApprove, onReject, onView }: {
+const ReportCardItem = React.memo(function ReportCardItem({ r, isProcessing, onApprove, onReject, onView, serviceName, driverName }: {
   r: DriverReportDTO;
   isProcessing: boolean;
   onApprove: (r: DriverReportDTO) => void;
   onReject: (r: DriverReportDTO) => void;
   onView: (r: DriverReportDTO) => void;
+  /** `07/11/2026 · 08:30 · WANDERING IN ROME`, o el ID si no hay servicio. */
+  serviceName: string;
+  /** Nombre del chofer que envió el parte, o su ID si no está en el catálogo. */
+  driverName: string;
 }) {
   const cfg = STATUS_CONFIG[r.status] || STATUS_CONFIG.Pendiente;
   const Icon = cfg.icon;
@@ -30,7 +35,8 @@ const ReportCardItem = React.memo(function ReportCardItem({ r, isProcessing, onA
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${cfg.bg} ${cfg.color}`}><Icon className="w-3 h-3" />{cfg.label}</span>
           <span className="text-[10px] text-on-surface-variant">v{r.version}</span>
-          <span className="text-[10px] text-on-surface-variant">Service: {r.serviceId}</span>
+          <span className="text-[10px] font-medium text-on-surface truncate" title={r.driverId}>{driverName}</span>
+          <span className="text-[10px] text-on-surface-variant truncate" title={r.serviceId}>{serviceName}</span>
         </div>
         <div className="flex items-center gap-4 mt-1 text-[11px] text-on-surface-variant">
           {r.kmExtra > 0 && <span>Km Extra: {r.kmExtra}</span>}
@@ -58,6 +64,10 @@ const ReportCardItem = React.memo(function ReportCardItem({ r, isProcessing, onA
 export default function DriverReportScreen({ onNavigate }: Props) {
   const { showToast } = useToast();
   const [reports, setReports] = useState<DriverReportDTO[]>([]);
+  // Etiquetas legibles por serviceId. Si el lookup falla, la tarjeta muestra el ID.
+  const [services, setServices] = useState<Record<string, ServiceSummary>>({});
+  // Nombres de choferes por id: el parte se aprueba mirando quién lo envió.
+  const [drivers, setDrivers] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -68,13 +78,30 @@ export default function DriverReportScreen({ onNavigate }: Props) {
 
   useEffect(() => { loadData(); }, []);
 
+  useEffect(() => {
+    // Cada catálogo con su propio catch: si falla, la pantalla sigue mostrando
+    // los IDs en vez de quedarse vacía.
+    getServices()
+      .then(list => setServices(buildServiceMap(list)))
+      .catch(err => console.error('Error loading services for report labels:', err));
+    getDrivers()
+      .then(list => setDrivers(buildNameMap(list)))
+      .catch(err => console.error('Error loading drivers for report labels:', err));
+  }, []);
+
   const loadData = async () => {
     setIsLoading(true);
     try { setReports(await getDriverReports()); } finally { setIsLoading(false); }
   };
 
   const filtered = reports.filter(r => {
-    const matchSearch = !searchQuery || r.id.toLowerCase().includes(searchQuery.toLowerCase()) || r.serviceId.toLowerCase().includes(searchQuery.toLowerCase()) || r.driverId.toLowerCase().includes(searchQuery.toLowerCase());
+    const q = searchQuery.toLowerCase();
+    const matchSearch = !searchQuery
+      || r.id.toLowerCase().includes(q)
+      || r.serviceId.toLowerCase().includes(q)
+      || r.driverId.toLowerCase().includes(q)
+      || nameOf(drivers, r.driverId).toLowerCase().includes(q)
+      || serviceLabel(services[r.serviceId], r.serviceId).toLowerCase().includes(q);
     const matchStatus = statusFilter === 'All' || r.status === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -146,6 +173,8 @@ export default function DriverReportScreen({ onNavigate }: Props) {
             onApprove={(report) => handleApprove(report)}
             onReject={(report) => setRejectTarget(report)}
             onView={(report) => setViewTarget(report)}
+            serviceName={serviceLabel(services[r.serviceId], r.serviceId)}
+            driverName={nameOf(drivers, r.driverId)}
           />
         ))}
       </div>
@@ -159,8 +188,8 @@ export default function DriverReportScreen({ onNavigate }: Props) {
               <button onClick={() => setViewTarget(null)} aria-label="Close modal" className="p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"><X className="w-4 h-4 text-on-surface-variant" /></button>
             </div>
             <div className="px-5 py-4 space-y-2 text-[13px] overflow-y-auto flex-1 min-h-0">
-              <div className="grid grid-cols-2 gap-2"><span className="text-on-surface-variant">Service:</span><span>{viewTarget.serviceId}</span></div>
-              <div className="grid grid-cols-2 gap-2"><span className="text-on-surface-variant">Driver:</span><span>{viewTarget.driverId}</span></div>
+              <div className="grid grid-cols-2 gap-2"><span className="text-on-surface-variant">Service:</span><span title={viewTarget.serviceId}>{serviceLabel(services[viewTarget.serviceId], viewTarget.serviceId)}</span></div>
+              <div className="grid grid-cols-2 gap-2"><span className="text-on-surface-variant">Driver:</span><span title={viewTarget.driverId}>{nameOf(drivers, viewTarget.driverId)}</span></div>
               <div className="grid grid-cols-2 gap-2"><span className="text-on-surface-variant">Version:</span><span>v{viewTarget.version}</span></div>
               <div className="grid grid-cols-2 gap-2"><span className="text-on-surface-variant">Status:</span><span>{viewTarget.status}</span></div>
               <hr className="border-outline-variant" />

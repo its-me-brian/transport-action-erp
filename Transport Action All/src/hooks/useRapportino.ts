@@ -5,9 +5,11 @@ import {
   getRapportinoClients,
   getRapportinoDrivers,
   getRapportinoCollaborators,
+  getRapportinoItems,
   RapportinoClientDTO,
   RapportinoDriverDTO,
   RapportinoCollaboratorDTO,
+  RapportinoItemDTO,
   reviewRapportinoClient,
   sendRapportinoClient,
   acceptRapportinoClient,
@@ -20,19 +22,20 @@ import {
   acceptRapportinoCollaborator,
   payRapportinoCollaborator,
   removeServiceFromRapportino,
-  RapportinoItemDTO,
   generateDriverLink,
   DriverLinkDTO,
   getProjects,
   getClients,
   getDrivers,
   getCollaborators,
+  getServices,
   Project,
   ClientDTO,
   DriverRecord,
   CollaboratorDTO
 } from '../services/api';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
+import { buildNameMap, buildServiceMap, nameOf, ServiceLike } from '../utils/serviceLabels';
 import {
   CLIENT_STATUS_CONFIG,
   DRIVER_STATUS_CONFIG,
@@ -76,8 +79,13 @@ export function useRapportino({ onNavigate }: UseRapportinoProps) {
   const [driversList, setDriversList] = useState<DriverRecord[]>([]);
   const [collaboratorsList, setCollaboratorsList] = useState<CollaboratorDTO[]>([]);
   const [projectsList, setProjectsList] = useState<Project[]>([]);
+  // Servicios del rango visible: la tarjeta es por período, pero el detalle y el
+  // PDF necesitan fecha, hora y cliente de cada servicio del rapportino.
+  const [servicesList, setServicesList] = useState<ServiceLike[]>([]);
 
   const [viewTarget, setViewTarget] = useState<RapportinoClientDTO | RapportinoDriverDTO | RapportinoCollaboratorDTO | null>(null);
+  const [detailItems, setDetailItems] = useState<RapportinoItemDTO[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
@@ -126,13 +134,21 @@ export function useRapportino({ onNavigate }: UseRapportinoProps) {
   useEffect(() => {
     const loadSelectData = async () => {
       try {
-        const [projects, clients, drivers, collaborators] = await Promise.all([
-          getProjects(), getClients(), getDrivers(), getCollaborators()
+        // Los servicios se piden en paralelo y con su propio catch: son solo para
+        // traducir IDs a etiquetas. Si esa llamada falla, los filtros siguen
+        // funcionando y las tarjetas muestran el ID como antes.
+        const servicesPromise = getServices().catch(err => {
+          console.error('Error loading services for labels:', err);
+          return [] as ServiceLike[];
+        });
+        const [projects, clients, drivers, collaborators, services] = await Promise.all([
+          getProjects(), getClients(), getDrivers(), getCollaborators(), servicesPromise
         ]);
         setProjectsList(projects || []);
         setClientsList(clients || []);
         setDriversList(drivers || []);
         setCollaboratorsList(collaborators || []);
+        setServicesList(services || []);
       } catch (err) {
         console.error('Error loading select data:', err);
         showToast('Error al cargar datos de filtro', 'error');
@@ -140,6 +156,16 @@ export function useRapportino({ onNavigate }: UseRapportinoProps) {
     };
     loadSelectData();
   }, [showToast]);
+
+  // Mapas id → nombre. Se arman una vez por cambio de catálogo, no por tarjeta:
+  // resolver el nombre dentro del render repetiría la búsqueda cientos de veces.
+  const names = useMemo(() => ({
+    clients: buildNameMap(clientsList),
+    projects: buildNameMap(projectsList),
+    drivers: buildNameMap(driversList),
+    collaborators: buildNameMap(collaboratorsList),
+    services: buildServiceMap(servicesList),
+  }), [clientsList, projectsList, driversList, collaboratorsList, servicesList]);
 
   const filteredClients = useMemo(() => clientRapportinos.filter(r => {
     if (statusFilter !== 'All' && r.status !== statusFilter) return false;
@@ -149,10 +175,12 @@ export function useRapportino({ onNavigate }: UseRapportinoProps) {
       const q = searchQuery.toLowerCase();
       return r.id?.toLowerCase().includes(q) ||
              r.clientId?.toLowerCase().includes(q) ||
-             r.projectId?.toLowerCase().includes(q);
+             r.projectId?.toLowerCase().includes(q) ||
+             nameOf(names.clients, r.clientId).toLowerCase().includes(q) ||
+             nameOf(names.projects, r.projectId).toLowerCase().includes(q);
     }
     return true;
-  }), [clientRapportinos, statusFilter, filterClient, filterProject, searchQuery]);
+  }), [clientRapportinos, statusFilter, filterClient, filterProject, searchQuery, names]);
 
   const filteredDrivers = useMemo(() => driverRapportinos.filter(r => {
     if (statusFilter !== 'All' && r.status !== statusFilter) return false;
@@ -162,10 +190,12 @@ export function useRapportino({ onNavigate }: UseRapportinoProps) {
       const q = searchQuery.toLowerCase();
       return r.id?.toLowerCase().includes(q) ||
              r.driverId?.toLowerCase().includes(q) ||
-             r.projectId?.toLowerCase().includes(q);
+             r.projectId?.toLowerCase().includes(q) ||
+             nameOf(names.drivers, r.driverId).toLowerCase().includes(q) ||
+             nameOf(names.projects, r.projectId).toLowerCase().includes(q);
     }
     return true;
-  }), [driverRapportinos, statusFilter, filterDriver, filterProject, searchQuery]);
+  }), [driverRapportinos, statusFilter, filterDriver, filterProject, searchQuery, names]);
 
   const filteredCollaborators = useMemo(() => collaboratorRapportinos.filter(r => {
     if (statusFilter !== 'All' && r.status !== statusFilter) return false;
@@ -175,10 +205,12 @@ export function useRapportino({ onNavigate }: UseRapportinoProps) {
       const q = searchQuery.toLowerCase();
       return r.id?.toLowerCase().includes(q) ||
              r.collaboratorId?.toLowerCase().includes(q) ||
-             r.projectId?.toLowerCase().includes(q);
+             r.projectId?.toLowerCase().includes(q) ||
+             nameOf(names.collaborators, r.collaboratorId).toLowerCase().includes(q) ||
+             nameOf(names.projects, r.projectId).toLowerCase().includes(q);
     }
     return true;
-  }), [collaboratorRapportinos, statusFilter, filterCollaborator, filterProject, searchQuery]);
+  }), [collaboratorRapportinos, statusFilter, filterCollaborator, filterProject, searchQuery, names]);
 
   const handleClientStatusUpdate = useCallback(async (rapportinoId: string, action: 'review' | 'send' | 'accept' | 'facturar') => {
     setUpdatingStatus(rapportinoId);
@@ -275,6 +307,34 @@ export function useRapportino({ onNavigate }: UseRapportinoProps) {
     return map[next] || null;
   }, []);
 
+  /**
+   * Abre el detalle. En rapportinos de cliente trae además los items con sus
+   * servicios: el modal es el único lugar donde se ve de qué servicios se
+   * compone el período facturado.
+   */
+  const openDetail = useCallback(async (r: RapportinoClientDTO | RapportinoDriverDTO | RapportinoCollaboratorDTO) => {
+    setViewTarget(r);
+    setDetailItems([]);
+    if (activeTab !== 'client' || !r.id) {
+      setDetailLoading(false);
+      return;
+    }
+    setDetailLoading(true);
+    try {
+      setDetailItems((await getRapportinoItems(r.id)) || []);
+    } catch (err) {
+      // Sin items el detalle sigue sirviendo: estado, período e importe.
+      console.error('Error loading rapportino items:', err);
+    } finally {
+      setDetailLoading(false);
+    }
+  }, [activeTab]);
+
+  const closeDetail = useCallback(() => {
+    setViewTarget(null);
+    setDetailItems([]);
+  }, []);
+
   const handleGenerateDriverLink = useCallback(async (rapportino: RapportinoDriverDTO) => {
     setDriverLinkModal({ open: true, rapportino, loading: true, link: null, error: '', copied: false });
     try {
@@ -329,12 +389,13 @@ export function useRapportino({ onNavigate }: UseRapportinoProps) {
 
   const handleExportExcel = useCallback(() => {
     const entityLabel = activeTab === 'client' ? 'Client' : activeTab === 'driver' ? 'Driver' : 'Collaborator';
+    const entityMap = activeTab === 'client' ? names.clients : activeTab === 'driver' ? names.drivers : names.collaborators;
     const headers = ['ID', 'Type', entityLabel, 'Project', 'PeriodStart', 'PeriodEnd', 'Status', 'Services', 'Amount', 'CreatedAt', 'SentAt', 'AcceptedAt', 'PaidAt'];
     const rows = currentData.map(r => [
       r.id,
       activeTab,
-      r.clientId || r.driverId || r.collaboratorId,
-      r.projectId,
+      nameOf(entityMap, r.clientId || r.driverId || r.collaboratorId),
+      nameOf(names.projects, r.projectId),
       r.periodStart,
       r.periodEnd,
       r.status,
@@ -346,11 +407,12 @@ export function useRapportino({ onNavigate }: UseRapportinoProps) {
       r.paidAt || ''
     ]);
     exportToCSV(headers, rows, `Rapportino_${activeTab}`);
-  }, [activeTab, currentData]);
+  }, [activeTab, currentData, names]);
 
   const handleExportPDF = useCallback(() => {
     const typeLabel = activeTab === 'client' ? 'Clienti' : activeTab === 'driver' ? 'Conductores' : 'Collaboratori';
     const entityLabel = activeTab === 'client' ? 'Client' : activeTab === 'driver' ? 'Driver' : 'Collaborator';
+    const entityMap = activeTab === 'client' ? names.clients : activeTab === 'driver' ? names.drivers : names.collaborators;
     const columns = [
       { key: 'id', label: 'ID' },
       { key: 'entity', label: entityLabel },
@@ -364,8 +426,8 @@ export function useRapportino({ onNavigate }: UseRapportinoProps) {
     ];
     const data = currentData.map(r => ({
       id: r.id,
-      entity: r.clientId || r.driverId || r.collaboratorId,
-      project: r.projectId,
+      entity: nameOf(entityMap, r.clientId || r.driverId || r.collaboratorId),
+      project: nameOf(names.projects, r.projectId),
       period: `${formatDate(r.periodStart)} — ${formatDate(r.periodEnd)}`,
       status: r.status,
       services: r.items?.length || 0,
@@ -377,7 +439,7 @@ export function useRapportino({ onNavigate }: UseRapportinoProps) {
       subtitle: `Total: ${currentData.length} rapportinos`,
       footer: 'Transport Action ERP — Rapportino Report',
     });
-  }, [activeTab, currentData, formatDate, formatCurrency]);
+  }, [activeTab, currentData, formatDate, formatCurrency, names]);
 
   const handleClearFilters = useCallback(() => {
     setDateFrom('');
@@ -422,8 +484,14 @@ export function useRapportino({ onNavigate }: UseRapportinoProps) {
     driversList,
     collaboratorsList,
     projectsList,
+    servicesList,
+    names,
     viewTarget,
     setViewTarget,
+    detailItems,
+    detailLoading,
+    openDetail,
+    closeDetail,
     updatingStatus,
     driverLinkModal,
     setDriverLinkModal,
