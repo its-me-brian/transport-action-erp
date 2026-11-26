@@ -3,10 +3,10 @@ type: constitution
 title: Transport Action — Constitución
 description: Principios ratificados del proyecto, derivados de la especificación y de la evidencia medida al cerrar la primera versión.
 tags: [sdd, constitution]
-timestamp: 2026-11-26T03:40:00Z
+timestamp: 2026-11-26T05:15:13Z
 topic: sdd
 status: ratified
-version: 1.0.0
+version: 1.0.1
 ---
 
 # Transport Action — Constitución
@@ -91,6 +91,8 @@ Reglas de estructura, sin excepciones:
   URL y los permisos no cambien.
 - El rollback es desplegar la versión anterior: `clasp deploy -i <id> -V <n>`.
 - Un commit describe el efecto, no el archivo: `fix: invoice DTO saldo resolution`.
+- Los commits automáticos del harness usan `docs(auto):` — tipo `docs`, ámbito `auto` — sin emoji
+  ni atribución de IA, y llevan `[skip ci]` solo en la rama de intercambio `rsc/knowledge`.
 
 ## 5. Piso de seguridad y privacidad
 
@@ -155,3 +157,4 @@ El criterio que corre `verify`:
 |------|---------|--------|---------|
 | 2026-11-26 | draft | Borrador generado por `rsc onboard`. | El piso de SDD necesita una constitución. |
 | 2026-11-26 | 1.0.0 | Ratificada desde la especificación de `docs/` y la evidencia de la primera versión. | Sin ella, `verify` corre contra un DoD vacío. |
+| 2026-11-26 | 1.0.1 | Los commits automáticos del harness quedan en `docs(auto):`, sin emoji. | Alinear el auto-commit con la convención de commits de la §4. |

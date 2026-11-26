@@ -58,3 +58,25 @@ borrador con siete secciones vacías.
 **Elegido**: la 3, versión 1.0.0. **Por qué**: cada sección cita de dónde sale (stack real,
 792 tests, 252 pasos E2E, 21 invariantes) en lugar de prometer algo que nadie midió. El dueño
 puede enmendar; el registro de enmiendas ya está abierto.
+
+## [2026-11-26] commits automáticos sin emoji
+
+**Requisito**: el knowledge-sync commitea solo al cerrar cada turno y escribía
+`📝 docs(auto): 7 ficheros: …`, mientras la §4 de la constitución exige conventional commits
+(«un commit describe el efecto, no el archivo»).
+
+**Opciones**
+
+1. Editar `.rsc/knowledge-sync.mjs` para cambiar el texto del mensaje. Da control total, pero el
+   archivo está materializado y con digest en `.rsc.json`: `rsc doctor` lo lee como drift y
+   `rsc repair` lo pisa en la próxima actualización.
+2. Apagar el knowledge-sync (`.rsc/.no-knowledge-sync`) y commitear la wiki a mano. Cumple la
+   convención, pero se pierde la sincronización entre máquinas, que es para lo que se instaló.
+3. `rsc emoji off`: interruptor soportado (`.rsc/.no-emoji` + `optOuts` en `.rsc.json`). El
+   mensaje queda `docs(auto): …` — tipo `docs`, ámbito `auto`, sin emoji — y el resto del
+   comportamiento no cambia.
+
+**Elegido**: la 3. **Por qué**: es el único camino que alinea sin editar un archivo gobernado.
+`docs(auto)` ya es conventional commit; lo que sobraba era el glifo. El cuerpo sigue listando
+ficheros porque en un commit automático el efecto **es** «la wiki cambió»: el detalle es cuáles.
+El interruptor viaja en `.rsc.json`, así que la decisión se comparte con el repo.
