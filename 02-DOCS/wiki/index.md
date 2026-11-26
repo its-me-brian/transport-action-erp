@@ -16,6 +16,8 @@ necesita cualquier spec antes de proponer un cambio.
 | [Máquinas de estado](erp/state-machines.md) | Transiciones válidas de cada entidad y dónde se hacen cumplir | 2026-11-26 | 11.0 |
 | [Reglas de negocio, invariantes y permisos](erp/business-rules.md) | 40+ reglas por familia, 21 invariantes verificables y los 4 roles | 2026-11-26 | 14.0 |
 | [Flujo del dinero](erp/money-flow.md) | De la tarifa a la factura cobrada: qué se congela y cuándo | 2026-11-26 | 20.0 |
+| [Alta de un chofer](erp/driver-onboarding.md) | Cuenta vs link público, `DRIVER_NOT_LINKED` y el ciclo del token | 2026-11-26 | 7.0 |
+| [Importación de listas de transporte](erp/transport-list-import.md) | Formato xlsx, ciclo de dos pasos, dedup delta y errores típicos | 2026-11-26 | 6.0 |
 
 ## operations
 
@@ -25,6 +27,7 @@ Cómo se corre, se prueba, se publica y se recupera. Léelo antes de tocar la ba
 |---------|---------|---------|-------|
 | [Runbook](operations/runbook.md) | Comandos reales, deploy con clasp, backup y recuperación de acceso | 2026-11-26 | 12.0 |
 | [Testing](operations/testing.md) | Cuatro niveles, 9 suites E2E y cómo distinguir fixture de producto | 2026-11-26 | 16.0 |
+| [Migraciones](operations/migrations.md) | `schemaVersion`, la cadena de 12 y sus dos fallas silenciosas | 2026-11-26 | 8.0 |
 | [Riesgos abiertos](operations/risks.md) | Rendimiento, cuotas, hojas financieras vacías y VAT de prueba | 2026-11-26 | 13.0 |
 
 ## sdd

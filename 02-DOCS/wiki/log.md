@@ -17,3 +17,18 @@
 ## [2026-11-26] maintenance | autofixes: 0, new See Also: 8, gaps detected: 3
 - Scores recalculados a `scores.json`; links internos verificados (0 rotos).
 - Gaps abiertos: onboarding de un chofer nuevo, importación de listas de transporte, migraciones.
+
+## [2026-11-26] ingest | cierre de los 3 gaps abiertos
+- Created: [Alta de un chofer](erp/driver-onboarding.md) — cuenta vs link público, `DRIVER_NOT_LINKED`, ciclo del token
+- Created: [Importación de listas de transporte](erp/transport-list-import.md) — formato xlsx, dos pasos, dedup delta
+- Created: [Migraciones](operations/migrations.md) — `schemaVersion`, cadena de 12, fallas silenciosas
+- Updated: [index.md](index.md) (3 filas nuevas), [gaps.md](gaps.md) (3 → `[FILLED]`), `scores.json`
+- Source: código verificado, no memoria — `api.gs`, `infrastructure/driverLinks.gs`,
+  `domain/transportList.gs`, `infrastructure/excelParser.gs`, `migrations/migration.gs`, más
+  `docs/14-MIGRATIONS.md` y `docs/18-LOCAL-TESTING.md`
+- Evidencia medida: *Drivers* tiene 13 filas y **0 con `Email`** (`backups/db-20261126-030944.json`),
+  lo que confirma que la cuenta `driver` es inoperante y el link público es el camino real.
+- Hallazgo documentado: `runMigrations()` corre en cada request dentro de un `try/catch` que solo
+  loguea, y la versión avanza después de `fn()`. Una migración rota reintenta en cada request y la
+  app sigue con el esquema viejo, sin señal en la UI.
+
