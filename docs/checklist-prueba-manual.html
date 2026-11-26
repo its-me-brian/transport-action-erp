@@ -215,6 +215,31 @@
     </ul>
   </section>
 
+  <section data-sec="s08">
+    <div class="sec-head">
+      <h2><span class="kicker">Paso 0.8</span>Sociedad emisora (requisito para facturar)</h2>
+      <span class="badge" data-count="s08">0/3</span>
+    </div>
+    <p class="note">Va antes del Paso 8 a prop&oacute;sito: sin sociedad emisora <b>no se puede emitir ninguna factura</b>. Esta pantalla ten&iacute;a un bug mudo (el guardado fallaba y el error se tragaba) que se arregl&oacute; en v240.</p>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s08-1"><span class="body">
+        <span class="t">Los datos de la emisora precargan</span><span class="w">/settings &rarr; Company Settings</span>
+        <span class="e">Esperado: cada tarjeta muestra raz&oacute;n social, VAT, direcci&oacute;n, tel&eacute;fono, moneda e IVA ya guardados. Si aparecen vac&iacute;os, es el bug de v240: el match por <code>id === 'TA'</code> nunca encontraba <code>OC-TA-&hellip;</code>.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s08-2"><span class="body">
+        <span class="t">Guardar de verdad, no en silencio</span><span class="w">Company Settings &rarr; Edit &rarr; Save All Changes</span>
+        <span class="e">Esperado: toast de &eacute;xito, y tras F5 el valor nuevo sigue ah&iacute;. Prob&aacute; cambiar la direcci&oacute;n o el tel&eacute;fono y recarg&aacute;: antes fallaba con <code>NotFound</code> y el <code>catch</code> no mostraba nada.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s08-3"><span class="body">
+        <span class="t">Emisora completa antes de la primera factura</span><span class="w">raz&oacute;n social &middot; VAT &middot; direcci&oacute;n fiscal &middot; moneda</span>
+        <span class="e">Esperado: los cuatro campos con dato real. Hoy el VAT dice <code>00FALSO12135</code> a prop&oacute;sito: reemplazalo por el CIF real antes de facturar de verdad.</span>
+        <span class="alt">si la hoja est&aacute; vac&iacute;a, creala desde ac&aacute; (desde v240 el guardado crea la sociedad); <code>GET ?action=getOperatingCompanies</code> confirma que qued&oacute;.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
   <section data-sec="s1">
     <div class="sec-head">
       <h2><span class="kicker">Paso 1</span>Acceso, sesión y permisos</h2>
@@ -679,6 +704,7 @@
       <h2><span class="kicker">Paso 8</span>Facturación, cobros y gastos</h2>
       <span class="badge" data-count="s8">0/13</span>
     </div>
+    <p class="note">Antes de empezar: los 3 items del Paso 0.8 (sociedad emisora) tienen que estar completos. Sin emisor, la factura no se puede emitir.</p>
     <ul class="list">
       <li class="item"><label><input type="checkbox" data-id="s8-1"><span class="body">
         <span class="t">La lista de facturas carga</span><span class="w">/accounting → Invoices</span>
