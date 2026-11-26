@@ -115,3 +115,7 @@ npm-debug.log*
 .opencode/commands/specify.md
 .opencode/commands/tasks.md
 .opencode/commands/verify.md
+
+# harness scratch (no es codigo del proyecto)
+.dsh-work/
+
