@@ -105,6 +105,10 @@ node scripts/e2e/run.mjs --json reports/e2e.json --coverage
 
 ## 3. Smoke test — bloque operativo (pasos 1–9)
 
+> Versión interactiva con checkboxes, progreso guardado y los atajos alternativos:
+> [checklist-prueba-manual.html](checklist-prueba-manual.html). Abrilo en el navegador
+> (funciona offline, sin servidor) o imprimilo a PDF.
+
 Usar **datos de prueba** con prefijo `TEST-` en notas/proyecto, así se pueden borrar después.
 No usar producciones activas: el flujo mueve estados reales y congela breakdowns.
 

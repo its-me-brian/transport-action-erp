@@ -1,0 +1,1242 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transport Action · Checklist de prueba v1</title>
+<style>
+  :root{
+    --bg:#f6f6f4;
+    --card:#ffffff;
+    --ink:#1b1c1a;
+    --muted:#6b6f6a;
+    --line:#e3e4df;
+    --accent:#0f766e;
+    --accent-soft:#e6f2f0;
+    --warn-soft:#fff4d6;
+    --danger:#b42318;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  code{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:.88em;background:#eef0ec;border:1px solid var(--line);
+    border-radius:4px;padding:.05em .35em;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:0 18px}
+
+  header.top{
+    background:var(--card);border-bottom:1px solid var(--line);
+    padding:22px 0 18px;position:sticky;top:0;z-index:20;
+  }
+  .head-row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between}
+  h1{margin:0;font-size:20px;letter-spacing:-.2px}
+  .sub{margin:4px 0 0;color:var(--muted);font-size:13px}
+  .counter{font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted);white-space:nowrap}
+  .counter b{color:var(--ink);font-size:18px}
+  .bar{height:8px;background:#e9eae5;border-radius:99px;overflow:hidden;margin-top:14px}
+  .bar > i{display:block;height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .18s ease}
+  .tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
+  button.tool{
+    appearance:none;border:1px solid var(--line);background:#fff;color:var(--ink);
+    border-radius:8px;padding:7px 11px;font-size:12.5px;cursor:pointer;line-height:1.2;
+  }
+  button.tool:hover{background:#f2f3ef}
+  button.tool.danger{color:var(--danger);border-color:#f0c9c4}
+  button.tool.danger:hover{background:#fdf1ef}
+  input.search{
+    flex:1 1 200px;min-width:160px;border:1px solid var(--line);border-radius:8px;
+    padding:7px 10px;font-size:13px;background:#fff;color:var(--ink);
+  }
+  input.search:focus,button.tool:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+  .intro{margin:22px 0 0;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
+  .intro h2{margin:0 0 8px;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .intro ul{margin:0;padding-left:18px}
+  .intro li{margin:4px 0;font-size:13.5px}
+  .callout{
+    margin-top:14px;background:var(--warn-soft);border:1px solid #f0dfa8;
+    border-radius:8px;padding:10px 12px;font-size:13px;color:#5c4708
+  }
+  .callout b{color:#3f3105}
+
+  main{padding:22px 0 70px}
+  section{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    margin:0 0 16px;overflow:hidden;
+  }
+  .sec-head{
+    display:flex;align-items:center;gap:10px;justify-content:space-between;
+    padding:14px 16px;border-bottom:1px solid var(--line);background:#fbfbf9;
+  }
+  .sec-head h2{margin:0;font-size:15px;letter-spacing:-.1px}
+  .sec-head .kicker{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin-bottom:2px}
+  .badge{
+    font-variant-numeric:tabular-nums;font-size:11.5px;font-weight:600;color:var(--accent);
+    background:var(--accent-soft);border-radius:99px;padding:3px 9px;white-space:nowrap
+  }
+  .badge.full{background:#e7f6e9;color:#166534}
+  ul.list{list-style:none;margin:0;padding:6px 0}
+  li.item{padding:0}
+  li.item label{
+    display:flex;gap:12px;align-items:flex-start;padding:11px 16px;cursor:pointer;
+    border-left:3px solid transparent;
+  }
+  li.item label:hover{background:#fafbf8}
+  li.item input[type=checkbox]{
+    width:18px;height:18px;margin:2px 0 0;flex:0 0 auto;accent-color:var(--accent);cursor:pointer
+  }
+  .body{display:block;min-width:0}
+  .t{display:block;font-weight:600;font-size:14px}
+  .w{display:inline-block;margin-top:2px;font-size:11.5px;color:var(--accent);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .e{display:block;margin-top:3px;font-size:13px;color:#4a4f49}
+  .alt{display:block;margin-top:4px;font-size:12.5px;color:var(--muted)}
+  .alt::before{content:"↳ también: ";font-weight:600}
+  li.done{background:#f5faf6}
+  li.done .t{color:#5c6b60}
+  li.done .e,li.done .w{opacity:.65}
+  li.done input[type=checkbox]{accent-color:#16a34a}
+  li.hide{display:none}
+
+  .table-scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:620px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#fbfbf9;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  td:first-child{font-weight:600}
+  tr.done td{background:#f5faf6}
+  .cell-check{width:34px}
+  .cell-check input{width:17px;height:17px;accent-color:var(--accent)}
+  .route{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;color:var(--muted);margin-top:2px}
+  .note{font-size:12.5px;color:var(--muted);padding:10px 16px 14px;margin:0}
+
+  footer{padding:0 0 40px;color:var(--muted);font-size:12px;text-align:center}
+  .empty{padding:26px 16px;text-align:center;color:var(--muted);font-size:13px;display:none}
+
+  @media (max-width:640px){
+    header.top{position:static}
+    .head-row{flex-direction:column;gap:8px}
+    h1{font-size:18px}
+    .wrap{padding:0 12px}
+    li.item label{padding:12px}
+    .sec-head{padding:12px}
+  }
+  @media print{
+    body{background:#fff}
+    header.top{position:static;border:0;padding:0 0 10px}
+    .tools,.search,.bar,.badge{display:none!important}
+    section{break-inside:avoid;box-shadow:none;border-color:#ccc}
+    main{padding:0}
+    .intro{display:none}
+    li.hide{display:block!important}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="head-row">
+      <div>
+        <h1>Transport Action · Checklist de prueba manual</h1>
+        <p class="sub">Recorrido completo como usuario, con los caminos alternativos para llegar a lo mismo. Se guarda en este navegador.</p>
+      </div>
+      <div class="counter"><b id="done">0</b> / <span id="total">0</span> · <span id="pct">0%</span></div>
+    </div>
+    <div class="bar"><i id="fill"></i></div>
+    <div class="tools">
+      <input class="search" id="q" type="search" placeholder="Filtrar por palabra: factura, móvil, link…" aria-label="Filtrar ítems">
+      <button class="tool" id="toggle-done" type="button">Ocultar completados</button>
+      <button class="tool" id="print" type="button">Imprimir / PDF</button>
+      <button class="tool danger" id="reset" type="button">Reiniciar</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="intro">
+    <h2>Cómo usarlo</h2>
+    <ul>
+      <li>Marcá cada paso cuando lo viste funcionar. El avance queda guardado en <code>localStorage</code> de este navegador.</li>
+      <li>Usá datos de prueba con prefijo <b>TEST-</b> en clientes, proyectos y notas, así se pueden borrar después.</li>
+      <li>No uses producciones activas: el ciclo mueve estados reales y al validar <b>congela</b> los importes.</li>
+      <li>Si algo falla, anotá: pantalla, acción clickeada, <code>action</code> de la request, payload y respuesta JSON (F12 → Network → <code>exec</code>).</li>
+    </ul>
+    <div class="callout">
+      <b>Contraseña de admin:</b> no está en el repositorio, se rotó. Si no la tenés, corré <code>resetAdminPassword</code> desde el editor de Apps Script (<code>utils/resetAdminPassword.gs</code>): genera una nueva y la muestra una sola vez en el log.
+    </div>
+  </div>
+
+  <section data-sec="s0">
+    <div class="sec-head">
+      <h2><span class="kicker">Paso 0</span>Preparación del entorno</h2>
+      <span class="badge" data-count="s0">0/7</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s0-1"><span class="body">
+        <span class="t">Node 22 instalado</span><span class="w">node -v</span>
+        <span class="e">Esperado: <code>v22.x</code>. Vitest 4 no corre en Node 20.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s0-2"><span class="body">
+        <span class="t">Dependencias instaladas</span><span class="w">Transport Action All/ · npm ci</span>
+        <span class="e">Esperado: termina sin errores.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s0-3"><span class="body">
+        <span class="t">Dev server levantado</span><span class="w">npm run dev → http://localhost:3001</span>
+        <span class="e">Esperado: la app carga y aparece el login.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s0-4"><span class="body">
+        <span class="t">Backend vivo</span><span class="w">GET &lt;VITE_GAS_WEBAPP_URL&gt;?action=healthCheck</span>
+        <span class="e">Esperado: <code>{"success":true,"data":{"status":"ok"}}</code>. Si tarda 3–10 s es cold start, no un bug.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s0-5"><span class="body">
+        <span class="t">Backup antes de tocar nada</span><span class="w">node scripts/backup-snapshot.mjs</span>
+        <span class="e">Esperado: archivo en <code>backups/</code> y total de filas impreso. Anotá ese número: se compara al final.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s0-6"><span class="body">
+        <span class="t">Consola y red limpias</span><span class="w">F12 → Console + Network (filtro: exec)</span>
+        <span class="e">Esperado: sin errores rojos en reposo. Cada llamada al backend lleva <code>?action=…</code>.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s0-7"><span class="body">
+        <span class="t">Versión y rollback a mano</span><span class="w">clasp list-deployments</span>
+        <span class="e">Anotá el número de versión vivo y la línea de rollback del release, por si hay que volver atrás.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s1">
+    <div class="sec-head">
+      <h2><span class="kicker">Paso 1</span>Acceso, sesión y permisos</h2>
+      <span class="badge" data-count="s1">0/9</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s1-1"><span class="body">
+        <span class="t">Login como admin</span><span class="w">/</span>
+        <span class="e">Esperado: entra a <code>/dashboard</code> con métricas, sin pantalla en blanco.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s1-2"><span class="body">
+        <span class="t">Contraseña incorrecta</span><span class="w">/</span>
+        <span class="e">Esperado: mensaje de credenciales inválidas, sin crash ni spinner infinito.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s1-3"><span class="body">
+        <span class="t">Sesión sobrevive al refresh</span><span class="w">F5</span>
+        <span class="e">Esperado: seguís logueado y en la misma pantalla.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s1-4"><span class="body">
+        <span class="t">Logout limpio</span><span class="w">menú → Sign out</span>
+        <span class="e">Esperado: vuelve al login; atrás en el navegador no reabre la app con sesión.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s1-5"><span class="body">
+        <span class="t">Menú completo de admin</span><span class="w">sidebar</span>
+        <span class="e">Esperado: 4 secciones — Operations, Finance, Management, System — con todos sus ítems.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s1-6"><span class="body">
+        <span class="t">Menú reducido de coordinator</span><span class="w">login como brian (coordinator)</span>
+        <span class="e">Esperado: ve operación, finanzas y gestión; no ve Users &amp; Roles ni Settings.</span>
+        <span class="alt">probá también un usuario con rol <code>accounting</code>.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s1-7"><span class="body">
+        <span class="t">URL prohibida a mano</span><span class="w">/user-management con coordinator</span>
+        <span class="e">Esperado: pantalla <i>No access to this section</i> con “Go to my dashboard” y “Sign out”. Ni error de React ni tabla vacía.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s1-8"><span class="body">
+        <span class="t">URL inexistente</span><span class="w">/lo-que-sea</span>
+        <span class="e">Esperado: redirige a la primera pantalla permitida del rol, nunca a un dashboard que dé 403.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s1-9"><span class="body">
+        <span class="t">Pantalla de no acceso directa</span><span class="w">/no-access</span>
+        <span class="e">Esperado: renderiza la pantalla, no rompe.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s2">
+    <div class="sec-head">
+      <h2><span class="kicker">Paso 2</span>Catálogo: clientes, proyectos, proveedores, choferes, vehículos y tarifas</h2>
+      <span class="badge" data-count="s2">0/14</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s2-1"><span class="body">
+        <span class="t">Listado de clientes con búsqueda</span><span class="w">/customers</span>
+        <span class="e">Esperado: carga la lista y el buscador filtra sin recargar.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-2"><span class="body">
+        <span class="t">Crear cliente TEST-</span><span class="w">/customers → New</span>
+        <span class="e">Esperado: aparece en la lista con sus datos fiscales.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-3"><span class="body">
+        <span class="t">Editar cliente y recargar</span><span class="w">/customers → Edit</span>
+        <span class="e">Esperado: el cambio persiste después de F5.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-4"><span class="body">
+        <span class="t">Detalle de cliente</span><span class="w">/customers → abrir fila</span>
+        <span class="e">Esperado: muestra proyectos y servicios asociados sin error.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-5"><span class="body">
+        <span class="t">Borrar cliente con proyectos</span><span class="w">/customers → Delete</span>
+        <span class="e">Esperado: rechazado con mensaje claro (no borra en cascada por accidente).</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-6"><span class="body">
+        <span class="t">Crear proyecto ligado al cliente</span><span class="w">/projects → New</span>
+        <span class="e">Esperado: aparece y queda seleccionable al crear un servicio.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-7"><span class="body">
+        <span class="t">Editar proyecto</span><span class="w">/projects → Edit</span>
+        <span class="e">Esperado: cambia nombre/cliente y persiste.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-8"><span class="body">
+        <span class="t">Crear colaborador y sus tarifas</span><span class="w">/providers → New → Supplier Rates</span>
+        <span class="e">Esperado: el proveedor queda disponible como <code>ProviderType = collaborator</code> al asignar un servicio.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-9"><span class="body">
+        <span class="t">Alta, edición y baja de chofer</span><span class="w">/drivers</span>
+        <span class="e">Esperado: crear TEST-, editar, y borrar con confirmación. El buscador encuentra por nombre.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-10"><span class="body">
+        <span class="t">Vehículos</span><span class="w">/vehicles</span>
+        <span class="e">Esperado: crear/editar vehículo y que aparezca al asignar chofer a un servicio.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-11"><span class="body">
+        <span class="t">Rate cards</span><span class="w">/rate_cards</span>
+        <span class="e">Esperado: lista tarifas, editás una y el cambio se refleja al recalcular un servicio.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-12"><span class="body">
+        <span class="t">Tarifas por chofer</span><span class="w">/rate_cards o /drivers → Rates</span>
+        <span class="e">Esperado: el costo del servicio sale de la tarifa del chofer asignado.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-13"><span class="body">
+        <span class="t">Contactos y documentos</span><span class="w">/contacts · /documents</span>
+        <span class="e">Esperado: crear/editar un contacto y listar/abrir un documento.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s2-14"><span class="body">
+        <span class="t">Pricing reference en Settings</span><span class="w">/settings → Pricing Reference</span>
+        <span class="e">Esperado: muestra las tarifas que usa el cálculo, coherentes con <code>/rate_cards</code>.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s3">
+    <div class="sec-head">
+      <h2><span class="kicker">Paso 3</span>Ciclo de vida del servicio</h2>
+      <span class="badge" data-count="s3">0/18</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s3-1"><span class="body">
+        <span class="t">Crear servicio desde Transport</span><span class="w">/transport → “+”</span>
+        <span class="e">Esperado: abre el formulario de alta.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-2"><span class="body">
+        <span class="t">Alta completa</span><span class="w">/new-service</span>
+        <span class="e">Esperado: proyecto, origen, destino, fecha y chofer → servicio en <code>Importado</code>.</span>
+        <span class="alt">entrá directo por URL a <code>/new-service</code>.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-3"><span class="body">
+        <span class="t">Alta por importación de Excel</span><span class="w">/transport → Import Excel → /transport-list</span>
+        <span class="e">Esperado: preview, vincular a proyecto y confirmar → servicios creados. Requiere un xlsx real.</span>
+        <span class="alt"><code>/transport-list</code> no está en el menú: se llega por el botón o por URL.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-4"><span class="body">
+        <span class="t">Workspace del servicio</span><span class="w">/service/&lt;id&gt;</span>
+        <span class="e">Esperado: Overview con datos, tabs Movements / Operations / Communication / Finance / History.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-5"><span class="body">
+        <span class="t">Editar Movements</span><span class="w">workspace → Movements</span>
+        <span class="e">Esperado: fecha/horas se guardan y sobreviven al refresh.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-6"><span class="body">
+        <span class="t">Asignar chofer y vehículo</span><span class="w">workspace → Operations → Driver</span>
+        <span class="e">Esperado: pasa a <code>Asignado</code> y el chofer deja de estar disponible para otro servicio activo.</span>
+        <span class="alt">asignación inline desde la tabla de <code>/transport</code>.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-7"><span class="body">
+        <span class="t">Asignación masiva</span><span class="w">/transport → seleccionar varios → Assign driver</span>
+        <span class="e">Esperado: asigna a todos los seleccionados sin tocar los que no corresponden.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-8"><span class="body">
+        <span class="t">Confirmar</span><span class="w">workspace → Operations</span>
+        <span class="e">Esperado: <code>Confirmado</code>, con fecha/hora de confirmación.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-9"><span class="body">
+        <span class="t">Iniciar</span><span class="w">workspace → Operations</span>
+        <span class="e">Esperado: <code>EnRuta</code>.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-10"><span class="body">
+        <span class="t">Completar</span><span class="w">workspace → Operations</span>
+        <span class="e">Esperado: <code>Realizado</code>.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-11"><span class="body">
+        <span class="t">Reportar</span><span class="w">workspace → Operations</span>
+        <span class="e">Esperado: <code>Reportado</code> y el parte del chofer queda vinculado.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-12"><span class="body">
+        <span class="t">Validar</span><span class="w">workspace → Operations</span>
+        <span class="e">Esperado: <code>Validado</code> y los breakdowns quedan congelados. <b>Anotá los totales</b>: se comparan en el rapportino.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-13"><span class="body">
+        <span class="t">Transición inválida</span><span class="w">otro servicio: Iniciar sin Confirmar</span>
+        <span class="e">Esperado: error de transición claro, sin excepción ni cambio de estado.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-14"><span class="body">
+        <span class="t">Cancelar / borrar servicio</span><span class="w">workspace → Cancel</span>
+        <span class="e">Esperado: permitido en <code>Importado</code>/<code>Asignado</code>; desaparece de la tabla.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-15"><span class="body">
+        <span class="t">Borrar un servicio avanzado</span><span class="w">servicio en Validado/Facturado</span>
+        <span class="e">Esperado: rechazado. Es a propósito: solo se borra en estados tempranos.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-16"><span class="body">
+        <span class="t">History del servicio</span><span class="w">workspace → History</span>
+        <span class="e">Esperado: la secuencia de estados y cambios, en orden y con usuario.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-17"><span class="body">
+        <span class="t">Communication → WhatsApp</span><span class="w">workspace → Communication</span>
+        <span class="e">Esperado: pegás el texto del chat, se parsea y podés revisar la propuesta antes de aplicarla.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s3-18"><span class="body">
+        <span class="t">Edición de datos del servicio</span><span class="w">workspace → Edit</span>
+        <span class="e">Esperado: se puede corregir origen/destino/notas; los cambios quedan auditados.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s4">
+    <div class="sec-head">
+      <h2><span class="kicker">Paso 4</span>Link público del chofer</h2>
+      <span class="badge" data-count="s4">0/9</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s4-1"><span class="body">
+        <span class="t">Generar link</span><span class="w">/driver-links → Create Link</span>
+        <span class="e">Esperado: URL <code>…?action=driverForm&amp;token=…</code> para el servicio elegido.</span>
+        <span class="alt">workspace → Operations → Driver Link → Create Link.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s4-2"><span class="body">
+        <span class="t">Abrir el link sin sesión</span><span class="w">ventana incógnito</span>
+        <span class="e">Esperado: el formulario abre sin pedir login. Si redirige al login, el deployment quedó restringido.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s4-3"><span class="body">
+        <span class="t">Enviar el parte desde el link</span><span class="w">formulario público</span>
+        <span class="e">Esperado: km, horas y gastos se aceptan; confirmación de envío y sin errores de validación raros.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s4-4"><span class="body">
+        <span class="t">Estado del link en la app</span><span class="w">/driver-links</span>
+        <span class="e">Esperado: pasa por <code>Active → Opened → Submitted</code>, con eventos CREATED/ACCESSED.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s4-5"><span class="body">
+        <span class="t">Revocar link</span><span class="w">/driver-links → Revoke</span>
+        <span class="e">Esperado: el link pasa a <code>Revoked</code> y al abrirlo dice “Link non valido”.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s4-6"><span class="body">
+        <span class="t">Token inventado</span><span class="w">…?action=driverForm&amp;token=AAA</span>
+        <span class="e">Esperado: mensaje de link inválido, no pantalla en blanco ni error 500.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s4-7"><span class="body">
+        <span class="t">Token de otro servicio</span><span class="w">link válido, servicio ajeno</span>
+        <span class="e">Esperado: rechazo con mensaje; no permite cargar datos sobre otro servicio.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s4-8"><span class="body">
+        <span class="t">Link ya usado</span><span class="w">abrir después de enviar</span>
+        <span class="e">Esperado: no permite enviar dos veces (o avisa que ya fue enviado).</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s4-9"><span class="body">
+        <span class="t">Comparación transporte vs parte</span><span class="w">workspace → Operations → Reconciliation</span>
+        <span class="e">Esperado: se ven las diferencias entre lo planificado y lo que declaró el chofer.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s5">
+    <div class="sec-head">
+      <h2><span class="kicker">Paso 5</span>Parte del chofer: inbox y revisión</h2>
+      <span class="badge" data-count="s5">0/9</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s5-1"><span class="body">
+        <span class="t">El parte llega al inbox</span><span class="w">/driver-reports → Inbox</span>
+        <span class="e">Esperado: aparece el envío del paso 4, con servicio y chofer correctos.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s5-2"><span class="body">
+        <span class="t">Detalle del parte</span><span class="w">/driver-reports → abrir</span>
+        <span class="e">Esperado: km, horas, peajes, parking, combustible y espera coinciden con lo cargado.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s5-3"><span class="body">
+        <span class="t">Normalizar</span><span class="w">/driver-reports → Normalize</span>
+        <span class="e">Esperado: los valores quedan en el formato del dominio y se ve el antes/después.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s5-4"><span class="body">
+        <span class="t">Aprobar el parte</span><span class="w">/driver-reports → Approve</span>
+        <span class="e">Esperado: sale del inbox y el servicio queda consistente (estado y economía recalculada).</span>
+        <span class="alt">workspace → Operations → Driver Report.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s5-5"><span class="body">
+        <span class="t">Historial de partes</span><span class="w">/driver-reports → History</span>
+        <span class="e">Esperado: el aprobado aparece con su estado final.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s5-6"><span class="body">
+        <span class="t">Rechazar un parte</span><span class="w">/driver-reports → Reject</span>
+        <span class="e">Esperado: pide motivo, queda <code>Rechazado</code> y no altera la economía del servicio.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s5-7"><span class="body">
+        <span class="t">Importar parte desde texto</span><span class="w">/driver-reports → Import</span>
+        <span class="e">Esperado: pegás el mensaje de WhatsApp, se parsea y podés crear el reporte.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s5-8"><span class="body">
+        <span class="t">Texto basura</span><span class="w">/driver-reports → Import</span>
+        <span class="e">Esperado: avisa que no pudo interpretar, sin crear un reporte vacío.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s5-9"><span class="body">
+        <span class="t">Doble aprobación</span><span class="w">aprobar el mismo parte dos veces</span>
+        <span class="e">Esperado: la segunda se rechaza; no duplica cost breakdowns.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s6">
+    <div class="sec-head">
+      <h2><span class="kicker">Paso 6</span>Economía del servicio</h2>
+      <span class="badge" data-count="s6">0/8</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s6-1"><span class="body">
+        <span class="t">Revenue breakdown</span><span class="w">workspace → Finance</span>
+        <span class="e">Esperado: líneas de ingreso con concepto e importe, y total.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s6-2"><span class="body">
+        <span class="t">Cost breakdown</span><span class="w">workspace → Finance</span>
+        <span class="e">Esperado: costo del chofer o colaborador con sus líneas, coherente con la tarifa.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s6-3"><span class="body">
+        <span class="t">Margen</span><span class="w">workspace → Finance</span>
+        <span class="e">Esperado: ingreso − costo = margen, sin colas decimales (<code>603.18</code>, no <code>603.1849999</code>).</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s6-4"><span class="body">
+        <span class="t">Ajuste manual</span><span class="w">workspace → Finance → Adjustment</span>
+        <span class="e">Esperado: el total cambia, el ajuste queda listado y auditado con motivo.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s6-5"><span class="body">
+        <span class="t">Recalcular sin perder ajustes</span><span class="w">workspace → Finance → Recalculate</span>
+        <span class="e">Esperado: los breakdowns se recalculan y el ajuste manual sobrevive.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s6-6"><span class="body">
+        <span class="t">Congelado al validar</span><span class="w">servicio en Validado</span>
+        <span class="e">Esperado: los importes no se pueden editar; si intentás, la UI lo impide o el backend lo rechaza.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s6-7"><span class="body">
+        <span class="t">Cambio de tarifa y recálculo</span><span class="w">/rate_cards → editar → recalcular</span>
+        <span class="e">Esperado: el nuevo importe se aplica y el cambio queda auditado.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s6-8"><span class="body">
+        <span class="t">Invariantes</span><span class="w">reporte de economía / checkInvariants</span>
+        <span class="e">Esperado: sin violaciones nuevas (INV-001..021) después de crear y validar servicios.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s7">
+    <div class="sec-head">
+      <h2><span class="kicker">Paso 7</span>Rapportinos: cliente, chofer y colaborador</h2>
+      <span class="badge" data-count="s7">0/12</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s7-1"><span class="body">
+        <span class="t">Generar rapportino de cliente</span><span class="w">/rapportinos → Generate</span>
+        <span class="e">Esperado: crea un <code>Borrador</code> con los servicios validados del cliente y período.</span>
+        <span class="alt">workspace → Finance → Rapportino.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s7-2"><span class="body">
+        <span class="t">Totales cuadran</span><span class="w">/rapportinos → detalle</span>
+        <span class="e">Esperado: coincide con los totales anotados al validar el servicio (paso 3.12).</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s7-3"><span class="body">
+        <span class="t">Agregar y quitar servicio</span><span class="w">/rapportinos → detalle</span>
+        <span class="e">Esperado: el total se recalcula y el cambio queda registrado.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s7-4"><span class="body">
+        <span class="t">Borrador → Revisado</span><span class="w">/rapportinos → Review</span>
+        <span class="e">Esperado: avanza y se habilita el envío.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s7-5"><span class="body">
+        <span class="t">Revisado → Enviado</span><span class="w">/rapportinos → Send</span>
+        <span class="e">Esperado: avanza. Enviar un rapportino vacío debe rechazarse con mensaje.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s7-6"><span class="body">
+        <span class="t">Enviado → Aceptado</span><span class="w">/rapportinos → Accept</span>
+        <span class="e">Esperado: avanza y se habilita Facturar.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s7-7"><span class="body">
+        <span class="t">Aceptado → Facturar</span><span class="w">/rapportinos → Facturar</span>
+        <span class="e">Esperado: genera un Invoice en borrador con items y total real.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s7-8"><span class="body">
+        <span class="t">Rechazar rapportino</span><span class="w">/rapportinos → Reject (desde Enviado)</span>
+        <span class="e">Esperado: queda <code>Rechazado</code>. Desde <code>Revisado</code> la máquina de estados lo debe impedir.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s7-9"><span class="body">
+        <span class="t">Rapportino de chofer</span><span class="w">/rapportinos → Driver</span>
+        <span class="e">Esperado: crear, enviar, aceptar y registrar pago; estados respetados en cada salto.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s7-10"><span class="body">
+        <span class="t">Rapportino de colaborador</span><span class="w">/rapportinos → Collaborator</span>
+        <span class="e">Esperado: crear, agregar servicio con <code>ProviderType = collaborator</code>, enviar, aceptar, pagar.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s7-11"><span class="body">
+        <span class="t">Reportes de cost breakdown</span><span class="w">/reports</span>
+        <span class="e">Esperado: generar un reporte por producción/chofer y verlo en la lista generada.</span>
+        <span class="alt"><code>/reports</code> no está en el menú: se llega desde Financial → Reports o desde Rapportinos.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s7-12"><span class="body">
+        <span class="t">Gate de facturación</span><span class="w">rapportino con servicio sin conciliar</span>
+        <span class="e">Esperado: Facturar bloqueado con motivo claro (falta conciliación o parte aprobado).</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s8">
+    <div class="sec-head">
+      <h2><span class="kicker">Paso 8</span>Facturación, cobros y gastos</h2>
+      <span class="badge" data-count="s8">0/13</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s8-1"><span class="body">
+        <span class="t">La lista de facturas carga</span><span class="w">/accounting → Invoices</span>
+        <span class="e">Esperado: sin error de sistema. Este listado estaba roto y se arregló en v238.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-2"><span class="body">
+        <span class="t">Crear factura manual</span><span class="w">/accounting → Invoices → New</span>
+        <span class="e">Esperado: borrador con cliente e items; subtotal, IVA 21% y total bien calculados.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-3"><span class="body">
+        <span class="t">Editar borrador</span><span class="w">/accounting → Invoices → Edit</span>
+        <span class="e">Esperado: se puede modificar mientras es borrador; persiste al recargar.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-4"><span class="body">
+        <span class="t">Emitir y enviar</span><span class="w">/accounting → Invoices</span>
+        <span class="e">Esperado: pasa a emitida; el envío por email se puede omitir o simular.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-5"><span class="body">
+        <span class="t">Editar una factura emitida</span><span class="w">/accounting → Invoices → Edit</span>
+        <span class="e">Esperado: rechazado. Solo se anula con motivo, no se edita.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-6"><span class="body">
+        <span class="t">Anular factura</span><span class="w">/accounting → Invoices → Void</span>
+        <span class="e">Esperado: pide motivo, queda anulada y el saldo deja de contar.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-7"><span class="body">
+        <span class="t">Agregar y editar pago</span><span class="w">/accounting → Payments</span>
+        <span class="e">Esperado: borrador editable; método, fecha e importe se guardan.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-8"><span class="body">
+        <span class="t">Confirmar pago</span><span class="w">/accounting → Payments → Confirm</span>
+        <span class="e">Esperado: confirmado; la factura refleja el cobro y el saldo baja.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-9"><span class="body">
+        <span class="t">Conciliar pago</span><span class="w">/accounting → Payments → Reconcile</span>
+        <span class="e">Esperado: permite conciliar un pago confirmado (antes fallaba con “Payment is immutable”).</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-10"><span class="body">
+        <span class="t">Anular pago</span><span class="w">/accounting → Payments → Void</span>
+        <span class="e">Esperado: permitido en borrador; en confirmado es terminal y debe rechazarse con mensaje.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-11"><span class="body">
+        <span class="t">Duplicado de pago</span><span class="w">/accounting → Payments → dos pagos iguales</span>
+        <span class="e">Esperado: aviso de posible duplicado (el detector comparaba mal la fecha y estaba muerto).</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-12"><span class="body">
+        <span class="t">Gastos</span><span class="w">/accounting → Expenses</span>
+        <span class="e">Esperado: alta y edición de gasto, con categoría e importe correctos.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s8-13"><span class="body">
+        <span class="t">Máquina de estados financiera</span><span class="w">/financial</span>
+        <span class="e">Esperado: Calcular → Confrontar → Confirmar actuals → Aprobar → Facturable → Facturar → Cobrar. Un salto inválido se rechaza.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s9">
+    <div class="sec-head">
+      <h2><span class="kicker">Paso 9</span>Reconciliación</h2>
+      <span class="badge" data-count="s9">0/6</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s9-1"><span class="body">
+        <span class="t">Listado y filtros</span><span class="w">/reconciliation</span>
+        <span class="e">Esperado: carga, buscás por servicio/proyecto y filtrás por estado.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s9-2"><span class="body">
+        <span class="t">Abrir el servicio desde la fila</span><span class="w">/reconciliation → abrir</span>
+        <span class="e">Esperado: lleva al workspace correcto.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s9-3"><span class="body">
+        <span class="t">Resolver</span><span class="w">/reconciliation → Resolve</span>
+        <span class="e">Esperado: horas finales, km, diaria, festivo, notturno y notas → <code>Resuelto</code>.</span>
+        <span class="alt">workspace → Operations → Reconciliation.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s9-4"><span class="body">
+        <span class="t">Datos inválidos</span><span class="w">hora fin menor que inicio</span>
+        <span class="e">Esperado: validación clara, sin guardar una reconciliación imposible.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s9-5"><span class="body">
+        <span class="t">Bloqueo de facturación</span><span class="w">servicio sin conciliar</span>
+        <span class="e">Esperado: el gate impide facturar y explica qué falta.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s9-6"><span class="body">
+        <span class="t">Ajuste de importes al resolver</span><span class="w">/reconciliation</span>
+        <span class="e">Esperado: si cambian km/horas, el importe del servicio se recalcula y queda auditado.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s10">
+    <div class="sec-head">
+      <h2><span class="kicker">Paso 10</span>Usuarios, roles y ajustes</h2>
+      <span class="badge" data-count="s10">0/11</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s10-1"><span class="body">
+        <span class="t">Listado de usuarios</span><span class="w">/user-management</span>
+        <span class="e">Esperado: usuario, rol y estado visibles; los dados de baja no aparecen.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s10-2"><span class="body">
+        <span class="t">Crear usuario</span><span class="w">/user-management → Create User</span>
+        <span class="e">Esperado: queda <code>pending</code> y todavía no puede entrar.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s10-3"><span class="body">
+        <span class="t">Aprobar con rol</span><span class="w">/user-management → ✓ Approve</span>
+        <span class="e">Esperado: modal pide rol (Admin / Coordinator / Accounting / Driver); después del alta puede entrar.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s10-4"><span class="body">
+        <span class="t">Editar rol</span><span class="w">/user-management → Edit</span>
+        <span class="e">Esperado: el menú del usuario cambia según el rol al volver a entrar.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s10-5"><span class="body">
+        <span class="t">Reset de contraseña</span><span class="w">/user-management → ícono llave</span>
+        <span class="e">Esperado: no pide la clave vieja, la nueva funciona y la sesión abierta del usuario cae.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s10-6"><span class="body">
+        <span class="t">Cambiar mi contraseña</span><span class="w">/user-management → Change my password</span>
+        <span class="e">Esperado: pide actual + nueva + confirmación; con la nueva entrás y queda auditado.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s10-7"><span class="body">
+        <span class="t">Validaciones de contraseña</span><span class="w">modal de reset / cambio</span>
+        <span class="e">Esperado: menos de 6 caracteres o confirmación distinta frenan el submit sin llamar al backend.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s10-8"><span class="body">
+        <span class="t">Dar de baja un usuario</span><span class="w">/user-management → Delete</span>
+        <span class="e">Esperado: desaparece de la lista y el login responde “account disabled”.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s10-9"><span class="body">
+        <span class="t">Protecciones de baja</span><span class="w">borrarte a vos / último admin</span>
+        <span class="e">Esperado: ambas rechazadas con mensaje.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s10-10"><span class="body">
+        <span class="t">Usuarios activos</span><span class="w">/active-users</span>
+        <span class="e">Esperado: muestra la sesión actual (heartbeat cada 25 s) y las recientes.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s10-11"><span class="body">
+        <span class="t">Secciones embebidas en Settings</span><span class="w">/settings</span>
+        <span class="e">Esperado: User Management y Audit Log funcionan también desde acá (mismo dato que las pantallas propias).</span>
+        <span class="alt">atajo real: gestionar usuarios sin salir de Settings.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s11">
+    <div class="sec-head">
+      <h2><span class="kicker">Paso 11</span>Auditoría y actividad</h2>
+      <span class="badge" data-count="s11">0/5</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s11-1"><span class="body">
+        <span class="t">Buscar el servicio de prueba</span><span class="w">/audit-center → Activity</span>
+        <span class="e">Esperado: aparecen los eventos de los pasos 3 a 9, en orden y con usuario.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s11-2"><span class="body">
+        <span class="t">Cambios de campos</span><span class="w">/audit-center → Changes</span>
+        <span class="e">Esperado: se ven antes/después de las ediciones (por ejemplo, el cambio de tarifa).</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s11-3"><span class="body">
+        <span class="t">Activity Feed</span><span class="w">/active-users o sección de actividad</span>
+        <span class="e">Esperado: navegación y acciones recientes, sin huecos ni duplicados raros.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s11-4"><span class="body">
+        <span class="t">Eventos de usuario</span><span class="w">/audit-center</span>
+        <span class="e">Esperado: <code>user.passwordChanged</code>, <code>user.passwordReset</code>, <code>user.deleted</code> con descripción legible.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s11-5"><span class="body">
+        <span class="t">Snapshot auditado</span><span class="w">node scripts/backup-snapshot.mjs</span>
+        <span class="e">Esperado: el export queda como <code>system.backupExported</code> en el audit center.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s12">
+    <div class="sec-head">
+      <h2><span class="kicker">Paso 12</span>Móvil (375 × 667 o teléfono real)</h2>
+      <span class="badge" data-count="s12">0/9</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s12-1"><span class="body">
+        <span class="t">Barra superior</span><span class="w">cualquier pantalla</span>
+        <span class="e">Esperado: franja fija de 48 px con el nombre del sistema; el ☰ no tapa los títulos.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s12-2"><span class="body">
+        <span class="t">Drawer de navegación</span><span class="w">☰</span>
+        <span class="e">Esperado: abre completo con etiquetas, fondo oscurecido, ✕ para cerrar y bloquea el scroll de atrás.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s12-3"><span class="body">
+        <span class="t">Navegar desde el drawer</span><span class="w">☰ → ítem</span>
+        <span class="e">Esperado: navega y cierra el drawer solo.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s12-4"><span class="body">
+        <span class="t">Tablas</span><span class="w">/transport · /accounting</span>
+        <span class="e">Esperado: scroll horizontal dentro de la tarjeta; la página nunca se desborda a la derecha.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s12-5"><span class="body">
+        <span class="t">Modales</span><span class="w">cualquier alta/edición</span>
+        <span class="e">Esperado: bottom sheet con header/footer fijos, cuerpo scrolleable y Guardar/Cancelar siempre alcanzables.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s12-6"><span class="body">
+        <span class="t">Zoom en iOS</span><span class="w">enfocar un input</span>
+        <span class="e">Esperado: no hay zoom automático (font-size ≥ 16 px en móvil).</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s12-7"><span class="body">
+        <span class="t">Filtros del dashboard</span><span class="w">/dashboard</span>
+        <span class="e">Esperado: la fila de filtros se parte en dos líneas; nada queda cortado.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s12-8"><span class="body">
+        <span class="t">Workspace en móvil</span><span class="w">/service/&lt;id&gt;</span>
+        <span class="e">Esperado: header compacto, tabs inferiores y panel lateral a pantalla completa.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s12-9"><span class="body">
+        <span class="t">Safe area</span><span class="w">iPhone con notch</span>
+        <span class="e">Esperado: el contenido no queda debajo del home indicator.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s13">
+    <div class="sec-head">
+      <h2><span class="kicker">Paso 13</span>Pruebas negativas (deben fallar bien)</h2>
+      <span class="badge" data-count="s13">0/9</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s13-1"><span class="body">
+        <span class="t">Salto de estado</span><span class="w">Confirmado → EnRuta sin confirmar</span>
+        <span class="e">Esperado: error de transición legible, sin excepción ni estado a medias.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s13-2"><span class="body">
+        <span class="t">Validar sin costo</span><span class="w">servicio sin CostBreakdown</span>
+        <span class="e">Esperado: “Service must have at least 1 CostBreakdown”. Es la invariante, no un bug.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s13-3"><span class="body">
+        <span class="t">Link vencido o ajeno</span><span class="w">formulario público</span>
+        <span class="e">Esperado: rechazo con mensaje.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s13-4"><span class="body">
+        <span class="t">Permiso insuficiente</span><span class="w">coordinator → /user-management</span>
+        <span class="e">Esperado: bloqueo en UI y 403 si se fuerza la llamada.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s13-5"><span class="body">
+        <span class="t">Contraseña corta o distinta</span><span class="w">modal de reset</span>
+        <span class="e">Esperado: error en el modal, sin request al backend.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s13-6"><span class="body">
+        <span class="t">Contraseña vieja tras el reset</span><span class="w">login</span>
+        <span class="e">Esperado: rechazada.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s13-7"><span class="body">
+        <span class="t">Borrar cliente con proyectos</span><span class="w">/customers</span>
+        <span class="e">Esperado: rechazado con el detalle de dependencias.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s13-8"><span class="body">
+        <span class="t">Enviar rapportino vacío</span><span class="w">/rapportinos</span>
+        <span class="e">Esperado: “Cannot send empty rapportino”.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s13-9"><span class="body">
+        <span class="t">Editar factura emitida</span><span class="w">/accounting</span>
+        <span class="e">Esperado: rechazado; solo anulación con motivo.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <section data-sec="s14">
+    <div class="sec-head">
+      <h2><span class="kicker">Paso 14</span>Atajos: la misma tarea por distintos caminos</h2>
+      <span class="badge" data-count="s14">0/12</span>
+    </div>
+    <p class="note">Marcá la fila cuando probaste <b>todos</b> los caminos y llegaste al mismo resultado. Si uno falla y otro no, el bug está en la pantalla, no en el comando.</p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th class="cell-check"></th><th>Tarea</th><th>Camino A</th><th>Camino B</th><th>Camino C</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s14-1"></td>
+            <td>Crear servicio</td>
+            <td>/transport → “+”<span class="route">/new-service</span></td>
+            <td>URL directa<span class="route">/new-service</span></td>
+            <td>Importar Excel<span class="route">/transport-list</span></td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s14-2"></td>
+            <td>Asignar chofer</td>
+            <td>Celda inline en la tabla<span class="route">/transport</span></td>
+            <td>Selección múltiple → Assign<span class="route">/transport</span></td>
+            <td>Workspace → Operations → Driver<span class="route">/service/:id/operations</span></td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s14-3"></td>
+            <td>Avanzar el estado</td>
+            <td>Botón de acción del workspace<span class="route">/service/:id</span></td>
+            <td>Desde la tabla de Transport<span class="route">/transport</span></td>
+            <td>Desde Financial<span class="route">/financial</span></td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s14-4"></td>
+            <td>Generar link del chofer</td>
+            <td>Pantalla de links<span class="route">/driver-links</span></td>
+            <td>Workspace → Operations → Driver Link<span class="route">/service/:id/operations</span></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s14-5"></td>
+            <td>Revisar y aprobar el parte</td>
+            <td>Inbox de partes<span class="route">/driver-reports</span></td>
+            <td>Workspace → Operations → Driver Report<span class="route">/service/:id/operations</span></td>
+            <td>Import desde texto<span class="route">/driver-reports → Import</span></td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s14-6"></td>
+            <td>Generar rapportino</td>
+            <td>Pantalla de rapportinos<span class="route">/rapportinos</span></td>
+            <td>Workspace → Finance → Rapportino<span class="route">/service/:id/finance</span></td>
+            <td>Reportes de cost breakdown<span class="route">/reports</span></td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s14-7"></td>
+            <td>Crear factura</td>
+            <td>Facturación<span class="route">/accounting → Invoices</span></td>
+            <td>Rapportino → Facturar<span class="route">/rapportinos</span></td>
+            <td>Workspace → Finance → Facturar<span class="route">/service/:id/finance</span></td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s14-8"></td>
+            <td>Cobrar</td>
+            <td>Pagos<span class="route">/accounting → Payments</span></td>
+            <td>Workspace → Finance → Cobrar<span class="route">/service/:id/finance</span></td>
+            <td>Estado financiero<span class="route">/financial</span></td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s14-9"></td>
+            <td>Resolver conciliación</td>
+            <td>Pantalla de conciliación<span class="route">/reconciliation</span></td>
+            <td>Workspace → Operations → Reconciliation<span class="route">/service/:id/operations</span></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s14-10"></td>
+            <td>Gestionar usuarios</td>
+            <td>Pantalla de usuarios<span class="route">/user-management</span></td>
+            <td>Sección embebida en Settings<span class="route">/settings</span></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s14-11"></td>
+            <td>Ver auditoría</td>
+            <td>Audit Center<span class="route">/audit-center</span></td>
+            <td>Audit Log en Settings<span class="route">/settings</span></td>
+            <td>Activity Feed<span class="route">/active-users</span></td>
+          </tr>
+          <tr>
+            <td class="cell-check"><input type="checkbox" data-id="s14-12"></td>
+            <td>Encontrar un servicio</td>
+            <td>Tabla de Transport<span class="route">/transport</span></td>
+            <td>Reportes<span class="route">/reports</span></td>
+            <td>Dashboard / auditoría<span class="route">/dashboard · /audit-center</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note"><b>Ojo:</b> <code>/transport-list</code> y <code>/reports</code> no tienen entrada en el menú lateral. Se llegan por botón (Import Excel, Reports) o por URL directa. Si un ítem del menú no aparece, no significa que la pantalla no exista.</p>
+  </section>
+
+  <section data-sec="s15">
+    <div class="sec-head">
+      <h2><span class="kicker">Paso 15</span>Cierre y limpieza</h2>
+      <span class="badge" data-count="s15">0/6</span>
+    </div>
+    <ul class="list">
+      <li class="item"><label><input type="checkbox" data-id="s15-1"><span class="body">
+        <span class="t">Sesión y estado intactos</span><span class="w">F5 + re-login + volver al servicio</span>
+        <span class="e">Esperado: mismo estado, mismos importes, sin recálculos espurios.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s15-2"><span class="body">
+        <span class="t">Borrar los datos TEST-</span><span class="w">UI o scripts</span>
+        <span class="e">Esperado: servicios en Importado/Asignado borrados, clientes sin proyectos borrados, usuarios de prueba dados de baja.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s15-3"><span class="body">
+        <span class="t">Restos de la batería E2E</span><span class="w">node scripts/e2e/purge.mjs --dry</span>
+        <span class="e">Esperado: simulacro primero; si hay filas, correr <code>--confirm</code>. Nunca borra al usuario <code>admin</code>.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s15-4"><span class="body">
+        <span class="t">Backup posterior</span><span class="w">node scripts/backup-snapshot.mjs</span>
+        <span class="e">Esperado: total de filas comparable con el del paso 0.5. Diferencias = datos que quedaron.</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s15-5"><span class="body">
+        <span class="t">Consola sin errores nuevos</span><span class="w">F12 → Console</span>
+        <span class="e">Esperado: ningún error rojo atribuible a la app (los de red por cold start son otra cosa).</span>
+      </span></label></li>
+
+      <li class="item"><label><input type="checkbox" data-id="s15-6"><span class="body">
+        <span class="t">Reporte de fallos</span><span class="w">por cada bug encontrado</span>
+        <span class="e">Anotá pantalla, acción, <code>action</code>, payload y respuesta. Con eso se reproduce sin adivinar.</span>
+      </span></label></li>
+    </ul>
+  </section>
+
+  <div class="empty" id="empty">No hay ítems que coincidan con el filtro.</div>
+
+  <footer>
+    Transport Action · checklist manual v1 · se guarda en este navegador (localStorage) · imprimible a PDF
+  </footer>
+</main>
+
+<script>
+(function () {
+  var KEY = 'ta-checklist-v1';
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('input[type=checkbox][data-id]'));
+  var fill = document.getElementById('fill');
+  var doneEl = document.getElementById('done');
+  var totalEl = document.getElementById('total');
+  var pctEl = document.getElementById('pct');
+  var q = document.getElementById('q');
+  var empty = document.getElementById('empty');
+  var hideDone = false;
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; }
+    catch (e) { return {}; }
+  }
+  function save() {
+    var out = {};
+    boxes.forEach(function (b) { if (b.checked) out[b.dataset.id] = 1; });
+    try { localStorage.setItem(KEY, JSON.stringify(out)); } catch (e) { /* file:// sin storage */ }
+  }
+
+  var state = load();
+  boxes.forEach(function (b) {
+    b.checked = !!state[b.dataset.id];
+    var li = b.closest('li') || b.closest('tr');
+    if (li) li.classList.toggle('done', b.checked);
+  });
+
+  function update() {
+    var total = boxes.length;
+    var done = boxes.filter(function (b) { return b.checked; }).length;
+    var pct = total ? Math.round((done / total) * 100) : 0;
+    doneEl.textContent = done;
+    totalEl.textContent = total;
+    pctEl.textContent = pct + '%';
+    fill.style.width = pct + '%';
+
+    document.querySelectorAll('section[data-sec]').forEach(function (sec) {
+      var list = Array.prototype.slice.call(sec.querySelectorAll('input[data-id]'));
+      var d = list.filter(function (b) { return b.checked; }).length;
+      var badge = sec.querySelector('[data-count]');
+      if (badge) {
+        badge.textContent = d + '/' + list.length;
+        badge.classList.toggle('full', d === list.length && list.length > 0);
+      }
+    });
+  }
+
+  function applyFilter() {
+    var term = (q.value || '').trim().toLowerCase();
+    var visible = 0;
+    boxes.forEach(function (b) {
+      var row = b.closest('li') || b.closest('tr');
+      if (!row) return;
+      var text = (row.textContent || '').toLowerCase();
+      var matchTerm = !term || text.indexOf(term) !== -1;
+      var matchDone = !hideDone || !b.checked;
+      var show = matchTerm && matchDone;
+      row.classList.toggle('hide', !show);
+      if (show) visible++;
+    });
+    empty.style.display = visible === 0 ? 'block' : 'none';
+  }
+
+  boxes.forEach(function (b) {
+    b.addEventListener('change', function () {
+      var row = b.closest('li') || b.closest('tr');
+      if (row) row.classList.toggle('done', b.checked);
+      save();
+      update();
+      if (hideDone || (q.value || '').trim()) applyFilter();
+    });
+  });
+
+  q.addEventListener('input', applyFilter);
+
+  document.getElementById('toggle-done').addEventListener('click', function () {
+    hideDone = !hideDone;
+    this.textContent = hideDone ? 'Mostrar todos' : 'Ocultar completados';
+    this.setAttribute('aria-pressed', hideDone ? 'true' : 'false');
+    applyFilter();
+  });
+
+  document.getElementById('print').addEventListener('click', function () { window.print(); });
+
+  document.getElementById('reset').addEventListener('click', function () {
+    if (!window.confirm('¿Borrar todas las marcas de este checklist? No se puede deshacer.')) return;
+    boxes.forEach(function (b) {
+      b.checked = false;
+      var row = b.closest('li') || b.closest('tr');
+      if (row) row.classList.remove('done');
+    });
+    save();
+    update();
+    applyFilter();
+  });
+
+  update();
+})();
+</script>
+<noscript><p style="padding:16px">Este checklist necesita JavaScript para guardar el avance. Podés imprimirlo y marcarlo en papel.</p></noscript>
+</body>
+</html>
