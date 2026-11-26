@@ -31,4 +31,9 @@
 - Hallazgo documentado: `runMigrations()` corre en cada request dentro de un `try/catch` que solo
   loguea, y la versión avanza después de `fn()`. Una migración rota reintenta en cada request y la
   app sigue con el esquema viejo, sin señal en la UI.
+- Verificación: un lector sin contexto respondió 5 preguntas de dominio usando solo la wiki, y
+  detectó 2 ambigüedades, ya cerradas: el vencimiento del link se calcula desde **medianoche UTC**
+  de `dateTo` (con `linkDurationDays: 0` nace vencido), y "ciclo operativo" vs "ciclo completo"
+  quedó definido en [Panorama](erp/overview.md) — el ciclo completo exige `admin`, no `coordinator`.
+
 

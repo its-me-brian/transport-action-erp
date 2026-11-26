@@ -75,12 +75,24 @@ exige los cuatro primeros parámetros y valida `dateFrom <= dateTo`.
 |---|---|
 | `Token` | ID generado por `_generateId('DL', 'TA')`, sin prefijo ni guiones |
 | `Status` | `ACTIVE` al crear |
-| `ExpiresAt` | `dateTo + linkDurationDays` días (**default 1**) |
+| `ExpiresAt` | `dateTo + linkDurationDays` días (**default 1**), calculado desde la medianoche UTC de `dateTo` |
 | `FieldsSchema` | JSON de los campos del formulario; si no se pasa, `DEFAULT_FIELDS_SCHEMA` |
 | Link resultante | `<baseUrl>?action=driverForm&token=<token>` |
 
 El `baseUrl` por defecto es la URL del propio Web App (`SpreadsheetApp.getService().getUrl()`), así
 que el link apunta al deployment vivo sin configuración extra.
+
+**La hora del vencimiento no es obvia.** `new Date(dateTo)` interpreta `"2026-11-26"` como
+**medianoche UTC**, y el vencimiento se calcula sumándole días enteros. Con el default de 1 día:
+
+| `dateTo` | `ExpiresAt` real | Efecto |
+|---|---|---|
+| `2026-11-26` | `2026-11-27T00:00Z` | Vive todo el 26 y muere a las 01:00 de Roma (UTC+1 en invierno) |
+| `2026-11-26` con `linkDurationDays: 0` | `2026-11-26T00:00Z` | **Nace vencido**: a esa hora en Roma ya pasó |
+
+No hay margen de gracia ni hora configurable: es fecha, no timestamp. Si el chofer tiene que
+reportar a la mañana siguiente, el link necesita `durationDays` ≥ 1 sobre un `dateTo` que incluya
+ese día.
 
 ### Abrir
 

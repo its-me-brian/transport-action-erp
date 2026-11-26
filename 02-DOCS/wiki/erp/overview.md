@@ -37,6 +37,17 @@ Cuatro roles, ni uno más. La matriz completa está en
 | `accounting` | Dinero | Facturas, pagos, gastos, cashflow; no crea servicios ni proyectos |
 | `driver` | Solo lo suyo | Sus servicios y el formulario público de reporte; requiere estar vinculado a una fila de *Drivers* |
 
+**Dos términos que no son sinónimos**, y la diferencia decide qué rol alcanza:
+
+| Término | Alcance | Rol mínimo |
+|---|---|---|
+| **Ciclo operativo** | Importar la lista → asignar → ejecutar → validar → calcular economía | `coordinator` |
+| **Ciclo completo** | Lo anterior + rapportino → facturar → cobrar | `admin` |
+
+`coordinator` no factura ni gestiona usuarios; `accounting` no importa, no crea servicios ni
+proyectos y no reporta partes de chofer. Ningún rol intermedio cubre el ciclo completo: o hay un
+`admin`, o el trabajo se reparte entre dos personas.
+
 ## Stack
 
 | Capa | Tecnología | Detalle |
