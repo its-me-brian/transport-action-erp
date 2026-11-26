@@ -109,18 +109,38 @@ const ServiceRepository = {
     return _update(this.SHEET, id, changes);
   },
 
-  toDTO(entity) {
+  /**
+   * Convierte una fila de Services en el DTO que consume el frontend.
+   *
+   * `lookups` es opcional y existe por rendimiento. Sin él cada servicio
+   * dispara hasta siete lecturas completas de hoja (chofer, vehículo, proyecto,
+   * cliente, proveedor y los dos breakdowns); con 62 servicios eso medía ~100 s
+   * de listado. `buildLookups()` arma los índices una sola vez por request.
+   */
+  toDTO(entity, lookups) {
+    // `array.map(ServiceRepository.toDTO)` pasa el indice como segundo argumento.
+    // Un numero es truthy, asi que `lookups.drivers` explotaba con "Cannot read
+    // properties of undefined (reading 'DRV-...')" desde el segundo servicio.
+    // Solo se acepta el indice si tiene la forma esperada.
+    const lk = lookups ? (lookups.drivers ? lookups : null) : null;
+
+    const lookDriver = (id) => (lk ? lk.drivers[String(id)] || null : DriverRepository.getById(id));
+    const lookVehicle = (id) => (lk ? lk.vehicles[String(id)] || null : VehicleRepository.getById(id));
+    const lookProject = (id) => (lk ? lk.projects[String(id)] || null : ProjectRepository.getById(id));
+    const lookClient = (id) => (lk ? lk.clients[String(id)] || null : ClientRepository.getById(id));
+    const lookCollaborator = (id) => (lk ? lk.collaborators[String(id)] || null : CollaboratorRepository.getById(id));
+
     // Resolve driver name from DriverID
     let driverName = '';
     if (entity.DriverID) {
-      const driver = DriverRepository.getById(entity.DriverID);
+      const driver = lookDriver(entity.DriverID);
       if (driver) driverName = driver.Name || '';
     }
     
     // Resolve vehicle type: first from VehicleID (linked vehicle), fallback to entity.VehicleType (imported value)
     let vehicleType = entity.VehicleType || '';
     if (entity.VehicleID) {
-      const vehicle = VehicleRepository.getById(entity.VehicleID);
+      const vehicle = lookVehicle(entity.VehicleID);
       if (vehicle) vehicleType = vehicle.Type || '';
     }
     
@@ -128,11 +148,11 @@ const ServiceRepository = {
     let clientId = '';
     let clientName = '';
     if (entity.ProjectID) {
-      const project = ProjectRepository.getById(entity.ProjectID);
+      const project = lookProject(entity.ProjectID);
       if (project) {
         clientId = project.ClientID || '';
         if (clientId) {
-          const client = ClientRepository.getById(clientId);
+          const client = lookClient(clientId);
           if (client) clientName = client.Name || '';
         }
       }
@@ -142,10 +162,10 @@ const ServiceRepository = {
     let providerName = '';
     if (entity.ProviderID) {
       if (entity.ProviderType === 'collaborator') {
-        const collaborator = CollaboratorRepository.getById(entity.ProviderID);
+        const collaborator = lookCollaborator(entity.ProviderID);
         if (collaborator) providerName = collaborator.Name || '';
       } else if (entity.ProviderType === 'internal_driver') {
-        const driver = DriverRepository.getById(entity.ProviderID);
+        const driver = lookDriver(entity.ProviderID);
         if (driver) providerName = driver.Name || '';
       }
     }
@@ -216,10 +236,10 @@ const ServiceRepository = {
       updatedAt: entity.UpdatedAt,
       // Revenue breakdown from ServiceRevenueBreakdown sheet
       revenueBreakdown: ServiceEconomics._buildLegacyBreakdown(
-        ServiceRevenueBreakdownRepository.getByService(entity.ID), 'Total'),
+        lookups ? (lookups.revenue[String(entity.ID)] || []) : ServiceRevenueBreakdownRepository.getByService(entity.ID), 'Total'),
       // Cost breakdown from ServiceCostBreakdown sheet
       costBreakdown: ServiceEconomics._buildLegacyCostBreakdown(
-        ServiceCostBreakdownRepository.getByService(entity.ID))
+        lookups ? (lookups.cost[String(entity.ID)] || []) : ServiceCostBreakdownRepository.getByService(entity.ID))
     };
   }
 };
@@ -227,6 +247,41 @@ const ServiceRepository = {
 // ============================================================================
 // API endpoints
 // ============================================================================
+
+/**
+ * Índices de las hojas que `toDTO` consulta por servicio.
+ *
+ * Se arma una sola vez por request: siete lecturas de hoja en vez de siete por
+ * servicio. Solo lo usa el listado; el detalle sigue resolviendo por repositorio.
+ */
+function _buildServiceLookups() {
+  const byId = (sheetName) => {
+    const map = {};
+    _getAll(sheetName).forEach((row) => {
+      if (row.ID !== undefined && row.ID !== null && row.ID !== '') map[String(row.ID)] = row;
+    });
+    return map;
+  };
+  const byService = (sheetName) => {
+    const map = {};
+    _getAll(sheetName).forEach((row) => {
+      const key = String(row.ServiceID || '');
+      if (!key) return;
+      (map[key] = map[key] || []).push(row);
+    });
+    return map;
+  };
+
+  return {
+    drivers: byId(SHEETS.Drivers),
+    vehicles: byId(SHEETS.Vehicles),
+    projects: byId(SHEETS.Projects),
+    clients: byId(SHEETS.Clients),
+    collaborators: byId(SHEETS.Collaborators),
+    revenue: byService(SHEETS.ServiceRevenueBreakdown),
+    cost: byService(SHEETS.ServiceCostBreakdown)
+  };
+}
 
 function apiGetServices(filters) {
   let services = ServiceRepository.getAll();
@@ -242,7 +297,9 @@ function apiGetServices(filters) {
     if (filters.dateTo) services = services.filter(s => new Date(s.Date) <= new Date(filters.dateTo));
   }
 
-  return services.map(ServiceRepository.toDTO);
+  // Un solo armado de índices para todo el listado (ver comentario en toDTO).
+  const lookups = _buildServiceLookups();
+  return services.map((entity) => ServiceRepository.toDTO(entity, lookups));
 }
 
 function apiGetService(id) {
@@ -325,7 +382,14 @@ function apiUpdateServiceField(serviceId, field, value) {
     };
 
     // Resolve field name: frontend camelCase → backend PascalCase
-    const resolvedField = fieldMap[field] || field;
+    // El fieldMap cubre los campos compuestos; para el resto alcanza con
+    // capitalizar la primera letra ("time" → "Time", "notes" → "Notes"), así
+    // el mismo endpoint acepta el nombre que manda la UI y el de la columna.
+    let resolvedField = fieldMap[field] || field;
+    if (!allowedFields.includes(resolvedField) && typeof field === 'string' && field) {
+      const pascal = field.charAt(0).toUpperCase() + field.slice(1);
+      if (allowedFields.includes(pascal)) resolvedField = pascal;
+    }
 
     if (!allowedFields.includes(resolvedField)) {
       return { success: false, error: 'Field not editable: ' + field };

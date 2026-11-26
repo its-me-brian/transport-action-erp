@@ -228,14 +228,30 @@ const ReconciliationCommands = {
         if (resolution.FinalNotturno !== undefined) updates.IsNotturno = resolution.FinalNotturno;
 
         // Recalcular economics con valores finales
+        // Este objeto tiene que llevar TODO el reporte del chofer. Antes se
+        // armaba solo con horas, km y diaria, y `applyCostBreakdown` borra los
+        // items desbloqueados al recrear: los extras del chofer (parking,
+        // peajes, combustible y espera) desaparecían del coste al aprobar el
+        // reporte, así que el margen quedaba inflado y el total calculado no
+        // coincidía con los items guardados.
+        var reportSource = _driverReportData(DriverReportRepository.getActiveByService(service.ID)) || {};
+        var hasFinal = function (value) {
+          return value !== undefined && value !== null && value !== '';
+        };
         const finalDriverReport = {
-          startTime: resolution.FinalStartTime,
-          endTime: resolution.FinalEndTime,
-          kmTotal: parseFloat(resolution.FinalKm) || 0,
-          hasDiaria: resolution.FinalDiaria !== 'none',
-          isFestivo: resolution.FinalFestivo || false,
-          isNotturno: resolution.FinalNotturno || false,
-          diariaType: resolution.FinalDiaria || 'none'
+          startTime: hasFinal(resolution.FinalStartTime) ? resolution.FinalStartTime : reportSource.startTime,
+          endTime: hasFinal(resolution.FinalEndTime) ? resolution.FinalEndTime : reportSource.endTime,
+          kmTotal: hasFinal(resolution.FinalKm) ? parseFloat(resolution.FinalKm) || 0 : reportSource.kmTotal || 0,
+          hasDiaria: hasFinal(resolution.FinalDiaria)
+            ? resolution.FinalDiaria !== 'none'
+            : reportSource.hasDiaria === true,
+          isFestivo: hasFinal(resolution.FinalFestivo) ? !!resolution.FinalFestivo : reportSource.isFestivo === true,
+          isNotturno: hasFinal(resolution.FinalNotturno) ? !!resolution.FinalNotturno : reportSource.isNotturno === true,
+          diariaType: hasFinal(resolution.FinalDiaria) ? resolution.FinalDiaria : reportSource.diariaType || 'none',
+          parking: reportSource.parking || 0,
+          tolls: reportSource.tolls || 0,
+          fuel: reportSource.fuel || 0,
+          waitMinutes: reportSource.waitMinutes || 0
         };
 
         try {

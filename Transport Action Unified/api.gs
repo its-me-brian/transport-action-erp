@@ -379,6 +379,10 @@ function _handleRoute(params, data) {
         _checkPermission(data, 'operatingCompany.update');
         result = apiUpdateOperatingCompany(data.id, data);
         break;
+      case 'createOperatingCompany':
+        _checkPermission(data, 'operatingCompany.create');
+        result = apiCreateOperatingCompany(data);
+        break;
 
       // =====================================================================
       // SETTINGS
@@ -1473,6 +1477,15 @@ function _handleRoute(params, data) {
       case 'snapshotSummary':
         _checkPermission(data, 'system.backup');
         result = sbSnapshotSummary(data.token);
+        break;
+      case 'purgeTestData':
+        _checkPermission(data, 'system.backup');
+        result = sbPurgeTestData(data.token, {
+          tag: data.tag,
+          confirm: data.confirm,
+          dryRun: data.dryRun,
+          includeUsers: data.includeUsers
+        });
         break;
 
       // =====================================================================

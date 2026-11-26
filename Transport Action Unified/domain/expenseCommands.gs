@@ -13,6 +13,41 @@ function _isAccountingPeriodClosed(accountingDate) {
   return new Date(accountingDate) <= new Date(closeDate);
 }
 
+/**
+ * Campos editables de Expense: nombre que manda la UI (camelCase) → columna.
+ *
+ * Sin este mapeo `_update` recibe claves que no existen como columna, las
+ * ignora y devuelve true: el gasto "se editaba" sin cambiar nada (Amount
+ * quedaba en 0 y la UI mostraba el valor viejo sin error).
+ */
+const _EXPENSE_FIELDS = {
+  ownerType: 'OwnerType',
+  ownerId: 'OwnerID',
+  category: 'Category',
+  description: 'Description',
+  amount: 'Amount',
+  expenseDate: 'ExpenseDate',
+  accountingDate: 'AccountingDate',
+  projectId: 'ProjectID',
+  operatingCompany: 'OperatingCompany',
+  notes: 'Notes'
+};
+
+/** Normaliza un payload de gasto a nombres de columna. Acepta ambos formatos. */
+function _normalizeExpenseFields(data) {
+  const out = {};
+  if (!data) return out;
+  Object.keys(_EXPENSE_FIELDS).forEach((camel) => {
+    const column = _EXPENSE_FIELDS[camel];
+    if (data[column] !== undefined && data[column] !== null && data[column] !== '') {
+      out[column] = data[column];
+    } else if (data[camel] !== undefined) {
+      out[column] = data[camel];
+    }
+  });
+  return out;
+}
+
 const ExpenseCommands = {
   /**
    * Crear gasto
@@ -20,24 +55,26 @@ const ExpenseCommands = {
    */
   create(expenseData) {
     return _withLock(() => {
-      if (!expenseData.description) throw new ValidationError('Description is required');
-      if (!expenseData.amount || expenseData.amount <= 0) throw new ValidationError('Amount must be > 0');
-      if (!expenseData.ownerType) throw new ValidationError('OwnerType is required');
-      if (!expenseData.ownerId) throw new ValidationError('OwnerID is required');
+      const data = _normalizeExpenseFields(expenseData);
+      if (!data.Description) throw new ValidationError('Description is required');
+      if (!data.Amount || Number(data.Amount) <= 0) throw new ValidationError('Amount must be > 0');
+      if (!data.OwnerType) throw new ValidationError('OwnerType is required');
+      if (!data.OwnerID) throw new ValidationError('OwnerID is required');
 
       // E004: AccountingDate ≥ ExpenseDate
-      var expenseDate = expenseData.expenseDate || expenseData.ExpenseDate;
-      var accountingDate = expenseData.accountingDate || expenseData.AccountingDate || expenseDate;
+      var expenseDate = data.ExpenseDate;
+      var accountingDate = data.AccountingDate || expenseDate;
       if (expenseDate && accountingDate && new Date(accountingDate) < new Date(expenseDate)) {
         throw new BusinessRuleError('AccountingDate must be ≥ ExpenseDate', 'E004');
       }
+      data.AccountingDate = accountingDate;
 
       // Default OperatingCompany
-      if (!expenseData.operatingCompany) {
-        expenseData.operatingCompany = SettingsRepository.get('ActiveCompany') || 'TA';
+      if (!data.OperatingCompany) {
+        data.OperatingCompany = SettingsRepository.get('ActiveCompany') || 'TA';
       }
 
-      const expense = ExpenseRepository.create(expenseData);
+      const expense = ExpenseRepository.create(data);
 
       _dispatchEvent({
         type: 'expense.created',
@@ -61,14 +98,23 @@ const ExpenseCommands = {
         throw new BusinessRuleError('Can only edit draft expenses', 'E001');
       }
 
+      const fields = _normalizeExpenseFields(changes);
+      if (fields.Amount !== undefined && Number(fields.Amount) <= 0) {
+        throw new ValidationError('Amount must be > 0');
+      }
+      if (fields.Description !== undefined && !fields.Description) {
+        throw new ValidationError('Description is required');
+      }
+
       // E004: AccountingDate ≥ ExpenseDate (check against effective values)
-      var effectiveExpenseDate = changes.expenseDate || changes.ExpenseDate || expense.ExpenseDate;
-      var effectiveAccountingDate = changes.accountingDate || changes.AccountingDate || expense.AccountingDate || effectiveExpenseDate;
+      var effectiveExpenseDate = fields.ExpenseDate || expense.ExpenseDate;
+      var effectiveAccountingDate = fields.AccountingDate || expense.AccountingDate || effectiveExpenseDate;
       if (effectiveExpenseDate && effectiveAccountingDate && new Date(effectiveAccountingDate) < new Date(effectiveExpenseDate)) {
         throw new BusinessRuleError('AccountingDate must be ≥ ExpenseDate', 'E004');
       }
+      if (!effectiveAccountingDate) fields.AccountingDate = effectiveExpenseDate;
 
-      ExpenseRepository.update(expenseId, changes);
+      ExpenseRepository.update(expenseId, fields);
 
       _dispatchEvent({
         type: 'expense.edited',

@@ -9,7 +9,7 @@
 // 'Fuera de alcance', para que la cobertura no mienta por omisión.
 // ============================================================================
 
-import { createService, driveToCompleted, getService } from '../lib/flows.mjs';
+import { acquireDriver, createService, driveToCompleted, driveToValidated, getService } from '../lib/flows.mjs';
 import { addDays, today } from '../lib/fixtures.mjs';
 
 function arr(value) {
@@ -114,7 +114,21 @@ export async function run(ctx) {
   });
 
   await r.step('updateOperatingCompany actualiza sin cambiar el nombre', async () => {
-    const list = arr(await client.post('getOperatingCompanies', {}));
+    // La hoja OperatingCompany está vacía en producción: la única fila era un
+    // fixture. Sin issuer no se puede emitir factura, así que la suite crea uno
+    // etiquetado con el tag de la corrida (purge lo barre al final).
+    let list = arr(await client.post('getOperatingCompanies', {}));
+    if (list.length === 0) {
+      const created = await client.post('createOperatingCompany', {
+        name: `${ctx.tag} SL`,
+        vat: 'IT00000000000',
+        currency: 'EUR',
+        defaultTaxRate: 21,
+        active: true,
+      });
+      if (!idOf(created)) throw new Error('createOperatingCompany no devolvió id');
+      list = arr(await client.post('getOperatingCompanies', {}));
+    }
     if (list.length === 0) throw new Error('no hay operating companies');
     const company = list[0];
     const id = idOf(company);
@@ -317,18 +331,25 @@ export async function run(ctx) {
   await r.step('captureWhatsAppReports crea items de inbox', async () => {
     if (!parsed?.reports?.length) throw new Error('no hay parse previo para capturar');
     const before = arr(await client.post('getInboxItems', { filters: {} })).length;
+    // El parser devuelve el nombre tal cual viene del texto: sin matchedDriverId
+    // no hay a quién imputar el reporte y el comando responde captured:0 (con
+    // `success:false` y sin `error`, de ahí el "respuesta de error sin detalle").
     const res = await client.post('captureWhatsAppReports', {
-      reports: parsed.reports.slice(0, 1),
+      reports: [{ ...parsed.reports[0], matchedDriverId: driverId }],
       projectId: ctx.ids.projectId,
     });
-    const created = arr(res);
+    const created = arr(res.results) || [];
     for (const item of created) {
       const id = idOf(item) || item.inboxId;
       if (id) ctx.track('inboxIds', id);
     }
+    if (!res.captured) {
+      const why = created.map((c) => c.error).filter(Boolean).join('; ');
+      throw new Error(`captured=0${why ? ` (${why})` : ''}`);
+    }
     const after = arr(await client.post('getInboxItems', { filters: {} })).length;
     if (after <= before) throw new Error(`el inbox no creció: ${before} → ${after}`);
-    return { created: created.length, before, after };
+    return { created: res.captured, before, after };
   });
 
   // ── Inbox masivo ─────────────────────────────────────────────────────────
@@ -354,13 +375,33 @@ export async function run(ctx) {
   });
 
   await r.step('lockReport bloquea el primero', async () => {
+    // lockReport exige PENDING_REVIEW: un item recién capturado está CAPTURED.
+    // Hay que recorrer CAPTURED → NORMALIZED → PENDING_REVIEW antes de bloquear.
+    await client.post('normalizeReport', {
+      inboxId: bulkIds[0],
+      normalizedData: {
+        startTime: '08:00',
+        endTime: '18:00',
+        kmTotal: 101,
+        hasDiaria: true,
+        diariaType: 'piena',
+        isFestivo: false,
+        isNotturno: false,
+      },
+    });
+    await client.post('submitToReview', { inboxId: bulkIds[0] });
+
     const res = await client.post('lockReport', { inboxId: bulkIds[0] });
-    if (res && res.success === false) throw new Error('lockReport falló');
-    const item = await client.post('getInboxItem', { id: bulkIds[0] });
-    if (item && item.locked !== undefined && item.locked !== true && item.locked !== 'true') {
-      throw new Error(`locked=${item.locked}`);
+    if (res && res.success === false) throw new Error(`lockReport falló: ${res.error || 'sin detalle'}`);
+    // El router lee data.inboxId (api.gs:1326), no data.id: con `id` devolvia
+    // null y el assert fallaba con status=undefined aunque el lock funciono.
+    const item = await client.post('getInboxItem', { inboxId: bulkIds[0] });
+    const status = item?.status ?? item?.Status;
+    const locked = item?.locked ?? item?.Locked;
+    if (status !== 'LOCKED' && locked !== true && locked !== 'true') {
+      throw new Error(`no quedó bloqueado: status=${status} locked=${locked}`);
     }
-    return res;
+    return { status };
   });
 
   await r.step('bulkNormalizeInbox normaliza el segundo', async () => {
@@ -445,6 +486,24 @@ export async function run(ctx) {
   // ── Rapportino de colaborador ────────────────────────────────────────────
   r.section('Rapportino de colaborador');
 
+  /**
+   * `addServiceToRapportino` exige OperationalStatus=Validado y un
+   * FinancialStatus en {Pendiente, ActualsConfirmados, Aprobado, Facturable}.
+   * Un servicio recién validado queda en `Calculado` (no está en la lista), así
+   * que hay que confirmar actuals antes de meterlo en un rapportino de cliente.
+   */
+  const ADDABLE_FINANCIAL = ['Pendiente', 'ActualsConfirmados', 'Aprobado', 'Facturable'];
+  async function ensureAddableToRapportino(serviceId) {
+    const svc = await client.post('getService', { id: serviceId });
+    if (ADDABLE_FINANCIAL.includes(svc?.financialStatus)) return svc.financialStatus;
+    await client.post('confirmActuals', { serviceId });
+    const after = await client.post('getService', { id: serviceId });
+    if (!ADDABLE_FINANCIAL.includes(after?.financialStatus)) {
+      throw new Error(`financialStatus=${after?.financialStatus} no permite agregar a rapportino`);
+    }
+    return after.financialStatus;
+  }
+
   let collabDriverId = null;
   let collaboratorServiceId = null;
   let collaboratorRapportinoId = null;
@@ -460,17 +519,41 @@ export async function run(ctx) {
     collabDriverId = idOf(res);
     if (!collabDriverId) throw new Error('sin id');
     ctx.track('drivers', collabDriverId);
+    // PROVIDER_COLABORADOR necesita su propia SupplierRate: el costo se busca
+    // por (ProviderType, ProviderID) = (collaborator, collaboratorId), no por el
+    // driver. Sin esto approveDriverReport no genera CostBreakdown y
+    // validateService corta con "Service must have at least 1 CostBreakdown".
+    const collabRate = await client.post('createSupplierRate', {
+      supplierType: 'collaborator',
+      supplierId: ctx.ids.collaboratorId,
+      projectId: ctx.ids.projectId,
+      serviceType: 'Dispo',
+      vehicleType: 'Van',
+      baseRate: 180,
+      includedKm: 100,
+      includedHours: 8,
+      extraKmRate: 0.45,
+      extraHourRate: 22,
+      diariaPiena: 160,
+      diariaMezza: 100,
+      nightExtra: 15,
+      holidayExtra: 50,
+      waitHourRate: 18,
+    });
+    ctx.track('supplierRateIds', idOf(collabRate));
     return { id: collabDriverId };
   });
 
-  await r.step('servicio completado con proveedor colaborador', async () => {
-    const svc = await createService(ctx, { time: '06:45', serviceType: 'Dispo' });
-    await driveToCompleted(ctx, svc.id, collabDriverId, ctx.ids.vehicleId);
-    const dto = await getService(ctx, svc.id);
+  await r.step('servicio validado con proveedor colaborador', async () => {
+    // addServiceToRapportinoCollaborator exige el servicio en Validado, así que
+    // el recorrido tiene que llegar hasta el reporte aceptado + validateService.
+    const flow = await driveToValidated(ctx, { driverId: collabDriverId });
+    const dto = flow.serviceAfter;
     if (dto.providerType !== 'collaborator') throw new Error(`providerType=${dto.providerType}`);
     if (dto.providerId !== ctx.ids.collaboratorId) throw new Error(`providerId=${dto.providerId}`);
-    collaboratorServiceId = svc.id;
-    return { providerType: dto.providerType };
+    if (dto.operationalStatus !== 'Validado') throw new Error(`operationalStatus=${dto.operationalStatus}`);
+    collaboratorServiceId = flow.service.id;
+    return { providerType: dto.providerType, status: dto.operationalStatus };
   });
 
   await r.step('createRapportinoCollaborator', async () => {
@@ -523,11 +606,33 @@ export async function run(ctx) {
   });
 
   await r.step('removeServiceFromRapportino quita el servicio', async () => {
+    // La acción del router opera sobre RapportinoClient, no sobre el de
+    // colaborador: con el id del rapportino de colaborador respondía
+    // "RapportinoClient RCO-... not found".
+    const created = await client.post('createRapportinoClient', {
+      projectId: ctx.ids.projectId,
+      clientId: ctx.ids.clientId,
+      // Periodo propio (+30/+36) para no chocar con el borrador que crea la
+      // suite 06 para el mismo proyecto/cliente/semana (RC001 por duplicado).
+      weekStart: addDays(today(), 30),
+      weekEnd: addDays(today(), 36),
+      periodType: 'weekly',
+    });
+    const draftId = idOf(created);
+    if (!draftId) throw new Error('sin id de rapportino cliente');
+    ctx.track('rapportinoClientIds', draftId);
+
+    await ensureAddableToRapportino(collaboratorServiceId);
+    await client.post('addServiceToRapportino', { rapportinoId: draftId, serviceId: collaboratorServiceId });
     const res = await client.post('removeServiceFromRapportino', {
-      rapportinoId: collaboratorRapportinoId,
+      rapportinoId: draftId,
       serviceId: collaboratorServiceId,
     });
-    if (res && res.success === false) throw new Error(`removeService: ${res.error || 'falló'}`);
+
+    const items = arr(await client.post('getRapportinoItems', { rapportinoClientId: draftId }));
+    if (items.some((i) => (i.serviceId || i.ServiceID) === collaboratorServiceId)) {
+      throw new Error('el servicio sigue en el rapportino');
+    }
     return res;
   });
 
@@ -535,13 +640,23 @@ export async function run(ctx) {
     const created = await client.post('createRapportinoClient', {
       projectId: ctx.ids.projectId,
       clientId: ctx.ids.clientId,
-      weekStart: today(),
-      weekEnd: addDays(today(), 6),
+      // Otro periodo distinto del paso anterior y del de la suite 06: dos
+      // borradores para el mismo proyecto/cliente/periodo se rechazan (RC001).
+      weekStart: addDays(today(), 40),
+      weekEnd: addDays(today(), 46),
       periodType: 'weekly',
     });
     const id = idOf(created);
     if (!id) throw new Error('sin id');
     ctx.track('rapportinoClientIds', id);
+    // `reviewRapportinoClient` rechaza un rapportino vacío (RC004): hay que
+    // sumarle un servicio antes de poder revisarlo y rechazarlo.
+    await ensureAddableToRapportino(collaboratorServiceId);
+    await client.post('addServiceToRapportino', { rapportinoId: id, serviceId: collaboratorServiceId });
+    await client.post('reviewRapportinoClient', { rapportinoId: id });
+    // Borrador → Revisado → Enviado → Rechazado. Rechazar desde Revisado no
+    // es una transición válida: el rapportino tiene que estar enviado.
+    await client.post('sendRapportinoClient', { rapportinoId: id });
     const res = await client.post('rejectRapportinoClient', { rapportinoId: id, reason: 'E2E rechazo' });
     expectStatus(res, ['Rechazado', 'Rifiutato'], 'rejectRapportinoClient');
     return res;
@@ -550,10 +665,17 @@ export async function run(ctx) {
   // ── Reconciliación y comandos legacy ─────────────────────────────────────
   r.section('Reconciliación y comandos legacy');
 
-  const economicsServiceId = ctx.flowState?.economicsServiceId;
+  // 09 tiene que poder correr SOLA (`--suite 09`). Antes tomaba el servicio
+  // validado que dejaba la suite 04 en memoria; en un re-run aislado no existe
+  // y los dos pasos siguientes fallaban por arrastre, no por producto.
+  let economicsServiceId = ctx.flowState?.economicsServiceId || null;
+  if (!economicsServiceId) {
+    const flow = await driveToValidated(ctx);
+    economicsServiceId = flow.service.id;
+    ctx.flowState = { ...(ctx.flowState || {}), economicsServiceId };
+  }
 
   await r.step('createReconciliation + getReconciliation', async () => {
-    if (!economicsServiceId) throw new Error('la suite 04 no dejó un servicio validado');
     const created = await client.post('createReconciliation', { serviceId: economicsServiceId });
     const id = idOf(created) || created?.reconciliationId;
     if (!id) throw new Error('sin id de reconciliación');
@@ -564,7 +686,6 @@ export async function run(ctx) {
   });
 
   await r.step('debugServiceEconomicsChain devuelve la cadena', async () => {
-    if (!economicsServiceId) throw new Error('sin servicio de economía');
     const res = await client.post('debugServiceEconomicsChain', { serviceId: economicsServiceId });
     if (!res || typeof res !== 'object') throw new Error('respuesta inválida');
     return res;
@@ -572,7 +693,7 @@ export async function run(ctx) {
 
   await r.step('calculateService deja el servicio en Calculado', async () => {
     const svc = await createService(ctx, { time: '11:15' });
-    await driveToCompleted(ctx, svc.id, driverId, ctx.ids.vehicleId);
+    await driveToCompleted(ctx, svc.id, await acquireDriver(ctx), ctx.ids.vehicleId);
     await client.post('calculateService', { serviceId: svc.id });
     const dto = await getService(ctx, svc.id);
     if (dto.financialStatus !== 'Calculado') throw new Error(`financialStatus=${dto.financialStatus}`);
@@ -581,7 +702,7 @@ export async function run(ctx) {
 
   await r.step('reportService → Reportado → moveToRevision → Revision', async () => {
     const svc = await createService(ctx, { time: '12:00' });
-    await driveToCompleted(ctx, svc.id, driverId, ctx.ids.vehicleId);
+    await driveToCompleted(ctx, svc.id, await acquireDriver(ctx), ctx.ids.vehicleId);
 
     await client.post('reportService', { serviceId: svc.id });
     let dto = await getService(ctx, svc.id);
@@ -599,7 +720,7 @@ export async function run(ctx) {
 
   await r.step('moveToConfrontacion deja el servicio en Confrontacion', async () => {
     const svc = await createService(ctx, { time: '13:30' });
-    await driveToCompleted(ctx, svc.id, driverId, ctx.ids.vehicleId);
+    await driveToCompleted(ctx, svc.id, await acquireDriver(ctx), ctx.ids.vehicleId);
     await client.post('calculateService', { serviceId: svc.id });
     await client.post('moveToConfrontacion', { serviceId: svc.id });
     const dto = await getService(ctx, svc.id);

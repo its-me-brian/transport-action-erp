@@ -23,7 +23,7 @@ const InvoiceItemRepository = {
 
   create(data) {
     const now = new Date().toISOString();
-    const amount = parseFloat(data.Amount) || 0;
+    const amount = _roundMoney(data.Amount);
     return _create(this.SHEET, {
       ID: '',
       InvoiceID: data.InvoiceID || '',

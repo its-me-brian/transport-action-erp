@@ -73,6 +73,27 @@ function apiGetOperatingCompany(id) {
   return OperatingCompanyRepository.toDTO(entity);
 }
 
+/**
+ * Alta de sociedad operativa. Faltaba: la única forma de tener una era que la
+ * sembrara el setup, así que en una instalación existente con la hoja vacía no
+ * había issuer para las facturas ni forma de crear uno desde la app.
+ */
+function apiCreateOperatingCompany(data) {
+  if (!data || !data.name) throw new ValidationError('Name is required');
+  const entity = OperatingCompanyRepository.create({
+    Name: data.name,
+    VAT: data.vat || '',
+    Address: data.address || '',
+    Phone: data.phone || '',
+    Email: data.email || '',
+    Currency: data.currency || 'EUR',
+    DefaultTaxRate: data.defaultTaxRate !== undefined ? data.defaultTaxRate : 21,
+    Active: data.active !== undefined ? data.active : true
+  });
+  _dispatchEvent({ type: 'operating_company.created', entity: 'OperatingCompany', entityId: entity.ID });
+  return OperatingCompanyRepository.toDTO(entity);
+}
+
 function apiUpdateOperatingCompany(id, data) {
   const entity = OperatingCompanyRepository.getById(id);
   if (!entity) throw new NotFoundError('OperatingCompany', id);

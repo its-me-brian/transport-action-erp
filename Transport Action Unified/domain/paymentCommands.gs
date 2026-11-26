@@ -35,7 +35,7 @@ const PaymentCommands = {
         }
         // Check overpayment
         const saldo = InvoiceRepository.getSaldo(payment.InvoiceID);
-        if (filteredChanges.Amount > saldo + 0.01) {
+        if (_moneyExceeds(filteredChanges.Amount, saldo)) {
           throw new BusinessRuleError(
             'Payment amount ' + filteredChanges.Amount + ' exceeds outstanding balance ' + saldo,
             'P004'
@@ -80,9 +80,10 @@ const PaymentCommands = {
       if (!paymentData.amount || paymentData.amount <= 0) {
         throw new ValidationError('Payment amount must be > 0');
       }
-      // P004: Amount ≤ saldo pendiente
+      // P004: Amount ≤ saldo pendiente (comparado en céntimos: sin redondeo
+      // el saldo tiene cola binaria y rechaza el pago exacto por 0.0049…)
       const saldo = InvoiceRepository.getSaldo(invoiceId);
-      if (paymentData.amount > saldo + 0.01) {
+      if (_moneyExceeds(paymentData.amount, saldo)) {
         throw new BusinessRuleError(
           `Payment amount ${paymentData.amount} exceeds outstanding balance ${saldo}`,
           'P004'
@@ -173,7 +174,7 @@ const PaymentCommands = {
       if (!payment) throw new NotFoundError('Payment', paymentId);
       _assertValidTransition('Payment', payment.Status, 'Conciliado');
 
-      PaymentRepository.update(paymentId, {
+      PaymentRepository.transition(paymentId, {
         Status: 'Conciliado',
         ReconciledAt: new Date().toISOString()
       });
@@ -202,7 +203,7 @@ const PaymentCommands = {
         throw new ValidationError('Void reason is required');
       }
 
-      PaymentRepository.update(paymentId, {
+      PaymentRepository.transition(paymentId, {
         Status: 'Anulado',
         VoidedAt: new Date().toISOString(),
         VoidReason: reason
@@ -285,15 +286,33 @@ function apiVoidPayment(paymentId, reason) {
 /**
  * EDGE003: Check for duplicate payment warning.
  * Returns { warning: boolean, message?: string }
+ *
+ * Las fechas NO se comparan con ===: Apps Script guarda 'YYYY-MM-DD' en la
+ * celda y Google Sheets lo devuelve como Date, así que `p.PaymentDate ===
+ * paymentDate` nunca era true y el detector de duplicados estaba muerto.
+ * También se normaliza el monto, que llega como string por la query string.
  */
+function _paymentDuplicateDateKey(value) {
+  if (value instanceof Date) {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  }
+  return String(value === null || value === undefined ? '' : value).trim().slice(0, 10);
+}
+
 function apiCheckDuplicatePayment(invoiceId, amount, paymentDate, reference) {
   const payments = PaymentRepository.getAllByInvoice(invoiceId);
-  const duplicate = payments.find(p =>
-    Math.abs(parseFloat(p.Amount) - amount) < 0.01 &&
-    p.PaymentDate === paymentDate &&
-    p.Reference === reference &&
-    p.Status !== 'Anulado'
-  );
+  const targetAmount = parseFloat(amount) || 0;
+  const targetDate = _paymentDuplicateDateKey(paymentDate);
+  const targetReference = String(reference === null || reference === undefined ? '' : reference).trim();
+
+  const duplicate = payments.find(p => {
+    if (p.Status === 'Anulado') return false;
+    const sameAmount = Math.abs((parseFloat(p.Amount) || 0) - targetAmount) < 0.01;
+    const sameDate = _paymentDuplicateDateKey(p.PaymentDate) === targetDate;
+    const sameReference = String(p.Reference === null || p.Reference === undefined ? '' : p.Reference).trim() === targetReference;
+    return sameAmount && sameDate && sameReference;
+  });
+
   if (duplicate) {
     return {
       warning: true,

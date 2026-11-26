@@ -146,10 +146,13 @@ function apiUpdateChange(data) {
 }
 
 function apiDeleteChange(data) {
-  var entity = ChangeRepository.getById(data.id);
-  if (!entity) throw new NotFoundError('Change', data.id);
-  
-  _softDelete(ChangeRepository.SHEET, data.id);
+  // El router lo invoca con el id suelto (apiDeleteChange(data.id)); se acepta
+  // tambien el objeto completo para no romper llamadas internas.
+  var id = (data && typeof data === 'object') ? data.id : data;
+  var entity = ChangeRepository.getById(id);
+  if (!entity) throw new NotFoundError('Change', id);
+
+  _softDelete(ChangeRepository.SHEET, id);
   return { success: true };
 }
 

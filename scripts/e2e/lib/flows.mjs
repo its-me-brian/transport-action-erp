@@ -2,7 +2,7 @@
 // FLOWS — recorridos de negocio reutilizables
 // ============================================================================
 
-import { addDays, today } from './fixtures.mjs';
+import { addDays, addSupplierRate, today } from './fixtures.mjs';
 
 export async function createService(ctx, overrides = {}) {
   const dto = await ctx.client.post('createService', {
@@ -28,12 +28,70 @@ export async function getService(ctx, serviceId) {
   return ctx.client.post('getService', { id: serviceId });
 }
 
+/** Estados en los que un chofer queda tomado por un servicio (INV-009). */
+const ACTIVE_OPERATIONAL = ['Asignado', 'Confirmado', 'EnRuta', 'Realizado', 'Reportado'];
+
+/**
+ * Devuelve un chofer libre para asignar.
+ *
+ * INV-009 impide que un mismo chofer esté en dos servicios activos a la vez, así
+ * que reutilizar `ctx.ids.drivers[0]` en todos los casos hace fallar la mitad de
+ * la batería con "Driver ... is already assigned to service ...". Acá se consulta
+ * qué choferes están tomados y, si no queda ninguno, se crea uno al vuelo.
+ */
+export async function acquireDriver(ctx) {
+  const raw = await ctx.client.post('getServices', {});
+  const services = Array.isArray(raw) ? raw : raw?.items || raw?.services || [];
+  const busy = new Set(
+    services
+      .filter((s) => ACTIVE_OPERATIONAL.includes(s.operationalStatus || s.OperationalStatus))
+      .map((s) => s.driverId || s.DriverID)
+      .filter(Boolean)
+  );
+
+  const free = ctx.ids.drivers.find((d) => !busy.has(d));
+  if (free) return free;
+
+  const created = await ctx.client.post('createDriverOnTheFly', {
+    name: `${ctx.tag} Driver ${ctx.ids.drivers.length + 1}`,
+    phone: '+39 333 000 0000',
+    type: 'Internal',
+    driverOwnership: 'Internal',
+  });
+  const newId = created?.id || created?.ID || created?.driverId;
+  if (!newId) throw new Error('createDriverOnTheFly no devolvió id');
+  ctx.ids.drivers.push(newId);
+  ctx.track('drivers', newId);
+  // Sin tarifa de proveedor el servicio no se puede validar ni calcular coste.
+  await addSupplierRate(ctx, newId);
+  return newId;
+}
+
+/**
+ * Ejecuta una transición de estado tolerando el timeout del gateway.
+ *
+ * Apps Script tarda 5–10 s por comando y a veces la respuesta se pierde
+ * después de que el backend YA aplicó el cambio. Reintentar a ciegas duplica
+ * la transición (`EnRuta → EnRuta`), así que si el error es un timeout se
+ * consulta el estado real: si el avance ocurrió, se sigue; si no, se propaga.
+ */
+async function transition(ctx, serviceId, action, expectedStatus, payload = {}) {
+  try {
+    return await ctx.client.post(action, { serviceId, ...payload });
+  } catch (e) {
+    if (e.code !== 'TIMEOUT') throw e;
+    const dto = await getService(ctx, serviceId);
+    if (dto && dto.operationalStatus === expectedStatus) return dto;
+    throw e;
+  }
+}
+
 /** Importado → Asignado → Confirmado → EnRuta → Realizado */
 export async function driveToCompleted(ctx, serviceId, driverId, vehicleId) {
-  await ctx.client.post('assignDriver', { serviceId, driverId, vehicleId });
-  await ctx.client.post('confirmService', { serviceId });
-  await ctx.client.post('startService', { serviceId });
-  return ctx.client.post('completeService', { serviceId });
+  await transition(ctx, serviceId, 'assignDriver', 'Asignado', { driverId, vehicleId });
+  await transition(ctx, serviceId, 'confirmService', 'Confirmado');
+  await transition(ctx, serviceId, 'startService', 'EnRuta');
+  return transition(ctx, serviceId, 'completeService', 'Realizado');
 }
 
 export function reportPayload(overrides = {}) {
@@ -94,14 +152,15 @@ export async function submitReport(ctx, { serviceId, driverId, source = 'whatsap
  * Recorrido completo hasta Validado:
  * crear → asignar → confirmar → iniciar → completar → reporte → validar.
  */
-export async function driveToValidated(ctx, { driverIndex = 0, raw = {}, source = 'whatsapp' } = {}) {
-  const driverId = ctx.ids.drivers[driverIndex];
+export async function driveToValidated(ctx, { driverIndex = null, driverId = null, raw = {}, source = 'whatsapp' } = {}) {
+  const resolvedDriver =
+    driverId || (driverIndex === null ? await acquireDriver(ctx) : ctx.ids.drivers[driverIndex]);
   const service = await createService(ctx);
-  await driveToCompleted(ctx, service.id, driverId, ctx.ids.vehicleId);
-  const report = await submitReport(ctx, { serviceId: service.id, driverId, source, raw });
+  await driveToCompleted(ctx, service.id, resolvedDriver, ctx.ids.vehicleId);
+  const report = await submitReport(ctx, { serviceId: service.id, driverId: resolvedDriver, source, raw });
   await ctx.client.post('validateService', { serviceId: service.id });
   const updated = await getService(ctx, service.id);
-  return { service, driverId, report, serviceAfter: updated };
+  return { service, driverId: resolvedDriver, report, serviceAfter: updated };
 }
 
 /** Validado → Calculado → ActualsConfirmados → Aprobado → Facturable → Facturado → Cobrado → Cerrado */

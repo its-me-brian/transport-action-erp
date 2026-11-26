@@ -17,12 +17,16 @@ const DashboardQueries = {
     const validatedServices = services.filter(s => s.OperationalStatus === 'Validado').length;
     const pendingValidation = services.filter(s => s.OperationalStatus === 'Reportado').length;
 
-    // Revenue y Cost
+    // Revenue y Cost: agregación en UNA lectura por hoja. Antes se llamaba
+    // calculateRevenue/calculateCost por servicio, y cada llamada leía la hoja
+    // completa: con 120 servicios el dashboard tardaba ~110 s.
+    const revenueByService = ServiceQueries.revenueTotalsByService();
+    const costByService = ServiceQueries.costTotalsByService();
     let totalRevenue = 0;
     let totalCost = 0;
     services.forEach(s => {
-      totalRevenue += ServiceQueries.calculateRevenue(s.ID);
-      totalCost += ServiceQueries.calculateCost(s.ID);
+      totalRevenue += revenueByService[s.ID] || 0;
+      totalCost += costByService[s.ID] || 0;
     });
 
     // Facturación

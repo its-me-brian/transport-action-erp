@@ -26,8 +26,8 @@ const RapportinoCollaboratorRepository = {
       row.ProjectID === projectId &&
       row.CollaboratorID === collaboratorId &&
       row.PeriodType === (periodType || 'weekly') &&
-      row.PeriodStart === periodStart &&
-      row.PeriodEnd === periodEnd &&
+      _samePeriod(row.PeriodStart, periodStart) &&
+      _samePeriod(row.PeriodEnd, periodEnd) &&
       row.Status === 'Borrador'
     );
     return items.length > 0 ? items[0] : null;

@@ -8,7 +8,7 @@
 // deployment, así que se prueba también su revocación.
 // ============================================================================
 
-import { createService, driveToCompleted, getService, reportPayload } from '../lib/flows.mjs';
+import { acquireDriver, createService, driveToCompleted, getService, reportPayload } from '../lib/flows.mjs';
 import { addDays, today } from '../lib/fixtures.mjs';
 import { config } from '../lib/env.mjs';
 
@@ -29,10 +29,11 @@ export const description = 'inbox de reportes (aceptar/rechazar), versionado y l
 
 export async function run(ctx) {
   const { client, reporter: r } = ctx;
-  const driverId = ctx.ids.drivers[1];
+  let driverId = null;
 
   r.section('Reporte directo del chofer');
   const service = await r.step('servicio completado listo para reportar', async () => {
+    driverId = await acquireDriver(ctx);
     const svc = await createService(ctx, { time: '07:30' });
     await driveToCompleted(ctx, svc.id, driverId, ctx.ids.vehicleId);
     return svc;
@@ -68,7 +69,9 @@ export async function run(ctx) {
   await r.step('getDriverReport devuelve el detalle', async () => {
     const res = await client.post('getDriverReport', { id: reportId });
     if (!res || (res.id || res.ID) !== reportId) throw new Error('detalle distinto');
-    if (parseFloat(res.kmTotal) !== 155) throw new Error(`kmTotal=${res.kmTotal}`);
+    // El DTO expone `km` (ver DriverReportRepository.toDTO), no `kmTotal`.
+    const km = res.km ?? res.kmTotal;
+    if (parseFloat(km) !== 155) throw new Error(`km=${km}`);
     return res;
   });
 
@@ -129,25 +132,32 @@ export async function run(ctx) {
   });
 
   await r.step('aceptar y aprobar el reporte mueve el servicio a Calculado', async () => {
+    // Servicio propio: un servicio admite un solo DriverReport activo, así que
+    // reutilizar el de arriba (que ya tiene un reporte directo) hace que
+    // `acceptReport` falle con "A report already exists for this service".
+    const inboxDriver = await acquireDriver(ctx);
+    const inboxService = await createService(ctx, { time: '06:00' });
+    await driveToCompleted(ctx, inboxService.id, inboxDriver, ctx.ids.vehicleId);
+
     const cap = await client.post('captureReport', {
       source: 'whatsapp',
       channel: 'manual',
-      driverId,
+      driverId: inboxDriver,
       projectId: ctx.ids.projectId,
       serviceDate: today(),
-      rawData: { ...reportPayload(), serviceId: service.id },
+      rawData: { ...reportPayload(), serviceId: inboxService.id },
     });
     ctx.track('inboxIds', cap.inboxId);
     await client.post('normalizeReport', {
       inboxId: cap.inboxId,
-      normalizedData: { ...reportPayload(), serviceId: service.id },
+      normalizedData: { ...reportPayload(), serviceId: inboxService.id },
     });
     await client.post('submitToReview', { inboxId: cap.inboxId });
     const accepted = await client.post('acceptReport', { inboxId: cap.inboxId, reviewedBy: 'e2e-battery' });
     if (!accepted?.reportId) throw new Error('sin reportId');
     ctx.track('reportIds', accepted.reportId);
     await client.post('approveDriverReport', { reportId: accepted.reportId });
-    const dto = await getService(ctx, service.id);
+    const dto = await getService(ctx, inboxService.id);
     if (dto.financialStatus !== 'Calculado') throw new Error(`financialStatus=${dto.financialStatus}`);
     return dto;
   });
@@ -174,7 +184,7 @@ export async function run(ctx) {
   await r.step('getDriverLinks lista el link generado', async () => {
     const res = await client.post('getDriverLinks', { filters: { driverId } });
     const list = arr(res);
-    if (!list.some((l) => (l.token || l.Token) === link.token)) throw new Error('el link no aparece');
+    if (!list.some((l) => String(l.token ?? l.Token) === String(link.token))) throw new Error('el link no aparece');
     return list;
   });
 
@@ -210,16 +220,13 @@ export async function run(ctx) {
     return { revoked: true };
   });
 
-  await r.expectFailure(
-    'un token inventado no sirve el formulario',
-    async () => {
-      const url = `${config.gasUrl}?action=driverForm&token=E2E-INVENTADO`;
-      const { text } = await fetchText(url);
-      if (!/Link non valido/i.test(text)) throw new Error('devolvió un formulario con token inventado');
-      return text;
-    },
-    /.*/
-  );
+  await r.step('un token inventado no sirve el formulario', async () => {
+    const url = `${config.gasUrl}?action=driverForm&token=E2E-INVENTADO`;
+    const { status, text } = await fetchText(url);
+    if (status !== 200) throw new Error(`HTTP ${status}`);
+    if (!/Link non valido/i.test(text)) throw new Error('devolvió un formulario con token inventado');
+    return { rejected: true };
+  });
 
   ctx.flowState = { ...(ctx.flowState || {}), reportedServiceId: service.id, linkDriverId: driverId };
 }

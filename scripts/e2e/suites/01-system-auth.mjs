@@ -155,9 +155,17 @@ export async function run(ctx) {
   r.section('Sesiones y baja');
   await r.step('logoutUser invalida el token secundario', async () => {
     await coord2.post('logoutUser', {});
-    const v = await coord2.raw('validateSession', { token: coord2.token });
-    if (v.valid !== false) throw new Error('la sesión sigue válida');
-    return v;
+    // validateSession responde { valid:false, error:'Invalid or expired session' }.
+    // El cliente convierte ese `error` en ApiError (sobre tramposo), así que un
+    // token revocado se ve como excepción: es el resultado esperado, no un fallo.
+    try {
+      const v = await coord2.raw('validateSession', { token: coord2.token });
+      if (v.valid !== false) throw new Error('la sesión sigue válida');
+      return v;
+    } catch (e) {
+      if (/invalid or expired session/i.test(e.message)) return { valid: false };
+      throw e;
+    }
   });
 
   await r.step('deleteUser da de baja la cuenta', async () => {

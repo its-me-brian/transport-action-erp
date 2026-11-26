@@ -40,6 +40,9 @@ reports/
 # Scripts scratch con URL de producción hardcodeada
 _test-*.mjs
 
+# Sondas de diagnóstico de la batería E2E (se usan una vez y se descartan)
+scripts/e2e/_*.mjs
+
 # Logs
 *.log
 npm-debug.log*

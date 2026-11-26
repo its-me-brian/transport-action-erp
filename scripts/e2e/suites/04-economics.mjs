@@ -8,7 +8,7 @@
 //   → recalculate reconstruye los automáticos sin perder los manuales
 // ============================================================================
 
-import { createService, driveToCompleted, getService, submitReport } from '../lib/flows.mjs';
+import { acquireDriver, createService, driveToCompleted, getService, submitReport } from '../lib/flows.mjs';
 
 function arr(value) {
   if (Array.isArray(value)) return value;
@@ -29,10 +29,11 @@ export const description = 'breakdowns de revenue/cost, márgenes, ajustes manua
 
 export async function run(ctx) {
   const { client, reporter: r } = ctx;
-  const driverId = ctx.ids.drivers[0];
+  let driverId = null;
 
   r.section('Preparación');
   const service = await r.step('servicio completado con reporte aprobado', async () => {
+    driverId = await acquireDriver(ctx);
     const svc = await createService(ctx, { time: '08:00', serviceType: 'Dispo' });
     await driveToCompleted(ctx, svc.id, driverId, ctx.ids.vehicleId);
     const report = await submitReport(ctx, { serviceId: svc.id, driverId });
@@ -83,10 +84,22 @@ export async function run(ctx) {
 
   await r.step('los totales del breakdown coinciden con calculateServiceEconomics', async () => {
     const res = await client.post('calculateServiceEconomics', { serviceId });
+    // Desglose en el mensaje: cuando los totales no coinciden, el número solo
+    // no dice nada; los items sí muestran qué se calculó y qué quedó guardado.
+    const brief = (items, field) =>
+      (items || []).map((i) => `${i.itemType || i.ItemType}=${i[field] ?? i.Amount ?? i.Total}`).join(' + ') || '∅';
     const rev = money(sumBy(revenue, 'total'));
     const cst = money(sumBy(cost, 'amount'));
-    if (money(res.revenue.total) !== rev) throw new Error(`revenue ${res.revenue.total} != ${rev}`);
-    if (money(res.cost.total) !== cst) throw new Error(`cost ${res.cost.total} != ${cst}`);
+    if (money(res.revenue.total) !== rev) {
+      throw new Error(
+        `revenue ${res.revenue.total} != ${rev} · calculado: ${brief(res.revenue.breakdown, 'total')} · guardado: ${brief(revenue, 'total')}`
+      );
+    }
+    if (money(res.cost.total) !== cst) {
+      throw new Error(
+        `cost ${res.cost.total} != ${cst} · calculado: ${brief(res.cost.breakdown, 'amount')} · guardado: ${brief(cost, 'amount')}`
+      );
+    }
     return { rev, cst };
   });
 
@@ -142,6 +155,11 @@ export async function run(ctx) {
   });
 
   r.section('Ajustes manuales');
+  // El margen de este servicio puede ser negativo con las tarifas del fixture
+  // (coste de proveedor por encima del precio de cliente en un Dispo). Lo que
+  // sí es invariante es el DELTA: +45 de revenue y −12 de coste son +33.
+  const marginBefore = (await client.post('calculateServiceEconomics', { serviceId })).margin;
+
   await r.step('adjustRevenue agrega un item manual', async () => {
     const before = arr(await client.post('getRevenueBreakdowns', { serviceId }));
     await client.post('adjustRevenue', {
@@ -172,7 +190,12 @@ export async function run(ctx) {
 
   await r.step('el margen refleja los ajustes manuales', async () => {
     const res = await client.post('calculateServiceEconomics', { serviceId });
-    if (res.margin <= 0) throw new Error(`margen=${res.margin}`);
+    const expected = money(marginBefore + 45 - 12);
+    if (money(res.margin) !== expected) {
+      throw new Error(
+        `margen ${res.margin} != ${expected} (antes ${marginBefore} + 45 revenue − 12 coste)`
+      );
+    }
     return res;
   });
 

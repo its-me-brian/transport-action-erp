@@ -84,14 +84,16 @@ const InvoiceRepository = {
    */
   recalculateTotals(invoiceId) {
     const items = InvoiceItemRepository.getByInvoice(invoiceId);
-    const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.Amount) || 0), 0);
+    // Céntimos: los importes vienen de multiplicaciones (km × tarifa) y sin
+    // redondeo arrastran cola binaria hasta el total de la factura.
+    const subtotal = _sumMoney(items.map(item => item.Amount));
     const invoice = this.getById(invoiceId);
     const taxRate = parseFloat(invoice.TaxRate) || 0;
-    const taxAmount = subtotal * (taxRate / 100);
+    const taxAmount = _roundMoney(subtotal * (taxRate / 100));
     this.update(invoiceId, {
       Subtotal: subtotal,
       TaxAmount: taxAmount,
-      Total: subtotal + taxAmount
+      Total: _roundMoney(subtotal + taxAmount)
     });
   },
 
@@ -102,13 +104,18 @@ const InvoiceRepository = {
     const invoice = this.getById(invoiceId);
     if (!invoice) return 0;
     const payments = PaymentRepository.getConfirmedByInvoice(invoiceId);
-    const totalPaid = payments.reduce((sum, p) => sum + (parseFloat(p.Amount) || 0), 0);
-    return (parseFloat(invoice.Total) || 0) - totalPaid;
+    const totalPaid = _sumMoney(payments.map(p => p.Amount));
+    // Redondeado: sin esto el saldo queda en 0.004999... y `saldo <= 0` nunca
+    // se cumple, así que la factura jamás pasa a Pagada.
+    return _roundMoney((parseFloat(invoice.Total) || 0) - totalPaid);
   },
 
   toDTO(entity) {
     const total = parseFloat(entity.Total) || 0;
-    const balance = this.getSaldo(entity.ID);
+    // Autoreferencia explícita, no `this`: toDTO se usa como callback
+    // (`invoices.map(InvoiceRepository.toDTO)`), donde `this` es el global de
+    // Apps Script y `this.getSaldo` no existe → SYSTEM_ERROR al listar facturas.
+    const balance = InvoiceRepository.getSaldo(entity.ID);
     return {
       id: entity.ID,
       invoiceNumber: entity.InvoiceNumber,

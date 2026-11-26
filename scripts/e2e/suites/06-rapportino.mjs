@@ -24,12 +24,15 @@ export const description = 'rapportino de cliente y de chofer, gate de facturaci
 
 export async function run(ctx) {
   const { client, reporter: r } = ctx;
-  const driverId = ctx.ids.drivers[2];
   const week = { start: weekStart(), end: weekEnd() };
 
   r.section('Preparación');
   const prepared = await r.step('servicio validado y con economía calculada', async () => {
-    const res = await driveToValidated(ctx, { driverIndex: 2 });
+    // Sin driverIndex: acquireDriver() descarta los choferes tomados por otro
+    // servicio activo (INV-009) y crea uno nuevo si hace falta. Fijar un índice
+    // acá rompe con "Driver ... is already assigned" según lo que usaron las
+    // suites anteriores en la misma corrida.
+    const res = await driveToValidated(ctx);
     const dto = res.serviceAfter;
     if (dto.operationalStatus !== 'Validado') throw new Error(`status=${dto.operationalStatus}`);
     return res;
@@ -37,6 +40,7 @@ export async function run(ctx) {
   if (!prepared) return;
 
   const serviceId = prepared.service.id;
+  const driverId = prepared.driverId;
 
   r.section('Reconciliación');
   let reconciliationId = null;
@@ -143,8 +147,14 @@ export async function run(ctx) {
 
   await r.step('addServiceToRapportino', async () => {
     const res = await client.post('addServiceToRapportino', { rapportinoId, serviceId });
-    if (!(res.total > 0)) throw new Error(`total=${res.total}`);
-    return res;
+    // `addService` devuelve el DTO del rapportino, no un total: los totales se
+    // calculan desde RapportinoItems (ver _recalculateTotals). El contrato real
+    // es "el servicio aparece como item con importe".
+    const items = arr(await client.post('getRapportinoItems', { rapportinoClientId: rapportinoId }));
+    const item = items.find((i) => i.serviceId === serviceId);
+    if (!item) throw new Error(`el servicio ${serviceId} no está en los items del rapportino`);
+    if (!(item.amount > 0)) throw new Error(`amount=${item.amount}`);
+    return { rapportino: idOf(res), item };
   });
 
   await r.step('reviewRapportinoClient → Revisado', async () => {
@@ -167,7 +177,26 @@ export async function run(ctx) {
 
   r.section('Facturación del rapportino');
   await r.step('facturarRapportino → Facturado y crea Invoice', async () => {
-    const res = await client.post('facturarRapportino', { rapportinoId });
+    let res;
+    try {
+      res = await client.post('facturarRapportino', { rapportinoId });
+    } catch (e) {
+      // El gate "Ready to Invoice" compara período y estado del rapportino de
+      // cada chofer contra el del cliente. Cuando falla, el mensaje solo nombra
+      // al chofer: sin los períodos al lado no se sabe si es estado o formato.
+      const scope = { projectId: ctx.ids.projectId, filters: { projectId: ctx.ids.projectId } };
+      const clients = arr(await client.post('getRapportinoClients', scope));
+      const drivers = arr(await client.post('getRapportinoDrivers', scope));
+      const mine = clients.find((c) => idOf(c) === rapportinoId);
+      const detail = drivers
+        .map((d) =>
+          `${idOf(d)} driver=${d.driverId} status=${d.status} period=${d.periodStart ?? d.weekStart}→${d.periodEnd ?? d.weekEnd}`
+        )
+        .join(' | ');
+      throw new Error(
+        `${e.message} · cliente period=${mine?.periodStart ?? mine?.weekStart}→${mine?.periodEnd ?? mine?.weekEnd} status=${mine?.status} · choferes: ${detail || '∅'}`
+      );
+    }
     if (res.status !== 'Facturado') throw new Error(`status=${res.status}`);
     const svc = await getService(ctx, serviceId);
     if (svc.financialStatus !== 'Facturado') throw new Error(`service.financialStatus=${svc.financialStatus}`);

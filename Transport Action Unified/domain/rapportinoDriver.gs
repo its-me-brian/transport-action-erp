@@ -27,8 +27,8 @@ const RapportinoDriverRepository = {
       row.DriverID === driverId &&
       row.Status === 'Borrador' &&
       row.PeriodType === (periodType || 'weekly') &&
-      row.WeekStart === weekStart &&
-      row.WeekEnd === weekEnd
+      _samePeriod(row.WeekStart, weekStart) &&
+      _samePeriod(row.WeekEnd, weekEnd)
     );
     return items.length > 0 ? items[0] : null;
   },

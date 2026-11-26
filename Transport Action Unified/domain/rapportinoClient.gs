@@ -27,8 +27,8 @@ const RapportinoClientRepository = {
       row.ClientID === clientId &&
       row.Status === 'Borrador' &&
       row.PeriodType === (periodType || 'weekly') &&
-      row.PeriodStart === periodStart &&
-      row.PeriodEnd === periodEnd
+      _samePeriod(row.PeriodStart, periodStart) &&
+      _samePeriod(row.PeriodEnd, periodEnd)
     );
     return items.length > 0 ? items[0] : null;
   },

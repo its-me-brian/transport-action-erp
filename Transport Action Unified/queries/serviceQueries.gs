@@ -28,6 +28,23 @@ const ServiceQueries = {
   },
 
   /**
+   * Totales de revenue por servicio en UNA sola lectura de la hoja.
+   * Devuelve { [serviceId]: total }.
+   *
+   * `calculateRevenue()` lee la hoja completa en cada llamada: iterar N
+   * servicios hacía N lecturas (2 round-trips de Apps Script cada una) y el
+   * dashboard ejecutivo tardaba ~110 s con 120 servicios. Esto lo deja en una.
+   */
+  revenueTotalsByService() {
+    return _sumByService(ServiceRevenueBreakdownRepository.getAll(), 'ServiceID', 'Total');
+  },
+
+  /** Totales de cost por servicio en UNA sola lectura. { [serviceId]: total } */
+  costTotalsByService() {
+    return _sumByService(ServiceCostBreakdownRepository.getAll(), 'ServiceID', 'Amount');
+  },
+
+  /**
    * Obtener servicios por rango de fechas con totales
    */
   getServicesByDateRange(startDate, endDate, filters) {
@@ -104,7 +121,7 @@ const ServiceQueries = {
   getPendingValidation(company) {
     let services = ServiceRepository.getAllByStatus('Reportado');
     if (company) services = services.filter(s => s.OperatingCompany === company);
-    return services.map(ServiceRepository.toDTO);
+    return services.map((s) => ServiceRepository.toDTO(s));
   },
 
   /**
@@ -114,7 +131,7 @@ const ServiceQueries = {
     let services = ServiceRepository.getAllByFinancialStatus('Pendiente');
     services = services.filter(s => s.OperationalStatus === 'Validado');
     if (company) services = services.filter(s => s.OperatingCompany === company);
-    return services.map(ServiceRepository.toDTO);
+    return services.map((s) => ServiceRepository.toDTO(s));
   },
 
   /**
@@ -123,9 +140,25 @@ const ServiceQueries = {
   getInConfrontation(company) {
     let services = ServiceRepository.getAllByFinancialStatus('Confrontacion');
     if (company) services = services.filter(s => s.OperatingCompany === company);
-    return services.map(ServiceRepository.toDTO);
+    return services.map((s) => ServiceRepository.toDTO(s));
   }
 };
+
+/**
+ * Suma un campo numérico agrupando por id, sobre filas ya leídas.
+ * Reemplaza bucles `getByService()` (una lectura de hoja por servicio) por una
+ * sola lectura + agregación en memoria.
+ */
+function _sumByService(rows, idField, amountField) {
+  const totals = {};
+  (rows || []).forEach(function (row) {
+    const id = row[idField];
+    if (!id) return;
+    const amount = parseFloat(row[amountField]) || 0;
+    totals[id] = (totals[id] || 0) + amount;
+  });
+  return totals;
+}
 
 // ============================================================================
 // API endpoints

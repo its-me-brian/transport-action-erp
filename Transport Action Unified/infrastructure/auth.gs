@@ -215,6 +215,7 @@ var PERMISSION_MATRIX = {
   // === OPERATING COMPANY ===
   'operatingCompany.list':     ['admin', 'coordinator', 'accounting'],
   'operatingCompany.update':   ['admin'],
+  'operatingCompany.create':   ['admin'],
 
   // === REVENUE / COST BREAKDOWNS ===
   'revenueBreakdown.list':     ['admin', 'coordinator', 'accounting'],

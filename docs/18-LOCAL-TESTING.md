@@ -10,7 +10,7 @@ Guía para levantar el sistema en tu máquina y recorrer el circuito completo an
 Navegador → Vite dev server (localhost:3001) → Apps Script Web App (deploy real) → Google Sheets (datos reales)
 ```
 
-**Estado actual (verificado):** el Web App corre el deployment del `.env`, ya redesplegado con los cambios de `serviceEconomics`, `rateCard`, `reconciliation`, `driverReport`, `whatsapp`, **gestión de contraseñas**, **roles/permisos en el alta de usuarios** y **backup snapshot** (versión **230**). No hace falta volver a desplegar para probar.
+**Estado actual (verificado):** el Web App corre el deployment del `.env`, redesplegado con los cambios de `serviceEconomics`, `rateCard`, `reconciliation`, `driverReport`, `whatsapp`, **gestión de contraseñas**, **roles/permisos en el alta de usuarios**, **backup snapshot**, **purga de datos de prueba** y los fixes de dinero que destapó la batería E2E (versión **240**). No hace falta volver a desplegar para probar.
 
 | Qué querés probar | Qué hacer primero |
 |---|---|
@@ -22,7 +22,7 @@ Navegador → Vite dev server (localhost:3001) → Apps Script Web App (deploy r
 Para volver atrás después de un cambio riesgoso:
 
 ```powershell
-clasp deploy --deploymentId <DEPLOYMENT_ID> --versionNumber 229 -d "rollback"
+clasp deploy --deploymentId <DEPLOYMENT_ID> --versionNumber 239 -d "rollback"
 ```
 
 ---
@@ -159,6 +159,30 @@ Cierre de sesión:
 |---|---|---|
 | 19 | `F5` + re-login y volver al servicio | la sesión persiste y el estado sigue igual |
 | 20 | `/settings` | guardar un cambio y recargar: persiste |
+
+### 5.1 Sociedad emisora (issuer de facturas)
+
+Sin una fila en la hoja `OperatingCompany` no se puede emitir ninguna factura.
+En esta instalación ya existe:
+
+| Campo | Valor |
+|---|---|
+| ID | `OC-TA-2026-00003` |
+| Nombre | Agencia de Transporte |
+| Dirección | Via San Fernando 7 |
+| VAT | `00FALSO12135` |
+| Moneda / IVA | EUR / 21 % |
+
+> **El VAT es falso a propósito.** No valida formato en el backend, así que se
+> acepta, pero una factura emitida con él **no es deducible para el cliente**.
+> Antes de la primera factura real hay que reemplazarlo por el CIF verdadero
+> desde `/settings` (Company Settings → editar Transport Action → guardar).
+
+Antes de esto, `createOperatingCompany` existía en el backend pero no estaba
+cableado en el frontend, y el guardado usaba el literal del slot (`'TA'`) como
+si fuera el ID: fallaba con `NotFound` y el `catch` lo tragaba. Editabas VAT,
+dirección y teléfono y no se guardaba nada, sin un solo error en pantalla.
+Hoy el guardado resuelve el slot por nombre y **crea la sociedad si no existe**.
 
 ---
 
@@ -308,6 +332,34 @@ Endpoint: `action=exportSnapshot` (solo `admin`, permiso `system.backup`), con
 `maxCells` e `includeSheets` opcionales. Queda auditado como
 `system.backupExported` en `/audit-center`.
 
+### 9.1 Limpiar los datos de la batería
+
+La batería crea clientes, proyectos, servicios, facturas y links **reales**. Al
+terminar intenta borrarlos con los comandos del dominio, pero esos comandos son
+conservadores a propósito: un servicio en `Validado`, `Realizado` o `Facturado`
+no se puede borrar, y un cliente con proyectos tampoco. Cuando una suite falla a
+mitad de camino, esos restos quedan.
+
+`purgeTestData` barre por **etiqueta**, no por comando, y en cascada por IDs.
+
+```powershell
+node scripts/e2e/purge.mjs --dry        # simulacro: qué borraría (tag E2E-)
+node scripts/e2e/purge.mjs --confirm    # borra de verdad
+node scripts/e2e/purge.mjs --tag E2E-20261125171628 --confirm
+```
+
+Reglas de seguridad del barrido:
+
+| Regla | Detalle |
+|---|---|
+| Permiso | `system.backup`, solo `admin` (el mismo del snapshot) |
+| Alcance | filas que **contengan** la etiqueta + filas que referencian por ID a una borrada |
+| Usuarios | excluidos por defecto; `--include-users` los incluye, pero nunca a `admin` |
+| Confirmación | sin `--confirm` es simulacro, aunque la etiqueta sea válida |
+| Auditoría | deja `system.testDataPurged` con el conteo por hoja |
+
+Antes y después del barrido conviene un snapshot (§9) para comparar filas.
+
 ---
 
 ## 10. Si algo falla
@@ -324,6 +376,11 @@ Endpoint: `action=exportSnapshot` (solo `admin`, permiso `system.backup`), con
    operación salió bien: mirá `data`/`data.error`. Un script que solo valida
    `success` va a reportar éxito en un login rechazado.
 7. **Pantalla en blanco**: `localStorage.clear()` y recargar; si persiste, mirar `ErrorBoundary` en consola.
+8. **Importes con cola decimal** (`603.1849999999999`) o una factura que
+   nunca pasa a `Pagada` pese a estar cobrada: es aritmética de punto flotante.
+   Todo importe se redondea a céntimos con `_roundMoney()` / `_sumMoney()` /
+   `_moneyExceeds()` ([utils/money.gs](../Transport%20Action%20Unified/utils/money.gs)).
+   Si un importe nuevo aparece con cola, falta redondear en su punto de creación.
 
 Para reportar un fallo sirve: pantalla, acción clickeada, `action` de la request, payload y la respuesta JSON.
 
@@ -368,6 +425,8 @@ Detalles que importan:
   imprime la línea exacta con el número anterior.
 - `-SkipTests` publica sin correr la suite. Solo para un hotfix urgente.
 - Verificado: crea la versión, redespliega y el `healthCheck` responde `ok`.
+- **Si PowerShell bloquea el script** ("no está firmado digitalmente"), corré:
+  `pwsh -ExecutionPolicy Bypass -File .\scripts\release.ps1 -Message "..."`.
 
 Lo que el script **no** hace (a propósito): no hace commit, no pushea a git y no
 toca el frontend. El orden recomendado es commit → release → prueba.

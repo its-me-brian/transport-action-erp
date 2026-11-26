@@ -929,6 +929,10 @@ export async function getOperatingCompanies(): Promise<OperatingCompany[]> {
   return gasGetWithRetry('getOperatingCompanies');
 }
 
+export async function createOperatingCompany(data: Record<string, any>): Promise<OperatingCompany> {
+  return gasPostWithRetry('createOperatingCompany', data);
+}
+
 export interface ClientDTO {
   id: string;
   name: string;

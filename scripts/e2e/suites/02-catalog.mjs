@@ -283,8 +283,11 @@ export async function run(ctx) {
     return dto;
   });
   await r.step('getChanges lo lista', async () => {
-    const list = await client.post('getChanges', {});
+    // getChanges devuelve { changes: [...] }, igual que consume ChangesScreen.
+    const res = await client.post('getChanges', {});
+    const list = Array.isArray(res) ? res : res?.changes ?? [];
     if (!list.some((c) => c.id === changeId)) throw new Error('no aparece');
+    if (!changeId) throw new Error('createChange no devolvió id');
     return list;
   });
   await r.step('updateChange y resolveChange', async () => {
@@ -381,9 +384,26 @@ export async function run(ctx) {
     if (!Array.isArray(list) || list.length === 0) throw new Error('lista vacía');
     return list;
   });
-  await r.step('getOperatingCompanies devuelve al menos una', async () => {
-    const list = await client.post('getOperatingCompanies', {});
-    if (!Array.isArray(list) || list.length === 0) throw new Error('lista vacía');
+  await r.step('getOperatingCompanies crea la sociedad si la hoja esta vacia', async () => {
+    // Una instalacion nueva tiene OperatingCompany vacia y sin issuer las
+    // facturas no se pueden emitir. El alta no existia en el router: se agrego
+    // en esta ronda, asi que la bateria la ejercita y deja una sociedad valida.
+    const asList = (v) => (Array.isArray(v) ? v : v?.items ?? v?.companies ?? []);
+    let list = asList(await client.post('getOperatingCompanies', {}));
+    if (list.length === 0) {
+      const created = await client.post('createOperatingCompany', {
+        name: `${ctx.tag} SL`,
+        vat: 'IT00000000000',
+        currency: 'EUR',
+        defaultTaxRate: 21,
+        active: true,
+      });
+      if (!created || !(created.id || created.ID)) throw new Error('createOperatingCompany no devolvio id');
+      list = asList(await client.post('getOperatingCompanies', {}));
+    }
+    if (list.length === 0) throw new Error('lista vacia');
+    const first = list[0];
+    ctx.ids.operatingCompanyId = first.id || first.ID;
     return list;
   });
 

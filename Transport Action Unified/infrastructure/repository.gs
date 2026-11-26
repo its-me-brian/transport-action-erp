@@ -78,6 +78,34 @@ function _normalizeDiariaType(val) {
 }
 
 /**
+ * Clave de día (yyyy-MM-dd) de una fecha de la Sheet.
+ *
+ * Necesario porque las fechas vuelven como Date y `Date === Date` es SIEMPRE
+ * false: cualquier comparación de períodos con `===` fallaba aunque los valores
+ * fueran el mismo día. Eso rompía el gate de facturación (rechazaba rapportinos
+ * aceptados) y duplicaba borradores en vez de reutilizarlos.
+ */
+function _periodDayKey(val) {
+  if (val === null || val === undefined || val === '') return '';
+  if (val instanceof Date) {
+    if (isNaN(val.getTime())) return '';
+    return Utilities.formatDate(val, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  }
+  var str = String(val).trim();
+  // Fecha plana: se devuelve tal cual (evita el corrimiento de zona horaria
+  // que produce new Date('2026-11-23') al interpretarla como UTC).
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  var d = new Date(str);
+  if (isNaN(d.getTime())) return str;
+  return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+}
+
+/** true si ambas fechas caen el mismo día (o ambas están vacías). */
+function _samePeriod(a, b) {
+  return _periodDayKey(a) === _periodDayKey(b);
+}
+
+/**
  * Obtiene todas las filas de una hoja como array de objetos.
  * La primera fila son los headers.
  * Excluye registros soft-deleted (DeletedAt set).
@@ -299,6 +327,12 @@ function _update(sheetName, id, changes) {
  * Los queries automáticos lo excluyen.
  */
 function _softDelete(sheetName, id) {
+  const sheet = getSheet(sheetName);
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  // Hojas sin columna DeletedAt (Clients, Projects) no pueden hacer baja
+  // lógica. Antes `_update` no encontraba la columna, no cambiaba nada y
+  // devolvía true: el borrado "funcionaba" sin borrar el registro.
+  if (headers.indexOf('DeletedAt') === -1) return _delete(sheetName, id);
   return _update(sheetName, id, { DeletedAt: new Date().toISOString() });
 }
 
@@ -409,7 +443,10 @@ function _safeDelete(entityType, entityId) {
   const sheetName = sheetMap[entityType];
   if (!sheetName) return { success: false, error: 'Unknown entity type: ' + entityType };
   
-  _softDelete(sheetName, entityId);
+  const deleted = _softDelete(sheetName, entityId);
+  if (!deleted) {
+    return { success: false, deleted: false, error: 'Delete failed: ' + entityType + ' ' + entityId };
+  }
   return { success: true, deleted: true };
 }
 

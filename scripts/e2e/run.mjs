@@ -14,12 +14,12 @@
 // llama exista en el router de api.gs, antes de gastar dos horas en cold starts.
 // ============================================================================
 
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 import { assertConfig, config, parseArgs, ROOT } from './lib/env.mjs';
 import { allCalls, createClient, login, ApiError } from './lib/client.mjs';
-import { createContext } from './lib/fixtures.mjs';
+import { createBaseContext, createContext } from './lib/fixtures.mjs';
 import { Reporter } from './lib/reporter.mjs';
 import { groupByPrefix, runtimeCoverage, staticCheck } from './lib/coverage.mjs';
 
@@ -48,6 +48,61 @@ const NEEDS_FIXTURES = new Set([
 ]);
 
 const C = { reset: '\x1b[0m', dim: '\x1b[2m', bold: '\x1b[1m', green: '\x1b[32m', red: '\x1b[31m', yellow: '\x1b[33m', cyan: '\x1b[36m' };
+
+// ============================================================================
+// LOCK DE CORRIDA
+// ============================================================================
+// El backend guarda UN solo token por usuario (Users L/M). Dos corridas
+// simultáneas comparten la cuenta admin, así que el login de una invalida el
+// token de la otra y la corrida entera se llena de 403 falsos. El lock hace
+// que la segunda corrida aborte en vez de envenenar los resultados.
+const LOCK = resolve(ROOT, 'reports', 'e2e.lock');
+
+function acquireLock() {
+  mkdirSync(dirname(LOCK), { recursive: true });
+  if (existsSync(LOCK)) {
+    const pid = Number(String(readFileSync(LOCK, 'utf8')).trim());
+    if (pid) {
+      try {
+        process.kill(pid, 0);
+        return pid; // sigue vivo
+      } catch {
+        // proceso muerto: el lock es basura de una corrida anterior
+      }
+    }
+  }
+  writeFileSync(LOCK, String(process.pid));
+  return 0;
+}
+
+function releaseLock() {
+  try {
+    if (existsSync(LOCK) && Number(String(readFileSync(LOCK, 'utf8')).trim()) === process.pid) {
+      unlinkSync(LOCK);
+    }
+  } catch {
+    // no importa: el lock se limpia solo cuando el pid desaparece
+  }
+}
+
+/** Revalida el token antes de cada suite. */
+async function ensureSession(client, reporter) {
+  try {
+    const v = await client.post('validateSession');
+    if (v && v.valid === true) return true;
+  } catch {
+    // cae al re-login
+  }
+  try {
+    await login(client, config.username, config.password);
+    reporter.note('sesión renovada: el token anterior dejó de ser válido');
+    return true;
+  } catch (e) {
+    reporter.note(`no se pudo renovar la sesión: ${e.message}`);
+    return false;
+  }
+}
+
 
 function usage() {
   console.log(`
@@ -134,6 +189,17 @@ async function main() {
 
   assertConfig();
 
+  const holder = acquireLock();
+  if (holder) {
+    console.error(
+      `\n❌ Ya hay una corrida E2E activa (pid ${holder}).\n` +
+        `   Dos corridas comparten la cuenta admin: el login de una invalida el token de la otra\n` +
+        `   y todo el reporte se llena de 403 falsos. Esperá a que termine o matá el proceso.\n`
+    );
+    return 6;
+  }
+  process.on('exit', releaseLock);
+
   const reporter = new Reporter({ verbose: args.verbose, grep: args.grep });
   const selected = args.suites.length
     ? SUITES.filter((s) => args.suites.some((want) => s.name.startsWith(want) || s.name === want))
@@ -168,7 +234,7 @@ async function main() {
     return 3;
   }
 
-  let ctx = { client, reporter, tag: config.runTag, ids: null };
+  let ctx = createBaseContext(client, reporter);
 
   if (selected.some((s) => NEEDS_FIXTURES.has(s.name))) {
     console.log(`\n${C.dim}Creando fixtures (cliente, proyecto, 3 choferes, vehículo, tarifas)…${C.reset}`);
@@ -191,6 +257,10 @@ async function main() {
 
   for (const suite of selected) {
     if (interrupted) break;
+    if (!(await ensureSession(client, reporter))) {
+      reporter.check(`sesión válida antes de ${suite.name}`, false, 'token inválido y re-login fallido');
+      break;
+    }
     reporter.suiteStart(suite.name, suite.description);
     try {
       await suite.run(ctx);

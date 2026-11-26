@@ -14,6 +14,7 @@ import {
   AuditEntry,
   getOperatingCompanies,
   updateOperatingCompany,
+  createOperatingCompany,
   OperatingCompany,
   getVehicleTypes,
   getServiceTypes,
@@ -25,6 +26,33 @@ import { useToast } from '../contexts/ToastContext';
 
 interface UseCompanySettingsProps {
   onNavigate: (screen: ScreenId, transition?: 'none' | 'slide_up' | 'push' | 'push_back') => void;
+}
+
+/**
+ * La UI trabaja con dos slots fijos (TA / MM) pero las filas reales tienen IDs
+ * OC-TA-2026-00001, así que hay que resolverlos por nombre y caer a la posición
+ * cuando el nombre no coincide con lo configurado.
+ */
+function resolveCompanySlots(
+  companies: OperatingCompany[],
+  names: { ta: string; mm: string }
+): { ta: OperatingCompany | null; mm: OperatingCompany | null } {
+  const byName = (needle: string) => {
+    const n = needle.trim().toLowerCase();
+    if (!n) return null;
+    return companies.find((c) => (c.name || '').trim().toLowerCase().includes(n)) || null;
+  };
+  let ta = byName(names.ta);
+  let mm = byName(names.mm);
+  if (!ta && !mm) {
+    ta = companies[0] || null;
+    mm = companies[1] || null;
+  } else if (!ta) {
+    ta = companies.find((c) => c !== mm) || null;
+  } else if (!mm) {
+    mm = companies.find((c) => c !== ta) || null;
+  }
+  return { ta, mm };
 }
 
 export default function useCompanySettings({ onNavigate }: UseCompanySettingsProps) {
@@ -70,6 +98,12 @@ export default function useCompanySettings({ onNavigate }: UseCompanySettingsPro
   const [mmTaxRate, setMmTaxRate] = useState('21');
 
   const [operatingCompanies, setOperatingCompanies] = useState<OperatingCompany[]>([]);
+  // ID real (OC-TA-...) de cada slot. Antes se usaba el literal 'TA'/'MM' como
+  // id al guardar, y updateOperatingCompany fallaba con NotFound en silencio.
+  const [companyIds, setCompanyIds] = useState<{ TA: string | null; MM: string | null }>({
+    TA: null,
+    MM: null,
+  });
 
   const [editingCompany, setEditingCompany] = useState<'TA' | 'MM' | null>(null);
   const [tempEmail, setTempEmail] = useState('');
@@ -164,8 +198,13 @@ export default function useCompanySettings({ onNavigate }: UseCompanySettingsPro
         });
 
         setOperatingCompanies(companies);
-        const ta = companies.find((c: OperatingCompany) => c.id === 'TA');
-        const mm = companies.find((c: OperatingCompany) => c.id === 'MM');
+        const slots = resolveCompanySlots(companies, {
+          ta: cfg.ta_name || 'Transport Action',
+          mm: cfg.mm_name || 'Movie Motion',
+        });
+        setCompanyIds({ TA: slots.ta?.id || null, MM: slots.mm?.id || null });
+        const ta = slots.ta;
+        const mm = slots.mm;
         if (ta) {
           setTaVat(ta.vat || '');
           setTaPhone(ta.phone || '');
@@ -372,17 +411,32 @@ export default function useCompanySettings({ onNavigate }: UseCompanySettingsPro
 
   const saveCompanyEdit = useCallback(async () => {
     if (editingCompany) {
+      const payload = {
+        email: tempEmail,
+        address: tempAddress,
+        vat: tempVat,
+        phone: tempPhone,
+        currency: tempCurrency,
+        defaultTaxRate: parseFloat(tempTaxRate) || 21,
+      };
+      const existingId = companyIds[editingCompany];
       try {
-        await updateOperatingCompany(editingCompany, {
-          email: tempEmail,
-          address: tempAddress,
-          vat: tempVat,
-          phone: tempPhone,
-          currency: tempCurrency,
-          defaultTaxRate: parseFloat(tempTaxRate) || 21,
-        });
-      } catch (err) {
-        console.error('[CompanySettings] save operating company error:', err);
+        if (existingId) {
+          await updateOperatingCompany(existingId, payload);
+        } else {
+          // Hoja vacía: no había issuer para las facturas ni forma de crearlo.
+          const created = await createOperatingCompany({
+            name: (editingCompany === 'TA' ? taName : mmName) || (editingCompany === 'TA' ? 'Transport Action' : 'Movie Motion'),
+            active: true,
+            ...payload,
+          });
+          if (created?.id) {
+            setCompanyIds((prev) => ({ ...prev, [editingCompany]: created.id }));
+            setOperatingCompanies((prev) => [...prev, created]);
+          }
+        }
+      } catch (err: any) {
+        showToast('Error saving company: ' + (err.message || 'Unknown'), 'error');
       }
 
       if (editingCompany === 'TA') {
@@ -402,7 +456,7 @@ export default function useCompanySettings({ onNavigate }: UseCompanySettingsPro
       }
     }
     setEditingCompany(null);
-  }, [editingCompany, tempEmail, tempAddress, tempVat, tempPhone, tempCurrency, tempTaxRate]);
+  }, [editingCompany, tempEmail, tempAddress, tempVat, tempPhone, tempCurrency, tempTaxRate, companyIds, taName, mmName, showToast]);
 
   const openWhatsAppEdit = useCallback(() => {
     setTempWhatsApp(whatsappTemplate);

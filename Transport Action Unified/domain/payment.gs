@@ -39,7 +39,7 @@ const PaymentRepository = {
       ID: '',
       InvoiceID: data.InvoiceID || '',
       ClientID: data.ClientID || '',
-      Amount: parseFloat(data.Amount) || 0,
+      Amount: _roundMoney(data.Amount),
       PaymentMethod: data.PaymentMethod || '',
       PaymentDate: data.PaymentDate || '',
       Reference: data.Reference || '',
@@ -64,6 +64,36 @@ const PaymentRepository = {
     if (existing && (existing.Status === 'Confirmado' || existing.Status === 'Conciliado' || existing.Status === 'Anulado')) {
       throw new ImmutableError('Payment', id);
     }
+    return _update(this.SHEET, id, changes);
+  },
+
+  /**
+   * Cambio de ESTADO de un pago (Registrado→Confirmado→Conciliado, o →Anulado).
+   *
+   * `update()` es intocable a propósito: un pago confirmado no se edita. Pero
+   * la máquina de estados SÍ necesita mover Status, y hasta ahora reconcile() y
+   * voidPayment() pasaban por update() → ImmutableError. O sea: un pago
+   * confirmado no se podía conciliar ni anular nunca.
+   *
+   * Acá se autoriza SOLO el movimiento de columnas de estado; cualquier intento
+   * de tocar un dato (Amount, InvoiceID, PaymentDate…) sigue bloqueado.
+   */
+  transition(id, changes) {
+    var ALLOWED = ['Status', 'ConfirmedAt', 'ReconciledAt', 'VoidedAt', 'VoidReason', 'UpdatedAt'];
+    var forbidden = Object.keys(changes).filter(function(key) {
+      return ALLOWED.indexOf(key) === -1;
+    });
+    if (forbidden.length > 0) {
+      throw new ValidationError('Payment.transition only moves status, got: ' + forbidden.join(', '));
+    }
+
+    var existing = PaymentRepository.getById(id);
+    if (!existing) throw new NotFoundError('Payment', id);
+    if (changes.Status) {
+      _assertValidTransition('Payment', existing.Status, changes.Status);
+    }
+
+    changes.UpdatedAt = new Date().toISOString();
     return _update(this.SHEET, id, changes);
   },
 

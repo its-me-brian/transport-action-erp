@@ -327,15 +327,18 @@ const RapportinoClientCommands = {
           // Check RapportinoCollaborator for collaborator drivers (Issue #14)
           const collabRapportinos = RapportinoCollaboratorRepository.getAllByCollaborator(driver.CollaboratorID)
             .filter(r => r.ProjectID === rapportino.ProjectID &&
-              r.PeriodStart === periodStart &&
-              r.PeriodEnd === periodEnd);
+              _samePeriod(r.PeriodStart, periodStart) &&
+              _samePeriod(r.PeriodEnd, periodEnd));
           accepted = collabRapportinos.some(r => r.Status === 'Aceptado' || r.Status === 'Pagado');
         } else {
           // Check RapportinoDriver for internal drivers
+          // _samePeriod y no ===: las fechas de la Sheet vuelven como Date y
+          // `Date === Date` es siempre false, así que el gate rechazaba
+          // rapportinos aceptados con datos reales.
           const driverRapportinos = RapportinoDriverRepository.getAllByDriver(driverId)
             .filter(r => r.ProjectID === rapportino.ProjectID &&
-              (r.PeriodStart || r.WeekStart) === periodStart &&
-              (r.PeriodEnd || r.WeekEnd) === periodEnd);
+              _samePeriod(r.PeriodStart || r.WeekStart, periodStart) &&
+              _samePeriod(r.PeriodEnd || r.WeekEnd, periodEnd));
           accepted = driverRapportinos.some(r => r.Status === 'Aceptado' || r.Status === 'Pagado');
         }
 

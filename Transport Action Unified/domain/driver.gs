@@ -189,13 +189,25 @@ function apiCreateDriverOnTheFly(data) {
     }
 
     // Crear conductor
+    // El router ya normaliza camelCase → PascalCase (FIELD_MAPS.driver), pero
+    // acá solo se copiaban nombre y teléfono: cualquier otro campo se perdía en
+    // silencio. El caso caro es `collaboratorId`: sin él, `assignDriver` no
+    // puede derivar el proveedor y el servicio queda como internal_driver
+    // aunque el chofer sea de un colaborador.
     const entity = DriverRepository.create({
       Name: data.Name,
       Phone: data.Phone,
-      WhatsApp: data.Phone,
+      WhatsApp: data.WhatsApp || data.Phone,
+      Type: data.Type || '',
+      DriverOwnership: data.DriverOwnership || '',
+      CollaboratorID: data.CollaboratorID || '',
+      Email: data.Email || '',
+      IBAN: data.IBAN || '',
+      LicenseType: data.LicenseType || '',
+      LicenseExpiry: data.LicenseExpiry || '',
       OperatingCompany: data.OperatingCompany || '',
       Source: 'service_form',
-      Notes: 'Creado desde formulario de servicios'
+      Notes: data.Notes || 'Creado desde formulario de servicios'
     });
 
     _dispatchEvent({

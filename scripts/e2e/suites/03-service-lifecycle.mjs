@@ -105,6 +105,14 @@ export async function run(ctx) {
     return dto;
   });
 
+  // El guard S006 solo dispara desde Reportado: desde Realizado la máquina de
+  // estados responde "Invalid transition" y el test no llega a probar la regla.
+  await r.step('reportService → Reportado (para llegar al guard S006)', async () => {
+    const dto = await client.post('reportService', { serviceId: service.id });
+    if (dto.operationalStatus !== 'Reportado') throw new Error(`status=${dto.operationalStatus}`);
+    return dto;
+  });
+
   await r.expectFailure(
     'validateService exige un DriverReport aceptado (S006)',
     () => client.post('validateService', { serviceId: service.id }),

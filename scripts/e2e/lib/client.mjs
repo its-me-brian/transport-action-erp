@@ -29,6 +29,17 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+/**
+ * Acciones que se pueden reintentar sin efecto colateral.
+ *
+ * Reintentar un POST que muta estado lo aplica dos veces cuando el primer
+ * intento SÍ llegó al backend y solo se perdió la respuesta (timeout del
+ * gateway). El síntoma típico es un segundo intento que choca con el estado
+ * ya avanzado: `Invalid transition: ServiceOperational EnRuta → EnRuta`.
+ * Por eso el default es 0 reintentos y solo estos prefijos son reintentables.
+ */
+const RETRYABLE_ACTION = /^(get|list|healthCheck|login|validateSession|checkSystem|calculate)/;
+
 function normalizeErrorBody(body, action) {
   const err = body?.error;
   if (typeof err === 'string') {
@@ -68,13 +79,14 @@ export function createClient({ gasUrl = config.gasUrl, timeoutMs = config.timeou
     globalCalls.push(action);
   }
 
-  async function request(action, data = {}, { method = 'POST', retries = 2 } = {}) {
+  async function request(action, data = {}, { method = 'POST', retries } = {}) {
     record(action);
     const url = new URL(gasUrl);
     url.searchParams.set('action', action);
 
+    const maxRetries = retries === undefined ? (RETRYABLE_ACTION.test(action) ? 2 : 0) : retries;
     let lastError = null;
-    for (let attempt = 0; attempt <= retries; attempt++) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
       if (attempt > 0) await sleep(600 * attempt * attempt);
 
       const controller = new AbortController();

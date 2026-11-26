@@ -32,7 +32,7 @@ export async function run(ctx) {
 
   r.section('Máquina financiera del servicio');
   const closed = await r.step('servicio validado listo para cerrar', async () => {
-    const res = await driveToValidated(ctx, { driverIndex: 0 });
+    const res = await driveToValidated(ctx);
     return res;
   });
   if (!closed) return;
@@ -51,11 +51,16 @@ export async function run(ctx) {
       const svc = await createService(ctx, { time: '05:30' });
       await client.post('facturarService', { serviceId: svc.id });
     },
-    /Facturable|SF001/i
+    // El guard cambió de mensaje con la máquina financiera: hoy responde
+    // "Service must be validated before invoicing". La regla es la misma.
+    /Facturable|SF001|validated before invoicing/i
   );
 
   r.section('Invoice');
-  const invoiceId = (ctx.flowState?.invoiceIds || [])[0];
+  // La suite 06 trackea el invoice en ctx.ids.invoiceIds; mirror en flowState
+  // era una promesa que nunca se cumplió y dejaba el ciclo de Invoice siempre
+  // omitido (y con él emitInvoice/registerPayment/voidInvoice sin evidencia).
+  const invoiceId = (ctx.flowState?.invoiceIds || ctx.ids.invoiceIds || [])[0];
   if (!invoiceId) {
     r.skip('ciclo de Invoice', 'la suite 06 no dejó un invoice en borrador');
     return;
@@ -128,18 +133,6 @@ export async function run(ctx) {
     /exceeds|P004/i
   );
 
-  await r.step('confirmPayment → Confirmado', async () => {
-    const res = await client.post('confirmPayment', { paymentId });
-    if (res.status !== 'Confirmado') throw new Error(`status=${res.status}`);
-    return res;
-  });
-
-  await r.step('reconcilePayment → Conciliado', async () => {
-    const res = await client.post('reconcilePayment', { paymentId });
-    if (res.status !== 'Conciliado') throw new Error(`status=${res.status}`);
-    return res;
-  });
-
   await r.step('checkDuplicatePayment detecta el pago repetido', async () => {
     const res = await client.post('checkDuplicatePayment', {
       invoiceId,
@@ -151,20 +144,41 @@ export async function run(ctx) {
     return res;
   });
 
+  // Orden importante: anular ANTES de confirmar. Un pago Confirmado/Conciliado
+  // es terminal para edición y la factura queda saldada, así que no habría
+  // saldo para registrar el pago de reemplazo.
   await r.step('voidPayment anula un pago registrado', async () => {
-    const dup = await client.post('registerPayment', {
+    const res = await client.post('voidPayment', { paymentId, reason: 'E2E anulación' });
+    if (res.status !== 'Anulado') throw new Error(`status=${res.status}`);
+    return res;
+  });
+
+  await r.step('registerPayment de reemplazo tras la anulación', async () => {
+    const res = await client.post('registerPayment', {
       invoiceId,
       paymentData: {
-        amount: 1,
-        paymentMethod: 'Cash',
+        amount: total,
+        paymentMethod: 'Bank Transfer',
         paymentDate: today(),
-        reference: `${ctx.tag}-VOID`,
+        reference: `${ctx.tag}-PAY2`,
+        notes: 'E2E payment (reemplazo)',
       },
     });
-    const dupId = idOf(dup);
-    ctx.track('paymentIds', dupId);
-    const res = await client.post('voidPayment', { paymentId: dupId, reason: 'E2E anulación' });
-    if (res.status !== 'Anulado') throw new Error(`status=${res.status}`);
+    paymentId = idOf(res);
+    if (!paymentId) throw new Error('sin id de pago');
+    ctx.track('paymentIds', paymentId);
+    return res;
+  });
+
+  await r.step('confirmPayment → Confirmado', async () => {
+    const res = await client.post('confirmPayment', { paymentId });
+    if (res.status !== 'Confirmado') throw new Error(`status=${res.status}`);
+    return res;
+  });
+
+  await r.step('reconcilePayment → Conciliado', async () => {
+    const res = await client.post('reconcilePayment', { paymentId });
+    if (res.status !== 'Conciliado') throw new Error(`status=${res.status}`);
     return res;
   });
 

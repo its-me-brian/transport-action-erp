@@ -441,22 +441,59 @@ const ServiceEconomics = {
     const revenueItems = this.calculateRevenueBreakdown(serviceId, driverReport);
     const costItems = this.calculateCostBreakdown(serviceId, driverReport);
 
-    const revenue = revenueItems.reduce((sum, i) => sum + i.total, 0);
-    const cost = costItems.reduce((sum, i) => sum + i.amount, 0);
+    // Los ajustes manuales SOLO existen en la planilla: el cálculo automático
+    // los reconstruye desde la tarifa y por eso los perdía. Sin esto, agregar
+    // un ajuste no movía el margen y `calculateServiceEconomics` devolvía un
+    // número distinto de la suma de getRevenueBreakdowns/getCostBreakdowns
+    // (dos totales contradictorios en la misma pantalla del servicio).
+    const manualRevenue = ServiceRevenueBreakdownRepository.getByService(serviceId)
+      .filter(i => this._isManualSource(i.Source))
+      .map(i => ({
+        itemType: i.ItemType,
+        description: i.Description,
+        quantity: parseFloat(i.Quantity) || 1,
+        unitPrice: parseFloat(i.UnitPrice) || 0,
+        total: parseFloat(i.Total) || 0,
+        rateCardId: i.RateCardID || '',
+        source: i.Source,
+        id: i.ID
+      }));
+    const manualCost = ServiceCostBreakdownRepository.getByService(serviceId)
+      .filter(i => this._isManualSource(i.Source))
+      .map(i => ({
+        itemType: i.ItemType,
+        description: i.Description,
+        amount: parseFloat(i.Amount) || 0,
+        driverId: i.DriverID || '',
+        source: i.Source,
+        supplierRateId: i.SupplierRateID || '',
+        id: i.ID
+      }));
+
+    const allRevenue = revenueItems.concat(manualRevenue);
+    const allCost = costItems.concat(manualCost);
+
+    const revenue = allRevenue.reduce((sum, i) => sum + i.total, 0);
+    const cost = allCost.reduce((sum, i) => sum + i.amount, 0);
 
     return {
       serviceId: serviceId,
       revenue: {
         total: revenue,
-        breakdown: revenueItems
+        breakdown: allRevenue
       },
       cost: {
         total: cost,
-        breakdown: costItems
+        breakdown: allCost
       },
       margin: revenue - cost,
       marginPercent: revenue > 0 ? ((revenue - cost) / revenue * 100).toFixed(2) : 0
     };
+  },
+
+  /** Fuentes que representan un ajuste manual (no recalculables). */
+  _isManualSource(source) {
+    return source === 'adjustment' || source === 'manual';
   },
 
   // ========== HELPERS ==========
@@ -645,8 +682,37 @@ const ServiceEconomics = {
 // API endpoints
 // ============================================================================
 
+/**
+ * Convierte un DriverReport en el shape que consumen los cálculos.
+ * Un solo lugar para el mapeo: calculate y recalculate deben dar lo mismo.
+ */
+function _driverReportData(report) {
+  if (!report) return null;
+  return {
+    startTime: report.StartTime,
+    endTime: report.EndTime,
+    kmTotal: parseFloat(report.KmTotal) || 0,
+    hasDiaria: report.HasDiaria === 'true' || report.HasDiaria === true,
+    isFestivo: report.IsFestivo === 'true' || report.IsFestivo === true,
+    isNotturno: report.IsNotturno === 'true' || report.IsNotturno === true,
+    diariaType: report.DiariaType || 'none',
+    parking: parseFloat(report.Parking) || 0,
+    tolls: parseFloat(report.Tolls) || 0,
+    fuel: parseFloat(report.Fuel) || 0,
+    waitMinutes: parseFloat(report.WaitMinutes) || 0
+  };
+}
+
 function apiCalculateServiceEconomics(serviceId, driverReport) {
-  return ServiceEconomics.calculateEconomics(serviceId, driverReport);
+  // Sin driverReport explícito se usa el reporte activo. Si no, el cálculo
+  // ignora km, horas y diaria, y el margen que devuelve no coincide con la
+  // suma de los breakdowns guardados (dos números distintos en la misma UI).
+  var data = driverReport;
+  if (!data) {
+    var report = DriverReportRepository.getActiveByService(serviceId);
+    data = _driverReportData(report);
+  }
+  return ServiceEconomics.calculateEconomics(serviceId, data);
 }
 
 function apiApplyRevenueBreakdown(serviceId, driverReport) {
@@ -669,19 +735,7 @@ function apiRecalculateServiceEconomics(serviceId) {
   var report = DriverReportRepository.getActiveByService(serviceId);
   if (!report) throw new BusinessRuleError('No active DriverReport for service ' + serviceId, 'NO_REPORT');
   
-  var driverReportData = {
-    startTime: report.StartTime,
-    endTime: report.EndTime,
-    kmTotal: parseFloat(report.KmTotal) || 0,
-    hasDiaria: report.HasDiaria === 'true' || report.HasDiaria === true,
-    isFestivo: report.IsFestivo === 'true' || report.IsFestivo === true,
-    isNotturno: report.IsNotturno === 'true' || report.IsNotturno === true,
-    diariaType: report.DiariaType || 'none',
-    parking: parseFloat(report.Parking) || 0,
-    tolls: parseFloat(report.Tolls) || 0,
-    fuel: parseFloat(report.Fuel) || 0,
-    waitMinutes: parseFloat(report.WaitMinutes) || 0
-  };
+  var driverReportData = _driverReportData(report);
   
   var warnings = [];
   var revenueItems = [];

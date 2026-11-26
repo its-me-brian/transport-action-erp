@@ -32,8 +32,46 @@ export function weekEnd() {
 /** Bajas best-effort: si el registro ya no existe, no es un resto. */
 const BEST_EFFORT = new Set(['cancelExpense', 'deleteUser']);
 
-export async function createContext(client, reporter, { tag = config.runTag } = {}) {
-  const created = [];
+/**
+ * Tarifa de proveedor para un chofer del contexto.
+ *
+ * Base > 0 a propósito: con 0 el cost breakdown automático nace vacío, el
+ * servicio no se puede validar ("Service must have at least 1 CostBreakdown")
+ * y no hay margen que probar. Sirve también para los choferes que se crean al
+ * vuelo cuando los del contexto están todos tomados.
+ */
+export async function addSupplierRate(ctx, driverId) {
+  const sr = await ctx.client.post('createSupplierRate', {
+    supplierType: 'internal_driver',
+    supplierId: driverId,
+    projectId: ctx.ids.projectId,
+    serviceType: 'Dispo',
+    vehicleType: 'Van',
+    baseRate: 200,
+    includedKm: 100,
+    includedHours: 8,
+    extraKmRate: 0.5,
+    extraHourRate: 25,
+    diariaPiena: 180,
+    diariaMezza: 110,
+    nightExtra: 15,
+    holidayExtra: 60,
+    waitHourRate: 20,
+  });
+  const id = sr.id || sr.ID;
+  ctx.ids.supplierRateIds.push(id);
+  return id;
+}
+
+/**
+ * Contexto mínimo, sin fixtures.
+ *
+ * Existe porque las suites que NO necesitan fixtures (01-system-auth) igual
+ * llaman `ctx.track(...)`: sin esto, correr una suite suelta explotaba con
+ * "ctx.track is not a function" después de crear la cuenta, y esa cuenta
+ * quedaba viva porque nadie la había registrado para la limpieza.
+ */
+export function createBaseContext(client, reporter, { tag = config.runTag } = {}) {
   const ctx = {
     client,
     reporter,
@@ -63,10 +101,27 @@ export async function createContext(client, reporter, { tag = config.runTag } = 
       if (!id) return id;
       if (Array.isArray(ctx.ids[kind])) ctx.ids[kind].push(id);
       else ctx.ids[kind] = id;
-      created.push({ kind, id });
       return id;
     },
   };
+
+  ctx.cleanup = async function cleanupBase() {
+    const leftovers = [];
+    for (const userId of ctx.ids.userIds || []) {
+      try {
+        await client.post('deleteUser', { userId });
+      } catch (e) {
+        if (!BEST_EFFORT.has('deleteUser')) leftovers.push(`deleteUser: ${e.message}`);
+      }
+    }
+    return leftovers;
+  };
+
+  return ctx;
+}
+
+export async function createContext(client, reporter, { tag = config.runTag } = {}) {
+  const ctx = createBaseContext(client, reporter, { tag });
 
   // ── Cliente ────────────────────────────────────────────────────────────────
   const clientDto = await client.post('createClient', {
@@ -151,24 +206,7 @@ export async function createContext(client, reporter, { tag = config.runTag } = 
 
   // ── Tarifas de proveedor (Cost) para los 3 conductores ─────────────────────
   for (const driverId of ctx.ids.drivers) {
-    const sr = await client.post('createSupplierRate', {
-      supplierType: 'internal_driver',
-      supplierId: driverId,
-      projectId: ctx.ids.projectId,
-      serviceType: 'Dispo',
-      vehicleType: 'Van',
-      baseRate: 0,
-      includedKm: 100,
-      includedHours: 8,
-      extraKmRate: 0.5,
-      extraHourRate: 25,
-      diariaPiena: 180,
-      diariaMezza: 110,
-      nightExtra: 15,
-      holidayExtra: 60,
-      waitHourRate: 20,
-    });
-    ctx.ids.supplierRateIds.push(sr.id || sr.ID);
+    await addSupplierRate(ctx, driverId);
   }
 
   // ── Tarifa de conductor (legacy, para la pantalla de drivers) ──────────────
@@ -186,20 +224,29 @@ export async function createContext(client, reporter, { tag = config.runTag } = 
   reporter.note(`fixtures: client=${ctx.ids.clientId} project=${ctx.ids.projectId} drivers=${ctx.ids.drivers.join(',')}`);
 
   ctx.cleanup = async function cleanup() {
-    // `cancelExpense` es la baja real: el router NO tiene `deleteExpense`
-    // (ese nombre hacía que la limpieza fallara en silencio en cada corrida).
+    // `cancelExpense` es la baja real: el router NO tiene `deleteExpense`.
+    //
+    // Cada acción tiene su propio nombre de parámetro: `deleteService` recibe
+    // `serviceId`, el resto recibe `id`. Mandar `{ id }` a deleteService
+    // devolvía "Service undefined not found", los servicios quedaban vivos y,
+    // como driver/vehicle/project/client no se borran si tienen servicios
+    // colgados, la corrida entera quedaba en la Sheet.
+    const byId = (id) => ({ id, reason: 'E2E cleanup' });
+    const byServiceId = (id) => ({ serviceId: id, reason: 'E2E cleanup' });
     const steps = [
-      ['cancelExpense', ctx.ids.expenseIds],
-      ['voidPayment', ctx.ids.paymentIds],
-      ['voidInvoice', ctx.ids.invoiceIds],
-      ['deleteService', ctx.ids.services],
-      ['deleteDriver', ctx.ids.drivers],
-      ['deleteVehicle', ctx.ids.vehicleId],
-      ['deleteRateCard', ctx.ids.rateCardId],
-      ['deleteSupplierRate', ctx.ids.supplierRateIds],
-      ['deleteCollaborator', ctx.ids.collaboratorId],
-      ['deleteProject', ctx.ids.projectId],
-      ['deleteClient', ctx.ids.clientId],
+      ['cancelExpense', ctx.ids.expenseIds, byId],
+      ['voidPayment', ctx.ids.paymentIds, byId],
+      ['voidInvoice', ctx.ids.invoiceIds, byId],
+      ['deleteService', ctx.ids.services, byServiceId],
+      // Las tarifas van ANTES que el chofer: deleteDriver rechaza si quedan
+      // SupplierRates apuntándolo.
+      ['deleteSupplierRate', ctx.ids.supplierRateIds, byId],
+      ['deleteRateCard', ctx.ids.rateCardId, byId],
+      ['deleteCollaborator', ctx.ids.collaboratorId, byId],
+      ['deleteDriver', ctx.ids.drivers, byId],
+      ['deleteVehicle', ctx.ids.vehicleId, byId],
+      ['deleteProject', ctx.ids.projectId, byId],
+      ['deleteClient', ctx.ids.clientId, byId],
     ];
     const leftovers = [];
 
@@ -211,9 +258,9 @@ export async function createContext(client, reporter, { tag = config.runTag } = 
       }
     };
 
-    for (const [action, ids] of steps) {
+    for (const [action, ids, toPayload] of steps) {
       const list = Array.isArray(ids) ? ids : ids ? [ids] : [];
-      for (const id of list) await attempt(action, { id, reason: 'E2E cleanup' });
+      for (const id of list) await attempt(action, toPayload(id));
     }
     for (const userId of ctx.ids.userIds || []) await attempt('deleteUser', { userId });
 

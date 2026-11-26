@@ -791,6 +791,10 @@ function getDriverLinks(filters) {
         }
       }
 
+      // Sheets convierte un token numérico en Number: se normaliza a String para
+      // que el consumidor pueda compararlo con el token de la URL sin sorpresas.
+      if (row.Token !== undefined && row.Token !== null) row.Token = String(row.Token);
+
       results.push(row);
     }
 
@@ -1055,7 +1059,11 @@ function _getDriverLinkEvents(token) {
       var row = {};
       headers.forEach(function(h, j) { row[h] = data[i][j]; });
 
-      if (token && row.LinkToken !== token) continue;
+      // La columna se llama Token (la escribe _logLinkEvent); LinkToken es el
+      // nombre viejo. Sin la coerción a String, un token numérico (Sheets lo
+      // guarda como número) nunca coincide con el string que llega por la URL.
+      var linkToken = row.Token !== undefined && row.Token !== '' ? row.Token : row.LinkToken;
+      if (token && String(linkToken) !== String(token)) continue;
 
       results.push(row);
     }

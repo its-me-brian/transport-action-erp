@@ -4,17 +4,30 @@
 
 const ProfitQueries = {
   /**
+   * Suma revenue y cost de una lista de servicios leyendo cada hoja de
+   * breakdown UNA sola vez. Antes se llamaba calculateRevenue/calculateCost
+   * por servicio y cada llamada releía la hoja completa (N+1).
+   */
+  _totals(services) {
+    const revenueByService = ServiceQueries.revenueTotalsByService();
+    const costByService = ServiceQueries.costTotalsByService();
+    let totalRevenue = 0;
+    let totalCost = 0;
+    (services || []).forEach(s => {
+      totalRevenue += revenueByService[s.ID] || 0;
+      totalCost += costByService[s.ID] || 0;
+    });
+    return { totalRevenue, totalCost };
+  },
+
+  /**
    * Calcular profit por proyecto
    */
   byProject(projectId) {
     const services = ServiceRepository.getAllByProject(projectId);
-    let totalRevenue = 0;
-    let totalCost = 0;
-
-    services.forEach(s => {
-      totalRevenue += ServiceQueries.calculateRevenue(s.ID);
-      totalCost += ServiceQueries.calculateCost(s.ID);
-    });
+    const totals = this._totals(services);
+    const totalRevenue = totals.totalRevenue;
+    const totalCost = totals.totalCost;
 
     return {
       projectId,
@@ -34,13 +47,9 @@ const ProfitQueries = {
     if (startDate) services = services.filter(s => new Date(s.Date) >= new Date(startDate));
     if (endDate) services = services.filter(s => new Date(s.Date) <= new Date(endDate));
 
-    let totalRevenue = 0;
-    let totalCost = 0;
-
-    services.forEach(s => {
-      totalRevenue += ServiceQueries.calculateRevenue(s.ID);
-      totalCost += ServiceQueries.calculateCost(s.ID);
-    });
+    const totals = this._totals(services);
+    const totalRevenue = totals.totalRevenue;
+    const totalCost = totals.totalCost;
 
     return {
       driverId,
@@ -60,13 +69,9 @@ const ProfitQueries = {
     if (startDate) services = services.filter(s => new Date(s.Date) >= new Date(startDate));
     if (endDate) services = services.filter(s => new Date(s.Date) <= new Date(endDate));
 
-    let totalRevenue = 0;
-    let totalCost = 0;
-
-    services.forEach(s => {
-      totalRevenue += ServiceQueries.calculateRevenue(s.ID);
-      totalCost += ServiceQueries.calculateCost(s.ID);
-    });
+    const totals = this._totals(services);
+    const totalRevenue = totals.totalRevenue;
+    const totalCost = totals.totalCost;
 
     return {
       operatingCompany,
@@ -84,6 +89,8 @@ const ProfitQueries = {
   byPeriod(periodType, startDate, endDate) {
     const services = ServiceRepository.getByDateRange(startDate, endDate);
     const periods = {};
+    const revenueByService = ServiceQueries.revenueTotalsByService();
+    const costByService = ServiceQueries.costTotalsByService();
 
     services.forEach(s => {
       const date = new Date(s.Date);
@@ -102,8 +109,8 @@ const ProfitQueries = {
       if (!periods[key]) {
         periods[key] = { revenue: 0, cost: 0, count: 0 };
       }
-      periods[key].revenue += ServiceQueries.calculateRevenue(s.ID);
-      periods[key].cost += ServiceQueries.calculateCost(s.ID);
+      periods[key].revenue += revenueByService[s.ID] || 0;
+      periods[key].cost += costByService[s.ID] || 0;
       periods[key].count++;
     });
 
@@ -124,6 +131,8 @@ const ProfitQueries = {
    */
   estimatedVsActual(projectId) {
     const services = ServiceRepository.getAllByProject(projectId);
+    const revenueByService = ServiceQueries.revenueTotalsByService();
+    const costByService = ServiceQueries.costTotalsByService();
     let totalEstimatedRevenue = 0;
     let totalEstimatedCost = 0;
     let totalActualRevenue = 0;
@@ -133,8 +142,8 @@ const ProfitQueries = {
     services.forEach(s => {
       const estRev = parseFloat(s.EstimatedRevenue) || 0;
       const estCost = parseFloat(s.EstimatedCost) || 0;
-      const actRev = ServiceQueries.calculateRevenue(s.ID);
-      const actCost = ServiceQueries.calculateCost(s.ID);
+      const actRev = revenueByService[s.ID] || 0;
+      const actCost = costByService[s.ID] || 0;
 
       totalEstimatedRevenue += estRev;
       totalEstimatedCost += estCost;
