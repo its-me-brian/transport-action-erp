@@ -52,6 +52,7 @@
   "catalogVersion": "4.2.1",
   "tier": null,
   "optOuts": [
+    "emoji",
     "trunk-guard"
   ],
   "gitPermissions": true,
