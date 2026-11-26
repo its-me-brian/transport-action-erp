@@ -31,4 +31,30 @@
 - Hallazgo documentado: `runMigrations()` corre en cada request dentro de un `try/catch` que solo
   loguea, y la versión avanza después de `fn()`. Una migración rota reintenta en cada request y la
   app sigue con el esquema viejo, sin señal en la UI.
+- Verificación: un lector sin contexto respondió 5 preguntas de dominio usando solo la wiki, y
+  detectó 2 ambigüedades, ya cerradas: el vencimiento del link se calcula desde **medianoche UTC**
+  de `dateTo` (con `linkDurationDays: 0` nace vencido), y "ciclo operativo" vs "ciclo completo"
+  quedó definido en [Panorama](erp/overview.md) — el ciclo completo exige `admin`, no `coordinator`.
+
+## [2026-11-26] feature | etiquetas legibles en rapportinos, reconciliación y partes
+
+- Created: [Etiquetas legibles — de IDs a nombres en la interfaz](erp/ui-labels.md)
+- Updated: [index.md](index.md) (1 fila nueva)
+- Source: código leído, no memoria — `Transport Action All/src/utils/serviceLabels.ts`,
+  `hooks/useRapportino.ts`, `components/RapportinoCards.tsx`, `RapportinoDetailModal.tsx`,
+  `ReconciliationScreen.tsx`, `DriverReportScreen.tsx`, `services/api.ts`, y
+  `Transport Action Unified/domain/service.gs` para confirmar qué trae el DTO.
+- Decisión de alcance: **frontend, sin redeploy**. Los nombres ya estaban cargados en
+  `useRapportino` (se usaban solo para los desplegables) y `apiGetServices` ya devuelve
+  `clientName`/`driverName` resueltos con índices por request. No se tocó ningún `.gs`.
+- Regla fijada: toda etiqueta degrada al ID cuando el catálogo no alcanza. Un lookup caído
+  muestra el ID de antes, no una tarjeta vacía ni una pantalla en error.
+- Trampa documentada: cambiar lo que se ve sin cambiar lo que se busca deja filtros muertos.
+  Los cuatro buscadores aceptan ID **y** nombre.
+- Hueco cerrado: el modal de detalle no listaba los servicios del período. Ahora pide
+  `getRapportinoItems(rapportinoClientId)` al abrir (solo pestaña clientes) y la misma tabla
+  va al PDF. La firma exige el ID porque sin filtro el backend devuelve todos los items.
+- Verificación: `tsc --noEmit` limpio; `vitest run` **792/792** en 33 archivos.
+
+
 
