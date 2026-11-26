@@ -1487,6 +1487,13 @@ function _handleRoute(params, data) {
           includeUsers: data.includeUsers
         });
         break;
+      case 'wipeOperationalData':
+        _checkPermission(data, 'system.backup');
+        result = sbWipeOperationalData(data.token, {
+          confirm: data.confirm,
+          dryRun: data.dryRun
+        });
+        break;
 
       // =====================================================================
       // WHATSAPP PARSERS — AUTHENTICATED (utility)

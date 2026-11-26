@@ -232,3 +232,134 @@ function sbPurgeTestData(token, options) {
     return { error: e.message || String(e) };
   }
 }
+
+// ============================================================================
+// WIPE OPERATIVO — base en blanco, conservando admin y sociedad emisora
+// ============================================================================
+// POR QUÉ EXISTE:
+//   purgeTestData borra por ETIQUETA: sirve para barrer fixtures de la batería,
+//   no para dejar la base limpia antes de una pasada manual. No hay comando de
+//   dominio que vacíe todo, y varios ni siquiera se pueden borrar (deleteService
+//   solo acepta Importado/Asignado).
+//
+// QUÉ CONSERVA (y por qué no es "datos de negocio"):
+//   Settings         → catálogos de configuración (vehicle_types, service_types).
+//   Sequence         → contadores de ID. Vaciarlos reemite IDs ya usados.
+//   OperatingCompany → la sociedad emisora. Sin ella no se puede facturar.
+//   Users            → se trata aparte: quedan solo las cuentas protegidas.
+//
+// SEGURIDAD:
+//   - Solo admin ('system.backup', el mismo permiso que exportar el snapshot).
+//   - Sin confirm === 'WIPE-ALL-DATA' es un SIMULACRO: informa qué borraría.
+//   - Nunca toca 'admin' ni las hojas de la lista de conservación.
+//   - Queda auditado como system.operationalDataWiped.
+
+/** Hojas que NO se vacían nunca: son estado de la máquina, no datos de negocio. */
+var WIPE_KEEP_SHEETS = ['Settings', 'Sequence', 'OperatingCompany', 'Users'];
+
+/** Literal exacto que hay que enviar en `confirm` para que borre de verdad. */
+var WIPE_CONFIRM = 'WIPE-ALL-DATA';
+
+/**
+ * Deja la base en blanco: borra todas las filas de datos de cada hoja, salvo
+ * las de WIPE_KEEP_SHEETS. En `Users` conserva solo PURGE_PROTECTED_USERS.
+ *
+ * @param {string} token - Sesión admin
+ * @param {Object} options - { confirm?, dryRun? }
+ * @returns {Object} { success, dryRun, deleted, bySheet, keptSheets, keptUsers }
+ */
+function sbWipeOperationalData(token, options) {
+  try {
+    var permErr = _requirePermissionAction(token, 'system.backup');
+    if (permErr) return permErr;
+
+    var actor = _getUserFromToken(token);
+    if (!actor) return { error: 'Invalid session' };
+
+    options = options || {};
+    var dryRun = options.dryRun === true || String(options.confirm || '') !== WIPE_CONFIRM;
+
+    var ss = SpreadsheetApp.openById(CONFIG.DB_SHEET_ID);
+    var sheets = ss.getSheets();
+
+    var bySheet = {};
+    var total = 0;
+    var ops = [];
+    var keptUsers = [];
+
+    for (var i = 0; i < sheets.length; i++) {
+      var sheet = sheets[i];
+      var name = sheet.getName();
+      var lastRow = sheet.getLastRow();
+      var lastCol = sheet.getLastColumn();
+      if (lastRow < 2 || lastCol < 1) continue;
+
+      if (name === 'Users') {
+        // Usuarios: se borra todo menos las cuentas protegidas.
+        var values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+        var keep = [];
+        for (var r = 1; r < values.length; r++) {
+          var username = String(values[r][1] || '').trim();
+          if (PURGE_PROTECTED_USERS.indexOf(username) !== -1) {
+            keep.push(r + 1);
+            keptUsers.push(username);
+          }
+        }
+        if (keep.length) {
+          var all = [];
+          for (var u = 2; u <= lastRow; u++) {
+            if (keep.indexOf(u) === -1) all.push(u);
+          }
+          if (all.length) {
+            ops.push({ sheet: sheet, rowNumbers: all, count: all.length });
+            bySheet[name] = all.length;
+            total += all.length;
+          }
+        }
+        continue;
+      }
+
+      if (WIPE_KEEP_SHEETS.indexOf(name) !== -1) continue;
+
+      // Resto de hojas: un solo deleteRows cubre todo el bloque de datos.
+      ops.push({ sheet: sheet, startRow: 2, count: lastRow - 1 });
+      bySheet[name] = lastRow - 1;
+      total += lastRow - 1;
+    }
+
+    if (!dryRun && total > 0) {
+      // Primero las hojas de bloque, después Users (que necesita rangos sueltos).
+      for (var d = 0; d < ops.length; d++) {
+        var op = ops[d];
+        if (op.rowNumbers) {
+          _purgeDeleteRows(op.sheet, op.rowNumbers);
+        } else {
+          op.sheet.deleteRows(op.startRow, op.count);
+        }
+      }
+
+      _dispatchEvent({
+        type: 'system.operationalDataWiped',
+        entity: 'System',
+        entityId: 'WIPE-ALL-DATA',
+        payload: {
+          requestedBy: actor.username,
+          rows: total,
+          bySheet: bySheet,
+          keptSheets: WIPE_KEEP_SHEETS
+        }
+      });
+    }
+
+    return {
+      success: true,
+      dryRun: dryRun,
+      deleted: total,
+      bySheet: bySheet,
+      keptSheets: WIPE_KEEP_SHEETS,
+      keptUsers: keptUsers
+    };
+  } catch (e) {
+    return { error: e.message || String(e) };
+  }
+}
