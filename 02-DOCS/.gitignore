@@ -1,0 +1,12 @@
+# Regenerado en cada Maintenance Pass
+wiki/dashboard.html
+
+# Artefactos por corrida del harness (point-in-time)
+audits/*.html
+
+# Archivo del inbox: los originales viven en raw/ y en docs/
+inbox/_processed/
+
+# Estado por máquina de Obsidian
+.obsidian/workspace*.json
+.obsidian/cache

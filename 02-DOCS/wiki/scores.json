@@ -1,0 +1,14 @@
+{
+  "erp/business-rules.md": 14,
+  "erp/domain-model.md": 8,
+  "erp/money-flow.md": 20,
+  "erp/overview.md": 5,
+  "erp/state-machines.md": 11,
+  "harness/decisions.md": 2.1,
+  "harness/installation-plan.md": -4.9,
+  "harness/user-profile.md": -4.9,
+  "operations/risks.md": 13,
+  "operations/runbook.md": 12,
+  "operations/testing.md": 16,
+  "sdd/constitution.md": -4
+}

@@ -1,0 +1,33 @@
+# 02-DOCS/.rscignore — rutas que el Auto-Ingest Sweep NUNCA debe escanear como fuente.
+# Versionado a propósito: el equipo comparte el mismo límite de escaneo.
+node_modules/
+.git/
+dist/
+build/
+.vite/
+coverage/
+
+# Salidas de la propia ingesta
+02-DOCS/inbox/_processed/
+02-DOCS/raw/
+02-DOCS/wiki/
+
+# Herramientas y plantillas del harness
+01-TOOLS/
+
+# Código de la aplicación: nunca es fuente de conocimiento.
+# Lo que se entiende del código se escribe a mano en wiki/.
+Transport Action All/
+Transport Action Unified/
+scripts/
+test/
+
+# Corpus canónico del ERP. Se destila a mano en wiki/erp/ y wiki/operations/;
+# el sweep no debe copiarlo a raw/ ni proponer borrarlo.
+docs/
+
+# Datos y artefactos operativos
+backups/
+reports/
+backup/
+*.zip
