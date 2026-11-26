@@ -102,14 +102,35 @@ devuelve todos los items de la hoja, y por eso la firma de `api.ts` lo exige.
 | `src/hooks/useRapportino.ts` | Mapas con `useMemo`, `openDetail`, export CSV/PDF con nombres |
 | `src/components/RapportinoDetailModal.tsx` | Nombre del cliente/proyecto, tabla de servicios, PDF con la tabla |
 | `src/components/ReconciliationScreen.tsx` | Etiqueta de servicio y nombre de proyecto |
-| `src/components/DriverReportScreen.tsx` | Etiqueta de servicio en tarjeta y modal |
+| `src/components/DriverReportScreen.tsx` | Etiqueta de servicio y **nombre del chofer** en tarjeta, modal y buscador |
 | `src/services/api.ts` | `getRapportinoItems(rapportinoClientId)` |
+| `src/__tests__/serviceLabels.test.ts` | Nuevo. 22 tests de los helpers: fecha sin corrimiento, degradación al ID |
+
+## El costo, dicho de frente
+
+Cada pantalla que traduce IDs pide **su propio catálogo** al backend:
+
+| Pantalla | Requests de catálogo | Antes |
+|---|---|---|
+| Rapportinos | 5 (proyectos, clientes, choferes, colaboradores, **servicios**) | 4 |
+| Reconciliación | 2 (**servicios**, proyectos) | 0 |
+| Partes del chofer | 2 (**servicios**, choferes) | 0 |
+
+`getServices()` **no acepta límite** (`apiGetServices` devuelve la hoja entera, filtrada solo si se le pasan
+filtros). Hoy son 37 servicios y el costo es despreciable; con miles de servicios es la latencia que ya
+documenta [riesgos](../operations/risks.md). No se cacheó entre pantallas a propósito: un caché
+compartido necesita invalidación, y un nombre viejo es peor que un ID correcto.
+
+Si alguna vez pesa, el arreglo es del backend (devolver `clientName`/`driverName` en los DTO de
+rapportino y reconciliación), no del frontend.
 
 ## Verificación
 
 - `npx tsc --noEmit` sin errores.
-- `npx vitest run` → **792/792** en 33 archivos.
-- Tests actualizados: `RapportinoScreen.test.tsx`, `ReconciliationScreen.test.tsx`.
+- `npx vitest run` → **814/814** en 34 archivos.
+- Tests nuevos: `serviceLabels.test.ts` (22 casos: fecha ISO sin corrimiento de huso, hora con y sin
+  segundos, mapa incompleto, degradación al ID, etiqueta sin separadores sueltos).
+- Tests actualizados: `RapportinoScreen.test.tsx`, `ReconciliationScreen.test.tsx` (mocks de catálogo).
 
 ## See Also
 
