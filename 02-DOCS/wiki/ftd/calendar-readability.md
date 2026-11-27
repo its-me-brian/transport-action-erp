@@ -27,7 +27,7 @@ y los efectos de cambio entre vistas para facilitar el uso.
 - [x] Filtros activos se ven y se pueden limpiar con un botón, sin falso positivo al cargar.
 - [x] Cambio de vista animado, desactivado si el sistema pide menos movimiento (pill incluido).
 - [x] `tsc --noEmit` y `vitest run` en verde.
-- [x] `rsc risk` + revisor en fresco ({tier 1}, 1 reviewer).
+- [x] `rsc risk` + revisor en fresco (tier 1, 1 reviewer).
 
 ## Evidence
 - `canEditService()` es la única fuente de verdad: producción (`Production Van/Car`) se filtra de
