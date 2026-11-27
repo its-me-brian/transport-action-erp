@@ -17,6 +17,7 @@
  * 10. parseTimeToHour
  * 11. formatTimeDisplay
  * 12. getHourSlots
+ * 12a. getTimeWindowEnd
  * 13. parseDriverReport
  * 14. parseMultipleDriverReports
  * 15. getDiariaCost
@@ -39,6 +40,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   Service,
   isProductionVehicle,
+  canEditService,
   formatDateKey,
   getWeekColumns,
   mapServiceDTOToService,
@@ -50,6 +52,7 @@ import {
   parseTimeToHour,
   formatTimeDisplay,
   getHourSlots,
+  getTimeWindowEnd,
   parseDriverReport,
   parseMultipleDriverReports,
   getDiariaCost,
@@ -383,6 +386,47 @@ describe('12. getHourSlots', () => {
     expect(slots[0].label).toBe('06:00');
     expect(slots[16].hour).toBe(22);
     expect(slots[16].label).toBe('22:00');
+  });
+
+  it('grows to cover early and late services', () => {
+    const slots = getHourSlots(5, 24);
+    expect(slots).toHaveLength(20);
+    expect(slots[0].label).toBe('05:00');
+    expect(slots[slots.length - 1].label).toBe('24:00');
+  });
+
+  it('never returns a negative hour or a reversed range', () => {
+    expect(getHourSlots(-4, 30)[0].hour).toBe(0);
+    expect(getHourSlots(-4, 30).slice(-1)[0].hour).toBe(24);
+    expect(getHourSlots(10, 8)).toHaveLength(1);
+  });
+});
+
+describe('12a. getTimeWindowEnd', () => {
+  it('rounds a late window up to 24 so the grid never clips it', () => {
+    expect(getTimeWindowEnd('20:00 - 23:30')).toBe(24);
+    expect(getTimeWindowEnd('06:00 - 14:00')).toBe(14);
+  });
+
+  it('handles afternoon windows and missing values', () => {
+    expect(getTimeWindowEnd('13:00 - 01:00')).toBe(24);
+    expect(getTimeWindowEnd(undefined)).toBe(22);
+  });
+});
+
+// ============================================================================
+// 12b. canEditService — single source of truth for calendar read-only state
+// ============================================================================
+describe('12b. canEditService', () => {
+  it('marks production transports as read-only', () => {
+    expect(canEditService({ vehicleType: 'Production Van' } as Service)).toBe(false);
+    expect(canEditService({ vehicleType: 'PRODUCTION CAR' } as Service)).toBe(false);
+  });
+
+  it('keeps company vehicles editable', () => {
+    expect(canEditService({ vehicleType: 'Van' } as Service)).toBe(true);
+    expect(canEditService({ vehicleType: 'Transfer' } as Service)).toBe(true);
+    expect(canEditService({} as Service)).toBe(true);
   });
 });
 

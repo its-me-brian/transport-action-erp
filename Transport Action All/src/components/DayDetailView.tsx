@@ -9,7 +9,7 @@ import {
   formatTimeDisplay,
   getServiceStatusColor,
   isProductionVehicle,
-  getHourSlots,
+  canEditService,
 } from '../types';
 
 interface DayDetailViewProps {
@@ -23,6 +23,7 @@ interface DayDetailViewProps {
     col: number;
     totalCols: number;
   }>;
+  hourSlots: Array<{ hour: number; label: string }>;
   selectedServiceIds: Set<string>;
   toggleServiceSelection: (id: string) => void;
   selectAllServicesForDay: (dateKey: string) => void;
@@ -37,6 +38,7 @@ export default function DayDetailView({
   selectedDay,
   dayServices,
   layoutServices,
+  hourSlots,
   selectedServiceIds,
   toggleServiceSelection,
   selectAllServicesForDay,
@@ -47,8 +49,8 @@ export default function DayDetailView({
 }: DayDetailViewProps) {
   if (!effectiveDay) return null;
 
-  const hourSlots = getHourSlots();
   const HOUR_HEIGHT = 72;
+  const gridStart = hourSlots[0]?.hour ?? 6;
   const dateObj = parseDateKeyToDate(effectiveDay);
   const dayOfWeek = dateObj ? dateObj.getDay() : 0;
   const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -102,7 +104,7 @@ export default function DayDetailView({
 
             <AnimatePresence>
               {layoutServices.map(({ service, start, end, col, totalCols }, idx) => {
-                const topOffset = (start - 6) * HOUR_HEIGHT;
+                const topOffset = Math.max(0, (start - gridStart) * HOUR_HEIGHT);
                 const height = (end - start) * HOUR_HEIGHT - 3;
                 const width = 100 / totalCols;
                 const left = col * width;
@@ -110,6 +112,7 @@ export default function DayDetailView({
                 const isSelected = selectedServiceIds.has(service.id);
                 const isCompleted = service.status === 'Completed';
                 const isProduction = isProductionVehicle(service);
+                const readOnly = !canEditService(service);
                 const statusColor = getServiceStatusColor(service);
 
                 return (
@@ -119,9 +122,9 @@ export default function DayDetailView({
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.25, delay: idx * 0.04 }}
-                    className={`absolute rounded-md px-2 py-1.5 cursor-pointer transition-all hover:shadow-md overflow-hidden ${
-                      isSelected ? 'ring-2 ring-primary ring-offset-1' : ''
-                    }`}
+                    className={`absolute rounded-md px-2 py-1.5 overflow-hidden ${
+                      readOnly ? 'cursor-not-allowed opacity-60 grayscale' : 'cursor-pointer transition-all hover:shadow-md'
+                    } ${isSelected ? 'ring-2 ring-primary ring-offset-1' : ''}`}
                     style={{
                       top: `${topOffset}px`,
                       height: `${height}px`,
@@ -129,19 +132,22 @@ export default function DayDetailView({
                       width: `calc(${width}% - 4px)`,
                       minHeight: '24px',
                       touchAction: 'manipulation',
-                      borderLeft: `4px solid ${getServiceStatusColor(service).hex}`,
-                      backgroundColor: isCompleted ? '#f9fafb' : service.operationalStatus === 'Cancelado' ? '#fef2f2' : getServiceStatusColor(service).hex + '12',
+                      borderLeft: `4px solid ${readOnly ? '#9ca3af' : statusColor.hex}`,
+                      backgroundColor: readOnly
+                        ? '#f3f4f6'
+                        : isCompleted ? '#f9fafb' : service.operationalStatus === 'Cancelado' ? '#fef2f2' : statusColor.hex + '12',
                     }}
-                    onClick={() => openService(service)}
-                    onDoubleClick={() => handleDoubleClick(service)}
-                    onTouchEnd={() => {
+                    title={`${service.date || ''} · ${formatTimeDisplay(service.time)} · ${service.clientName || ''} · ${service.driverName || 'Unassigned'}${readOnly ? ' · Producción (solo lectura)' : ''}`}
+                    onClick={readOnly ? undefined : () => openService(service)}
+                    onDoubleClick={readOnly ? undefined : () => handleDoubleClick(service)}
+                    onTouchEnd={readOnly ? undefined : () => {
                       const now = Date.now();
                       const last = lastTapMapRef.current.get(service.id) || 0;
                       if (now - last < 300) { handleDoubleClick(service); }
                       lastTapMapRef.current.set(service.id, now);
                     }}
                   >
-                    {(service.operationalStatus !== 'Validado' && service.operationalStatus !== 'Cancelado') && (
+                    {!readOnly && service.operationalStatus !== 'Validado' && service.operationalStatus !== 'Cancelado' && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -167,7 +173,7 @@ export default function DayDetailView({
                         </span>
                         {service.vehicleType && (
                           <span className={`text-[8px] px-1 py-0 rounded font-medium shrink-0 ${
-                            isProduction ? 'bg-gray-100 text-gray-600' : 'bg-primary/15 text-primary'
+                            isProduction ? 'bg-gray-200 text-gray-600' : 'bg-primary/15 text-primary'
                           }`}>
                             {service.serviceType ? `${service.serviceType.replace('Transfer ', 'T.').replace('Disposizione', 'Dispo').substring(0, 7)} · ` : ''}{service.vehicleType.replace('Disposal ', 'D-').replace('Production ', 'P-').substring(0, 6)}
                           </span>
@@ -256,6 +262,11 @@ export default function DayDetailView({
             )}
           </div>
         </div>
+        {dayServices.some(isProductionVehicle) && (
+          <p className="px-5 text-[10px] text-on-surface-variant/70">
+            ⚑ Transportes de producción: se muestran en gris, solo lectura. Los opera la producción.
+          </p>
+        )}
       </div>
     </div>
   );

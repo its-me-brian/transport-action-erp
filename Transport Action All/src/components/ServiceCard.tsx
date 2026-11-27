@@ -4,6 +4,7 @@ import {
   Service,
   getServiceStatusColor,
   isProductionVehicle,
+  canEditService,
   formatTimeDisplay,
 } from '../types';
 
@@ -27,6 +28,8 @@ const ServiceCard = React.memo(function ServiceCard({
   const statusColor = getServiceStatusColor(service);
   const isUnassigned = !service.driverName || service.driverName === 'Unassigned';
   const isProduction = isProductionVehicle(service);
+  const readOnly = !canEditService(service);
+  const readableLabel = `${service.date || ''} · ${formatTimeDisplay((service.movements || [])[0]?.time || service.time)} · ${service.clientName || ''} · ${service.driverName || 'Unassigned'}${readOnly ? ' · Producción (solo lectura)' : ''}`;
   const movements = service.movements || [];
   const hasMultiple = movements.length > 1;
   const isTerminal = service.operationalStatus === 'Validado' || service.operationalStatus === 'Cancelado';
@@ -53,13 +56,17 @@ const ServiceCard = React.memo(function ServiceCard({
   if (compact) {
     return (
       <div
-        className={`relative flex items-center gap-1.5 px-2 py-[5px] rounded cursor-pointer transition-all border-l-[3px] group ${
-          isSelected ? 'ring-1.5 ring-primary/40' : 'hover:bg-surface-dim/50'
-        }`}
-        style={{ borderLeftColor: statusColor.hex, backgroundColor: isSelected ? `${statusColor.hex}08` : undefined }}
-        onClick={() => onClickSidePanel?.(service)}
-        onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(service); }}
-        onTouchEnd={handleTouchEnd}
+        className={`relative flex items-center gap-1.5 px-2 py-[5px] rounded border-l-[3px] group ${
+          readOnly ? 'cursor-not-allowed opacity-60 grayscale' : 'cursor-pointer transition-all hover:bg-surface-dim/50'
+        } ${isSelected ? 'ring-1.5 ring-primary/40' : ''}`}
+        style={{
+          borderLeftColor: readOnly ? '#9ca3af' : statusColor.hex,
+          backgroundColor: readOnly ? '#f3f4f6' : isSelected ? `${statusColor.hex}08` : undefined,
+        }}
+        title={readableLabel}
+        onClick={readOnly ? undefined : () => onClickSidePanel?.(service)}
+        onDoubleClick={readOnly ? undefined : (e) => { e.stopPropagation(); onDoubleClick?.(service); }}
+        onTouchEnd={readOnly ? undefined : handleTouchEnd}
       >
         <span className="text-[11px] font-semibold text-on-surface/70 tabular-nums shrink-0 w-[38px]">
           {formatTimeDisplay(firstTime)}
@@ -73,7 +80,7 @@ const ServiceCard = React.memo(function ServiceCard({
           </span>
         )}
         {badge}
-        {!isTerminal && (
+        {!isTerminal && !readOnly && (
         <button onClick={(e) => { e.stopPropagation(); onSelect?.(service.id); }}
           className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 transition-colors opacity-0 group-hover:opacity-100 ${
             isSelected ? 'bg-primary border-primary text-white opacity-100' : 'border-outline-variant hover:border-primary'
@@ -92,13 +99,17 @@ const ServiceCard = React.memo(function ServiceCard({
 
   return (
     <div
-      className={`relative flex flex-col rounded cursor-pointer transition-all border-l-[3px] group ${
-        isSelected ? 'ring-1.5 ring-primary/40' : 'hover:bg-surface-dim/30'
-      }`}
-      style={{ borderLeftColor: statusColor.hex, backgroundColor: isSelected ? `${statusColor.hex}06` : undefined }}
-      onClick={() => onClickSidePanel?.(service)}
-      onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(service); }}
-      onTouchEnd={handleTouchEnd}
+      className={`relative flex flex-col rounded border-l-[3px] group ${
+        readOnly ? 'cursor-not-allowed opacity-60 grayscale' : 'cursor-pointer transition-all hover:bg-surface-dim/30'
+      } ${isSelected ? 'ring-1.5 ring-primary/40' : ''}`}
+      style={{
+        borderLeftColor: readOnly ? '#9ca3af' : statusColor.hex,
+        backgroundColor: readOnly ? '#f3f4f6' : isSelected ? `${statusColor.hex}06` : undefined,
+      }}
+      title={readableLabel}
+      onClick={readOnly ? undefined : () => onClickSidePanel?.(service)}
+      onDoubleClick={readOnly ? undefined : (e) => { e.stopPropagation(); onDoubleClick?.(service); }}
+      onTouchEnd={readOnly ? undefined : handleTouchEnd}
     >
       <div className="px-2 py-1 flex items-center gap-1.5 min-w-0">
         <span className={`text-[12px] font-semibold truncate flex-1 min-w-0 ${isUnassigned ? 'text-amber-600' : 'text-on-surface'}`}>
@@ -110,7 +121,7 @@ const ServiceCard = React.memo(function ServiceCard({
           </span>
         )}
         {badge}
-        {!isTerminal && (
+        {!isTerminal && !readOnly && (
         <button onClick={(e) => { e.stopPropagation(); onSelect?.(service.id); }}
           className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 transition-colors opacity-0 group-hover:opacity-100 ${
             isSelected ? 'bg-primary border-primary text-white opacity-100' : 'border-outline-variant hover:border-primary'

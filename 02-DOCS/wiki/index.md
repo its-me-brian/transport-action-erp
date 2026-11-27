@@ -19,6 +19,7 @@ necesita cualquier spec antes de proponer un cambio.
 | [Alta de un chofer](erp/driver-onboarding.md) | Cuenta vs link público, `DRIVER_NOT_LINKED` y el ciclo del token | 2026-11-26 | 7.0 |
 | [Importación de listas de transporte](erp/transport-list-import.md) | Formato xlsx, ciclo de dos pasos, dedup delta y errores típicos | 2026-11-26 | 6.0 |
 | [Etiquetas legibles](erp/ui-labels.md) | De IDs a nombre/fecha/cliente, regla de degradación y búsqueda por nombre | 2026-11-26 | 2.0 |
+| [Calendario legible](ftd/calendar-readability.md) | Producción gris y read-only, rejilla dinámica, móvil y transiciones de vista | 2026-11-28 | 1.0 |
 
 ## operations
 

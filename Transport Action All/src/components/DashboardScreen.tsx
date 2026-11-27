@@ -1,4 +1,5 @@
 import React from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Service, ScreenId, ViewMode } from '../types';
 import { useDashboard } from '../hooks/useDashboard';
 import EditServiceModal from './EditServiceModal';
@@ -44,6 +45,7 @@ export default function DashboardScreen({
     parametros,
     driverFilter, setDriverFilter,
     statusFilter, setStatusFilter,
+    hasActiveFilters, clearFilters, productionCount,
     showBulkDriverPicker, setShowBulkDriverPicker,
     bulkAssignDriverId, setBulkAssignDriverId,
     lastTapMapRef,
@@ -52,6 +54,7 @@ export default function DashboardScreen({
     filteredServices,
     columns,
     completedDates,
+    hourSlots,
     dateRangeLabel,
     effectiveDay,
     dayServices,
@@ -71,6 +74,7 @@ export default function DashboardScreen({
     handleAdjustmentConfirm,
     toggleExpandedCard,
   } = useDashboard({ services, isLoading, baseDate, onBaseDateChange, viewMode, onViewModeChange, onNavigate, onServiceUpdate });
+  const reduceMotion = useReducedMotion();
 
   return (
     <div className="flex flex-col h-full bg-surface overflow-hidden">
@@ -88,6 +92,9 @@ export default function DashboardScreen({
         driverFilter={driverFilter}
         statusFilter={statusFilter}
         searchQuery={searchQuery}
+        hasActiveFilters={hasActiveFilters}
+        productionCount={productionCount}
+        onClearFilters={clearFilters}
         onEntityChange={setActiveEntity}
         onDriverFilterChange={setDriverFilter}
         onStatusFilterChange={setStatusFilter}
@@ -96,58 +103,68 @@ export default function DashboardScreen({
 
       <div className="flex-1 overflow-y-auto pb-24">
         {isLoading ? <LoadingSkeleton /> : (
-          <>
-            {viewMode === 'month' && (
-              <MonthView
-                baseDate={baseDate}
-                filteredServices={filteredServices}
-                completedDates={completedDates}
-                onBaseDateChange={onBaseDateChange}
-                onViewModeChange={onViewModeChange}
-              />
-            )}
-            {viewMode === 'week' && selectedDay && (
-              <DayDetailView
-                effectiveDay={effectiveDay}
-                selectedDay={selectedDay}
-                dayServices={dayServices}
-                layoutServices={layoutServices}
-                selectedServiceIds={selectedServiceIds}
-                toggleServiceSelection={toggleServiceSelection}
-                selectAllServicesForDay={selectAllServicesForDay}
-                setSelectedDay={setSelectedDay}
-                handleDoubleClick={handleDoubleClick}
-                openService={openService}
-                lastTapMapRef={lastTapMapRef}
-              />
-            )}
-            {viewMode === 'week' && !selectedDay && (
-              <WeekView
-                columns={columns}
-                filteredServices={filteredServices}
-                completedDates={completedDates}
-                selectedServiceIds={selectedServiceIds}
-                handleDoubleClick={handleDoubleClick}
-                toggleServiceSelection={toggleServiceSelection}
-                openService={openService}
-              />
-            )}
-            {viewMode === 'day' && (
-              <DayDetailView
-                effectiveDay={effectiveDay}
-                selectedDay={selectedDay}
-                dayServices={dayServices}
-                layoutServices={layoutServices}
-                selectedServiceIds={selectedServiceIds}
-                toggleServiceSelection={toggleServiceSelection}
-                selectAllServicesForDay={selectAllServicesForDay}
-                setSelectedDay={setSelectedDay}
-                handleDoubleClick={handleDoubleClick}
-                openService={openService}
-                lastTapMapRef={lastTapMapRef}
-              />
-            )}
-          </>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={`${viewMode}:${selectedDay ?? ''}`}
+              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -6 }}
+              transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
+            >
+              {viewMode === 'month' && (
+                <MonthView
+                  baseDate={baseDate}
+                  filteredServices={filteredServices}
+                  completedDates={completedDates}
+                  onBaseDateChange={onBaseDateChange}
+                  onViewModeChange={onViewModeChange}
+                />
+              )}
+              {viewMode === 'week' && selectedDay && (
+                <DayDetailView
+                  effectiveDay={effectiveDay}
+                  selectedDay={selectedDay}
+                  dayServices={dayServices}
+                  layoutServices={layoutServices}
+                  hourSlots={hourSlots}
+                  selectedServiceIds={selectedServiceIds}
+                  toggleServiceSelection={toggleServiceSelection}
+                  selectAllServicesForDay={selectAllServicesForDay}
+                  setSelectedDay={setSelectedDay}
+                  handleDoubleClick={handleDoubleClick}
+                  openService={openService}
+                  lastTapMapRef={lastTapMapRef}
+                />
+              )}
+              {viewMode === 'week' && !selectedDay && (
+                <WeekView
+                  columns={columns}
+                  filteredServices={filteredServices}
+                  completedDates={completedDates}
+                  selectedServiceIds={selectedServiceIds}
+                  handleDoubleClick={handleDoubleClick}
+                  toggleServiceSelection={toggleServiceSelection}
+                  openService={openService}
+                />
+              )}
+              {viewMode === 'day' && (
+                <DayDetailView
+                  effectiveDay={effectiveDay}
+                  selectedDay={selectedDay}
+                  dayServices={dayServices}
+                  layoutServices={layoutServices}
+                  hourSlots={hourSlots}
+                  selectedServiceIds={selectedServiceIds}
+                  toggleServiceSelection={toggleServiceSelection}
+                  selectAllServicesForDay={selectAllServicesForDay}
+                  setSelectedDay={setSelectedDay}
+                  handleDoubleClick={handleDoubleClick}
+                  openService={openService}
+                  lastTapMapRef={lastTapMapRef}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
         )}
       </div>
 

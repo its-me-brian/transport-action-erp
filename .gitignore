@@ -118,4 +118,6 @@ npm-debug.log*
 
 # harness scratch (no es codigo del proyecto)
 .dsh-work/
+.dsh-plugins/
+cordis.patch.yml
 

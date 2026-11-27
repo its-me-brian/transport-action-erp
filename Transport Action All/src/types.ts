@@ -147,6 +147,15 @@ export function isProductionVehicle(service: Service): boolean {
   return vehicle.indexOf('PRODUCTION') > -1;
 }
 
+/**
+ * Single source of truth for calendar editability.
+ * Production transports belong to the production, not to the company: they are
+ * shown for context but must never be selectable, opened or edited from here.
+ */
+export function canEditService(service: Service): boolean {
+  return !isProductionVehicle(service);
+}
+
 export type ScreenId =
   // OPERATIONS
   | 'transport'
@@ -536,17 +545,33 @@ function formatSingleTime(raw: string): string {
 }
 
 /**
- * Generate hour slots for the day view (6:00 to 22:00)
+ * Generate hour slots for the day view.
+ * Default 6:00–22:00 keeps existing callers stable; callers with early or late
+ * services pass their own bounds so nothing is drawn outside the grid.
  */
-export function getHourSlots(): { hour: number; label: string }[] {
+export function getHourSlots(startHour = 6, endHour = 22): { hour: number; label: string }[] {
   const slots = [];
-  for (let h = 6; h <= 22; h++) {
+  const from = Math.max(0, Math.min(23, Math.floor(startHour)));
+  const to = Math.max(from, Math.min(24, Math.ceil(endHour)));
+  for (let h = from; h <= to; h++) {
     slots.push({
       hour: h,
       label: `${String(h).padStart(2, '0')}:00`,
     });
   }
   return slots;
+}
+
+/** Extracts the end hour from a service window like "20:00 - 23:30" (rounds up to 24). */
+export function getTimeWindowEnd(time?: string): number {
+  const match = time?.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+  if (!match) return 22;
+  const start = Number(match[1]);
+  const endHour = Number(match[3]);
+  const endMinutes = Number(match[4]);
+  if (endHour < start) return 24; // crosses midnight: keep the whole evening visible
+  const rounded = endMinutes > 0 ? endHour + 1 : endHour;
+  return Math.min(24, Math.max(start + 1, rounded));
 }
 
 /**

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Plus, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
+import { Plus, Upload, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { ViewMode, getMonthName, parseDateKeyToDate, formatDateKey } from '../types';
 import { OperatingCompany } from '../services/api';
 
@@ -17,6 +18,9 @@ interface DashboardHeaderProps {
   driverFilter: string;
   statusFilter: string;
   searchQuery: string;
+  hasActiveFilters: boolean;
+  productionCount: number;
+  onClearFilters: () => void;
   onEntityChange: (v: string) => void;
   onDriverFilterChange: (v: string) => void;
   onStatusFilterChange: (v: string) => void;
@@ -37,11 +41,16 @@ export default function DashboardHeader({
   driverFilter,
   statusFilter,
   searchQuery,
+  hasActiveFilters,
+  productionCount,
+  onClearFilters,
   onEntityChange,
   onDriverFilterChange,
   onStatusFilterChange,
   onSearchChange,
 }: DashboardHeaderProps) {
+  const reduceMotion = useReducedMotion();
+
   const goToPrev = () => {
     const d = new Date(baseDate);
     if (viewMode === 'day') d.setDate(d.getDate() - 1);
@@ -121,10 +130,19 @@ export default function DashboardHeader({
         <div className="flex bg-surface-container rounded-md overflow-hidden border border-outline-variant/40 shrink-0">
           {(['day','week','month'] as ViewMode[]).map(mode => (
             <button key={mode} onClick={() => onViewModeChange(mode)}
-              className={`px-2 py-1 text-[10px] font-medium transition-colors cursor-pointer capitalize ${
-                viewMode === mode ? 'bg-on-surface text-surface-container-lowest' : 'text-on-surface-variant hover:text-on-surface'
-              }`}>
-              {mode}
+              className="relative px-2 py-1 text-[10px] font-medium transition-colors cursor-pointer capitalize">
+              {viewMode === mode && (
+                <motion.span
+                  layoutId="dashboard-view-pill"
+                  className="absolute inset-0 rounded-sm bg-on-surface"
+                  transition={reduceMotion
+                    ? { duration: 0 }
+                    : { type: 'spring', stiffness: 500, damping: 38 }}
+                />
+              )}
+              <span className={`relative z-10 ${viewMode === mode ? 'text-surface-container-lowest' : 'text-on-surface-variant hover:text-on-surface'}`}>
+                {mode}
+              </span>
             </button>
           ))}
         </div>
@@ -151,13 +169,29 @@ export default function DashboardHeader({
         <div className="w-px h-3.5 bg-outline-variant/30 shrink-0" />
 
         {/* Search — takes remaining space */}
-        <div className="relative flex-1 min-w-[120px] max-w-[180px]">
+        <div className="relative flex-1 min-w-[140px] max-w-[280px]">
           <svg className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-on-surface-variant/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input type="text" value={searchQuery} onChange={e => onSearchChange(e.target.value)}
             placeholder="Search..."
             aria-label="Search"
             className="w-full bg-transparent border-none pl-6 pr-1.5 py-1 text-[10px] text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none" />
         </div>
+
+        {hasActiveFilters && (
+          <button
+            onClick={onClearFilters}
+            title="Quitar todos los filtros"
+            className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-primary border border-primary/30 rounded-md hover:bg-primary/10 transition-colors cursor-pointer shrink-0"
+          >
+            <X className="w-3 h-3" />
+            <span className="hidden sm:inline">Clear filters</span>
+          </button>
+        )}
+        {productionCount > 0 && (
+          <span className="text-[10px] text-on-surface-variant/70 shrink-0 whitespace-nowrap" title="Transportes de producción: solo lectura">
+            ⚑ {productionCount} producción
+          </span>
+        )}
       </div>
     </>
   );

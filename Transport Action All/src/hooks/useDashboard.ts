@@ -5,8 +5,8 @@ import { useOpenService } from './useOpenService';
 import {
   Service, ScreenId, ViewMode,
   getWeekColumns, getMonthWeeks, getMonthName, formatDateKey,
-  getHourSlots, parseTimeToHour, parseDateKeyToDate, formatTimeDisplay,
-  getDriverAvatar, isProductionVehicle, getServiceStatusColor, getStatusDotColor, StatusColor, mapServiceDTOToService
+  getHourSlots, getTimeWindowEnd, parseTimeToHour, parseDateKeyToDate, formatTimeDisplay,
+  getDriverAvatar, isProductionVehicle, canEditService, getServiceStatusColor, getStatusDotColor, StatusColor, mapServiceDTOToService
 } from '../types';
 import {
   getDrivers, DriverRecord, getSettings, cerrarComercialmente, facturarService, cobrarService, closeService, deleteService, cancelService, adjustRevenue, adjustCost, completeService, reportService, assignDriver, approveFinancial, markFacturable, getOperatingCompanies, OperatingCompany, getVehicleTypes, confirmService, startService, validateService, moveToRevision
@@ -101,6 +101,7 @@ export function useDashboard({
   }, []);
 
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+  const projectsInitialized = useRef(false);
   const [driverFilter, setDriverFilter] = useState<string>('All');
   const [clientFilter, setClientFilter] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
@@ -126,7 +127,8 @@ export function useDashboard({
   }, [services]);
 
   useEffect(() => {
-    if (projectOptions.length > 0 && selectedProjects.length === 0) {
+    if (!projectsInitialized.current && projectOptions.length > 0) {
+      projectsInitialized.current = true;
       setSelectedProjects([...projectOptions]);
     }
   }, [projectOptions]);
@@ -140,7 +142,7 @@ export function useDashboard({
       const effectiveStatus = service.operationalStatus === 'Importado' && service.driverId ? 'Asignado' : service.operationalStatus;
       if (effectiveStatus !== statusFilter) return false;
     }
-    if (isProductionVehicle(service)) return false;
+    // Production transports stay visible as context, in gray and read-only.
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const searchable = [
@@ -153,17 +155,27 @@ export function useDashboard({
     return true;
   });
 
+  const productionCount = useMemo(
+    () => services.filter(isProductionVehicle).length,
+    [services]
+  );
+
   const toggleServiceSelection = useCallback((serviceId: string) => {
+    const svc = services.find(s => s.id === serviceId);
+    if (svc && !canEditService(svc)) {
+      showToast('Production transports are read-only and cannot be selected.', 'warning');
+      return;
+    }
     setSelectedServiceIds(prev => {
       const newSet = new Set(prev);
       if (newSet.has(serviceId)) newSet.delete(serviceId);
       else newSet.add(serviceId);
       return newSet;
     });
-  }, []);
+  }, [services, showToast]);
 
   const selectAllVisibleServices = useCallback(() => {
-    const visibleIds = filteredServices.map(s => s.id);
+    const visibleIds = filteredServices.filter(canEditService).map(s => s.id);
     setSelectedServiceIds(new Set(visibleIds));
   }, [filteredServices]);
 
@@ -294,11 +306,15 @@ export function useDashboard({
   }, [bulkAssignDriverId, selectedServiceIds, dbDrivers, onServiceUpdate, showToast]);
 
   const selectAllServicesForDay = useCallback((dateKey: string) => {
-    const dayServices = filteredServices.filter(s => s.date === dateKey);
+    const dayServices = filteredServices.filter(s => s.date === dateKey && canEditService(s));
     setSelectedServiceIds(new Set(dayServices.map(s => s.id)));
   }, [filteredServices]);
 
   const handleWorkflowAction = useCallback(async (service: Service, action: string) => {
+    if (!canEditService(service)) {
+      showToast('Production transports are read-only.', 'warning');
+      return;
+    }
     if (action === 'assign') {
       setEditingService(service);
       return;
@@ -347,10 +363,14 @@ export function useDashboard({
       }
       return false;
     });
-    setSelectedServiceIds(new Set(monthServices.map(s => s.id)));
+    setSelectedServiceIds(new Set(monthServices.filter(canEditService).map(s => s.id)));
   }, [filteredServices, baseDate]);
 
   const handleDoubleClick = useCallback((service: Service) => {
+    if (!canEditService(service)) {
+      showToast('Production transports are read-only.', 'warning');
+      return;
+    }
     if (service.status === 'Completed') {
       showToast('This service is already completed. Completed services cannot be reverted to In Progress.', 'warning');
       return;
@@ -412,7 +432,6 @@ export function useDashboard({
   }, [columns, viewMode, baseDate]);
 
   const monthWeeks = useMemo(() => getMonthWeeks(baseDate.getFullYear(), baseDate.getMonth()), [baseDate]);
-  const hourSlots = useMemo(() => getHourSlots(), []);
 
   const effectiveDay = useMemo(() => {
     if (selectedDay) return selectedDay;
@@ -424,6 +443,31 @@ export function useDashboard({
     if (!effectiveDay) return [];
     return filteredServices.filter(s => s.date === effectiveDay);
   }, [filteredServices, effectiveDay]);
+
+  // The old grid was fixed at 06:00–22:00, so an 05:00 airport pickup was
+  // drawn above the container and clipped away. Grow the grid to the real
+  // services of the day, never shrinking below the familiar 06:00–22:00.
+  const dayHourRange = useMemo(() => {
+    const points: number[] = [];
+    for (const s of dayServices) {
+      const first = parseTimeToHour(s.time);
+      if (Number.isFinite(first) && first >= 0) points.push(first);
+      points.push(getTimeWindowEnd(typeof s.time === 'string' ? s.time : undefined) - 1);
+      for (const m of (s.movements || [])) {
+        const t = parseTimeToHour(m.time);
+        if (Number.isFinite(t) && t >= 0) points.push(t);
+      }
+    }
+    if (points.length === 0) return { start: 6, end: 22 };
+    const start = Math.max(0, Math.min(6, Math.floor(Math.min(...points))));
+    const end = Math.min(24, Math.max(22, Math.ceil(Math.max(...points)) + 1));
+    return { start, end: Math.max(start + 1, end) };
+  }, [dayServices]);
+
+  const hourSlots = useMemo(
+    () => getHourSlots(dayHourRange.start, dayHourRange.end),
+    [dayHourRange]
+  );
 
   const layoutServices = useMemo(() => {
     if (dayServices.length === 0) return [];
@@ -440,10 +484,13 @@ export function useDashboard({
         const timeStr = service.time instanceof Date
           ? `${String(service.time.getHours()).padStart(2, '0')}:${String(service.time.getMinutes()).padStart(2, '0')}`
           : String(service.time || '');
-        const timeMatch = timeStr.match(/(\d{1,2})[:.]\d{2}\s*[-–]\s*(\d{1,2})[:.]\d{2}/);
-        if (timeMatch) endHour = parseInt(timeMatch[2]);
+        endHour = getTimeWindowEnd(timeStr);
       }
-      return { service, start: Math.max(6, startHour), end: Math.min(23, Math.max(startHour + 1, endHour)) };
+      return {
+        service,
+        start: Math.max(dayHourRange.start, startHour),
+        end: Math.min(dayHourRange.end, Math.max(startHour + 1, endHour)),
+      };
     }).filter(b => b.start < b.end).sort((a, b) => a.start - b.start);
 
     const columns: { end: number }[] = [];
@@ -465,11 +512,11 @@ export function useDashboard({
     }
     const totalCols = columns.length;
     return assignments.map(({ block, col }) => ({ ...block, col, totalCols }));
-  }, [dayServices]);
+  }, [dayServices, dayHourRange]);
 
   const selectAllServicesForWeek = useCallback(() => {
     const weekDates = columns.map(c => c.date);
-    const weekServices = filteredServices.filter(s => weekDates.includes(s.date));
+    const weekServices = filteredServices.filter(s => weekDates.includes(s.date) && canEditService(s));
     setSelectedServiceIds(new Set(weekServices.map(s => s.id)));
   }, [filteredServices, columns]);
 
@@ -481,6 +528,20 @@ export function useDashboard({
       return next;
     });
   }, []);
+
+  const hasActiveFilters = activeEntity !== 'All' || driverFilter !== 'All' ||
+    clientFilter !== 'All' || statusFilter !== 'All' ||
+    (projectsInitialized.current && selectedProjects.length !== projectOptions.length) ||
+    searchQuery.trim() !== '';
+
+  const clearFilters = useCallback(() => {
+    setActiveEntity('All');
+    setDriverFilter('All');
+    setClientFilter('All');
+    setStatusFilter('All');
+    setSelectedProjects([...projectOptions]);
+    setSearchQuery('');
+  }, [projectOptions]);
 
   return {
     activeEntity, setActiveEntity,
@@ -494,7 +555,13 @@ export function useDashboard({
     adjustmentType, setAdjustmentType,
     selectedServiceIds,
     isBulkCompleting,
-    openService: (service: Service) => openServiceNav(service.id),
+    openService: (service: Service) => {
+      if (!canEditService(service)) {
+        showToast('Production transports are read-only.', 'warning');
+        return;
+      }
+      openServiceNav(service.id);
+    },
     expandedCards,
     dbDrivers,
     parametros,
@@ -502,6 +569,7 @@ export function useDashboard({
     driverFilter, setDriverFilter,
     clientFilter, setClientFilter,
     statusFilter, setStatusFilter,
+    hasActiveFilters, clearFilters, productionCount,
     showBulkDriverPicker, setShowBulkDriverPicker,
     bulkAssignDriverId, setBulkAssignDriverId,
     lastTapMapRef,
