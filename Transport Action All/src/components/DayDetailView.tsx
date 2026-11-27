@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { ChevronLeft, Check } from 'lucide-react';
 import {
   Service,
@@ -47,6 +47,7 @@ export default function DayDetailView({
   openService,
   lastTapMapRef,
 }: DayDetailViewProps) {
+  const reduceMotion = useReducedMotion();
   if (!effectiveDay) return null;
 
   const HOUR_HEIGHT = 72;
@@ -118,10 +119,10 @@ export default function DayDetailView({
                 return (
                   <motion.div
                     key={service.id}
-                    initial={{ opacity: 0, x: -8 }}
+                    initial={reduceMotion ? false : { opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.25, delay: idx * 0.04 }}
+                    exit={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.95 }}
+                    transition={{ duration: reduceMotion ? 0 : 0.25, delay: reduceMotion ? 0 : idx * 0.04 }}
                     className={`absolute rounded-md px-2 py-1.5 overflow-hidden ${
                       readOnly ? 'cursor-not-allowed opacity-60 grayscale' : 'cursor-pointer transition-all hover:shadow-md'
                     } ${isSelected ? 'ring-2 ring-primary ring-offset-1' : ''}`}

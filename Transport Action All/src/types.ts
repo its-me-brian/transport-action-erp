@@ -562,13 +562,18 @@ export function getHourSlots(startHour = 6, endHour = 22): { hour: number; label
   return slots;
 }
 
-/** Extracts the end hour from a service window like "20:00 - 23:30" (rounds up to 24). */
+/**
+ * Extracts the end hour from a service window. Sheets and imported transport
+ * lists use both separators and both range marks: "20:00 - 23:30",
+ * "20.00 - 23.30" and "08.10, 15.30" must all grow the grid past 22:00.
+ */
 export function getTimeWindowEnd(time?: string): number {
-  const match = time?.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+  const match = time?.match(/(\d{1,2})[.:](\d{1,2})\s*[-–,]\s*(\d{1,2})[.:](\d{1,2})/);
   if (!match) return 22;
   const start = Number(match[1]);
   const endHour = Number(match[3]);
-  const endMinutes = Number(match[4]);
+  // A single digit after the separator means tens of minutes (formatSingleTime).
+  const endMinutes = match[4].length === 1 ? Number(match[4]) * 10 : Number(match[4]);
   if (endHour < start) return 24; // crosses midnight: keep the whole evening visible
   const rounded = endMinutes > 0 ? endHour + 1 : endHour;
   return Math.min(24, Math.max(start + 1, rounded));

@@ -126,11 +126,18 @@ export function useDashboard({
     return statuses.sort();
   }, [services]);
 
+  // Keep the selection in sync with the projects actually present. A rename or
+  // deletion used to leave a stale selection that hid entire projects while the
+  // "clear filters" button stayed invisible (it compared lengths only).
   useEffect(() => {
-    if (!projectsInitialized.current && projectOptions.length > 0) {
-      projectsInitialized.current = true;
-      setSelectedProjects([...projectOptions]);
-    }
+    if (projectOptions.length === 0) return;
+    projectsInitialized.current = true;
+    setSelectedProjects(prev => {
+      if (prev.length === 0) return [...projectOptions];
+      const next = projectOptions.filter(p => prev.includes(p));
+      if (next.length === prev.length && next.every((p, i) => p === prev[i])) return prev;
+      return next;
+    });
   }, [projectOptions]);
 
   const filteredServices = services.filter(service => {
@@ -183,12 +190,28 @@ export function useDashboard({
     setSelectedServiceIds(new Set());
   }, []);
 
+  // A service can become production while it is selected (edit modal). Drop it
+  // from the selection so a later bulk action cannot edit it.
+  useEffect(() => {
+    setSelectedServiceIds(prev => {
+      if (prev.size === 0) return prev;
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        const svc = services.find(s => s.id === id);
+        if (svc && !canEditService(svc)) { changed = true; continue; }
+        next.add(id);
+      }
+      return changed ? next : prev;
+    });
+  }, [services]);
+
   const markSelectedAsCompleted = useCallback(async () => {
     if (selectedServiceIds.size === 0) return;
     const allServices = [...services];
     const completableIds = Array.from(selectedServiceIds).filter(id => {
       const svc = allServices.find(s => s.id === id);
-      return svc?.operationalStatus === 'EnRuta';
+      return !!svc && canEditService(svc) && svc.operationalStatus === 'EnRuta';
     });
     const skippedCount = selectedServiceIds.size - completableIds.length;
     if (completableIds.length === 0) {
@@ -233,7 +256,7 @@ export function useDashboard({
     const selectedArray = [...selectedServiceIds];
     const eligibleIds: string[] = selectedArray.filter(id => {
       const svc = allSvcs.find(s => s.id === id);
-      if (!svc) return false;
+      if (!svc || !canEditService(svc)) return false;
       if (config.validStatuses.includes(svc.operationalStatus)) return true;
       if (action === 'confirm' && svc.operationalStatus === 'Importado' && svc.driverId) return true;
       return false;
@@ -279,12 +302,15 @@ export function useDashboard({
     if (!driver) return;
     setIsBulkCompleting(true);
     try {
-      const serviceIds: string[] = Array.from(selectedServiceIds);
+      const serviceIds = Array.from<string>(selectedServiceIds).filter(id => {
+        const svc = services.find(s => s.id === id);
+        return !!svc && canEditService(svc);
+      });
       const results = await Promise.all(
         serviceIds.map(id => assignDriver(id, driver.id, driver.vehiclePreferred || ''))
       ) as { error?: string; id?: string }[];
       const failures = results.filter(r => r?.error);
-      const successCount = selectedServiceIds.size - failures.length;
+      const successCount = serviceIds.length - failures.length;
       if (failures.length > 0) showToast(`${failures.length} failed`, 'error');
       if (successCount > 0) {
         showToast(`${successCount} driver(s) assigned to ${driver.name}`, 'success');
@@ -531,7 +557,10 @@ export function useDashboard({
 
   const hasActiveFilters = activeEntity !== 'All' || driverFilter !== 'All' ||
     clientFilter !== 'All' || statusFilter !== 'All' ||
-    (projectsInitialized.current && selectedProjects.length !== projectOptions.length) ||
+    (projectsInitialized.current && (
+      projectOptions.some(p => !selectedProjects.includes(p)) ||
+      selectedProjects.some(p => !projectOptions.includes(p))
+    )) ||
     searchQuery.trim() !== '';
 
   const clearFilters = useCallback(() => {

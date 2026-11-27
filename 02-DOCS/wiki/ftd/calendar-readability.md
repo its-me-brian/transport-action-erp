@@ -42,10 +42,17 @@ y los efectos de cambio entre vistas para facilitar el uso.
 - `WeekView.tsx`: móvil pasa de siete columnas apiladas a un `<details>` por día.
 - `MonthView.tsx`: totales del mes, sin chofer y producción; puntos grises para producción.
 - `npx tsc --noEmit` → sin errores (2026-11-28).
-- `npx vitest run` → 34 archivos, 820 tests passed (2026-11-28).
+- `getTimeWindowEnd()` acepta `20:00 - 23:30`, `20.00 - 23.30` y `08.10, 15.30` (formatos de la
+  hoja y de las importaciones xlsx), redondeando minutos a la hora siguiente.
+- Bulk actions (completar, confirmar, asignar chofer) ahora filtran servicios de producción incluso
+  si quedaron seleccionados antes de editar el `vehicleType`.
+- `DayDetailView` también respeta `useReducedMotion()` en las tarjetas animadas.
+- `npx vitest run` → 34 archivos, 821 tests passed (2026-11-28).
 - `rsc risk` → tier 1, 1 reviewer. Revisor en contexto fresco: 3 should-fix, 0 blockers; los 3 se
-  corrigieron y la suite quedó en verde.
-- Verificación visual en navegador: no ejecutada (servidor local no disponible en la sesión).
+  corrigieron, más dos hallazgos adicionales de formatos de hora y bulk actions; suite en verde.
+- `rsc doctor` → healthy, onboarding ready.
+- Servidor Vite respondiendo HTTP 200 en `http://127.0.0.1:3001/`; inspección visual de píxeles
+  no ejecutada (sin herramienta de navegador en la sesión).
 
 ## Next
 Pasada visual humana en el navegador con los datos demo cargados; si aparece algún detalle de

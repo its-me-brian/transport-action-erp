@@ -412,6 +412,13 @@ describe('12a. getTimeWindowEnd', () => {
     expect(getTimeWindowEnd('13:00 - 01:00')).toBe(24);
     expect(getTimeWindowEnd(undefined)).toBe(22);
   });
+
+  it('accepts dot separators and comma ranges from imported transport lists', () => {
+    expect(getTimeWindowEnd('20.00 - 23.30')).toBe(24);
+    expect(getTimeWindowEnd('08.10, 15.30')).toBe(16);
+    expect(getTimeWindowEnd('08.00 - 17.00')).toBe(17);
+    expect(getTimeWindowEnd('20.00 - 23.3')).toBe(24);
+  });
 });
 
 // ============================================================================
