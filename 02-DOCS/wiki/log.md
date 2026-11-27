@@ -1,5 +1,23 @@
 # Wiki Log
 
+## [2026-11-28] feature | calendario legible: producción en gris y vistas sin recortes
+- Created: [Calendario legible](ftd/calendar-readability.md) — FTD cerrado con evidencia.
+- Updated: [index.md](index.md) (1 fila nueva).
+- Source: código verificado — `Transport Action All/src/hooks/useDashboard.ts`, `types.ts`,
+  `components/{DayDetailView,WeekView,MonthView,DashboardHeader,DashboardScreen}.tsx`.
+- Decisión de alcance: **frontend puro**. El backend sigue en Apps Script v240, sin redeploy.
+- Regla fijada: `canEditService()` es la única fuente de verdad. Producción se ve en gris, sin
+  selección ni acciones masivas, y se filtra aunque haya quedado seleccionada antes de cambiar
+  `vehicleType`.
+- Trampa documentada: `getTimeWindowEnd()` acepta `:` y `.`, y separadores `-`, `–` y `,`. Sin eso,
+  el bloque 20:00–23:30 se recortaba en 22:00.
+- Otro hallazgo: renombrar un proyecto con igual longitud escondía servicios sin mostrar el chip de
+  filtros activos. Ahora la comparación es por pertenencia, con `projectsInitialized` como guardia
+  de la carga inicial (no es código muerto).
+- Verificación: `tsc --noEmit` limpio; `vitest run` **821/821** en 34 archivos; `rsc risk` tier 1 y
+  revisor en fresco con APPROVE; `rsc doctor` healthy; Vite responde HTTP 200.
+- Pendiente: pasada visual en navegador con los datos demo de `scripts/seed-demo.mjs`.
+
 ## [2026-11-26] ingest | ERP Transport Action — Panorama
 - Created: [ERP Transport Action — Panorama](erp/overview.md)
 - Created: [Modelo de dominio — Service en el centro](erp/domain-model.md)
