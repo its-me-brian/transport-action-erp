@@ -41,8 +41,10 @@ y los efectos de cambio entre vistas para facilitar el uso.
   servicio; los casos de formatos con punto/coma y minutos de un dígito están cubiertos en
   `types-all.test.ts:416-421` y pasan.
 - ** Mes y móvil**: verificado por lectura de `MonthView.tsx` (totales, sin chofer, producción) y
-  `WeekView.tsx` (lista por día en `grid-cols-1`). **No verificado visualmente aún**: la pasada con
-  Playwright quedó para después del cierre de código.
+  `WeekView.tsx` (lista por día en `grid-cols-1`), y ejecutado en navegador con Playwright:
+  `week`, `month` y `day` renderizan sin errores de consola. Mes muestra `5 servicio(s) este mes`
+  y `⚠ 3 sin chofer`; el día muestra la rejilla horaria completa. Screenshots en
+  `reports/calendar-{week,month,day}.png` (ignorados por git).
 - ** Filtros**: `hasActiveFilters` compara conjuntos (`useDashboard.ts:558-564`), no solo longitudes;
   `clearFilters` está en `:566-573`. `productionCount` pasó a contar sobre `filteredServices`, así el
   badge del header coincide con las tarjetas visibles.
@@ -60,9 +62,18 @@ y los efectos de cambio entre vistas para facilitar el uso.
   que correspondía un revisor con contexto fresco. El revisor informó 7 hallazgos: 4 ya estaban
   resueltos en el árbol cuando leyó y 3 se aplicaron en este cierre (teclado/ARIA, contador de
   producción sobre filtrados, etiqueta del día con año).
-- ** No ejecutado en este cierre**: `rsc risk` no se volvió a correr después de los últimos 3 ajustes;
-  la pasada visual con Playwright sigue pendiente.
+- ** Pasada visual (ejecutada después del commit `b5aa4d6`)**: `npx playwright test e2e/calendar-visual.spec.ts`
+  → **2/2 en verde**, 41,4 s. Caso 1: tres vistas sin crash, `aria-disabled=0` en el seed (no hay
+  servicios de producción), 10 tarjetas enfocables con foco real, filtro aplicado → `Clear filters`
+  visible → limpieza, y cambio `day↔month` con `prefers-reduced-motion`. Caso 2: un servicio de
+  producción inyectado **sólo en el navegador** (sin escribir en la Sheet) quedó
+  `role=group`, `aria-disabled=true`, sin `tabindex`, `cursor=not-allowed`, `opacity=0.6`,
+  `filter=grayscale(1)`, fondo `rgb(243,244,246)`; un click forzado no navegó.
+  Screenshot: `reports/calendar-production.png`.
+- ** No ejecutado**: `rsc risk` no se volvió a correr después de los últimos 3 ajustes.
 
 ## Next
-El usuario hace el commit de los 4 archivos pendientes más este documento. El hook post-merge de rsc
-debe marcar `status: done` y reemplazar esta sección por el punto y momento del merge.
+Commit `b5aa4d6` (`fix(calendar): keyboard access, production badge and day label`) pusheado y
+verificado (`HEAD == origin/main`). Queda pendiente un segundo commit del usuario con la evidencia
+de la pasada visual y el test `e2e/calendar-visual.spec.ts`. El frontmatter sigue en `in-progress`
+a propósito: la skill FTD reserva `status: done` para el hook post-merge y acá no hubo merge.
