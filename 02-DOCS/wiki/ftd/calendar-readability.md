@@ -64,5 +64,7 @@ y los efectos de cambio entre vistas para facilitar el uso.
   la pasada visual con Playwright sigue pendiente.
 
 ## Next
-El usuario hace el commit de los 4 archivos pendientes más este documento. El hook post-merge de rsc
-debe marcar `status: done` y reemplazar esta sección por el punto y momento del merge.
+Commit confirmado: `b5aa4d6` (`fix(calendar): keyboard access, production badge and day label`),
+pusheado a `origin/main` con `HEAD == origin/main` y árbol limpio. El frontmatter sigue en
+`in-progress` a propósito: la skill FTD reserva `status: done` para el hook post-merge y acá no
+hubo merge. Pendiente: pasada visual con Playwright sobre Week, Month y Day.
