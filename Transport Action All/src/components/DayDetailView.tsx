@@ -139,6 +139,16 @@ export default function DayDetailView({
                         : isCompleted ? '#f9fafb' : service.operationalStatus === 'Cancelado' ? '#fef2f2' : statusColor.hex + '12',
                     }}
                     title={`${service.date || ''} · ${formatTimeDisplay(service.time)} · ${service.clientName || ''} · ${service.driverName || 'Unassigned'}${readOnly ? ' · Producción (solo lectura)' : ''}`}
+                    role={readOnly ? 'group' : 'button'}
+                    aria-label={`${service.date || ''} · ${formatTimeDisplay(service.time)} · ${service.clientName || ''} · ${service.driverName || 'Unassigned'}${readOnly ? ' · Producción (solo lectura)' : ''}`}
+                    aria-disabled={readOnly || undefined}
+                    tabIndex={readOnly ? undefined : 0}
+                    onKeyDown={readOnly ? undefined : (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openService(service);
+                      }
+                    }}
                     onClick={readOnly ? undefined : () => openService(service)}
                     onDoubleClick={readOnly ? undefined : () => handleDoubleClick(service)}
                     onTouchEnd={readOnly ? undefined : () => {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { Plus, Upload, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { ViewMode, getMonthName, parseDateKeyToDate, formatDateKey } from '../types';
+import { ViewMode, getMonthName, formatDateKey } from '../types';
 import { OperatingCompany } from '../services/api';
 
 interface DashboardHeaderProps {
@@ -85,7 +85,7 @@ export default function DashboardHeader({
               {viewMode === 'month'
                 ? `${getMonthName(baseDate.getMonth())} ${baseDate.getFullYear()}`
                 : viewMode === 'day'
-                  ? `${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][parseDateKeyToDate(formatDateKey(baseDate))?.getDay() ?? 0]}, ${formatDateKey(baseDate)}`
+                  ? `${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][baseDate.getDay()]}, ${formatDateKey(baseDate)} ${baseDate.getFullYear()}`
                   : dateRangeLabel
               }
             </p>

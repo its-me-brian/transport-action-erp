@@ -64,6 +64,16 @@ const ServiceCard = React.memo(function ServiceCard({
           backgroundColor: readOnly ? '#f3f4f6' : isSelected ? `${statusColor.hex}08` : undefined,
         }}
         title={readableLabel}
+        role={readOnly ? 'group' : 'button'}
+        aria-label={readableLabel}
+        aria-disabled={readOnly || undefined}
+        tabIndex={readOnly ? undefined : 0}
+        onKeyDown={readOnly ? undefined : (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClickSidePanel?.(service);
+          }
+        }}
         onClick={readOnly ? undefined : () => onClickSidePanel?.(service)}
         onDoubleClick={readOnly ? undefined : (e) => { e.stopPropagation(); onDoubleClick?.(service); }}
         onTouchEnd={readOnly ? undefined : handleTouchEnd}
@@ -107,6 +117,16 @@ const ServiceCard = React.memo(function ServiceCard({
         backgroundColor: readOnly ? '#f3f4f6' : isSelected ? `${statusColor.hex}06` : undefined,
       }}
       title={readableLabel}
+      role={readOnly ? 'group' : 'button'}
+      aria-label={readableLabel}
+      aria-disabled={readOnly || undefined}
+      tabIndex={readOnly ? undefined : 0}
+      onKeyDown={readOnly ? undefined : (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClickSidePanel?.(service);
+        }
+      }}
       onClick={readOnly ? undefined : () => onClickSidePanel?.(service)}
       onDoubleClick={readOnly ? undefined : (e) => { e.stopPropagation(); onDoubleClick?.(service); }}
       onTouchEnd={readOnly ? undefined : handleTouchEnd}

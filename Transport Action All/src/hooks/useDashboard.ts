@@ -162,10 +162,9 @@ export function useDashboard({
     return true;
   });
 
-  const productionCount = useMemo(
-    () => services.filter(isProductionVehicle).length,
-    [services]
-  );
+  // Count what the views actually show, so the header badge agrees with the cards
+  // when a project/driver/status filter is active.
+  const productionCount = filteredServices.filter(isProductionVehicle).length;
 
   const toggleServiceSelection = useCallback((serviceId: string) => {
     const svc = services.find(s => s.id === serviceId);
